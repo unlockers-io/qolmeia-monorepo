@@ -116,8 +116,8 @@ type SidebarProps = {
 };
 
 type SidebarDependencies = {
+  pathname: string;
   SignOutControl: ComponentType<{ className?: string }>;
-  useCurrentPathname: () => string;
 };
 
 type SidebarNavProps = {
@@ -158,75 +158,78 @@ const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps)
   </nav>
 );
 
-const createSidebar = ({ SignOutControl, useCurrentPathname }: SidebarDependencies) => {
-  const SidebarWithDependencies = ({ pendingCount = 0, user }: SidebarProps) => {
-    const pathname = useCurrentPathname();
+const SidebarView = ({
+  dependencies,
+  pendingCount = 0,
+  user,
+}: SidebarProps & { dependencies: SidebarDependencies }) => {
+  const { pathname, SignOutControl } = dependencies;
 
-    return (
-      <>
-        <header
-          aria-label="Navegação principal"
-          className="sticky top-0 z-10 flex flex-col border-b border-border bg-card md:hidden"
-        >
-          <div className="flex h-14 items-center justify-between gap-3 px-4">
-            <Link
-              aria-label="Qolmeia backoffice"
-              className="inline-flex min-h-11 min-w-11 items-center justify-center"
-              href="/"
-            >
-              <Logo className="h-6 w-auto" />
-            </Link>
-            <div className="flex min-w-0 items-center gap-2">
-              {user ? (
-                <span className="truncate text-sm font-semibold text-foreground">{user.name}</span>
-              ) : null}
-              <SignOutControl className="min-h-11" />
-            </div>
-          </div>
-          <SidebarNav mobile pathname={pathname} pendingCount={pendingCount} />
-        </header>
-        <aside
-          aria-label="Navegação principal"
-          className="hidden h-screen w-[238px] shrink-0 flex-col border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
-        >
-          <div className="px-1.5">
-            <Link className="inline-flex transition-opacity hover:opacity-80" href="/">
-              <Logo className="h-6 w-auto" />
-            </Link>
-          </div>
-          <p className="px-2 pt-4 pb-2 font-mono text-[0.625rem] tracking-wide text-muted-foreground uppercase">
-            Painel operador
-          </p>
-          <SidebarNav pathname={pathname} pendingCount={pendingCount} />
-          <div className="mt-auto border-t border-border pt-3.5">
+  return (
+    <>
+      <header
+        aria-label="Navegação principal"
+        className="sticky top-0 z-10 flex flex-col border-b border-border bg-card md:hidden"
+      >
+        <div className="flex h-14 items-center justify-between gap-3 px-4">
+          <Link
+            aria-label="Qolmeia backoffice"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center"
+            href="/"
+          >
+            <Logo className="h-6 w-auto" />
+          </Link>
+          <div className="flex min-w-0 items-center gap-2">
             {user ? (
-              <div className="flex items-center gap-2.5 px-1.5">
-                <span
-                  aria-hidden
-                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-foreground text-[0.8125rem] font-bold text-background"
-                >
-                  {initialsFrom(user.name)}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[0.8125rem] font-bold text-foreground">{user.name}</p>
-                  <p className="truncate font-mono text-xs text-muted-foreground">{user.email}</p>
-                </div>
-                <span className="rounded-md bg-highlight-surface px-1.5 py-1 font-mono text-xs font-semibold text-highlight-surface-foreground">
-                  {user.role}
-                </span>
-              </div>
+              <span className="truncate text-sm font-semibold text-foreground">{user.name}</span>
             ) : null}
-            <SignOutControl className="mt-2 w-full justify-start" />
+            <SignOutControl className="min-h-11" />
           </div>
-        </aside>
-      </>
-    );
-  };
-
-  return SidebarWithDependencies;
+        </div>
+        <SidebarNav mobile pathname={pathname} pendingCount={pendingCount} />
+      </header>
+      <aside
+        aria-label="Navegação principal"
+        className="hidden h-screen w-[238px] shrink-0 flex-col border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
+      >
+        <div className="px-1.5">
+          <Link className="inline-flex transition-opacity hover:opacity-80" href="/">
+            <Logo className="h-6 w-auto" />
+          </Link>
+        </div>
+        <p className="px-2 pt-4 pb-2 font-mono text-[0.625rem] tracking-wide text-muted-foreground uppercase">
+          Painel operador
+        </p>
+        <SidebarNav pathname={pathname} pendingCount={pendingCount} />
+        <div className="mt-auto border-t border-border pt-3.5">
+          {user ? (
+            <div className="flex items-center gap-2.5 px-1.5">
+              <span
+                aria-hidden
+                className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-foreground text-[0.8125rem] font-bold text-background"
+              >
+                {initialsFrom(user.name)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[0.8125rem] font-bold text-foreground">{user.name}</p>
+                <p className="truncate font-mono text-xs text-muted-foreground">{user.email}</p>
+              </div>
+              <span className="rounded-md bg-highlight-surface px-1.5 py-1 font-mono text-xs font-semibold text-highlight-surface-foreground">
+                {user.role}
+              </span>
+            </div>
+          ) : null}
+          <SignOutControl className="mt-2 w-full justify-start" />
+        </div>
+      </aside>
+    </>
+  );
 };
 
-const Sidebar = createSidebar({ SignOutControl: SignOutButton, useCurrentPathname: usePathname });
+const Sidebar = (props: SidebarProps) => {
+  const pathname = usePathname();
+  return <SidebarView {...props} dependencies={{ pathname, SignOutControl: SignOutButton }} />;
+};
 
-export { createSidebar, Sidebar };
+export { Sidebar, SidebarView };
 export type { SidebarDependencies };

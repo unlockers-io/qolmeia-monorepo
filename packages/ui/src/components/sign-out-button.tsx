@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { runWithCleanup } from "../lib/run-with-cleanup";
 import { toast } from "../lib/toast";
 
 import { Button } from "./button";
@@ -22,60 +23,70 @@ type SignOutButtonProps = {
 };
 
 type SignOutButtonDependencies = {
+  router: Pick<ReturnType<typeof useRouter>, "push" | "refresh">;
   showError: (message: string) => void;
   signOut: () => Promise<void>;
-  useAppRouter: () => Pick<ReturnType<typeof useRouter>, "push" | "refresh">;
 };
 
-const createSignOutButton = ({ showError, signOut, useAppRouter }: SignOutButtonDependencies) => {
-  const SignOutButtonWithDependencies = ({ className, label = "Sair" }: SignOutButtonProps) => {
-    const { push, refresh } = useAppRouter();
-    const [pending, setPending] = useState(false);
-
-    const handleSignOut = async () => {
-      if (pending) {
-        return;
-      }
-      setPending(true);
-      try {
-        await signOut();
-        push("/login");
-        refresh();
-      } catch {
-        showError("Não foi possível sair. Tente novamente.");
-      } finally {
-        setPending(false);
-      }
-    };
-
-    return (
-      <Button
-        className={className}
-        disabled={pending}
-        onClick={() => {
-          void handleSignOut();
-        }}
-        type="button"
-        variant="ghost"
-      >
-        <LogOut aria-hidden />
-        {label}
-      </Button>
-    );
-  };
-
-  return SignOutButtonWithDependencies;
-};
-
-const SignOutButton = createSignOutButton({
+const DEFAULT_DEPENDENCIES: Omit<SignOutButtonDependencies, "router"> = {
   showError: (message) => {
     toast.error(message);
   },
   signOut: async () => {
     await authClient.signOut();
   },
-  useAppRouter: useRouter,
-});
+};
 
-export { createSignOutButton, SignOutButton };
+const SignOutButtonView = ({
+  className,
+  dependencies,
+  label = "Sair",
+}: SignOutButtonProps & { dependencies: SignOutButtonDependencies }) => {
+  const { router, showError, signOut } = dependencies;
+  const { push, refresh } = router;
+  const [pending, setPending] = useState(false);
+
+  const handleSignOut = async () => {
+    if (pending) {
+      return;
+    }
+    setPending(true);
+    await runWithCleanup(
+      async () => {
+        try {
+          await signOut();
+          push("/login");
+          refresh();
+        } catch {
+          showError("Não foi possível sair. Tente novamente.");
+        }
+      },
+      () => {
+        setPending(false);
+      },
+    );
+  };
+
+  return (
+    <Button
+      className={className}
+      disabled={pending}
+      onClick={() => {
+        void handleSignOut();
+      }}
+      type="button"
+      variant="ghost"
+    >
+      <LogOut aria-hidden />
+      {label}
+    </Button>
+  );
+};
+
+const SignOutButton = (props: SignOutButtonProps) => {
+  const router = useRouter();
+  return <SignOutButtonView {...props} dependencies={{ ...DEFAULT_DEPENDENCIES, router }} />;
+};
+
+export { SignOutButton, SignOutButtonView };
 export type { SignOutButtonDependencies, SignOutButtonProps };

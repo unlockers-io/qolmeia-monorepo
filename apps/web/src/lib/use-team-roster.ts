@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 
 import { fetchTeam, subscribeTeamEvents, type TeamMemberView } from "@/lib/team";
 
@@ -39,7 +39,6 @@ const createUseTeamRoster = ({ fetchRoster, subscribeToTeamEvents }: TeamRosterD
     initialData?: Array<TeamMemberView>,
   ): UseTeamRosterResult => {
     const queryClient = useQueryClient();
-    const queryKey = useMemo(() => teamQueryKey(companyId), [companyId]);
     const {
       data,
       error,
@@ -50,7 +49,7 @@ const createUseTeamRoster = ({ fetchRoster, subscribeToTeamEvents }: TeamRosterD
       initialData,
       meta: { errorToast: "Falha ao sincronizar time" },
       queryFn: fetchRoster,
-      queryKey,
+      queryKey: teamQueryKey(companyId),
       refetchInterval: POLL_INTERVAL_MS,
       refetchOnMount: initialData === undefined,
       refetchOnWindowFocus: true,
@@ -59,12 +58,12 @@ const createUseTeamRoster = ({ fetchRoster, subscribeToTeamEvents }: TeamRosterD
 
     useEffect(() => {
       const unsubscribe = subscribeToTeamEvents(() => {
-        void queryClient.invalidateQueries({ queryKey });
+        void queryClient.invalidateQueries({ queryKey: teamQueryKey(companyId) });
       });
       return () => {
         unsubscribe?.();
       };
-    }, [queryClient, queryKey]);
+    }, [companyId, queryClient]);
 
     const refetch = async (): Promise<void> => {
       await queryRefetch();

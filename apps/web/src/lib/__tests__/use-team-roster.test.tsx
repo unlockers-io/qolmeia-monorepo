@@ -49,6 +49,23 @@ afterEach(() => {
 });
 
 describe("useTeamRoster", () => {
+  it("keeps one subscription per company and cleans up when the company changes", () => {
+    const unsubscribe = vi.fn();
+    mockSubscribeTeamEvents.mockReturnValue(unsubscribe);
+    const { rerender, unmount } = renderHook((companyId: string) => useTeamRoster(companyId, []), {
+      initialProps: "co1",
+      wrapper: createWrapper(),
+    });
+    rerender("co1");
+    expect(mockSubscribeTeamEvents).toHaveBeenCalledOnce();
+    expect(unsubscribe).not.toHaveBeenCalled();
+    rerender("co2");
+    expect(mockSubscribeTeamEvents).toHaveBeenCalledTimes(2);
+    expect(unsubscribe).toHaveBeenCalledOnce();
+    unmount();
+    expect(unsubscribe).toHaveBeenCalledTimes(2);
+  });
+
   it("fetches on mount", async () => {
     const { result } = renderRoster();
 

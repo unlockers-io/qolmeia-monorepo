@@ -19,6 +19,7 @@ import { ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
+import { AssetImage } from "@/components/asset-image";
 import { ChatComposer } from "@/components/chat-composer";
 import { MarkdownResponse } from "@/components/markdown-response";
 import type { ChatMessage, UseFlueChatResult } from "@/lib/use-flue-chat";
@@ -128,8 +129,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
           }
           if (isUser) {
             return (
-              // oxlint-disable-next-line no-img-element
-              <img
+              <AssetImage
                 alt={part.filename ?? "Imagem"}
                 className="max-h-80 rounded-lg object-contain"
                 height={800}
@@ -147,8 +147,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
                 rel="noreferrer"
                 target="_blank"
               >
-                {/* oxlint-disable-next-line no-img-element */}
-                <img
+                <AssetImage
                   alt={part.filename ?? "Entrega do time"}
                   className="max-h-80 w-full object-contain"
                   height={800}

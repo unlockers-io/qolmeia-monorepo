@@ -18,6 +18,7 @@ import { CornerDownLeft, Paperclip, Square, X } from "lucide-react";
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent, SubmitEvent } from "react";
 import { useRef, useState } from "react";
 
+import { AssetImage } from "@/components/asset-image";
 import { apiSendForm } from "@/lib/api-client";
 
 type UploadState = "uploading" | "error" | "done";
@@ -205,8 +206,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
                   {attachment.state === "uploading" ? (
                     <Spinner />
                   ) : (
-                    // oxlint-disable-next-line no-img-element
-                    <img alt="" height={64} src={attachment.url} width={64} />
+                    <AssetImage alt="" height={64} src={attachment.url} width={64} />
                   )}
                 </AttachmentMedia>
                 <AttachmentContent>
