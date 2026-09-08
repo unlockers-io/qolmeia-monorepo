@@ -17,6 +17,7 @@ import { Eye, FileText, FolderOpen, Loader2, Music, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation";
 import { useReducer, useState } from "react";
 
+import { AssetImage } from "@/components/asset-image";
 import { AssetPreviewDialog } from "@/components/asset-preview-dialog";
 import type { WebChatAsset } from "@/lib/api-types";
 import { deleteAssets } from "@/lib/assets";
@@ -123,11 +124,12 @@ const galleryReducer = (state: GalleryState, action: GalleryAction): GalleryStat
 const AssetPreview = ({ asset }: { asset: WebChatAsset }) => {
   if (asset.mimeType.startsWith("image/")) {
     return (
-      // oxlint-disable-next-line no-img-element
-      <img
+      <AssetImage
         alt={asset.name}
         className="aspect-square w-full bg-muted object-cover"
+        height={800}
         src={asset.url}
+        width={800}
       />
     );
   }

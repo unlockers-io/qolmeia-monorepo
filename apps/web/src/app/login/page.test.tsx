@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { createLoginForm } from "./login-form";
+import { LoginFormView as LoginForm, type LoginFormDependencies } from "./login-form";
 
 const renderLoginForm = () => {
   const push = vi.fn();
@@ -9,28 +9,43 @@ const renderLoginForm = () => {
   const sendMagicLink = vi.fn(() => Promise.resolve({ error: null }));
   const showError = vi.fn();
   const signInEmail = vi.fn(() => Promise.resolve({ error: null }));
-  const LoginForm = createLoginForm({
-    sendMagicLink,
-    showError: (message) => {
-      showError(message);
-    },
-    signInEmail,
-    useAppRouter: () => ({
+  const dependencies: LoginFormDependencies = {
+    router: {
       push: (href) => {
         push(href);
       },
       refresh: () => {
         refresh();
       },
-    }),
-  });
+    },
+    sendMagicLink,
+    showError: (message) => {
+      showError(message);
+    },
+    signInEmail,
+  };
 
-  render(<LoginForm />);
+  render(<LoginForm dependencies={dependencies} />);
 
   return { push, refresh, sendMagicLink, showError, signInEmail };
 };
 
 describe("LoginForm", () => {
+  it.each(["password", "magicLink"])("cancels native navigation for %s submission", (method) => {
+    renderLoginForm();
+    if (method === "magicLink") {
+      fireEvent.click(screen.getByRole("button", { name: "Entrar com link mágico" }));
+    }
+    const label = method === "magicLink" ? "Enviar link mágico" : "Entrar";
+    const form = screen.getByRole("button", { name: label }).closest("form");
+    if (form === null) {
+      throw new Error("The login submit button must belong to its form");
+    }
+    const event = createEvent.submit(form);
+    fireEvent(form, event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it("defaults to e-mail and password login", () => {
     renderLoginForm();
     expect(screen.getByLabelText(/E-mail/v)).toBeInTheDocument();

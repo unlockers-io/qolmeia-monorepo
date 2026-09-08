@@ -1,13 +1,10 @@
 "use client";
 
 import { useFlueAgent } from "@flue/react";
-import {
-  createFlueClient,
-  type DeliveredAttachment,
-  type FlueConversationMessage,
-} from "@flue/sdk";
+import type { DeliveredAttachment, FlueConversationMessage } from "@flue/sdk";
 import type { FileUIPart } from "ai";
-import { useMemo } from "react";
+
+import { useFlueClient } from "./use-flue-client";
 
 type ChatMessage = FlueConversationMessage;
 
@@ -92,15 +89,7 @@ const toPromptImages = async (files: Array<FileUIPart>): Promise<Array<Delivered
 };
 
 const useConversation: UseConversation = ({ sessionToken, url }) => {
-  const client = useMemo(
-    () =>
-      createFlueClient({
-        fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
-        token: sessionToken === "" ? undefined : sessionToken,
-        url,
-      }),
-    [sessionToken, url],
-  );
+  const client = useFlueClient({ sessionToken, url });
 
   return useFlueAgent({ client, live: "sse" });
 };

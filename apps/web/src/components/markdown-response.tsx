@@ -5,12 +5,20 @@ import type { AnchorHTMLAttributes, ComponentProps, ImgHTMLAttributes } from "re
 import { memo } from "react";
 import { Streamdown } from "streamdown";
 
+import { AssetImage } from "@/components/asset-image";
+
 type ImgOverrideProps = ImgHTMLAttributes<HTMLImageElement> & { node?: unknown };
 
-const PlainImage = ({ alt, className, src }: ImgOverrideProps) => (
-  // oxlint-disable-next-line no-img-element
-  <img alt={alt ?? ""} className={cn("max-h-80 rounded-md object-contain", className)} src={src} />
-);
+const PlainImage = ({ alt, className, src }: ImgOverrideProps) =>
+  typeof src !== "string" || src === "" ? null : (
+    <AssetImage
+      alt={alt ?? ""}
+      className={cn("h-auto max-h-80 w-auto rounded-md object-contain", className)}
+      height={800}
+      src={src}
+      width={800}
+    />
+  );
 
 type AnchorOverrideProps = AnchorHTMLAttributes<HTMLAnchorElement> & { node?: unknown };
 

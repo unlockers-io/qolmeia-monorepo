@@ -63,4 +63,4 @@ const MarkerContent = ({ className, ...props }: ComponentProps<"span">) => (
   />
 );
 
-export { Marker, MarkerContent, MarkerIcon, markerVariants };
+export { Marker, MarkerContent, MarkerIcon };

@@ -12,6 +12,7 @@ import { buttonVariants } from "@repo/ui/lib/button-variants";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Loader2 } from "lucide-react";
 
+import { AssetImage } from "@/components/asset-image";
 import { MarkdownResponse } from "@/components/markdown-response";
 import type { WebChatAsset } from "@/lib/api-types";
 
@@ -90,8 +91,7 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
 
         <div className="max-h-[64vh] overflow-auto">
           {asset && isImage(asset.mimeType) ? (
-            // oxlint-disable-next-line no-img-element
-            <img
+            <AssetImage
               alt={asset.name}
               className="mx-auto max-h-[60vh] rounded-lg object-contain"
               height={800}

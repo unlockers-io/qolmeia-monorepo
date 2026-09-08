@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { AssetImage } from "@/components/asset-image";
 import {
   BRAND_CATEGORIES,
   BRAND_CATEGORY_LABEL,
@@ -216,12 +217,12 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
                 className="relative overflow-hidden rounded-lg border border-border bg-muted"
                 key={asset.id}
               >
-                {/* Asset URL is HMAC-signed by the Worker; a plain <img> is correct. */}
-                {/* oxlint-disable-next-line no-img-element */}
-                <img
+                <AssetImage
                   alt={asset.name ?? "Referência de marca"}
                   className="aspect-square w-full object-cover"
+                  height={800}
                   src={asset.url}
+                  width={800}
                 />
                 <Badge className="absolute top-1.5 left-1.5" variant="muted">
                   {BRAND_CATEGORY_LABEL[asset.category]}
