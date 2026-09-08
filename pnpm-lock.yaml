@@ -8,6 +8,10 @@ overrides:
   react: 19.2.8
   react-dom: 19.2.8
   '@hono/zod-openapi': 1.5.1
+  fast-uri: ^3.1.6
+  mysql2: ^3.23.1
+  nanoid: ^3.3.18
+  qs: ^6.16.0
 
 importers:
 
@@ -209,7 +213,7 @@ importers:
         version: 5.102.8(react@19.2.8)
       better-auth:
         specifier: ^1.7.2
-        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.15.3)(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
+        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.24.3(@types/node@26.4.1))(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
       lucide-react:
         specifier: ^1.40.0
         version: 1.40.0(react@19.2.8)
@@ -352,7 +356,7 @@ importers:
         version: 7.0.91(zod@4.5.4)
       better-auth:
         specifier: ^1.7.2
-        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.15.3)(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
+        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.24.3(@types/node@26.4.1))(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
       lucide-react:
         specifier: ^1.40.0
         version: 1.40.0(react@19.2.8)
@@ -422,7 +426,7 @@ importers:
         version: link:../worker-api
       better-auth:
         specifier: ^1.7.2
-        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.15.3)(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
+        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.24.3(@types/node@26.4.1))(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
     devDependencies:
       '@repo/config-vitest':
         specifier: workspace:*
@@ -456,7 +460,7 @@ importers:
         version: link:../transactional
       better-auth:
         specifier: ^1.7.2
-        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.15.3)(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
+        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.24.3(@types/node@26.4.1))(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
     devDependencies:
       '@repo/config-vitest':
         specifier: workspace:*
@@ -523,7 +527,7 @@ importers:
         version: 7.10.0
       '@prisma/client':
         specifier: ^7.10.0
-        version: 7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
+        version: 7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
     devDependencies:
       '@repo/config-vitest':
         specifier: workspace:*
@@ -539,7 +543,7 @@ importers:
         version: 17.4.2
       prisma:
         specifier: ^7.10.0
-        version: 7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
+        version: 7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
       tsdown:
         specifier: ^0.22.4
         version: 0.22.14(tsx@4.23.13)(typescript@7.0.2)
@@ -588,7 +592,7 @@ importers:
         version: 19.2.18
       better-auth:
         specifier: ^1.7.2
-        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.15.3)(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
+        version: 1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.24.3(@types/node@26.4.1))(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2))
       hono:
         specifier: ^4.13.5
         version: 4.13.5
@@ -4385,7 +4389,7 @@ packages:
       drizzle-kit: '>=0.31.4 || >=1.0.0-beta.1'
       drizzle-orm: ^0.45.2 || >=1.0.0-rc.1 <2.0.0
       mongodb: ^6.0.0 || ^7.0.0
-      mysql2: ^3.0.0
+      mysql2: ^3.23.1
       next: ^14.0.0 || ^15.0.0 || ^16.0.0
       pg: ^8.0.0
       prisma: ^5.0.0 || ^6.0.0 || ^7.0.0
@@ -4832,10 +4836,6 @@ packages:
   delaunator@5.1.0:
     resolution: {integrity: sha512-AGrQ4QSgssa1NGmWmLPqN5NY2KajF5MqxetNEO+o0n3ZwZZeTmt7bBnvzHWrmkZFxGgr4HdyFgelzgi06otLuQ==}
 
-  denque@2.1.0:
-    resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
-    engines: {node: '>=0.10'}
-
   depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
     engines: {node: '>= 0.8'}
@@ -5235,8 +5235,8 @@ packages:
   fast-sha256@1.3.0:
     resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
 
-  fast-uri@3.1.5:
-    resolution: {integrity: sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw==}
+  fast-uri@3.1.7:
+    resolution: {integrity: sha512-dOvZVzjdZdz7phd9v6jCbwxrBW3fK6n8Rc0CtdmM4bumzMnxywBYhuph6J819RRw/ku+rLbelwfMunktuzVVHg==}
 
   fastq@1.20.1:
     resolution: {integrity: sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw==}
@@ -6311,9 +6311,11 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  mysql2@3.15.3:
-    resolution: {integrity: sha512-FBrGau0IXmuqg4haEZRBfHNWB5mUARw6hNwPDXXGg0XzVJ50mr/9hb267lvpVMnhZ1FON3qNd4Xfcez1rbFwSg==}
+  mysql2@3.24.3:
+    resolution: {integrity: sha512-OKfWHkMAg9v06neq8FmSyhbxPQKABN9PAW5G9/bDTXzJBO5xXtkKL0V27vju7HQWk9UD4Od5BZsvCtBTB1CPEw==}
     engines: {node: '>= 8.0'}
+    peerDependencies:
+      '@types/node': '>= 8'
 
   named-placeholders@1.1.6:
     resolution: {integrity: sha512-Tz09sEL2EEuv5fFowm419c1+a/jSMiBjI9gHxVLrVdbUkkNUUfjsVYs9pVZu5oCon/kmRh9TfLEObFtkVxmY0w==}
@@ -6322,11 +6324,6 @@ packages:
   nanoid@3.3.18:
     resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
-  nanoid@5.1.16:
-    resolution: {integrity: sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ==}
-    engines: {node: ^18 || >=20}
     hasBin: true
 
   nanostores@1.5.2:
@@ -6819,8 +6816,8 @@ packages:
   pure-rand@6.1.0:
     resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
 
-  qs@6.15.3:
-    resolution: {integrity: sha512-O9gl3zCl5h5blw1KGUzQKhA5oUXSl8rwUIM5o0S3nCXMliSvy5Dzx7/DJcI+SwgICv+IneSZwhBh1oSyEHA71A==}
+  qs@6.16.0:
+    resolution: {integrity: sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA==}
     engines: {node: '>=0.6'}
 
   quansync@1.0.0:
@@ -7056,9 +7053,6 @@ packages:
     resolution: {integrity: sha512-1gnZf7DFcoIcajTjTwjwuDjzuz4PPcY2StKPlsGAQ1+YH20IRVrBaXSWmdjowTJ6u8Rc01PoYOGHXfP1mYcZNQ==}
     engines: {node: '>= 18'}
 
-  seq-queue@0.0.5:
-    resolution: {integrity: sha512-hr3Wtp/GZIc/6DAGPDcV4/9WoZhjrkXsi5B/07QgX8tsdc6ilr7BFM6PM6rbdAX1kFSDYeZGLipIZZKyQP0O5Q==}
-
   serve-static@2.2.1:
     resolution: {integrity: sha512-xRXBn0pPqQTVQiC8wyQrKs2MOlX24zQ0POGaj0kultvoOCstBQM5yvOhAVSUwOMjQtTvsPWoNCHfPGwaaQJhTw==}
     engines: {node: '>= 18'}
@@ -7171,9 +7165,9 @@ packages:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
 
-  sqlstring@2.3.3:
-    resolution: {integrity: sha512-qC9iz2FlN7DQl3+wjwn3802RTyjCx7sDvfQEXchwa6CWOx07/WVfh91gBmQ9fahw8snwGEWU3xGzOt4tFyHLxg==}
-    engines: {node: '>= 0.6'}
+  sql-escaper@1.5.1:
+    resolution: {integrity: sha512-4toX5E1fQbBrpfXidaHnF0669nkAdETeIPTs2SUjxxD7RRIs9ICG4gtpmfc68JCEKehsdwLFqBu9VlQqZ1P1gg==}
+    engines: {bun: '>=1.0.0', deno: '>=2.0.0', node: '>=12.0.0'}
 
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
@@ -8606,13 +8600,13 @@ snapshots:
       '@better-auth/core': 1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2)
       '@better-auth/utils': 0.4.2
 
-  '@better-auth/prisma-adapter@1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))':
+  '@better-auth/prisma-adapter@1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))':
     dependencies:
       '@better-auth/core': 1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2)
       '@better-auth/utils': 0.4.2
     optionalDependencies:
-      '@prisma/client': 7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
-      prisma: 7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
+      '@prisma/client': 7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
+      prisma: 7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
 
   '@better-auth/telemetry@1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)':
     dependencies:
@@ -9799,11 +9793,11 @@ snapshots:
 
   '@prisma/client-runtime-utils@7.10.0': {}
 
-  '@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)':
+  '@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)':
     dependencies:
       '@prisma/client-runtime-utils': 7.10.0
     optionalDependencies:
-      prisma: 7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
+      prisma: 7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
       typescript: 7.0.2
 
   '@prisma/config@7.10.0(magicast@0.5.4)':
@@ -10206,14 +10200,14 @@ snapshots:
 
   '@scalar/themes@0.17.4':
     dependencies:
-      nanoid: 5.1.16
+      nanoid: 3.3.18
 
   '@scalar/typebox@0.1.3': {}
 
   '@scalar/types@0.18.3':
     dependencies:
       '@scalar/helpers': 0.11.2
-      nanoid: 5.1.16
+      nanoid: 3.3.18
       type-fest: 5.9.0
       zod: 4.5.4
 
@@ -11075,7 +11069,7 @@ snapshots:
       cron-schedule: 6.0.0
       esbuild: 0.28.2
       mimetext: 3.0.28
-      nanoid: 5.1.16
+      nanoid: 3.3.18
       partyserver: 0.5.10(@cloudflare/workers-types@5.20260903.1)
       partysocket: 1.3.0(react@19.2.8)
       react: 19.2.8
@@ -11103,7 +11097,7 @@ snapshots:
       cron-schedule: 6.0.0
       esbuild: 0.28.2
       mimetext: 3.0.28
-      nanoid: 5.1.16
+      nanoid: 3.3.18
       partysocket: 1.3.0(react@19.2.8)
       yaml: 2.9.0
       zod: 4.5.4
@@ -11142,7 +11136,7 @@ snapshots:
   ajv@8.20.0:
     dependencies:
       fast-deep-equal: 3.1.3
-      fast-uri: 3.1.5
+      fast-uri: 3.1.7
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
@@ -11201,14 +11195,14 @@ snapshots:
 
   baseline-browser-mapping@2.11.20: {}
 
-  better-auth@1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.15.3)(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2)):
+  better-auth@1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.24.3(@types/node@26.4.1))(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2)):
     dependencies:
       '@better-auth/core': 1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2)
       '@better-auth/drizzle-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)
       '@better-auth/kysely-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(kysely@0.29.5)
       '@better-auth/memory-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)
       '@better-auth/mongo-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)
-      '@better-auth/prisma-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))
+      '@better-auth/prisma-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))
       '@better-auth/telemetry': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)
       '@better-auth/utils': 0.4.2
       '@better-fetch/fetch': 1.3.1
@@ -11221,11 +11215,11 @@ snapshots:
       nanostores: 1.5.2
       zod: 4.5.4
     optionalDependencies:
-      '@prisma/client': 7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
-      mysql2: 3.15.3
+      '@prisma/client': 7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
+      mysql2: 3.24.3(@types/node@26.4.1)
       next: 16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       pg: 8.23.0
-      prisma: 7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
+      prisma: 7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       vitest: 4.1.11(@opentelemetry/api@1.9.0)(@types/node@26.4.1)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1(@noble/hashes@2.3.0))(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
@@ -11234,14 +11228,14 @@ snapshots:
       - '@cloudflare/workers-types'
       - '@opentelemetry/api'
 
-  better-auth@1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.15.3)(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2)):
+  better-auth@1.7.2(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(mysql2@3.24.3(@types/node@26.4.1))(next@16.3.4(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(vitest@4.1.11)(vue@3.5.42(typescript@7.0.2)):
     dependencies:
       '@better-auth/core': 1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2)
       '@better-auth/drizzle-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)
       '@better-auth/kysely-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(kysely@0.29.5)
       '@better-auth/memory-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)
       '@better-auth/mongo-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)
-      '@better-auth/prisma-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@prisma/client@7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))
+      '@better-auth/prisma-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@prisma/client@7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2))(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))
       '@better-auth/telemetry': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@cloudflare/workers-types@5.20260903.1)(@opentelemetry/api@1.9.0)(better-call@1.4.0(zod@4.5.4))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.2))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)
       '@better-auth/utils': 0.4.2
       '@better-fetch/fetch': 1.3.1
@@ -11254,11 +11248,11 @@ snapshots:
       nanostores: 1.5.2
       zod: 4.5.4
     optionalDependencies:
-      '@prisma/client': 7.10.0(prisma@7.10.0(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
-      mysql2: 3.15.3
+      '@prisma/client': 7.10.0(prisma@7.10.0(@types/node@26.4.1)(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2))(typescript@7.0.2)
+      mysql2: 3.24.3(@types/node@26.4.1)
       next: 16.3.4(@babel/core@7.29.7)(@opentelemetry/api@1.9.0)(@playwright/test@1.62.1)(@types/node@26.4.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       pg: 8.23.0
-      prisma: 7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
+      prisma: 7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
       vitest: 4.1.11(@opentelemetry/api@1.9.0)(@types/node@26.4.1)(@vitest/coverage-v8@4.1.11)(jsdom@30.0.1(@noble/hashes@2.3.0))(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
@@ -11294,7 +11288,7 @@ snapshots:
       http-errors: 2.0.1
       iconv-lite: 0.7.3
       on-finished: 2.4.1
-      qs: 6.15.3
+      qs: 6.16.0
       raw-body: 3.0.2
       type-is: 2.1.0
     transitivePeerDependencies:
@@ -11619,8 +11613,6 @@ snapshots:
   delaunator@5.1.0:
     dependencies:
       robust-predicates: 3.0.3
-
-  denque@2.1.0: {}
 
   depd@2.0.0: {}
 
@@ -11996,7 +11988,7 @@ snapshots:
       once: 1.4.0
       parseurl: 1.3.3
       proxy-addr: 2.0.7
-      qs: 6.15.3
+      qs: 6.16.0
       range-parser: 1.3.0
       router: 2.2.0
       send: 1.2.1
@@ -12056,7 +12048,7 @@ snapshots:
 
   fast-sha256@1.3.0: {}
 
-  fast-uri@3.1.5: {}
+  fast-uri@3.1.7: {}
 
   fastq@1.20.1:
     dependencies:
@@ -13351,25 +13343,22 @@ snapshots:
 
   ms@2.1.3: {}
 
-  mysql2@3.15.3:
+  mysql2@3.24.3(@types/node@26.4.1):
     dependencies:
+      '@types/node': 26.4.1
       aws-ssl-profiles: 1.1.2
-      denque: 2.1.0
       generate-function: 2.3.1
       iconv-lite: 0.7.3
       long: 5.3.2
       lru.min: 1.1.4
       named-placeholders: 1.1.6
-      seq-queue: 0.0.5
-      sqlstring: 2.3.3
+      sql-escaper: 1.5.1
 
   named-placeholders@1.1.6:
     dependencies:
       lru.min: 1.1.4
 
   nanoid@3.3.18: {}
-
-  nanoid@5.1.16: {}
 
   nanostores@1.5.2: {}
 
@@ -13689,7 +13678,7 @@ snapshots:
   partyserver@0.5.10(@cloudflare/workers-types@5.20260903.1):
     dependencies:
       '@cloudflare/workers-types': 5.20260903.1
-      nanoid: 5.1.16
+      nanoid: 3.3.18
 
   partysocket@1.3.0(react@19.2.8):
     dependencies:
@@ -13843,17 +13832,18 @@ snapshots:
     dependencies:
       parse-ms: 4.0.0
 
-  prisma@7.10.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2):
+  prisma@7.10.0(@types/node@26.4.1)(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2):
     dependencies:
       '@prisma/config': 7.10.0(magicast@0.5.4)
       '@prisma/dev': 0.24.17(typescript@7.0.2)
       '@prisma/engines': 7.10.0
       '@prisma/studio-core': 0.33.0(@types/react-dom@19.2.6(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      mysql2: 3.15.3
+      mysql2: 3.24.3(@types/node@26.4.1)
       postgres: 3.4.7
     optionalDependencies:
       typescript: 7.0.2
     transitivePeerDependencies:
+      - '@types/node'
       - '@types/react'
       - '@types/react-dom'
       - magicast
@@ -13898,7 +13888,7 @@ snapshots:
 
   pure-rand@6.1.0: {}
 
-  qs@6.15.3:
+  qs@6.16.0:
     dependencies:
       es-define-property: 1.0.1
       side-channel: 1.1.1
@@ -13919,7 +13909,7 @@ snapshots:
       aria-hidden: 1.2.6
       defu: 6.1.7
       fast-deep-equal: 3.1.3
-      nanoid: 5.1.16
+      nanoid: 3.3.18
       vue: 3.5.42(typescript@7.0.2)
     transitivePeerDependencies:
       - '@vue/composition-api'
@@ -14232,8 +14222,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  seq-queue@0.0.5: {}
-
   serve-static@2.2.1:
     dependencies:
       encodeurl: 2.0.0
@@ -14453,7 +14441,7 @@ snapshots:
 
   split2@4.2.0: {}
 
-  sqlstring@2.3.3: {}
+  sql-escaper@1.5.1: {}
 
   stackback@0.0.2: {}
 
