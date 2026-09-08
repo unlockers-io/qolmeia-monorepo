@@ -57,19 +57,19 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 
 ### Packages
 
-| Package                   | Purpose                                                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `@repo/auth`              | `createAuth` factory wrapping Better Auth (magic-link + email/password). Consumed by `api`, `backoffice`, `web`. |
-| `@repo/db`                | Prisma schema plus Node and Cloudflare Worker client entry points.                                               |
-| `@repo/transactional`     | React Email templates + Resend sender.                                                                           |
-| `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the two Next apps.                                    |
-| `@repo/config-vitest`     | Shared Vitest config.                                                                                            |
-| `@repo/typescript-config` | Shared tsconfig bases.                                                                                           |
+| Package                   | Purpose                                                                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `@repo/auth`              | `createAuth` factory wrapping Better Auth (magic-link + email/password). Consumed by `api`, `backoffice`, `web`.             |
+| `@repo/db`                | Prisma schema plus Node and Cloudflare Worker client entry points.                                                           |
+| `@repo/transactional`     | React Email templates + Resend sender.                                                                                       |
+| `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the two Next apps.                                                |
+| `@repo/config-vitest`     | Shared Vitest config.                                                                                                        |
+| `@repo/typescript-config` | Shared tsconfig bases.                                                                                                       |
 | `@repo/app-shell`         | Next-side auth/session glue shared by `web` and `backoffice`: `./auth-client`, `./auth-server`, `./session`, `./agents-url`. |
-| `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`, `./internal`). |
-| `@repo/internal-auth`     | Constant-time bearer-token check guarding Worker-to-service internal routes.                                     |
-| `@repo/observability`     | Structured logging. Exports `./client`, `./fields`, `./next`, `./next/instrumentation`, `./hono`.                |
-| `@repo/portless-env`      | `applyPortlessUrls`: fills dev URL env vars from `portless get`.                                                 |
+| `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`, `./internal`).             |
+| `@repo/internal-auth`     | Constant-time bearer-token check guarding Worker-to-service internal routes.                                                 |
+| `@repo/observability`     | Structured logging. Exports `./client`, `./fields`, `./next`, `./next/instrumentation`, `./hono`.                            |
+| `@repo/portless-env`      | `applyPortlessUrls`: fills dev URL env vars from `portless get`.                                                             |
 
 ### The canonical E2E flow
 
