@@ -51,7 +51,12 @@ const fetchMe = async (request: Request, env: Env): Promise<MeFetch> => {
   const token = bearerToken ?? tokenParam;
   const orgId = readOrgId(request);
 
-  type HeadersContract = Record<string, string>;
+  type HeadersContract = {
+    Accept: string;
+    Authorization?: string;
+    Cookie?: string;
+    "X-Org-Id"?: string;
+  };
 
   const headers: HeadersContract = { Accept: "application/json" };
   if (token !== null && token !== "") {
