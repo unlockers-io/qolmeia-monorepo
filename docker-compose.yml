@@ -10,7 +10,8 @@ services:
       POSTGRES_PASSWORD: qolmeia123
       POSTGRES_DB: qolmeia
     ports:
-      - "5436:5432"
+      # Loopback-bound: an unqualified mapping publishes these dev credentials on every host interface.
+      - "127.0.0.1:5436:5432"
     volumes:
       # Postgres 18 expects the mount at /var/lib/postgresql (major-version
       # subdir lives inside). See docker-library/postgres#1259.
