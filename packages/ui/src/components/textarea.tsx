@@ -15,8 +15,8 @@ const Textarea = ({
       "disabled:cursor-not-allowed disabled:opacity-50",
       "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
       "dark:bg-input/30",
-      variant === "code" && "font-mono text-[0.8125rem]",
-      variant === "prompt" && "text-[0.84375rem] leading-relaxed",
+      variant === "code" && "font-mono text-(length:--text-label)",
+      variant === "prompt" && "text-(length:--text-label-lg) leading-relaxed",
       className,
     )}
     data-slot="textarea"

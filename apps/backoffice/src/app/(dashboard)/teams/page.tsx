@@ -52,7 +52,7 @@ const TeamsContent = async () => {
             <div className="flex items-center gap-3 border-b border-border px-5 py-4">
               <span
                 aria-hidden
-                className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-avatar-7 font-display text-sm font-bold text-white"
+                className="flex size-10 shrink-0 items-center justify-center rounded-panel bg-avatar-7 font-display text-sm font-bold text-white"
               >
                 {agentInitials(company.name)}
               </span>
@@ -80,13 +80,13 @@ const TeamsContent = async () => {
                     <span
                       aria-hidden
                       className={cn(
-                        "flex size-[30px] shrink-0 items-center justify-center rounded-lg font-display text-xs font-bold text-white",
+                        "flex size-7.5 shrink-0 items-center justify-center rounded-lg font-display text-xs font-bold text-white",
                         agentAvatarClass(m.role, m.workerKind),
                       )}
                     >
                       {agentInitials(m.displayName)}
                     </span>
-                    <span className="flex-1 truncate text-[0.84375rem] font-semibold text-foreground">
+                    <span className="flex-1 truncate text-(length:--text-label-lg) font-semibold text-foreground">
                       {memberRoleLabel(m)}
                     </span>
                     <StatusPill

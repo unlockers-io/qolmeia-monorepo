@@ -54,7 +54,7 @@ const PromptEditor = ({
 
       <Field>
         <Textarea
-          className="min-h-[150px] resize-y"
+          className="min-h-37.5 resize-y"
           disabled={busy}
           id="prompt-editor"
           onChange={(e) => {

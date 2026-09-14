@@ -63,7 +63,7 @@ const AgentCard = ({ member, variant }: AgentCardProps) => {
       <span
         aria-hidden
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-[10px] font-display font-bold text-white",
+          "flex shrink-0 items-center justify-center rounded-panel font-display font-bold text-white",
           avatarClass(member),
           detailed ? "size-11 text-base" : "size-10 text-sm",
         )}

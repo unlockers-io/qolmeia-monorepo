@@ -33,7 +33,7 @@ const TicketsContent = async () => {
           />
         ) : (
           <div>
-            <div className="hidden grid-cols-[1fr_9rem_8.5rem_11rem_6rem] gap-3 border-b border-border bg-muted/40 px-6 py-3 font-mono text-[0.65625rem] tracking-wide text-muted-foreground uppercase md:grid">
+            <div className="hidden grid-cols-tickets gap-3 border-b border-border bg-muted/40 px-6 py-3 font-mono text-(length:--text-micro-lg) tracking-wide text-muted-foreground uppercase md:grid">
               <span>Entregável</span>
               <span>Empresa</span>
               <span>Agente</span>
@@ -44,7 +44,7 @@ const TicketsContent = async () => {
               {res.items.map((ticket) => (
                 <li key={ticket.id}>
                   <Link
-                    className="grid gap-3 border-b border-border/60 px-4 py-4 transition-colors last:border-b-0 hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none sm:grid-cols-2 md:grid-cols-[1fr_9rem_8.5rem_11rem_6rem] md:items-center md:px-6 md:py-3.5"
+                    className="grid gap-3 border-b border-border/60 px-4 py-4 transition-colors last:border-b-0 hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none sm:grid-cols-2 md:grid-cols-tickets md:items-center md:px-6 md:py-3.5"
                     href={`/tickets/${ticket.id}`}
                   >
                     <div className="min-w-0 sm:col-span-2 md:col-span-1">
@@ -57,7 +57,7 @@ const TicketsContent = async () => {
                       <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
                         Empresa
                       </span>
-                      <span className="block truncate text-[0.8125rem] text-foreground/70">
+                      <span className="block truncate text-(length:--text-label) text-foreground/70">
                         {ticket.companyName}
                       </span>
                     </div>
@@ -68,11 +68,11 @@ const TicketsContent = async () => {
                       <div className="flex items-center gap-2">
                         <span
                           aria-hidden
-                          className="flex size-6 shrink-0 items-center justify-center rounded-[7px] bg-avatar-1 text-[0.625rem] font-bold text-white"
+                          className="flex size-6 shrink-0 items-center justify-center rounded-cell bg-avatar-1 text-(length:--text-micro) font-bold text-white"
                         >
                           {monogramOf(ticket.agentInstanceId)}
                         </span>
-                        <span className="truncate text-[0.8125rem] text-foreground/70">
+                        <span className="truncate text-(length:--text-label) text-foreground/70">
                           {ticket.agentInstanceId}
                         </span>
                       </div>

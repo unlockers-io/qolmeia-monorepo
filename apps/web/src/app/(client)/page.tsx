@@ -71,7 +71,7 @@ const ChatContent = async () => {
       companyId,
     );
     return (
-      <div className="flex h-[calc(100vh-3.5rem)] min-h-0 flex-col bg-background">
+      <div className="flex h-chat min-h-0 flex-col bg-background">
         <div className="min-h-0 flex-1 overflow-hidden">
           <Chat agent="planner" agentsUrl={AGENTS_URL} companyId={companyId} sessionToken={token} />
         </div>
@@ -86,7 +86,7 @@ const ChatContent = async () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] min-h-0 flex-1 bg-background">
+    <div className="flex h-chat min-h-0 flex-1 bg-background">
       <div className="flex min-w-0 flex-1 flex-col">
         <Chat
           agent="correspondent"
@@ -103,7 +103,7 @@ const ChatContent = async () => {
 };
 
 const ChatSkeleton = () => (
-  <div aria-hidden className="flex h-[calc(100vh-3.5rem)] min-h-0 flex-col gap-4 bg-background p-6">
+  <div aria-hidden className="flex h-chat min-h-0 flex-col gap-4 bg-background p-6">
     <Skeleton className="h-6 w-40" />
     <Skeleton className="min-h-0 flex-1" />
     <Skeleton className="h-12 w-full" />

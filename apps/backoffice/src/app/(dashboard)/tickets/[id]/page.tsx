@@ -79,7 +79,7 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
         <StatusPill status={ticket.status} />
       </header>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid items-start gap-4 lg:grid-cols-ticket-detail">
         <div className="flex flex-col gap-4">
           <Card>
             <CardContent>
@@ -104,7 +104,7 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
                             aria-hidden
                             className={cn("size-4 shrink-0 rounded-full border-2", STEP_DOT[tone])}
                           />
-                          {!isLast && <span className="min-h-[18px] w-0.5 flex-1 bg-border" />}
+                          {!isLast && <span className="min-h-4.5 w-0.5 flex-1 bg-border" />}
                         </div>
                         <div className={cn("pb-4", isLast && "pb-0")}>
                           <div className="text-sm leading-snug font-medium text-foreground">
@@ -148,7 +148,7 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
             <div className="mb-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
               Detalhes
             </div>
-            <div className="flex flex-col gap-2.5 text-[0.8125rem]">
+            <div className="flex flex-col gap-2.5 text-(length:--text-label)">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Empresa</span>
                 <span className="truncate font-semibold text-foreground">{ticket.companyId}</span>
@@ -187,7 +187,7 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
                   href={`/approvals/${relatedAction.id}`}
                 >
                   <span aria-hidden className="size-2 shrink-0 rounded-full bg-warning" />
-                  <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold text-foreground">
+                  <span className="min-w-0 flex-1 truncate text-(length:--text-label) font-semibold text-foreground">
                     {relatedAction.actionType}
                   </span>
                   <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />

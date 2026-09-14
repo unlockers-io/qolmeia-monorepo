@@ -16,7 +16,7 @@ const NavSkeleton = () => (
     className="sticky top-0 z-10 flex h-24 shrink-0 items-start justify-between gap-3 border-b border-border bg-card px-4 pt-4 md:h-14 md:items-center md:px-5 md:pt-0"
   >
     <Skeleton className="h-6 w-32" />
-    <Skeleton className="size-[30px]" />
+    <Skeleton className="size-7.5" />
   </div>
 );
 

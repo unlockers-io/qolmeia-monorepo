@@ -11,7 +11,7 @@ const NotFound = () => (
     <p className="font-display text-8xl font-semibold tracking-tight">404</p>
     <div className="flex flex-col gap-2">
       <h1 className="font-display text-2xl font-semibold tracking-tight">Página não encontrada</h1>
-      <p className="max-w-[56ch] text-base text-pretty text-muted-foreground">
+      <p className="max-w-(--container-measure-footer) text-base text-pretty text-muted-foreground">
         A página que você está procurando não existe ou foi movida.
       </p>
     </div>

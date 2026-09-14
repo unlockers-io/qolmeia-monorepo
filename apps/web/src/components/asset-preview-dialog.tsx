@@ -83,17 +83,17 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
       }}
       open={asset !== null}
     >
-      <DialogContent className="max-h-[85vh] max-w-2xl gap-4 overflow-hidden">
+      <DialogContent className="max-h-(--layout-max-h-dialog-viewport) max-w-2xl gap-4 overflow-hidden">
         <DialogHeader>
           <DialogTitle className="truncate pr-8">{asset?.name ?? "Arquivo"}</DialogTitle>
           <DialogDescription className="sr-only">Pré-visualização do arquivo</DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[64vh] overflow-auto">
+        <div className="max-h-dialog-body overflow-auto">
           {asset && isImage(asset.mimeType) ? (
             <AssetImage
               alt={asset.name}
-              className="mx-auto max-h-[60vh] rounded-lg object-contain"
+              className="mx-auto max-h-popover-viewport rounded-lg object-contain"
               height={800}
               src={asset.url}
               width={1200}

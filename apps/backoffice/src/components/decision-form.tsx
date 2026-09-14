@@ -130,7 +130,7 @@ const DecisionForm = ({ actionId }: DecisionFormProps) => {
               <span
                 aria-hidden
                 className={cn(
-                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors",
+                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-(length:--decision-border-width) transition-colors",
                   selected ? "border-primary" : "border-input",
                 )}
               >

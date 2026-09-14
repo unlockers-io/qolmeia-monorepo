@@ -119,7 +119,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
     return (
       <div className="w-full max-w-xs">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Verifique seu e-mail</h2>
-        <p className="mt-3 max-w-[56ch] text-base text-pretty text-muted-foreground sm:text-sm">
+        <p className="mt-3 max-w-(--container-measure-footer) text-base text-pretty text-muted-foreground sm:text-sm">
           Enviamos um link mágico para você. Abra o e-mail e clique no link para entrar.
         </p>
         <Button
@@ -139,7 +139,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
   return (
     <div className="w-full max-w-xs">
       <h2 className="font-display text-2xl font-semibold tracking-tight">Entrar</h2>
-      <p className="mt-3 max-w-[56ch] text-base text-pretty text-muted-foreground sm:text-sm">
+      <p className="mt-3 max-w-(--container-measure-footer) text-base text-pretty text-muted-foreground sm:text-sm">
         {isMagicLink
           ? "Digite seu e-mail para receber um link mágico de acesso."
           : "Digite seu e-mail e sua senha para entrar."}

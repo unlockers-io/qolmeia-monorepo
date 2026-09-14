@@ -150,7 +150,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
         <span
           aria-hidden
           className={cn(
-            "flex size-14 shrink-0 items-center justify-center rounded-[13px] font-display text-xl font-bold text-white",
+            "flex size-14 shrink-0 items-center justify-center rounded-member-card font-display text-xl font-bold text-white",
             avatarClass(member),
           )}
         >
@@ -184,7 +184,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardContent>
-            <div className="text-[0.78125rem] text-muted-foreground">Entregas</div>
+            <div className="text-(length:--text-label-sm) text-muted-foreground">Entregas</div>
             <div className="mt-1.5 font-display text-2xl font-bold tracking-tight text-foreground">
               {member.lifetimeDone}
             </div>
@@ -192,7 +192,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
         </Card>
         <Card>
           <CardContent>
-            <div className="text-[0.78125rem] text-muted-foreground">Em andamento</div>
+            <div className="text-(length:--text-label-sm) text-muted-foreground">Em andamento</div>
             <div className="mt-1.5 font-display text-2xl font-bold tracking-tight text-foreground">
               {member.currentWork.length}
             </div>
@@ -200,7 +200,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
         </Card>
         <Card>
           <CardContent>
-            <div className="text-[0.78125rem] text-muted-foreground">No time desde</div>
+            <div className="text-(length:--text-label-sm) text-muted-foreground">No time desde</div>
             <div className="mt-1.5 font-display text-2xl font-bold tracking-tight text-foreground">
               {memberSince}
             </div>

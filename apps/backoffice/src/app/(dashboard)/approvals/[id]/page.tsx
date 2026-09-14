@@ -62,7 +62,7 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
       <header className="flex flex-wrap items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-[1.625rem]">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-(length:--text-heading)">
               Revisar ação
             </h1>
             <span className="font-mono text-xs text-muted-foreground">{action.id}</span>
@@ -77,7 +77,7 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
         <StatusPill status={action.status} />
       </header>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[1.25fr_1fr]">
+      <div className="grid items-start gap-4 lg:grid-cols-approval">
         <div className="flex flex-col gap-4">
           {TypedRenderer ? (
             createElement(TypedRenderer, { proposed: action.proposed })

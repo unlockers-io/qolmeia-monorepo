@@ -64,7 +64,7 @@ const ApprovalsContent = async () => {
           />
         ) : (
           <div>
-            <div className="grid grid-cols-[1fr_180px_150px_110px_92px] items-center gap-3 border-b border-border bg-secondary/40 px-5 py-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
+            <div className="grid grid-cols-approvals items-center gap-3 border-b border-border bg-secondary/40 px-5 py-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
               <span>Ação</span>
               <span>Empresa</span>
               <span>Agente</span>
@@ -76,7 +76,7 @@ const ApprovalsContent = async () => {
                 const preview = proposedSummary(action.proposed);
                 return (
                   <li
-                    className="grid grid-cols-[1fr_180px_150px_110px_92px] items-center gap-3 border-b border-border/60 px-5 py-3.5 last:border-b-0"
+                    className="grid grid-cols-approvals items-center gap-3 border-b border-border/60 px-5 py-3.5 last:border-b-0"
                     key={action.id}
                   >
                     <div className="flex min-w-0 items-center gap-2.5">

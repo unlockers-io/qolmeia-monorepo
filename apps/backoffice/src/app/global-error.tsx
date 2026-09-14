@@ -4,60 +4,12 @@ import { useEffect, useRef } from "react";
 
 import { log } from "@/lib/observability-client";
 
+import styles from "./global-error.module.css";
+
 type GlobalErrorProps = {
   error: Error & { digest?: string };
   reset: () => void;
 };
-
-const styles = {
-  body: {
-    alignItems: "center",
-    backgroundColor: "#ffffff",
-    color: "#0a0a0a",
-    display: "flex",
-    fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-    justifyContent: "center",
-    margin: 0,
-    minHeight: "100vh",
-    padding: "1.5rem",
-  },
-  button: {
-    backgroundColor: "#0a0a0a",
-    border: "none",
-    borderRadius: "0.5rem",
-    color: "#fafafa",
-    cursor: "pointer",
-    fontSize: "0.875rem",
-    fontWeight: 500,
-    minHeight: "2.75rem",
-    padding: "0.625rem 1.25rem",
-  },
-  digest: {
-    color: "#71717a",
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-    fontSize: "0.75rem",
-    margin: 0,
-  },
-  heading: {
-    fontSize: "1.5rem",
-    fontWeight: 600,
-    margin: 0,
-  },
-  main: {
-    alignItems: "center",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1.5rem",
-    maxWidth: "28rem",
-    textAlign: "center",
-  },
-  text: {
-    color: "#52525b",
-    fontSize: "0.875rem",
-    lineHeight: 1.6,
-    margin: 0,
-  },
-} as const;
 
 const GlobalError = ({ error, reset }: GlobalErrorProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -68,20 +20,22 @@ const GlobalError = ({ error, reset }: GlobalErrorProps) => {
   }, [error]);
 
   return (
-    <html lang="pt-BR" style={{ colorScheme: "light" }}>
-      <body style={styles.body}>
-        <main id="main-content" style={styles.main}>
-          <h1 ref={headingRef} style={styles.heading} tabIndex={-1}>
+    <html className={styles.htmlStyle1} lang="pt-BR">
+      <body className={styles.body}>
+        <main className={styles.main} id="main-content">
+          <h1 className={styles.heading} ref={headingRef} tabIndex={-1}>
             Algo deu errado
           </h1>
-          <p style={styles.text}>
+          <p className={styles.text}>
             O aplicativo parou de funcionar inesperadamente. Tente novamente e, se o problema
             continuar, recarregue a página ou volte em alguns minutos.
           </p>
-          <button onClick={reset} style={styles.button} type="button">
+          <button className={styles.button} onClick={reset} type="button">
             Tentar novamente
           </button>
-          {error.digest !== undefined && <p style={styles.digest}>Referência: {error.digest}</p>}
+          {error.digest !== undefined && (
+            <p className={styles.digest}>Referência: {error.digest}</p>
+          )}
         </main>
       </body>
     </html>
