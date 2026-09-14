@@ -18,7 +18,7 @@
     "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/worker-api": "workspace:*",
-    "better-auth": "^1.7.2"
+    "better-auth": "^1.7.3"
   },
   "devDependencies": {
     "@repo/config-vitest": "workspace:*",
