@@ -4,13 +4,22 @@ import { cn } from "../lib/utils";
 
 const Card = ({
   className,
+  selected = false,
   size = "default",
+  variant = "default",
   ...props
-}: ComponentProps<"div"> & { size?: "default" | "sm" }) => {
+}: ComponentProps<"div"> & {
+  selected?: boolean;
+  size?: "default" | "sm";
+  variant?: "default" | "interactive" | "selectable";
+}) => {
   return (
     <div
       className={cn(
         "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        variant === "interactive" && "transition-colors hover:border-input",
+        variant === "selectable" && "transition-shadow",
+        variant === "selectable" && (selected ? "ring-2 ring-primary" : "hover:shadow-sm"),
         className,
       )}
       data-size={size}

@@ -28,6 +28,7 @@
     "@next/playwright": "^16.3.4",
     "@playwright/test": "^1.63.0",
     "@repo/db": "workspace:*",
+    "@shadcn/lint": "0.1.0",
     "fallow": "^3.24.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.5.0",

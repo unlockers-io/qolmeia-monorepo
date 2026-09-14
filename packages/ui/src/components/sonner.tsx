@@ -12,7 +12,7 @@ const TOASTER_STYLE: ToasterStyle = {
 };
 
 const Toaster = (props: ToasterProps) => (
-  <Sonner className="toaster group" style={TOASTER_STYLE} {...props} />
+  <Sonner className="group" style={TOASTER_STYLE} {...props} />
 );
 
 export { Toaster };

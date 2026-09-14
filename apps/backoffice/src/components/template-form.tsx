@@ -264,7 +264,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
             <Field>
               <FieldLabel htmlFor="systemPrompt">Prompt do sistema</FieldLabel>
               <Textarea
-                className="min-h-40 font-mono text-[0.8125rem]"
+                className="min-h-40"
                 disabled={busy}
                 id="systemPrompt"
                 name="systemPrompt"
@@ -272,6 +272,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   setField("systemPrompt", e.target.value);
                 }}
                 value={values.systemPrompt}
+                variant="code"
               />
               <FieldError errors={fieldError(errors.systemPrompt)} />
             </Field>
@@ -337,7 +338,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                 Objeto {`{ tipoDeAção: política }`}. Vazio = nenhuma política.
               </FieldDescription>
               <Textarea
-                className="min-h-28 font-mono text-[0.8125rem]"
+                className="min-h-28"
                 disabled={busy}
                 id={policiesFieldId}
                 name="defaultPolicies"
@@ -346,6 +347,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                 }}
                 spellCheck={false}
                 value={values.defaultPolicies}
+                variant="code"
               />
               <FieldError errors={fieldError(errors.defaultPolicies)} />
             </Field>

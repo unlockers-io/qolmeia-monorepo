@@ -198,7 +198,7 @@ const ChatSkeleton = () => (
 const PlannerGreeting = ({ scrollAnchor }: { scrollAnchor: boolean }) => (
   <MessageScrollerItem messageId="planner-greeting" scrollAnchor={scrollAnchor}>
     <Message align="start">
-      <MessageAvatar className="size-7 self-end rounded-lg bg-avatar-1 text-xs font-bold text-white">
+      <MessageAvatar className="size-7 self-end" variant="assistant">
         C
       </MessageAvatar>
       <MessageContent>
@@ -286,7 +286,7 @@ const ChatView = ({
                     >
                       <Message align={message.role === "user" ? "end" : "start"}>
                         {message.role === "user" ? null : (
-                          <MessageAvatar className="size-7 self-end rounded-lg bg-avatar-1 text-xs font-bold text-white">
+                          <MessageAvatar className="size-7 self-end" variant="assistant">
                             C
                           </MessageAvatar>
                         )}
@@ -313,7 +313,7 @@ const ChatView = ({
               ) : null}
 
               {status === "error" ? (
-                <Marker className="pl-9 text-destructive">
+                <Marker className="pl-9" variant="destructive">
                   <MarkerIcon>
                     <TriangleAlert aria-hidden />
                   </MarkerIcon>

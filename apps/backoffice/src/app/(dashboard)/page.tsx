@@ -54,12 +54,7 @@ type StatCardProps = {
 const StatCard = ({ accent, href, label, sub, value }: StatCardProps) => {
   const hasHref = href !== undefined && href !== "";
   const body = (
-    <Card
-      className={cn(
-        "gap-0 px-5 py-4",
-        hasHref ? "transition-colors hover:border-input" : undefined,
-      )}
-    >
+    <Card className="gap-0 px-5 py-4" variant={hasHref ? "interactive" : "default"}>
       <p className="text-[0.8125rem] text-muted-foreground">{label}</p>
       <p
         className={cn(

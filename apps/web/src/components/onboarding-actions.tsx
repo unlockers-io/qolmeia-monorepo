@@ -123,11 +123,12 @@ const OnboardingActions = ({
             {selected.size} de {templates.length} selecionado{templates.length === 1 ? "" : "s"}
           </span>
           <Button
-            className="rounded-lg"
+            className=""
             disabled={submitting || selected.size === 0}
             onClick={() => {
               void handleConfirm();
             }}
+            rounded
             size="lg"
             type="button"
           >

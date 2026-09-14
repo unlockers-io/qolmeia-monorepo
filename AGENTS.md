@@ -141,3 +141,7 @@ App configs resolve those URLs through `@repo/portless-env` rather than hardcodi
 - Operator REST lives at `apps/agents/api/backoffice/*` (OWNER/STAFF only). Customer REST at `apps/agents/api/me/*` and `apps/agents/api/teams/*`.
 - Agent paths at `/agents/<name>/<companyId>` are gated to CUSTOMER role. Operators don't open WebSockets to a DO; they call REST.
 - Turbo caches: be conscious that `apps/agents` reads `wrangler.jsonc` vars at build time.
+
+## Design-system linting
+
+Run `pnpm lint` after changes and fix every error. `oxlint.config.ts` registers `@shadcn/lint` and enforces component contracts, known Tailwind classes, and readable component class names. Use component variants for appearance and layout classes at call sites. The config lists the primitive directories that own their internal styles; unknown-class checking stays enabled there. Keep theme discovery local to each app. Exact class-merging fixture allowances apply only to the named test files.
