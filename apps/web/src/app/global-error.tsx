@@ -20,7 +20,7 @@ const GlobalError = ({ error, reset }: GlobalErrorProps) => {
   }, [error]);
 
   return (
-    <html className={styles.htmlStyle1} lang="pt-BR">
+    <html className={styles.document} lang="pt-BR">
       <body className={styles.body}>
         <main className={styles.main} id="main-content">
           <h1 className={styles.heading} ref={headingRef} tabIndex={-1}>

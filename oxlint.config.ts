@@ -6,13 +6,6 @@ export default defineConfig({
   jsPlugins: ["@shadcn/lint"],
   overrides: [
     {
-      files: ["packages/ui/src/components/**"],
-      rules: {
-        "shadcn/no-restyle": "off",
-        "shadcn/require-static-classes": "off",
-      },
-    },
-    {
       files: ["packages/ui/src/lib/utils.test.ts"],
       rules: {
         "shadcn/no-unknown-classes": [

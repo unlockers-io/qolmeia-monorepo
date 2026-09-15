@@ -1,7 +1,3 @@
-.document {
-  color-scheme: light dark;
-}
-
 .body {
   align-items: center;
   background-color: #ffffff;
@@ -62,6 +58,6 @@
   margin: 0;
 }
 
-.htmlStyle1 {
+.document {
   color-scheme: light;
 }
