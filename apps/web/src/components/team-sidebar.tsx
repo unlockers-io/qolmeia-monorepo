@@ -14,7 +14,7 @@ const TeamSidebar = ({ companyId }: TeamSidebarProps) => {
   return (
     <aside
       aria-label="Seu time"
-      className="hidden w-[300px] flex-col gap-2.5 border-l border-border bg-card p-[18px] lg:flex"
+      className="hidden w-75 flex-col gap-2.5 border-l border-border bg-card p-4.5 lg:flex"
     >
       <h2 className="mb-0.5 text-sm font-semibold">Seu Time</h2>
       {status === "loading" && members.length === 0 && (
@@ -25,13 +25,13 @@ const TeamSidebar = ({ companyId }: TeamSidebarProps) => {
       )}
       <ul className="flex flex-col gap-2.5">
         {members.map((m) => (
-          <li className="rounded-[10px] border border-border bg-card px-3.5 py-3" key={m.id}>
+          <li className="rounded-panel border border-border bg-card px-3.5 py-3" key={m.id}>
             <AgentCard member={m} variant="compact" />
           </li>
         ))}
       </ul>
       <Link
-        className="mt-auto inline-flex items-center justify-center gap-1 rounded-[10px] border border-dashed border-input px-3 py-3 text-center text-sm font-semibold text-primary transition-colors hover:bg-highlight-surface"
+        className="mt-auto inline-flex items-center justify-center gap-1 rounded-panel border border-dashed border-input px-3 py-3 text-center text-sm font-semibold text-primary transition-colors hover:bg-highlight-surface"
         href="/empresa"
       >
         + Contratar mais agentes

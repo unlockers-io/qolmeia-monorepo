@@ -75,7 +75,7 @@ const PublishPostCard = ({ proposed }: PublishPostCardProps) => {
       <div className="flex items-center gap-2.5 border-b border-border/60 px-4 py-3.5">
         <div
           aria-hidden
-          className="flex size-7 items-center justify-center rounded-[10px] bg-destructive-surface text-xs font-bold text-destructive-surface-foreground"
+          className="flex size-7 items-center justify-center rounded-panel bg-destructive-surface text-xs font-bold text-destructive-surface-foreground"
         >
           {platformAbbr}
         </div>
@@ -90,7 +90,7 @@ const PublishPostCard = ({ proposed }: PublishPostCardProps) => {
 
       <div
         aria-label="Pré-visualização da arte gerada pelo Designer"
-        className="flex h-[320px] items-center justify-center bg-[repeating-linear-gradient(45deg,var(--color-muted),var(--color-muted)_13px,var(--color-secondary)_13px,var(--color-secondary)_26px)]"
+        className="flex h-80 items-center justify-center publish-placeholder-surface"
       >
         <span className="rounded-md border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
           arte gerada pelo Designer
@@ -124,8 +124,7 @@ const PublishPostCard = ({ proposed }: PublishPostCardProps) => {
         <div className="flex items-center gap-2 border-t border-border/60 pt-3">
           <div
             aria-hidden
-            className="flex size-[22px] items-center justify-center rounded-[6px] text-xs font-bold text-white"
-            style={{ background: "var(--color-avatar-2)" }}
+            className="flex size-5.5 items-center justify-center rounded-control-inset text-xs font-bold text-white publish-avatar"
           >
             DE
           </div>

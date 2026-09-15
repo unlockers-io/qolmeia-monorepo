@@ -54,13 +54,8 @@ type StatCardProps = {
 const StatCard = ({ accent, href, label, sub, value }: StatCardProps) => {
   const hasHref = href !== undefined && href !== "";
   const body = (
-    <Card
-      className={cn(
-        "gap-0 px-5 py-4",
-        hasHref ? "transition-colors hover:border-input" : undefined,
-      )}
-    >
-      <p className="text-[0.8125rem] text-muted-foreground">{label}</p>
+    <Card className="gap-0 px-5 py-4" variant={hasHref ? "interactive" : "default"}>
+      <p className="text-(length:--text-label) text-muted-foreground">{label}</p>
       <p
         className={cn(
           "mt-2 font-display text-3xl font-bold tracking-tight tabular-nums",
@@ -108,16 +103,16 @@ const RecentEvents = async ({ activity }: { activity: Promise<ActivityResponse |
   }
 
   return (
-    <ul className="flex flex-col px-[18px] py-1.5">
+    <ul className="flex flex-col px-4.5 py-1.5">
       {items.slice(0, 6).map((row) => (
-        <li className="flex gap-[11px] border-b border-border py-2.5 last:border-b-0" key={row.id}>
+        <li className="flex gap-2.75 border-b border-border py-2.5 last:border-b-0" key={row.id}>
           <span
             aria-hidden
-            className={cn("mt-1.5 size-[7px] shrink-0 rounded-full", eventDotClass(row.type))}
+            className={cn("mt-1.5 size-1.75 shrink-0 rounded-full", eventDotClass(row.type))}
           />
           <div className="min-w-0">
-            <p className="text-[0.8125rem] leading-snug text-foreground">{row.summary}</p>
-            <p className="mt-[3px] font-mono text-xs text-muted-foreground">
+            <p className="text-(length:--text-label) leading-snug text-foreground">{row.summary}</p>
+            <p className="mt-0.75 font-mono text-xs text-muted-foreground">
               {row.type} · {formatRelative(row.createdAt)}
             </p>
           </div>
@@ -128,7 +123,7 @@ const RecentEvents = async ({ activity }: { activity: Promise<ActivityResponse |
 };
 
 const RecentEventsSkeleton = () => (
-  <div aria-hidden className="flex flex-col gap-3 px-[18px] py-4">
+  <div aria-hidden className="flex flex-col gap-3 px-4.5 py-4">
     {Array.from({ length: 5 }, (_, index) => (
       <Skeleton className="h-9 w-full" key={index} />
     ))}
@@ -189,12 +184,14 @@ const HomeContent = async () => {
         <StatCard label="Empresas ativas" sub={companiesSub} value={activeCompanies} />
       </div>
 
-      <div className="grid gap-3.5 lg:grid-cols-[1.25fr_1fr]">
+      <div className="grid gap-3.5 lg:grid-cols-approval">
         <Card className="gap-0 overflow-hidden p-0">
-          <div className="flex items-center border-b border-border px-[18px] py-[15px]">
-            <h2 className="text-[0.90625rem] font-bold text-foreground">Próximas aprovações</h2>
+          <div className="flex items-center border-b border-border px-4.5 py-3.75">
+            <h2 className="text-(length:--text-body-sm) font-bold text-foreground">
+              Próximas aprovações
+            </h2>
             <Link
-              className="ml-auto text-[0.78125rem] font-semibold text-primary transition-colors hover:text-primary/80"
+              className="ml-auto text-(length:--text-label-sm) font-semibold text-primary transition-colors hover:text-primary/80"
               href="/approvals"
             >
               Ver todas
@@ -212,20 +209,20 @@ const HomeContent = async () => {
                 return (
                   <li className="border-b border-border last:border-b-0" key={action.id}>
                     <Link
-                      className="flex items-center gap-3 px-[18px] py-[13px] transition-colors hover:bg-highlight-surface/40"
+                      className="flex items-center gap-3 px-4.5 py-3.25 transition-colors hover:bg-highlight-surface/40"
                       href={`/approvals/${action.id}`}
                     >
                       <span
                         aria-hidden
                         className={cn(
-                          "flex size-[34px] shrink-0 items-center justify-center rounded-[9px] text-[0.8125rem] font-bold text-white",
+                          "flex size-8.5 shrink-0 items-center justify-center rounded-panel-sm text-(length:--text-label) font-bold text-white",
                           agentAvatarClass(action.agent.role, action.agent.workerKind),
                         )}
                       >
                         {agentInitials(action.agent.name)}
                       </span>
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-[0.84375rem] font-semibold text-foreground">
+                        <span className="truncate text-(length:--text-label-lg) font-semibold text-foreground">
                           {action.actionType}
                         </span>
                         <span className="truncate text-xs text-muted-foreground">
@@ -246,8 +243,10 @@ const HomeContent = async () => {
         </Card>
 
         <Card className="gap-0 overflow-hidden p-0">
-          <div className="border-b border-border px-[18px] py-[15px]">
-            <h2 className="text-[0.90625rem] font-bold text-foreground">Eventos recentes</h2>
+          <div className="border-b border-border px-4.5 py-3.75">
+            <h2 className="text-(length:--text-body-sm) font-bold text-foreground">
+              Eventos recentes
+            </h2>
           </div>
           <Suspense fallback={<RecentEventsSkeleton />}>
             <RecentEvents activity={activity} />
@@ -265,7 +264,7 @@ const HomeSkeleton = () => (
         <Skeleton className="h-24" key={index} />
       ))}
     </div>
-    <div className="grid gap-3.5 lg:grid-cols-[1.25fr_1fr]">
+    <div className="grid gap-3.5 lg:grid-cols-approval">
       <Skeleton className="h-72" />
       <Skeleton className="h-72" />
     </div>
@@ -276,7 +275,7 @@ const Home = () => (
   <div className="flex flex-col gap-6">
     <PageHeader
       actions={
-        <span className="rounded-lg border border-border bg-card px-3 py-2 text-[0.8125rem] font-semibold text-foreground">
+        <span className="rounded-lg border border-border bg-card px-3 py-2 text-(length:--text-label) font-semibold text-foreground">
           Últimos 7 dias
         </span>
       }

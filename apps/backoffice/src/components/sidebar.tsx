@@ -135,9 +135,9 @@ const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps)
         <Link
           aria-current={active ? "page" : undefined}
           className={cn(
-            "flex shrink-0 items-center gap-[11px] rounded-lg px-2.5 text-sm transition-colors",
-            mobile ? "min-h-11" : "h-[38px]",
-            "[&_svg]:size-[18px]",
+            "flex shrink-0 items-center gap-2.75 rounded-lg px-2.5 text-sm transition-colors",
+            mobile ? "min-h-11" : "h-9.5",
+            "[&_svg]:size-4.5",
             active
               ? "bg-highlight-surface font-semibold text-primary"
               : "font-medium text-muted-foreground hover:bg-highlight-surface/50 hover:text-foreground",
@@ -148,7 +148,7 @@ const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps)
           {item.icon}
           {item.label}
           {showBadge ? (
-            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 font-mono text-[0.6875rem] font-semibold text-white">
+            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 font-mono text-(length:--text-caption-xs) font-semibold text-white">
               {pendingCount}
             </span>
           ) : null}
@@ -190,14 +190,14 @@ const SidebarView = ({
       </header>
       <aside
         aria-label="Navegação principal"
-        className="hidden h-screen w-[238px] shrink-0 flex-col border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
+        className="hidden h-screen w-59.5 shrink-0 flex-col border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
       >
         <div className="px-1.5">
           <Link className="inline-flex transition-opacity hover:opacity-80" href="/">
             <Logo className="h-6 w-auto" />
           </Link>
         </div>
-        <p className="px-2 pt-4 pb-2 font-mono text-[0.625rem] tracking-wide text-muted-foreground uppercase">
+        <p className="px-2 pt-4 pb-2 font-mono text-(length:--text-micro) tracking-wide text-muted-foreground uppercase">
           Painel operador
         </p>
         <SidebarNav pathname={pathname} pendingCount={pendingCount} />
@@ -206,12 +206,14 @@ const SidebarView = ({
             <div className="flex items-center gap-2.5 px-1.5">
               <span
                 aria-hidden
-                className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-foreground text-[0.8125rem] font-bold text-background"
+                className="flex size-8.5 shrink-0 items-center justify-center rounded-panel bg-foreground text-(length:--text-label) font-bold text-background"
               >
                 {initialsFrom(user.name)}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[0.8125rem] font-bold text-foreground">{user.name}</p>
+                <p className="truncate text-(length:--text-label) font-bold text-foreground">
+                  {user.name}
+                </p>
                 <p className="truncate font-mono text-xs text-muted-foreground">{user.email}</p>
               </div>
               <span className="rounded-md bg-highlight-surface px-1.5 py-1 font-mono text-xs font-semibold text-highlight-surface-foreground">

@@ -59,7 +59,7 @@ const NavView = ({ dependencies, orgName }: NavProps & { dependencies: NavDepend
       >
         <Logo className="h-6 w-auto" />
       </Link>
-      <nav className="order-3 -mx-4 w-[calc(100%+2rem)] overflow-x-auto border-t border-border px-4 py-2 md:order-2 md:mx-0 md:w-auto md:border-0 md:p-0">
+      <nav className="order-3 -mx-4 w-nav-bleed overflow-x-auto border-t border-border px-4 py-2 md:order-2 md:mx-0 md:w-auto md:border-0 md:p-0">
         <ul className="flex min-w-max items-center gap-1">
           {NAV_ITEMS.map((item) => {
             const active = isActive(pathname, item.href);
@@ -89,8 +89,7 @@ const NavView = ({ dependencies, orgName }: NavProps & { dependencies: NavDepend
           </span>
           <span
             aria-hidden
-            className="flex size-[30px] shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-            style={{ background: "var(--color-avatar-7)" }}
+            className="flex size-7.5 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white navigation-avatar"
           >
             {getInitials(org)}
           </span>

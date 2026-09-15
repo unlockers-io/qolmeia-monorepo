@@ -26,10 +26,15 @@ const Message = ({ align = "start", className, ...props }: MessageProps) => (
   />
 );
 
-const MessageAvatar = ({ className, ...props }: ComponentProps<"div">) => (
+const MessageAvatar = ({
+  className,
+  variant = "default",
+  ...props
+}: ComponentProps<"div"> & { variant?: "default" | "assistant" }) => (
   <div
     className={cn(
       "flex w-fit min-w-8 shrink-0 items-center justify-center self-end overflow-hidden rounded-full bg-muted group-has-data-[slot=message-footer]/message:-translate-y-8",
+      variant === "assistant" && "rounded-lg bg-avatar-1 text-xs font-bold text-white",
       className,
     )}
     data-slot="message-avatar"

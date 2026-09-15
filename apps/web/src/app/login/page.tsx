@@ -30,7 +30,7 @@ const CAPABILITIES = [
 ] as const;
 
 const LoginPage = () => (
-  <div className="flex min-h-svh flex-col lg:grid lg:grid-cols-[3fr_2fr]">
+  <div className="flex min-h-svh flex-col lg:grid lg:grid-cols-login">
     <section className="relative isolate flex flex-col justify-between gap-12 overflow-hidden border-b border-border px-6 pt-10 pb-9 sm:px-8 lg:border-r lg:border-b-0 lg:px-12 lg:py-14 xl:px-20">
       <Logo className="h-8 w-auto self-start" />
 
@@ -38,10 +38,10 @@ const LoginPage = () => (
         <p className="font-mono text-sm font-medium tracking-wide text-primary uppercase">
           Chat com seu Time de IA
         </p>
-        <h1 className="mt-4 max-w-[30ch] font-display text-3xl font-semibold tracking-tight text-balance lg:text-5xl">
+        <h1 className="mt-4 max-w-(--container-measure-30) font-display text-3xl font-semibold tracking-tight text-balance lg:text-5xl">
           Um time inteiro, na mesma conversa.
         </h1>
-        <p className="mt-5 max-w-[48ch] text-lg text-pretty text-muted-foreground max-lg:hidden">
+        <p className="mt-5 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground max-lg:hidden">
           Crie materiais de marca, organize campanhas e acompanhe o trabalho com os agentes da
           Qolmeia.
         </p>
@@ -51,7 +51,9 @@ const LoginPage = () => (
               <Icon aria-hidden="true" className="size-4 h-lh shrink-0 text-primary" />
               <div>
                 <dt className="font-medium">{label}</dt>
-                <dd className="mt-1 max-w-[56ch] text-muted-foreground">{description}</dd>
+                <dd className="mt-1 max-w-(--container-measure-footer) text-muted-foreground">
+                  {description}
+                </dd>
               </div>
             </div>
           ))}

@@ -54,7 +54,7 @@ const PromptEditor = ({
 
       <Field>
         <Textarea
-          className="min-h-[150px] resize-y text-[0.84375rem] leading-relaxed"
+          className="min-h-37.5 resize-y"
           disabled={busy}
           id="prompt-editor"
           onChange={(e) => {
@@ -63,6 +63,7 @@ const PromptEditor = ({
           placeholder="Escreva instruções específicas para este agente, em pt-BR."
           rows={8}
           value={value}
+          variant="prompt"
         />
         <FieldDescription>
           {overridden && updatedAt !== null

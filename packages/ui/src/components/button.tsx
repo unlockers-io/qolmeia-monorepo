@@ -5,12 +5,13 @@ import { cn } from "../lib/utils";
 
 const Button = ({
   className,
+  rounded = false,
   size = "default",
   variant = "default",
   ...props
-}: ButtonPrimitive.Props & ButtonVariantProps) => (
+}: ButtonPrimitive.Props & ButtonVariantProps & { rounded?: boolean }) => (
   <ButtonPrimitive
-    className={cn(buttonVariants({ className, size, variant }))}
+    className={cn(buttonVariants({ size, variant }), rounded && "rounded-lg", className)}
     data-slot="button"
     {...props}
   />

@@ -241,10 +241,11 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
         </label>
         {selected.size > 0 ? (
           <Button
-            className="ml-auto rounded-lg"
+            className="ml-auto"
             onClick={() => {
               dispatch({ ids: [...selected], type: "requestDelete" });
             }}
+            rounded
             size="sm"
             variant="destructive"
           >
@@ -260,10 +261,9 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
           return (
             <li className="relative" key={asset.id}>
               <Card
-                className={cn(
-                  "gap-0 overflow-hidden rounded-xl py-0 transition-shadow",
-                  isSelected ? "ring-2 ring-primary" : "hover:shadow-sm",
-                )}
+                className="gap-0 overflow-hidden py-0"
+                selected={isSelected}
+                variant="selectable"
               >
                 <button
                   aria-label={`Pré-visualizar ${asset.name}`}

@@ -185,7 +185,7 @@ const ChatEmptyState = ({ description, icon, title }: ChatEmptyStateProps) => (
 );
 
 const ChatSkeleton = () => (
-  <div className="flex h-[calc(100vh-3.5rem)] flex-col bg-background">
+  <div className="flex h-chat flex-col bg-background">
     <div className="flex flex-1 items-center justify-center">
       <Spinner className="size-5 text-muted-foreground" />
     </div>
@@ -198,7 +198,7 @@ const ChatSkeleton = () => (
 const PlannerGreeting = ({ scrollAnchor }: { scrollAnchor: boolean }) => (
   <MessageScrollerItem messageId="planner-greeting" scrollAnchor={scrollAnchor}>
     <Message align="start">
-      <MessageAvatar className="size-7 self-end rounded-lg bg-avatar-1 text-xs font-bold text-white">
+      <MessageAvatar className="size-7 self-end" variant="assistant">
         C
       </MessageAvatar>
       <MessageContent>
@@ -245,12 +245,12 @@ const ChatView = ({
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col bg-background">
+    <div className="flex h-chat flex-col bg-background">
       {isCorrespondent ? (
-        <header className="flex h-[54px] flex-none items-center gap-3 border-b border-border bg-card px-6">
+        <header className="flex h-13.5 flex-none items-center gap-3 border-b border-border bg-card px-6">
           <span
             aria-hidden
-            className="flex size-8 flex-none items-center justify-center rounded-lg bg-avatar-1 text-[0.8125rem] font-bold text-white"
+            className="flex size-8 flex-none items-center justify-center rounded-lg bg-avatar-1 text-(length:--text-label) font-bold text-white"
           >
             C
           </span>
@@ -286,7 +286,7 @@ const ChatView = ({
                     >
                       <Message align={message.role === "user" ? "end" : "start"}>
                         {message.role === "user" ? null : (
-                          <MessageAvatar className="size-7 self-end rounded-lg bg-avatar-1 text-xs font-bold text-white">
+                          <MessageAvatar className="size-7 self-end" variant="assistant">
                             C
                           </MessageAvatar>
                         )}
@@ -313,7 +313,7 @@ const ChatView = ({
               ) : null}
 
               {status === "error" ? (
-                <Marker className="pl-9 text-destructive">
+                <Marker className="pl-9" variant="destructive">
                   <MarkerIcon>
                     <TriangleAlert aria-hidden />
                   </MarkerIcon>

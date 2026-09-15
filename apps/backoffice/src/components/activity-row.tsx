@@ -51,7 +51,7 @@ const ActivityRow = ({ row }: ActivityRowProps) => {
       <div className="flex items-center gap-3.5">
         <span
           className={cn(
-            "inline-flex w-[188px] shrink-0 items-center overflow-hidden rounded-md px-2 py-1 font-mono text-xs font-medium tracking-tight text-ellipsis whitespace-nowrap",
+            "inline-flex w-47 shrink-0 items-center overflow-hidden rounded-md px-2 py-1 font-mono text-xs font-medium tracking-tight text-ellipsis whitespace-nowrap",
             tagClass,
           )}
           title={row.type}
@@ -62,12 +62,12 @@ const ActivityRow = ({ row }: ActivityRowProps) => {
         <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
           {row.companyName}
         </span>
-        <time className="w-[54px] shrink-0 text-right font-mono text-xs whitespace-nowrap text-muted-foreground/80">
+        <time className="w-13.5 shrink-0 text-right font-mono text-xs whitespace-nowrap text-muted-foreground/80">
           {formatRelative(row.createdAt)}
         </time>
       </div>
       {hasPayload(row.payload) && (
-        <details className="pl-[202px] text-xs text-muted-foreground">
+        <details className="pl-50.5 text-xs text-muted-foreground">
           <summary className="cursor-pointer text-xs font-medium select-none hover:text-foreground">
             Ver payload
           </summary>

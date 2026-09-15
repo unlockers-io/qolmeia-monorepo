@@ -49,10 +49,10 @@ const Page = () => (
         <p className="font-mono text-sm font-medium tracking-wide text-primary uppercase">
           Chat com seu Time de IA
         </p>
-        <h1 className="mt-5 max-w-[24ch] font-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+        <h1 className="mt-5 max-w-(--container-measure-hero) font-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
           Um time inteiro, na mesma conversa.
         </h1>
-        <p className="mt-6 max-w-[48ch] text-lg text-pretty text-muted-foreground">
+        <p className="mt-6 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground">
           A Qolmeia monta um time de agentes de IA para a sua marca. Você pede no chat, acompanha o
           trabalho acontecendo e aprova cada entrega.
         </p>
@@ -78,10 +78,10 @@ const Page = () => (
 
     <section className="border-b border-border" id="como-funciona">
       <div className="mx-auto max-w-6xl px-6 py-20 sm:px-8 lg:py-24">
-        <h2 className="max-w-[35ch] font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        <h2 className="max-w-(--container-measure-heading) font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
           Do pedido à entrega, sem trocar de ferramenta.
         </h2>
-        <p className="mt-5 max-w-[48ch] text-lg text-pretty text-muted-foreground">
+        <p className="mt-5 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground">
           Todo o trabalho acontece em um lugar só: o briefing, a produção, as aprovações e o
           histórico.
         </p>
@@ -92,7 +92,7 @@ const Page = () => (
                 <Icon aria-hidden="true" className="size-4 h-lh shrink-0 text-primary" />
                 {title}
               </dt>
-              <dd className="mt-3 max-w-[48ch] text-base text-pretty text-muted-foreground">
+              <dd className="mt-3 max-w-(--container-measure-body) text-base text-pretty text-muted-foreground">
                 {description}
               </dd>
             </div>
@@ -103,10 +103,10 @@ const Page = () => (
 
     <section className="border-b border-border">
       <div className="mx-auto max-w-6xl px-6 py-20 sm:px-8 lg:py-24">
-        <h2 className="max-w-[35ch] font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        <h2 className="max-w-(--container-measure-heading) font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
           Quem trabalha com você.
         </h2>
-        <p className="mt-5 max-w-[48ch] text-lg text-pretty text-muted-foreground">
+        <p className="mt-5 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground">
           Cada agente tem uma função clara. O time é montado a partir do que a sua marca precisa.
         </p>
         <dl className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
@@ -120,7 +120,7 @@ const Page = () => (
               </span>
               <div>
                 <dt className="font-medium">{name}</dt>
-                <dd className="mt-1 max-w-[48ch] text-base text-pretty text-muted-foreground">
+                <dd className="mt-1 max-w-(--container-measure-body) text-base text-pretty text-muted-foreground">
                   {role}
                 </dd>
               </div>
@@ -132,10 +132,10 @@ const Page = () => (
 
     <section>
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 py-20 text-center sm:px-8 lg:py-24">
-        <h2 className="max-w-[30ch] font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        <h2 className="max-w-(--container-measure-30) font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
           Pronto para começar?
         </h2>
-        <p className="max-w-[48ch] text-lg text-pretty text-muted-foreground">
+        <p className="max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground">
           O acesso é exclusivo para clientes convidados. Use o e-mail no qual você recebeu o
           convite.
         </p>
