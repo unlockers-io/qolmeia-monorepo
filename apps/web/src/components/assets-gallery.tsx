@@ -10,12 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
-import { EmptyState } from "@repo/ui/components/empty-state";
-import { toast } from "@repo/ui/lib/toast";
+import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { cn } from "@repo/ui/lib/utils";
 import { Eye, FileText, FolderOpen, Loader2, Music, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useReducer, useState } from "react";
+import { toast } from "sonner";
 
 import { AssetImage } from "@/components/asset-image";
 import { AssetPreviewDialog } from "@/components/asset-preview-dialog";
@@ -245,7 +245,6 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
             onClick={() => {
               dispatch({ ids: [...selected], type: "requestDelete" });
             }}
-            rounded
             size="sm"
             variant="destructive"
           >
@@ -260,31 +259,32 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
           const isSelected = selected.has(asset.id);
           return (
             <li className="relative" key={asset.id}>
-              <Card
-                className="gap-0 overflow-hidden py-0"
-                selected={isSelected}
-                variant="selectable"
+              <div
+                className="rounded-xl data-[selected=true]:ring-2 data-[selected=true]:ring-primary"
+                data-selected={isSelected}
               >
-                <button
-                  aria-label={`Pré-visualizar ${asset.name}`}
-                  className="block w-full cursor-pointer text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  onClick={() => {
-                    setPreviewing(asset);
-                  }}
-                  type="button"
-                >
-                  <AssetPreview asset={asset} />
-                  <div className="flex items-center gap-2 border-t border-border px-3 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{asset.name}</p>
-                      <p className="truncate font-mono text-xs tracking-wide text-muted-foreground uppercase">
-                        {kindLabel(asset.kind)} · {formatBytes(asset.size)}
-                      </p>
+                <Card className="gap-0 overflow-hidden py-0">
+                  <button
+                    aria-label={`Pré-visualizar ${asset.name}`}
+                    className="block w-full cursor-pointer text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    onClick={() => {
+                      setPreviewing(asset);
+                    }}
+                    type="button"
+                  >
+                    <AssetPreview asset={asset} />
+                    <div className="flex items-center gap-2 border-t border-border px-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">{asset.name}</p>
+                        <p className="truncate font-mono text-xs tracking-wide text-muted-foreground uppercase">
+                          {kindLabel(asset.kind)} · {formatBytes(asset.size)}
+                        </p>
+                      </div>
+                      <Eye aria-hidden className="size-4 shrink-0 text-muted-foreground" />
                     </div>
-                    <Eye aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-                  </div>
-                </button>
-              </Card>
+                  </button>
+                </Card>
+              </div>
               <input
                 aria-label={`Selecionar ${asset.name}`}
                 checked={isSelected}

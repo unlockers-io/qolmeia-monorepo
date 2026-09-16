@@ -1,16 +1,16 @@
 "use client";
 
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { StatusPill } from "@repo/ui/components/status-pill";
 import { Textarea } from "@repo/ui/components/textarea";
-import { toast } from "@repo/ui/lib/toast";
+import { MissingBriefBadge } from "@repo/ui/compositions/missing-brief-badge";
+import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import {
   type BriefPatch,
@@ -71,11 +71,7 @@ const liveFilledCount = (f: FormState): number =>
   ].filter(Boolean).length;
 
 const MissingMark = ({ show }: { show: boolean }) =>
-  show ? (
-    <Badge className="ml-2 align-middle" variant="warning">
-      A preencher
-    </Badge>
-  ) : null;
+  show ? <MissingBriefBadge className="ml-2 align-middle">A preencher</MissingBriefBadge> : null;
 
 type BriefCardProps = { companyId: string; initial: CompanyBrief };
 
@@ -111,7 +107,9 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2 [.border-b]:pb-6">
-        <CardTitle>Sobre a empresa</CardTitle>
+        <CardTitle>
+          <h2>Sobre a empresa</h2>
+        </CardTitle>
         {isComplete ? (
           <StatusPill dotless label="Completo" tone="success" />
         ) : (
@@ -160,7 +158,6 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
             </FieldLabel>
             <Textarea
               autoComplete="off"
-              className="min-h-20"
               id="brief-audience"
               onChange={(e) => {
                 setField("audience")(e.currentTarget.value);
@@ -210,7 +207,6 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
             </FieldLabel>
             <Textarea
               autoComplete="off"
-              className="min-h-20"
               id="brief-references"
               onChange={(e) => {
                 setField("references")(e.currentTarget.value);
@@ -248,7 +244,9 @@ const CompanyBriefForm = ({ companyId, initialData }: CompanyBriefFormProps) => 
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Sobre a empresa</CardTitle>
+          <CardTitle>
+            <h2>Sobre a empresa</h2>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Skeleton className="h-9 w-full" />

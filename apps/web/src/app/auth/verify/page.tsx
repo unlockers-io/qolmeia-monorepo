@@ -29,7 +29,9 @@ const VerifyContent = async ({ searchParams }: VerifyPageProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Não conseguimos entrar</CardTitle>
+        <CardTitle className="text-2xl">
+          <h2>Não conseguimos entrar</h2>
+        </CardTitle>
         <CardDescription>
           O link mágico expirou ou já foi usado. Solicite um novo no login.
         </CardDescription>

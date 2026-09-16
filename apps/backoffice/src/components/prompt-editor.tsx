@@ -53,18 +53,19 @@ const PromptEditor = ({
       </details>
 
       <Field>
-        <Textarea
-          className="min-h-37.5 resize-y"
-          disabled={busy}
-          id="prompt-editor"
-          onChange={(e) => {
-            setValue(e.target.value);
-          }}
-          placeholder="Escreva instruções específicas para este agente, em pt-BR."
-          rows={8}
-          value={value}
-          variant="prompt"
-        />
+        <div className="font-mono">
+          <Textarea
+            className="resize-y"
+            disabled={busy}
+            id="prompt-editor"
+            onChange={(e) => {
+              setValue(e.target.value);
+            }}
+            placeholder="Escreva instruções específicas para este agente, em pt-BR."
+            rows={8}
+            value={value}
+          />
+        </div>
         <FieldDescription>
           {overridden && updatedAt !== null
             ? `Você modificou este prompt em ${formatDate(updatedAt)}. Mudanças passam a valer na próxima interação.`

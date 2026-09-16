@@ -1,7 +1,7 @@
 import { Card } from "@repo/ui/components/card";
-import { PageHeader } from "@repo/ui/components/page-header";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { StatusPill, type StatusTone } from "@repo/ui/components/status-pill";
+import { PageHeader } from "@repo/ui/compositions/page-header";
+import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
 import { cn } from "@repo/ui/lib/utils";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";

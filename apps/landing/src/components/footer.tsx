@@ -1,4 +1,4 @@
-import { Logo } from "@repo/ui/components/logo";
+import { Logo } from "@repo/ui/compositions/logo";
 
 import { webAppUrl } from "@/lib/urls";
 

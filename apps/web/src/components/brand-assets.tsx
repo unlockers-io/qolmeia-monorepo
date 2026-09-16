@@ -10,10 +10,10 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { toast } from "@repo/ui/lib/toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { AssetImage } from "@/components/asset-image";
 import {
@@ -149,7 +149,9 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Identidade da marca</CardTitle>
+        <CardTitle>
+          <h2>Identidade da marca</h2>
+        </CardTitle>
         <CardDescription>
           Envie seu logo, posts e referências visuais. O Designer usa essas imagens para manter as
           entregas alinhadas à sua marca.
@@ -224,7 +226,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
                   src={asset.url}
                   width={800}
                 />
-                <Badge className="absolute top-1.5 left-1.5" variant="muted">
+                <Badge className="absolute top-1.5 left-1.5" variant="secondary">
                   {BRAND_CATEGORY_LABEL[asset.category]}
                 </Badge>
                 <button

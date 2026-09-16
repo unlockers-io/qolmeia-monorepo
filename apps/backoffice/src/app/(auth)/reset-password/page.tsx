@@ -10,12 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/lib/toast";
+import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { resetPasswordSchema } from "@/lib/form-schemas";
 
@@ -66,7 +67,9 @@ const ResetPasswordForm = ({ searchParams }: Props) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Redefinir senha</CardTitle>
+        <CardTitle className="text-2xl">
+          <h2>Redefinir senha</h2>
+        </CardTitle>
         <CardDescription>Crie uma nova senha para sua conta.</CardDescription>
       </CardHeader>
       <form className="flex flex-col gap-(--card-spacing)" noValidate onSubmit={handleSubmit}>
@@ -79,6 +82,7 @@ const ResetPasswordForm = ({ searchParams }: Props) => {
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Nova senha</FieldLabel>
                     <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
                       autoComplete="new-password"
                       id={field.name}
@@ -90,7 +94,9 @@ const ResetPasswordForm = ({ searchParams }: Props) => {
                       type="password"
                       value={field.state.value}
                     />
-                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
                   </Field>
                 );
               }}
@@ -103,6 +109,7 @@ const ResetPasswordForm = ({ searchParams }: Props) => {
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Confirmar nova senha</FieldLabel>
                     <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
                       autoComplete="new-password"
                       id={field.name}
@@ -114,7 +121,9 @@ const ResetPasswordForm = ({ searchParams }: Props) => {
                       type="password"
                       value={field.state.value}
                     />
-                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
                   </Field>
                 );
               }}

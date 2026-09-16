@@ -1,4 +1,5 @@
-import { buttonVariants } from "@repo/ui/lib/button-variants";
+import { buttonVariants } from "@repo/ui/components/button";
+import { cn } from "@repo/ui/lib/utils";
 import { CheckCircle2, MessagesSquare, Workflow } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -57,10 +58,10 @@ const Page = () => (
           trabalho acontecendo e aprova cada entrega.
         </p>
         <div className="mt-10 flex flex-wrap items-center gap-3">
-          <a className={buttonVariants({ size: "lg" })} href={webAppUrl("/login")}>
+          <a className={cn(buttonVariants({ size: "lg" }))} href={webAppUrl("/login")}>
             Entrar na conversa
           </a>
-          <a className={buttonVariants({ size: "lg", variant: "ghost" })} href="#como-funciona">
+          <a className={cn(buttonVariants({ size: "lg", variant: "ghost" }))} href="#como-funciona">
             Ver como funciona
           </a>
         </div>
@@ -140,7 +141,7 @@ const Page = () => (
           convite.
         </p>
         <a
-          className={buttonVariants({ size: "lg", variant: "secondary" })}
+          className={cn(buttonVariants({ size: "lg", variant: "secondary" }))}
           href={webAppUrl("/login")}
         >
           Entrar na conversa

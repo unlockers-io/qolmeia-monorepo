@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 
+import { badgeVariants } from "../components/badge";
 import { cn } from "../lib/utils";
 
 type StatusTone = "danger" | "info" | "neutral" | "success" | "warning";
@@ -27,14 +28,7 @@ type StatusPillProps = ComponentProps<"span"> & {
 const StatusPill = ({ className, dotless, label, pulse, tone, ...props }: StatusPillProps) => {
   const t = TONE[tone];
   return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-        t.pill,
-        className,
-      )}
-      {...props}
-    >
+    <span className={cn(badgeVariants({ variant: "secondary" }), t.pill, className)} {...props}>
       {dotless === true ? null : (
         <span
           aria-hidden

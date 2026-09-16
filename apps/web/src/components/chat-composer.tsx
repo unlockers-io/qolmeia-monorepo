@@ -11,12 +11,12 @@ import {
 } from "@repo/ui/components/attachment";
 import { Button } from "@repo/ui/components/button";
 import { Spinner } from "@repo/ui/components/spinner";
-import { toast } from "@repo/ui/lib/toast";
 import { cn } from "@repo/ui/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
 import { CornerDownLeft, Paperclip, Square, X } from "lucide-react";
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent, SubmitEvent } from "react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { AssetImage } from "@/components/asset-image";
 import { apiSendForm } from "@/lib/api-client";

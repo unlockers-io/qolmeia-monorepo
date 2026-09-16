@@ -11,8 +11,8 @@ import {
 } from "@repo/ui/components/dialog";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/lib/toast";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { hireMember, type HireableTemplate } from "@/lib/team";
 

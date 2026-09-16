@@ -1,5 +1,5 @@
-import { PageContainer } from "@repo/ui/components/page-container";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { PageContainer } from "@repo/ui/compositions/page-container";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 

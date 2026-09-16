@@ -1,4 +1,4 @@
-import { cn } from "@repo/ui/lib/utils";
+import { StatusPill as SharedStatusPill } from "@repo/ui/compositions/status-pill";
 import type { ActionStatus, TicketStatus } from "@repo/worker-api/contracts";
 
 type StatusKind = ActionStatus | TicketStatus;
@@ -33,41 +33,13 @@ const STATUS_TONE = {
   rejected: "danger",
 } satisfies Record<StatusKind, Tone>;
 
-const TONE_CLASSES = {
-  danger: "bg-destructive-surface text-destructive-surface-foreground ring-destructive/20",
-  info: "bg-info-surface text-info-surface-foreground ring-info/20",
-  neutral: "bg-muted text-muted-foreground ring-border",
-  success: "bg-success-surface text-success-surface-foreground ring-success/20",
-  warning: "bg-warning-surface text-warning-surface-foreground ring-warning/20",
-} satisfies Record<Tone, string>;
-
-const DOT_CLASSES = {
-  danger: "bg-destructive",
-  info: "bg-info",
-  neutral: "bg-muted-foreground/60",
-  success: "bg-success",
-  warning: "bg-warning",
-} satisfies Record<Tone, string>;
-
 type StatusPillProps = {
   className?: string;
   status: StatusKind;
 };
 
-const StatusPill = ({ className, status }: StatusPillProps) => {
-  const tone = STATUS_TONE[status];
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
-        TONE_CLASSES[tone],
-        className,
-      )}
-    >
-      <span aria-hidden className={cn("size-1.5 rounded-full", DOT_CLASSES[tone])} />
-      {STATUS_COPY[status]}
-    </span>
-  );
-};
+const StatusPill = ({ className, status }: StatusPillProps) => (
+  <SharedStatusPill className={className} label={STATUS_COPY[status]} tone={STATUS_TONE[status]} />
+);
 
 export { StatusPill };

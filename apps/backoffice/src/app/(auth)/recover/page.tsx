@@ -10,11 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/lib/toast";
+import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
+import { toast } from "sonner";
 
 import { recoverSchema } from "@/lib/form-schemas";
 
@@ -49,7 +50,9 @@ const RecoverPage = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Recuperar senha</CardTitle>
+        <CardTitle className="text-2xl">
+          <h2>Recuperar senha</h2>
+        </CardTitle>
         <CardDescription>
           Informe o e-mail cadastrado para receber o link de redefinição.
         </CardDescription>
@@ -64,6 +67,7 @@ const RecoverPage = () => {
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
                     <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
                       autoComplete="email"
                       id={field.name}
@@ -76,7 +80,9 @@ const RecoverPage = () => {
                       type="email"
                       value={field.state.value}
                     />
-                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
                   </Field>
                 );
               }}

@@ -10,13 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/lib/toast";
+import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, use, useState } from "react";
+import { toast } from "sonner";
 
 import { registerSchema } from "@/lib/form-schemas";
 import { safeRedirectPath } from "@/lib/redirect-validation";
@@ -95,7 +96,9 @@ const RegisterForm = ({ searchParams }: Props) => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Verifique seu e-mail</CardTitle>
+          <CardTitle className="text-2xl">
+            <h2>Verifique seu e-mail</h2>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <output aria-live="polite" className="block text-sm text-muted-foreground">
@@ -111,7 +114,9 @@ const RegisterForm = ({ searchParams }: Props) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Criar conta</CardTitle>
+        <CardTitle className="text-2xl">
+          <h2>Criar conta</h2>
+        </CardTitle>
         <CardDescription>Cadastre-se para acessar o painel da Qolmeia.</CardDescription>
       </CardHeader>
       <form className="flex flex-col gap-(--card-spacing)" noValidate onSubmit={handleSubmit}>
@@ -124,6 +129,7 @@ const RegisterForm = ({ searchParams }: Props) => {
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Nome</FieldLabel>
                     <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
                       autoComplete="name"
                       id={field.name}
@@ -135,7 +141,9 @@ const RegisterForm = ({ searchParams }: Props) => {
                       type="text"
                       value={field.state.value}
                     />
-                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
                   </Field>
                 );
               }}
@@ -148,6 +156,7 @@ const RegisterForm = ({ searchParams }: Props) => {
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
                     <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
                       autoComplete="email"
                       id={field.name}
@@ -160,7 +169,9 @@ const RegisterForm = ({ searchParams }: Props) => {
                       type="email"
                       value={field.state.value}
                     />
-                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
                   </Field>
                 );
               }}
@@ -173,6 +184,7 @@ const RegisterForm = ({ searchParams }: Props) => {
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
                     <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
                       autoComplete="new-password"
                       id={field.name}
@@ -184,7 +196,9 @@ const RegisterForm = ({ searchParams }: Props) => {
                       type="password"
                       value={field.state.value}
                     />
-                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
                   </Field>
                 );
               }}
@@ -197,6 +211,7 @@ const RegisterForm = ({ searchParams }: Props) => {
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Confirmar senha</FieldLabel>
                     <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
                       autoComplete="new-password"
                       id={field.name}
@@ -208,7 +223,9 @@ const RegisterForm = ({ searchParams }: Props) => {
                       type="password"
                       value={field.state.value}
                     />
-                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
                   </Field>
                 );
               }}

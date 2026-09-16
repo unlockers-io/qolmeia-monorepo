@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@repo/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
-import { buttonVariants } from "@repo/ui/lib/button-variants";
+import { cn } from "@repo/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Loader2 } from "lucide-react";
 
@@ -121,7 +122,7 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
         <DialogFooter>
           {asset ? (
             <a
-              className={buttonVariants({ variant: "outline" })}
+              className={cn(buttonVariants({ variant: "outline" }))}
               href={asset.url}
               rel="noreferrer"
               target="_blank"

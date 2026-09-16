@@ -2,12 +2,13 @@
 
 import { authClient } from "@repo/app-shell/auth-client";
 import { Button } from "@repo/ui/components/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/lib/toast";
+import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { loginSchema, magicLinkSchema } from "@/lib/form-schemas";
 
@@ -161,6 +162,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
                 <Field data-invalid={isInvalid || undefined}>
                   <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
                   <Input
+                    aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                     aria-invalid={isInvalid}
                     autoComplete="email"
                     id={field.name}
@@ -173,7 +175,9 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
                     type="email"
                     value={field.state.value}
                   />
-                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                  {isInvalid && (
+                    <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                  )}
                 </Field>
               );
             }}
@@ -187,6 +191,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
                     <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
                       autoComplete="current-password"
                       id={field.name}
@@ -198,7 +203,9 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
                       type="password"
                       value={field.state.value}
                     />
-                    {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
                   </Field>
                 );
               }}

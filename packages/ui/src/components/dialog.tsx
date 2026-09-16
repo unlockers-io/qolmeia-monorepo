@@ -1,77 +1,125 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { cn } from "@repo/ui/lib/utils";
-import { X } from "lucide-react";
-import type { ComponentProps } from "react";
+import { Button } from "@repo/ui/components/button";
+import { cn } from "cn";
+import { XIcon } from "lucide-react";
+import * as React from "react";
 
-const Dialog = DialogPrimitive.Root;
-const DialogTrigger = DialogPrimitive.Trigger;
-const DialogClose = DialogPrimitive.Close;
+const Dialog = ({ ...props }: DialogPrimitive.Root.Props) => {
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+};
 
-const DialogBackdrop = ({
-  className,
-  ...rest
-}: ComponentProps<typeof DialogPrimitive.Backdrop>) => (
-  <DialogPrimitive.Backdrop
-    className={cn(
-      "fixed inset-0 z-50 bg-black/50 transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
-      className,
-    )}
-    {...rest}
-  />
-);
+const DialogTrigger = ({ ...props }: DialogPrimitive.Trigger.Props) => {
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+};
+
+const DialogPortal = ({ ...props }: DialogPrimitive.Portal.Props) => {
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
+};
+
+const DialogClose = ({ ...props }: DialogPrimitive.Close.Props) => {
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
+};
+
+const DialogOverlay = ({ className, ...props }: DialogPrimitive.Backdrop.Props) => {
+  return (
+    <DialogPrimitive.Backdrop
+      className={cn(
+        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        className,
+      )}
+      data-slot="dialog-overlay"
+      {...props}
+    />
+  );
+};
 
 const DialogContent = ({
   children,
   className,
-  ...rest
-}: ComponentProps<typeof DialogPrimitive.Popup>) => (
-  <DialogPrimitive.Portal>
-    <DialogBackdrop />
-    <DialogPrimitive.Popup
+  showCloseButton = true,
+  ...props
+}: DialogPrimitive.Popup.Props & {
+  showCloseButton?: boolean;
+}) => {
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Popup
+        className={cn(
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-(--layout-max-w-dialog-viewport) -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          className,
+        )}
+        data-slot="dialog-content"
+        {...props}
+      >
+        {children}
+        {showCloseButton && (
+          <DialogPrimitive.Close
+            data-slot="dialog-close"
+            render={<Button className="absolute top-2 right-2" size="icon-sm" variant="ghost" />}
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Popup>
+    </DialogPortal>
+  );
+};
+
+const DialogHeader = ({ className, ...props }: React.ComponentProps<"div">) => {
+  return (
+    <div className={cn("flex flex-col gap-2", className)} data-slot="dialog-header" {...props} />
+  );
+};
+
+const DialogFooter = ({
+  children,
+  className,
+  showCloseButton = false,
+  ...props
+}: React.ComponentProps<"div"> & {
+  showCloseButton?: boolean;
+}) => {
+  return (
+    <div
       className={cn(
-        "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border bg-background p-6 shadow-lg transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
+        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
         className,
       )}
-      {...rest}
+      data-slot="dialog-footer"
+      {...props}
     >
       {children}
-      <DialogPrimitive.Close
-        aria-label="Fechar"
-        className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none"
-      >
-        <X className="size-4" />
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Popup>
-  </DialogPrimitive.Portal>
-);
+      {showCloseButton && (
+        <DialogPrimitive.Close render={<Button variant="outline" />}>Close</DialogPrimitive.Close>
+      )}
+    </div>
+  );
+};
 
-const DialogHeader = ({ className, ...rest }: ComponentProps<"div">) => (
-  <div className={cn("flex flex-col gap-1.5 text-left", className)} {...rest} />
-);
+const DialogTitle = ({ className, ...props }: DialogPrimitive.Title.Props) => {
+  return (
+    <DialogPrimitive.Title
+      className={cn("text-base leading-none font-medium", className)}
+      data-slot="dialog-title"
+      {...props}
+    />
+  );
+};
 
-const DialogFooter = ({ className, ...rest }: ComponentProps<"div">) => (
-  <div
-    className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
-    {...rest}
-  />
-);
-
-const DialogTitle = ({ className, ...rest }: ComponentProps<typeof DialogPrimitive.Title>) => (
-  <DialogPrimitive.Title
-    className={cn("text-lg leading-none font-semibold tracking-tight", className)}
-    {...rest}
-  />
-);
-
-const DialogDescription = ({
-  className,
-  ...rest
-}: ComponentProps<typeof DialogPrimitive.Description>) => (
-  <DialogPrimitive.Description
-    className={cn("text-sm text-muted-foreground", className)}
-    {...rest}
-  />
-);
+const DialogDescription = ({ className, ...props }: DialogPrimitive.Description.Props) => {
+  return (
+    <DialogPrimitive.Description
+      className={cn(
+        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+        className,
+      )}
+      data-slot="dialog-description"
+      {...props}
+    />
+  );
+};
 
 export {
   Dialog,
@@ -80,6 +128,8 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogOverlay,
+  DialogPortal,
   DialogTitle,
   DialogTrigger,
 };

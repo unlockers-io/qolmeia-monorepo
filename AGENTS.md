@@ -145,3 +145,7 @@ App configs resolve those URLs through `@repo/portless-env` rather than hardcodi
 ## Design-system linting
 
 Run `pnpm lint` after changes and fix every error. `oxlint.config.ts` registers `@shadcn/lint` and enforces all six rules as errors: component contracts, known Tailwind classes, static component class names, semantic colors, theme or scale values, and class-based styling. Use CSS custom properties for runtime geometry and named theme tokens for custom values. Use component variants for appearance and layout classes at call sites. All six rules also apply inside primitive directories. Shared styles belong to component variants or the owning stylesheet. Keep theme discovery local to each app. Exact class-merging fixture allowances apply only to the named test files.
+
+## Upstream UI components
+
+Keep registry primitives in `packages/ui/src/components` aligned with their configured shadcn Base UI style. Product adapters belong in `packages/ui/src/compositions`. Import variant factories beside the component, use local input IDs, normalize arbitrary validators through `FormFieldError`, and preserve semantic headings at call sites. Keep product branding in the theme, load `shadcn/tailwind.css`, and run `pnpm check:shadcn` with lint, typechecks, tests and the build. See `packages/ui/SHADCN.md` before updating the reviewed source lock.

@@ -1,8 +1,8 @@
 "use client";
 
-import { toast } from "@repo/ui/lib/toast";
 import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
+import { toast } from "sonner";
 
 const Providers = ({ children }: { children: ReactNode }) => {
   const [client] = useState(() => {

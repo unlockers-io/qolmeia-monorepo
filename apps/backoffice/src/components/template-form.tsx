@@ -2,14 +2,15 @@
 
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@repo/ui/components/field";
+import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
-import { toast } from "@repo/ui/lib/toast";
+import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import type { Template, TemplateInput } from "@repo/worker-api/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { BackLink } from "@/components/back-link";
@@ -219,6 +220,9 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
               <Field>
                 <FieldLabel htmlFor="displayName">Nome de exibição</FieldLabel>
                 <Input
+                  aria-describedby={
+                    errors.displayName === undefined ? undefined : "displayName-error"
+                  }
                   disabled={busy}
                   id="displayName"
                   name="displayName"
@@ -227,12 +231,15 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   }}
                   value={values.displayName}
                 />
-                <FieldError errors={fieldError(errors.displayName)} />
+                <FormFieldError errors={fieldError(errors.displayName)} id="displayName-error" />
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="workerKind">Tipo (worker kind)</FieldLabel>
                 <Input
+                  aria-describedby={
+                    errors.workerKind === undefined ? undefined : "workerKind-error"
+                  }
                   autoComplete="off"
                   disabled={busy}
                   id="workerKind"
@@ -243,13 +250,16 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   placeholder="seo-researcher"
                   value={values.workerKind}
                 />
-                <FieldError errors={fieldError(errors.workerKind)} />
+                <FormFieldError errors={fieldError(errors.workerKind)} id="workerKind-error" />
               </Field>
             </div>
 
             <Field>
               <FieldLabel htmlFor="description">Descrição</FieldLabel>
               <Input
+                aria-describedby={
+                  errors.description === undefined ? undefined : "description-error"
+                }
                 disabled={busy}
                 id="description"
                 name="description"
@@ -258,29 +268,33 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                 }}
                 value={values.description}
               />
-              <FieldError errors={fieldError(errors.description)} />
+              <FormFieldError errors={fieldError(errors.description)} id="description-error" />
             </Field>
 
             <Field>
               <FieldLabel htmlFor="systemPrompt">Prompt do sistema</FieldLabel>
-              <Textarea
-                className="min-h-40"
-                disabled={busy}
-                id="systemPrompt"
-                name="systemPrompt"
-                onChange={(e) => {
-                  setField("systemPrompt", e.target.value);
-                }}
-                value={values.systemPrompt}
-                variant="code"
-              />
-              <FieldError errors={fieldError(errors.systemPrompt)} />
+              <div className="font-mono">
+                <Textarea
+                  aria-describedby={
+                    errors.systemPrompt === undefined ? undefined : "systemPrompt-error"
+                  }
+                  disabled={busy}
+                  id="systemPrompt"
+                  name="systemPrompt"
+                  onChange={(e) => {
+                    setField("systemPrompt", e.target.value);
+                  }}
+                  value={values.systemPrompt}
+                />
+              </div>
+              <FormFieldError errors={fieldError(errors.systemPrompt)} id="systemPrompt-error" />
             </Field>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="model">Modelo (LLM)</FieldLabel>
                 <Input
+                  aria-describedby={errors.model === undefined ? undefined : "model-error"}
                   autoComplete="off"
                   disabled={busy}
                   id="model"
@@ -291,12 +305,15 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   placeholder="openai/gpt-4o-mini"
                   value={values.model}
                 />
-                <FieldError errors={fieldError(errors.model)} />
+                <FormFieldError errors={fieldError(errors.model)} id="model-error" />
               </Field>
 
               <Field>
                 <FieldLabel htmlFor="defaultActionType">Tipo de ação padrão</FieldLabel>
                 <Input
+                  aria-describedby={
+                    errors.defaultActionType === undefined ? undefined : "defaultActionType-error"
+                  }
                   autoComplete="off"
                   disabled={busy}
                   id="defaultActionType"
@@ -306,7 +323,10 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   }}
                   value={values.defaultActionType}
                 />
-                <FieldError errors={fieldError(errors.defaultActionType)} />
+                <FormFieldError
+                  errors={fieldError(errors.defaultActionType)}
+                  id="defaultActionType-error"
+                />
               </Field>
             </div>
           </CardContent>
@@ -337,19 +357,25 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
               <FieldDescription>
                 Objeto {`{ tipoDeAção: política }`}. Vazio = nenhuma política.
               </FieldDescription>
-              <Textarea
-                className="min-h-28"
-                disabled={busy}
-                id={policiesFieldId}
-                name="defaultPolicies"
-                onChange={(e) => {
-                  setField("defaultPolicies", e.target.value);
-                }}
-                spellCheck={false}
-                value={values.defaultPolicies}
-                variant="code"
+              <div className="font-mono">
+                <Textarea
+                  aria-describedby={
+                    errors.defaultPolicies === undefined ? undefined : `${policiesFieldId}-error`
+                  }
+                  disabled={busy}
+                  id={policiesFieldId}
+                  name="defaultPolicies"
+                  onChange={(e) => {
+                    setField("defaultPolicies", e.target.value);
+                  }}
+                  spellCheck={false}
+                  value={values.defaultPolicies}
+                />
+              </div>
+              <FormFieldError
+                errors={fieldError(errors.defaultPolicies)}
+                id={`${policiesFieldId}-error`}
               />
-              <FieldError errors={fieldError(errors.defaultPolicies)} />
             </Field>
           </CardContent>
         </Card>
