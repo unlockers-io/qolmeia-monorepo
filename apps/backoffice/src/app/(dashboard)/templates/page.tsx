@@ -2,6 +2,7 @@ import { buttonVariants } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { PageHeader } from "@repo/ui/compositions/page-header";
+import { cn } from "@repo/ui/lib/utils";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -29,7 +30,7 @@ const TemplatesPage = () => (
   <div className="flex flex-col gap-6">
     <PageHeader
       actions={
-        <Link className={buttonVariants()} href="/templates/new">
+        <Link className={cn(buttonVariants())} href="/templates/new">
           Novo modelo
         </Link>
       }

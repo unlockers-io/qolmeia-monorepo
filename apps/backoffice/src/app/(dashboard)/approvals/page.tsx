@@ -119,7 +119,7 @@ const ApprovalsContent = async () => {
                         : formatDurationSeconds(action.ageSeconds)}
                     </span>
                     <Link
-                      className={buttonVariants({ className: "w-full", size: "sm" })}
+                      className={cn(buttonVariants({ className: "w-full", size: "sm" }))}
                       href={`/approvals/${action.id}`}
                     >
                       Revisar

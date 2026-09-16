@@ -1,4 +1,5 @@
 import { buttonVariants } from "@repo/ui/components/button";
+import { cn } from "@repo/ui/lib/utils";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -15,7 +16,7 @@ const NotFound = () => (
         A página que você está procurando não existe ou foi movida.
       </p>
     </div>
-    <Link className={buttonVariants({ variant: "outline" })} href="/">
+    <Link className={cn(buttonVariants({ variant: "outline" }))} href="/">
       Voltar ao início
     </Link>
   </div>

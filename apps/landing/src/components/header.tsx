@@ -1,5 +1,6 @@
 import { buttonVariants } from "@repo/ui/components/button";
 import { Logo } from "@repo/ui/compositions/logo";
+import { cn } from "@repo/ui/lib/utils";
 import Link from "next/link";
 
 import { webAppUrl } from "@/lib/urls";
@@ -11,7 +12,7 @@ const Header = () => (
         <Logo className="h-7 w-auto" />
       </Link>
       <nav aria-label="Principal">
-        <a className={buttonVariants({ variant: "ghost" })} href={webAppUrl("/login")}>
+        <a className={cn(buttonVariants({ variant: "ghost" }))} href={webAppUrl("/login")}>
           Entrar
         </a>
       </nav>
