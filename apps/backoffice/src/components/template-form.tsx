@@ -278,7 +278,6 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   aria-describedby={
                     errors.systemPrompt === undefined ? undefined : "systemPrompt-error"
                   }
-                  className="min-h-40"
                   disabled={busy}
                   id="systemPrompt"
                   name="systemPrompt"
@@ -363,7 +362,6 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   aria-describedby={
                     errors.defaultPolicies === undefined ? undefined : `${policiesFieldId}-error`
                   }
-                  className="min-h-28"
                   disabled={busy}
                   id={policiesFieldId}
                   name="defaultPolicies"

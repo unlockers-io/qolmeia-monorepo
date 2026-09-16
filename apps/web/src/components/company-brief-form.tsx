@@ -158,7 +158,6 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
             </FieldLabel>
             <Textarea
               autoComplete="off"
-              className="min-h-20"
               id="brief-audience"
               onChange={(e) => {
                 setField("audience")(e.currentTarget.value);
@@ -208,7 +207,6 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
             </FieldLabel>
             <Textarea
               autoComplete="off"
-              className="min-h-20"
               id="brief-references"
               onChange={(e) => {
                 setField("references")(e.currentTarget.value);
