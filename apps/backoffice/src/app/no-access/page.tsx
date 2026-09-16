@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { SignOutButton } from "@repo/ui/components/sign-out-button";
+import { SignOutButton } from "@repo/ui/compositions/sign-out-button";
 import { ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -26,7 +26,9 @@ const NoAccessPage = () => (
         >
           <ShieldAlert />
         </div>
-        <CardTitle className="text-2xl">Sem acesso ao painel</CardTitle>
+        <CardTitle className="text-2xl">
+          <h2>Sem acesso ao painel</h2>
+        </CardTitle>
         <CardDescription>
           Esta conta não tem papel de Operador (OWNER ou STAFF) nesta organização. Acesse o app do
           cliente ou peça ao dono para promover seu papel.

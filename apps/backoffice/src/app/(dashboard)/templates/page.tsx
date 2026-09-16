@@ -1,7 +1,7 @@
+import { buttonVariants } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
-import { PageHeader } from "@repo/ui/components/page-header";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { buttonVariants } from "@repo/ui/lib/button-variants";
+import { PageHeader } from "@repo/ui/compositions/page-header";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";

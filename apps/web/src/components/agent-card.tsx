@@ -1,6 +1,6 @@
 "use client";
 
-import { StatusPill, type StatusTone } from "@repo/ui/components/status-pill";
+import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
 import { cn } from "@repo/ui/lib/utils";
 import { Pencil } from "lucide-react";
 

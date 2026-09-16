@@ -1,11 +1,9 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { Button } from "@repo/ui/components/button";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ComponentProps } from "react";
-
-import { cn } from "../lib/utils";
-
-import { Button } from "./button";
+import { cn } from "cn";
+import * as React from "react";
 
 const attachmentVariants = cva(
   "group/attachment relative flex w-fit max-w-full min-w-0 shrink-0 flex-wrap rounded-xl border bg-card text-card-foreground transition-colors focus-within:ring-1 focus-within:ring-ring/50 has-[>a,>button]:hover:bg-muted/50 data-[state=error]:border-destructive/30 data-[state=idle]:border-dashed",
@@ -25,27 +23,27 @@ const attachmentVariants = cva(
   },
 );
 
-type AttachmentProps = ComponentProps<"div"> &
-  VariantProps<typeof attachmentVariants> & {
-    state?: "idle" | "uploading" | "processing" | "error" | "done";
-  };
-
 const Attachment = ({
   className,
   orientation = "horizontal",
   size = "default",
   state = "done",
   ...props
-}: AttachmentProps) => (
-  <div
-    className={cn(attachmentVariants({ orientation, size }), className)}
-    data-orientation={orientation}
-    data-size={size}
-    data-slot="attachment"
-    data-state={state}
-    {...props}
-  />
-);
+}: React.ComponentProps<"div"> &
+  VariantProps<typeof attachmentVariants> & {
+    state?: "idle" | "uploading" | "processing" | "error" | "done";
+  }) => {
+  return (
+    <div
+      className={cn(attachmentVariants({ orientation, size }), className)}
+      data-orientation={orientation}
+      data-size={size}
+      data-slot="attachment"
+      data-state={state}
+      {...props}
+    />
+  );
+};
 
 const attachmentMediaVariants = cva(
   "relative flex aspect-square w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted text-foreground group-data-[orientation=vertical]/attachment:w-full group-data-[size=sm]/attachment:w-8 group-data-[size=xs]/attachment:w-7 group-data-[size=xs]/attachment:rounded-md group-data-[state=error]/attachment:bg-destructive/10 group-data-[state=error]/attachment:text-destructive group-data-[orientation=vertical]/attachment:*:data-[slot=spinner]:size-6! [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 group-data-[orientation=vertical]/attachment:[&_svg:not([class*='size-'])]:size-6 group-data-[size=xs]/attachment:[&_svg:not([class*='size-'])]:size-3.5",
@@ -63,84 +61,98 @@ const attachmentMediaVariants = cva(
   },
 );
 
-type AttachmentMediaProps = ComponentProps<"div"> & VariantProps<typeof attachmentMediaVariants>;
+const AttachmentMedia = ({
+  className,
+  variant = "icon",
+  ...props
+}: React.ComponentProps<"div"> & VariantProps<typeof attachmentMediaVariants>) => {
+  return (
+    <div
+      className={cn(attachmentMediaVariants({ variant }), className)}
+      data-slot="attachment-media"
+      data-variant={variant}
+      {...props}
+    />
+  );
+};
 
-const AttachmentMedia = ({ className, variant = "icon", ...props }: AttachmentMediaProps) => (
-  <div
-    className={cn(attachmentMediaVariants({ variant }), className)}
-    data-slot="attachment-media"
-    data-variant={variant}
-    {...props}
-  />
-);
+const AttachmentContent = ({ className, ...props }: React.ComponentProps<"div">) => {
+  return (
+    <div
+      className={cn(
+        "max-w-full min-w-0 flex-1 leading-tight group-data-[orientation=vertical]/attachment:px-1",
+        className,
+      )}
+      data-slot="attachment-content"
+      {...props}
+    />
+  );
+};
 
-const AttachmentContent = ({ className, ...props }: ComponentProps<"div">) => (
-  <div
-    className={cn(
-      "max-w-full min-w-0 flex-1 leading-tight group-data-[orientation=vertical]/attachment:px-1",
-      className,
-    )}
-    data-slot="attachment-content"
-    {...props}
-  />
-);
+const AttachmentTitle = ({ className, ...props }: React.ComponentProps<"span">) => {
+  return (
+    <span
+      className={cn(
+        "block max-w-full min-w-0 truncate font-medium group-data-[state=processing]/attachment:shimmer group-data-[state=uploading]/attachment:shimmer",
+        className,
+      )}
+      data-slot="attachment-title"
+      {...props}
+    />
+  );
+};
 
-const AttachmentTitle = ({ className, ...props }: ComponentProps<"span">) => (
-  <span
-    className={cn(
-      "block max-w-full min-w-0 truncate font-medium group-data-[state=processing]/attachment:shimmer group-data-[state=uploading]/attachment:shimmer",
-      className,
-    )}
-    data-slot="attachment-title"
-    {...props}
-  />
-);
+const AttachmentDescription = ({ className, ...props }: React.ComponentProps<"span">) => {
+  return (
+    <span
+      className={cn(
+        "mt-0.5 block min-w-0 truncate text-xs text-muted-foreground group-data-[state=error]/attachment:text-destructive/80",
+        "max-w-full",
+        className,
+      )}
+      data-slot="attachment-description"
+      {...props}
+    />
+  );
+};
 
-const AttachmentDescription = ({ className, ...props }: ComponentProps<"span">) => (
-  <span
-    className={cn(
-      "mt-0.5 block min-w-0 truncate text-xs text-muted-foreground group-data-[state=error]/attachment:text-destructive/80",
-      "max-w-full",
-      className,
-    )}
-    data-slot="attachment-description"
-    {...props}
-  />
-);
-
-const AttachmentActions = ({ className, ...props }: ComponentProps<"div">) => (
-  <div
-    className={cn(
-      "relative z-20 flex shrink-0 items-center group-data-[orientation=vertical]/attachment:absolute group-data-[orientation=vertical]/attachment:top-3 group-data-[orientation=vertical]/attachment:right-3 group-data-[orientation=vertical]/attachment:gap-1",
-      className,
-    )}
-    data-slot="attachment-actions"
-    {...props}
-  />
-);
+const AttachmentActions = ({ className, ...props }: React.ComponentProps<"div">) => {
+  return (
+    <div
+      className={cn(
+        "relative z-20 flex shrink-0 items-center group-data-[orientation=vertical]/attachment:absolute group-data-[orientation=vertical]/attachment:top-3 group-data-[orientation=vertical]/attachment:right-3 group-data-[orientation=vertical]/attachment:gap-1",
+        className,
+      )}
+      data-slot="attachment-actions"
+      {...props}
+    />
+  );
+};
 
 const AttachmentAction = ({
   className,
   size = "icon-xs",
   variant,
   ...props
-}: ComponentProps<typeof Button>) => (
-  <Button
-    className={cn(className)}
-    data-slot="attachment-action"
-    size={size}
-    variant={variant ?? "ghost"}
-    {...props}
-  />
-);
+}: React.ComponentProps<typeof Button>) => {
+  return (
+    <Button
+      className={cn(className)}
+      data-slot="attachment-action"
+      size={size}
+      variant={variant ?? "ghost"}
+      {...props}
+    />
+  );
+};
 
 const AttachmentTrigger = ({
   className,
   render,
   type,
   ...props
-}: useRender.ComponentProps<"button">) =>
-  useRender({
+}: useRender.ComponentProps<"button">) => {
+  return useRender({
     defaultTagName: "button",
     props: mergeProps<"button">(
       {
@@ -154,27 +166,29 @@ const AttachmentTrigger = ({
       slot: "attachment-trigger",
     },
   });
+};
 
-const AttachmentGroup = ({ className, ...props }: ComponentProps<"div">) => (
-  <div
-    className={cn(
-      "flex min-w-0 scroll-fade-x snap-x snap-mandatory scroll-px-1 scrollbar-none gap-3 overflow-x-auto overscroll-x-contain py-1 *:data-[slot=attachment]:flex-none *:data-[slot=attachment]:snap-start",
-      className,
-    )}
-    data-slot="attachment-group"
-    {...props}
-  />
-);
+const AttachmentGroup = ({ className, ...props }: React.ComponentProps<"div">) => {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 scroll-fade-x snap-x snap-mandatory scroll-px-1 scrollbar-none gap-3 overflow-x-auto overscroll-x-contain py-1 *:data-[slot=attachment]:flex-none *:data-[slot=attachment]:snap-start",
+        className,
+      )}
+      data-slot="attachment-group"
+      {...props}
+    />
+  );
+};
 
 export {
   Attachment,
-  AttachmentAction,
-  AttachmentActions,
-  AttachmentContent,
-  AttachmentDescription,
   AttachmentGroup,
   AttachmentMedia,
+  AttachmentContent,
   AttachmentTitle,
+  AttachmentDescription,
+  AttachmentActions,
+  AttachmentAction,
   AttachmentTrigger,
 };
-export type { AttachmentMediaProps, AttachmentProps };

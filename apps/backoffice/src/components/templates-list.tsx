@@ -1,15 +1,14 @@
 "use client";
 
-import { Button } from "@repo/ui/components/button";
+import { Button, buttonVariants } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
-import { EmptyState } from "@repo/ui/components/empty-state";
-import { StatusPill, type StatusTone } from "@repo/ui/components/status-pill";
-import { buttonVariants } from "@repo/ui/lib/button-variants";
-import { toast } from "@repo/ui/lib/toast";
+import { EmptyState } from "@repo/ui/compositions/empty-state";
+import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
 import type { Template, TemplateStatus } from "@repo/worker-api/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
+import { toast } from "sonner";
 
 import { ApiError } from "@/lib/api-client";
 import { fetchTemplates, setTemplateStatus, templateKeys } from "@/lib/templates-api";

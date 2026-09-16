@@ -2,11 +2,11 @@
 
 import { Button } from "@repo/ui/components/button";
 import { Textarea } from "@repo/ui/components/textarea";
-import { toast } from "@repo/ui/lib/toast";
 import { cn } from "@repo/ui/lib/utils";
 import type { DecisionOutcome } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { apiSend, ApiError } from "@/lib/api-client";
 

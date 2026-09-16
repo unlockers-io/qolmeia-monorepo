@@ -4,10 +4,10 @@ import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { StatusPill, type StatusTone } from "@repo/ui/components/status-pill";
-import { toast } from "@repo/ui/lib/toast";
+import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
 import { cn } from "@repo/ui/lib/utils";
 import { useOptimistic, useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { PromptEditor } from "@/components/prompt-editor";
 import { apiSend } from "@/lib/api-client";

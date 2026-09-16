@@ -1,4 +1,4 @@
-import { buttonVariants } from "@repo/ui/lib/button-variants";
+import { buttonVariants } from "@repo/ui/components/button";
 import type { Metadata } from "next";
 import Link from "next/link";
 

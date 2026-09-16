@@ -1,7 +1,7 @@
 "use client";
 
-import { Logo } from "@repo/ui/components/logo";
-import { SignOutButton } from "@repo/ui/components/sign-out-button";
+import { Logo } from "@repo/ui/compositions/logo";
+import { SignOutButton } from "@repo/ui/compositions/sign-out-button";
 import { cn } from "@repo/ui/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

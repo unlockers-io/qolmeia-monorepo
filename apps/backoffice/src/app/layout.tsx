@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 
 import { Toaster } from "@repo/ui/components/sonner";
+import { ThemeProvider } from "@repo/ui/compositions/theme-provider";
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, JetBrains_Mono, Sora } from "next/font/google";
 import type { ReactNode } from "react";
@@ -72,22 +73,28 @@ export const viewport: Viewport = {
 
 const RootLayout = ({ children }: { children: ReactNode }) => {
   return (
-    <html className={`${hanken.variable} ${sora.variable} ${jetbrainsMono.variable}`} lang="pt-BR">
+    <html
+      className={`${hanken.variable} ${sora.variable} ${jetbrainsMono.variable}`}
+      lang="pt-BR"
+      suppressHydrationWarning
+    >
       <head>
         <meta content="telephone=no" name="format-detection" />
         <meta content="#000000" name="msapplication-TileColor" />
       </head>
       <body className={hanken.className} suppressHydrationWarning>
-        <a
-          className="sr-only fixed top-2 left-2 z-50 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground ring-1 ring-ring focus:not-sr-only"
-          href="#main-content"
-        >
-          Pular para o conteúdo
-        </a>
-        <main id="main-content">
-          <Providers>{children}</Providers>
-        </main>
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <a
+            className="sr-only fixed top-2 left-2 z-50 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground ring-1 ring-ring focus:not-sr-only"
+            href="#main-content"
+          >
+            Pular para o conteúdo
+          </a>
+          <main id="main-content">
+            <Providers>{children}</Providers>
+          </main>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

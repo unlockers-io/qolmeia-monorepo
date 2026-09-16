@@ -5,11 +5,10 @@ import { magicLinkClient, usernameClient } from "better-auth/client/plugins";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
+import { Button } from "../components/button";
 import { runWithCleanup } from "../lib/run-with-cleanup";
-import { toast } from "../lib/toast";
-
-import { Button } from "./button";
 
 const authUrl = process.env.NEXT_PUBLIC_AUTH_URL;
 const authClient = createBetterAuthClient({

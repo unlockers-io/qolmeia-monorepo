@@ -1,10 +1,10 @@
 "use client";
 
 import { Button } from "@repo/ui/components/button";
-import { toast } from "@repo/ui/lib/toast";
 import { cn } from "@repo/ui/lib/utils";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 type Template = {
   description: string;
@@ -128,7 +128,6 @@ const OnboardingActions = ({
             onClick={() => {
               void handleConfirm();
             }}
-            rounded
             size="lg"
             type="button"
           >

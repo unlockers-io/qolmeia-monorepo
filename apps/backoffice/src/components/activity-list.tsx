@@ -1,9 +1,9 @@
 "use client";
 
 import { Button } from "@repo/ui/components/button";
-import { toast } from "@repo/ui/lib/toast";
 import type { ActivityEntry, ActivityResponse } from "@repo/worker-api/contracts";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { ActivityRow } from "@/components/activity-row";
 import { apiGet, ApiError } from "@/lib/api-client";

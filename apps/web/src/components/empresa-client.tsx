@@ -8,11 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { PageContainer } from "@repo/ui/components/page-container";
-import { PageHeader } from "@repo/ui/components/page-header";
-import { toast } from "@repo/ui/lib/toast";
+import { PageContainer } from "@repo/ui/compositions/page-container";
+import { PageHeader } from "@repo/ui/compositions/page-header";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { AgentCard } from "@/components/agent-card";
 import { BrandAssets } from "@/components/brand-assets";
@@ -210,7 +210,9 @@ const EmpresaClient = ({
           {catalogue.map((t) => (
             <Card key={t.id}>
               <CardHeader>
-                <CardTitle className="text-base">{t.displayName}</CardTitle>
+                <CardTitle className="text-base">
+                  <h2>{t.displayName}</h2>
+                </CardTitle>
                 <CardDescription>{t.description}</CardDescription>
               </CardHeader>
               <CardContent className="flex items-center justify-between gap-2">

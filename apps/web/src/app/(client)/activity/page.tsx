@@ -1,8 +1,8 @@
 import { Card, CardContent } from "@repo/ui/components/card";
-import { EmptyState } from "@repo/ui/components/empty-state";
-import { PageContainer } from "@repo/ui/components/page-container";
-import { PageHeader } from "@repo/ui/components/page-header";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { EmptyState } from "@repo/ui/compositions/empty-state";
+import { PageContainer } from "@repo/ui/compositions/page-container";
+import { PageHeader } from "@repo/ui/compositions/page-header";
 import { Activity } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";

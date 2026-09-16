@@ -1,6 +1,6 @@
-import { PageContainer } from "@repo/ui/components/page-container";
-import { PageHeader } from "@repo/ui/components/page-header";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { PageContainer } from "@repo/ui/compositions/page-container";
+import { PageHeader } from "@repo/ui/compositions/page-header";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 

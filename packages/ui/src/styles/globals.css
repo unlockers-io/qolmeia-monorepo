@@ -133,8 +133,8 @@
   --card-foreground: oklch(0.985 0.001 106.423);
   --popover: oklch(0.216 0.006 56.043);
   --popover-foreground: oklch(0.985 0.001 106.423);
-  --primary: oklch(0.432 0.232 292.759);
-  --primary-foreground: oklch(0.969 0.016 293.756);
+  --primary: oklch(0.7 0.18 292.759);
+  --primary-foreground: oklch(0.18 0.02 292.759);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.268 0.007 34.298);
@@ -511,4 +511,31 @@
   [data-slot="message-scroller-button"][data-variant] {
     @apply absolute inset-s-1/2 -translate-x-1/2 border-border bg-background text-foreground transition-translate-scale-opacity duration-200 hover:bg-muted hover:text-foreground data-[active=false]:pointer-events-none data-[active=false]:scale-95 data-[active=false]:opacity-0 data-[active=false]:duration-400 data-[active=false]:ease-message-exit data-[active=true]:translate-y-0 data-[active=true]:scale-100 data-[active=true]:opacity-100 data-[active=true]:ease-out-expo data-[direction=end]:bottom-4 data-[direction=end]:data-[active=false]:translate-y-full data-[direction=start]:top-4 data-[direction=start]:data-[active=false]:-translate-y-full rtl:translate-x-1/2 data-[direction=start]:[&_svg]:rotate-180;
   }
+}
+
+@theme inline {
+  --color-secondary-hover: color-mix(in oklch, var(--secondary), var(--foreground) 5%);
+}
+
+@utility toaster {
+  --normal-bg: var(--popover);
+  --normal-text: var(--popover-foreground);
+  --normal-border: var(--border);
+  --border-radius: var(--radius);
+}
+
+@utility contain-intrinsic-message {
+  contain-intrinsic-size: auto 10rem;
+}
+@utility content-visibility-auto {
+  content-visibility: auto;
+}
+@utility transition-message-scroll {
+  transition-property: translate, scale, opacity;
+}
+@theme inline {
+  --ease-message-scroll-out: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-message-scroll-in: cubic-bezier(0.23, 1, 0.32, 1);
+  --radius-checkbox: 4px;
+  --layout-max-w-dialog-viewport: calc(100% - 2rem);
 }

@@ -1,7 +1,7 @@
 import { Card } from "@repo/ui/components/card";
-import { EmptyState } from "@repo/ui/components/empty-state";
-import { PageHeader } from "@repo/ui/components/page-header";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { EmptyState } from "@repo/ui/compositions/empty-state";
+import { PageHeader } from "@repo/ui/compositions/page-header";
 import type { CoverageResponse } from "@repo/worker-api/contracts";
 import { TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";

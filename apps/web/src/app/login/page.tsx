@@ -1,4 +1,4 @@
-import { Logo } from "@repo/ui/components/logo";
+import { Logo } from "@repo/ui/compositions/logo";
 import { MessageSquareText, Sparkles, Workflow } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -47,14 +47,14 @@ const LoginPage = () => (
         </p>
         <dl className="mt-10 grid gap-6 text-sm max-lg:hidden">
           {CAPABILITIES.map(({ description, icon: Icon, label }) => (
-            <div className="flex items-start gap-3" key={label}>
-              <Icon aria-hidden="true" className="size-4 h-lh shrink-0 text-primary" />
-              <div>
-                <dt className="font-medium">{label}</dt>
-                <dd className="mt-1 max-w-(--container-measure-footer) text-muted-foreground">
-                  {description}
-                </dd>
-              </div>
+            <div key={label}>
+              <dt className="flex items-start gap-3 font-medium">
+                <Icon aria-hidden="true" className="size-4 h-lh shrink-0 text-primary" />
+                {label}
+              </dt>
+              <dd className="mt-1 ml-7 max-w-(--container-measure-footer) text-muted-foreground">
+                {description}
+              </dd>
             </div>
           ))}
         </dl>

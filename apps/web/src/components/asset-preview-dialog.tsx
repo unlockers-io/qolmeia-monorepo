@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@repo/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
-import { buttonVariants } from "@repo/ui/lib/button-variants";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Loader2 } from "lucide-react";
 

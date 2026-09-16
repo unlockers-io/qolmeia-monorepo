@@ -1,7 +1,7 @@
 import { Card } from "@repo/ui/components/card";
-import { EmptyState } from "@repo/ui/components/empty-state";
-import { PageHeader } from "@repo/ui/components/page-header";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { EmptyState } from "@repo/ui/compositions/empty-state";
+import { PageHeader } from "@repo/ui/compositions/page-header";
 import { cn } from "@repo/ui/lib/utils";
 import type {
   ActionsResponse,
@@ -54,7 +54,7 @@ type StatCardProps = {
 const StatCard = ({ accent, href, label, sub, value }: StatCardProps) => {
   const hasHref = href !== undefined && href !== "";
   const body = (
-    <Card className="gap-0 px-5 py-4" variant={hasHref ? "interactive" : "default"}>
+    <Card className="gap-0 px-5 py-4">
       <p className="text-(length:--text-label) text-muted-foreground">{label}</p>
       <p
         className={cn(

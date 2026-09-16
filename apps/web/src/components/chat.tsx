@@ -1,7 +1,7 @@
 "use client";
 
 import { Marker, MarkerContent, MarkerIcon } from "@repo/ui/components/marker";
-import { Message, MessageAvatar, MessageContent } from "@repo/ui/components/message";
+import { Message, MessageContent } from "@repo/ui/components/message";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -11,13 +11,13 @@ import {
   MessageScrollerViewport,
 } from "@repo/ui/components/message-scroller";
 import { Spinner } from "@repo/ui/components/spinner";
-import { StatusPill } from "@repo/ui/components/status-pill";
-import { toast } from "@repo/ui/lib/toast";
+import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { cn } from "@repo/ui/lib/utils";
 import type { FileUIPart } from "ai";
 import { ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
+import { toast } from "sonner";
 
 import { AssetImage } from "@/components/asset-image";
 import { ChatComposer } from "@/components/chat-composer";
@@ -198,9 +198,9 @@ const ChatSkeleton = () => (
 const PlannerGreeting = ({ scrollAnchor }: { scrollAnchor: boolean }) => (
   <MessageScrollerItem messageId="planner-greeting" scrollAnchor={scrollAnchor}>
     <Message align="start">
-      <MessageAvatar className="size-7 self-end" variant="assistant">
+      <div className="flex size-7 shrink-0 items-center justify-center self-end rounded-lg bg-avatar-1 text-xs font-bold text-white">
         C
-      </MessageAvatar>
+      </div>
       <MessageContent>
         <div className="w-fit max-w-full min-w-0 rounded-2xl rounded-bl-sm border border-border bg-card px-4 py-2 text-sm text-foreground">
           <MarkdownResponse>{PLANNER_GREETING}</MarkdownResponse>
@@ -286,9 +286,9 @@ const ChatView = ({
                     >
                       <Message align={message.role === "user" ? "end" : "start"}>
                         {message.role === "user" ? null : (
-                          <MessageAvatar className="size-7 self-end" variant="assistant">
+                          <div className="flex size-7 shrink-0 items-center justify-center self-end rounded-lg bg-avatar-1 text-xs font-bold text-white">
                             C
-                          </MessageAvatar>
+                          </div>
                         )}
                         <MessageContent>
                           <MessageBubble message={message} />
@@ -313,11 +313,13 @@ const ChatView = ({
               ) : null}
 
               {status === "error" ? (
-                <Marker className="pl-9" variant="destructive">
-                  <MarkerIcon>
-                    <TriangleAlert aria-hidden />
-                  </MarkerIcon>
-                  <MarkerContent>Não foi possível enviar. Tente novamente.</MarkerContent>
+                <Marker className="pl-9">
+                  <span className="contents text-destructive">
+                    <MarkerIcon>
+                      <TriangleAlert aria-hidden />
+                    </MarkerIcon>
+                    <MarkerContent>Não foi possível enviar. Tente novamente.</MarkerContent>
+                  </span>
                 </Marker>
               ) : null}
             </MessageScrollerContent>

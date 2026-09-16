@@ -1,5 +1,5 @@
-import { Logo } from "@repo/ui/components/logo";
-import { buttonVariants } from "@repo/ui/lib/button-variants";
+import { buttonVariants } from "@repo/ui/components/button";
+import { Logo } from "@repo/ui/compositions/logo";
 import Link from "next/link";
 
 import { webAppUrl } from "@/lib/urls";

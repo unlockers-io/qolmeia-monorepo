@@ -1,4 +1,4 @@
-import { buttonVariants } from "@repo/ui/lib/button-variants";
+import { buttonVariants } from "@repo/ui/components/button";
 import { CheckCircle2, MessagesSquare, Workflow } from "lucide-react";
 import type { Metadata } from "next";
 

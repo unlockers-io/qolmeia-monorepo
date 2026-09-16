@@ -10,13 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/lib/toast";
+import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useState } from "react";
+import { toast } from "sonner";
 
 import { loginSchema } from "@/lib/form-schemas";
 import { safeRedirectPath } from "@/lib/redirect-validation";
@@ -78,7 +79,9 @@ const createLoginPage = ({ showError, signInEmail, useAppRouter }: LoginDependen
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Entrar</CardTitle>
+          <CardTitle className="text-2xl">
+            <h2>Entrar</h2>
+          </CardTitle>
           <CardDescription>Acesse o painel operacional da Qolmeia.</CardDescription>
         </CardHeader>
         <form className="flex flex-col gap-(--card-spacing)" noValidate onSubmit={handleSubmit}>
@@ -91,6 +94,7 @@ const createLoginPage = ({ showError, signInEmail, useAppRouter }: LoginDependen
                     <Field data-invalid={isInvalid || undefined}>
                       <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
                       <Input
+                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                         aria-invalid={isInvalid}
                         autoComplete="email"
                         id={field.name}
@@ -103,7 +107,12 @@ const createLoginPage = ({ showError, signInEmail, useAppRouter }: LoginDependen
                         type="email"
                         value={field.state.value}
                       />
-                      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                      {isInvalid && (
+                        <FormFieldError
+                          errors={field.state.meta.errors}
+                          id={`${field.name}-error`}
+                        />
+                      )}
                     </Field>
                   );
                 }}
@@ -124,6 +133,7 @@ const createLoginPage = ({ showError, signInEmail, useAppRouter }: LoginDependen
                         </Link>
                       </div>
                       <Input
+                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                         aria-invalid={isInvalid}
                         autoComplete="current-password"
                         id={field.name}
@@ -135,7 +145,12 @@ const createLoginPage = ({ showError, signInEmail, useAppRouter }: LoginDependen
                         type="password"
                         value={field.state.value}
                       />
-                      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                      {isInvalid && (
+                        <FormFieldError
+                          errors={field.state.meta.errors}
+                          id={`${field.name}-error`}
+                        />
+                      )}
                     </Field>
                   );
                 }}

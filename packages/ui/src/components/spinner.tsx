@@ -1,17 +1,17 @@
-import { Loader2 } from "lucide-react";
-import type { ComponentProps } from "react";
+import { cn } from "cn";
+import { Loader2Icon } from "lucide-react";
 
-import { cn } from "../lib/utils";
-
-const Spinner = ({ className, ...props }: ComponentProps<typeof Loader2>) => (
-  <Loader2
-    aria-label="Carregando"
-    className={cn("size-4 animate-spin", className)}
-    data-slot="spinner"
-    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- decorative SVG spinner, not an <output>
-    role="status"
-    {...props}
-  />
-);
+const Spinner = ({ className, ...props }: React.ComponentProps<"svg">) => {
+  return (
+    <Loader2Icon
+      aria-label="Loading"
+      className={cn("size-4 animate-spin", className)}
+      data-slot="spinner"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Preserve the upstream SVG loading icon and its status announcement.
+      role="status"
+      {...props}
+    />
+  );
+};
 
 export { Spinner };

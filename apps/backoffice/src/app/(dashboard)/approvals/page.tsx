@@ -1,8 +1,8 @@
+import { buttonVariants } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
-import { EmptyState } from "@repo/ui/components/empty-state";
-import { PageHeader } from "@repo/ui/components/page-header";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { buttonVariants } from "@repo/ui/lib/button-variants";
+import { EmptyState } from "@repo/ui/compositions/empty-state";
+import { PageHeader } from "@repo/ui/compositions/page-header";
 import { cn } from "@repo/ui/lib/utils";
 import type { ActionsResponse } from "@repo/worker-api/contracts";
 import { Inbox } from "lucide-react";

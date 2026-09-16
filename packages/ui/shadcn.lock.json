@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "upstreamCommit": "2b3e6d4f8d9161fe5c19340dc383aade392012dd",
+  "registryBase": "https://ui.shadcn.com/r/styles/base-nova",
+  "style": "base-nova",
+  "componentsDirectory": "src/components",
+  "normalizations": [
+    "Repository formatting, import paths, declaration ordering, and RSC boundaries.",
+    "Arbitrary values replaced with equivalent named theme tokens or utilities.",
+    "Registry markers resolved to installed styling and Sonner CSS variables moved to its utility.",
+    "Strictly typed conditions and theme values, with reduced-motion support.",
+    "Composite internals render at the primitive layer when no-restyle prohibits the upstream call; public APIs and DOM composition are retained."
+  ],
+  "files": {
+    "src/components/attachment.tsx": {
+      "registry": "attachment",
+      "registrySha256": "f6c6d376067d2734375a607256d59ce6c3ea4e486deda510b31844102033d353",
+      "sha256": "f73b7ffe1e4bd3e8b43dc9bd4734e11883897b1076cb6082382110ea731879a6"
+    },
+    "src/components/avatar.tsx": {
+      "registry": "avatar",
+      "registrySha256": "bbcabf0121fb2ff93a8522f8f80b74631e732a31399b1b7991c0b8c3167e2172",
+      "sha256": "a79b4914200000dac5ffaa30d71d9f41d80107f5ce8025efb1765705040a82a7"
+    },
+    "src/components/badge.tsx": {
+      "registry": "badge",
+      "registrySha256": "ccc20021cdcbf0fb23c0d4d28f1da4adde8e51ba59f4b11dd2722ed97a5ee3a4",
+      "sha256": "730d1237412d736fef982981cdacab67e7d1c9f30203567da333634465e84c64"
+    },
+    "src/components/button.tsx": {
+      "registry": "button",
+      "registrySha256": "9ba7e870178813f0552b818a913a2792fb500c779e36395740b4973e3025d427",
+      "sha256": "b78018fbb870dcae0cdd1d2d4d7ebbd70742ade1bc69c7f3dd0f7af429c4c52b"
+    },
+    "src/components/card.tsx": {
+      "registry": "card",
+      "registrySha256": "e73e3fe00ab2e14c4db1dccb1ff5c67041a94c0926ac3216c1dc6dd6dee9d7e0",
+      "sha256": "b9fb8d4a85ad45ab819b95a1adf56b40fc50e35c5cfb32668d78b4a47f112ac3"
+    },
+    "src/components/dialog.tsx": {
+      "registry": "dialog",
+      "registrySha256": "40fc321d25eb9590d07db54b00d9bc1a74274a549aa06d5915a34ba302ed8b94",
+      "sha256": "7c6ce64b39b2a71f67c34a3720497d5ebe19af4a6b6a29b4e6582dc61563c125"
+    },
+    "src/components/field.tsx": {
+      "registry": "field",
+      "registrySha256": "586110f5563cbb5dc0929207ee34361f1349cf2f816465799c60b98821e4cedc",
+      "sha256": "f8896b9925e7b199ed73b77fd4b3964e7c2a2776569f371e1c2d8d35951b82c5"
+    },
+    "src/components/input.tsx": {
+      "registry": "input",
+      "registrySha256": "bbad1bba130ac9750a61844eeb8f043e8a710846e07689fa85398b80a46c2741",
+      "sha256": "d25707203e870873fb105596afcf7adcf642a2f824b59a34c8063643526de49c"
+    },
+    "src/components/label.tsx": {
+      "registry": "label",
+      "registrySha256": "89b01e14fd39dceece9fa421e71e78ea83286bd43a2ca1c2f55d2e8d3958fff2",
+      "sha256": "efd1a70bfaa327dcaa775603615206a6b4bc7231e36bb9e94063a7da7fe29d80"
+    },
+    "src/components/marker.tsx": {
+      "registry": "marker",
+      "registrySha256": "3e02a701ba7d9d4c4b41522e33c45171722d14c285c02995b8577b8a426a7a3d",
+      "sha256": "f5d06a700c7b97bc3d6b663c640ca6a187e908df1812c8ec1c5c4fdc283818ff"
+    },
+    "src/components/message-scroller.tsx": {
+      "registry": "message-scroller",
+      "registrySha256": "4893726e4c327b2964ba71b2ea8ca8be73a989c6cdfc567657416eacac8bcfe9",
+      "sha256": "ddd23b59e532a0565f19bb5345dc4376f2ed4d6f9c2350eb9944023fd12147ee"
+    },
+    "src/components/message.tsx": {
+      "registry": "message",
+      "registrySha256": "6a484395f7ed32d3b254619cc542aeed6ce77a5628d1e9a04d4b5baaf7de0c41",
+      "sha256": "e33e6d30b7d90565ab73c940d55f1794d040c9872bdb89a54d96f33d6c69fd21"
+    },
+    "src/components/separator.tsx": {
+      "registry": "separator",
+      "registrySha256": "3ad65962485f464592201cb90017b3d52a5c9fe272ce41ee049485b4c42e0d76",
+      "sha256": "8fb33b270fb4f4f9cb6d583ff2f476ff485adf022d6c14c55a150285b50475b5"
+    },
+    "src/components/skeleton.tsx": {
+      "registry": "skeleton",
+      "registrySha256": "85692a09912f518ffd64c540dfcf098fe748a807baf288c107cf8126496cf886",
+      "sha256": "55d659662f00299161830eee84a8a469f8b87340cd0ea489fa7e3946ae700050"
+    },
+    "src/components/sonner.tsx": {
+      "registry": "sonner",
+      "registrySha256": "831967f80f645ac3908b356a44748698a9ceed1c6a51b232dd5e87c52a54d7c3",
+      "sha256": "44059c798297cc9a276aeaa7eb5135f3b799aabb82420ffc229d5da72b76d6df"
+    },
+    "src/components/spinner.tsx": {
+      "registry": "spinner",
+      "registrySha256": "d949d0b91ff34620eecf2bb359536fd3e6942b518dc0a396b77fd02a90661b61",
+      "sha256": "0f2048b2acfc98ceed642f8df93d3ce010940746f063818ae6c62fecf0abbd0a"
+    },
+    "src/components/textarea.tsx": {
+      "registry": "textarea",
+      "registrySha256": "8f01f6bc4ee556263bae7644e8b527022fa77ff203f33a258bb47142ef7d9c81",
+      "sha256": "b3d4705b703ed903844f571e9657c3ba8896eeadd7094aa4baf762131e226d78"
+    }
+  },
+  "stylesheets": [
+    {
+      "file": "src/styles/globals.css",
+      "required": [
+        "@import \"shadcn/tailwind.css\";",
+        "--radius-control-sm: min(var(--radius-md), 10px);",
+        "--radius-control: min(var(--radius-md), 12px);",
+        "--text-control: 0.8rem;",
+        "--color-secondary-hover: color-mix(in oklch, var(--secondary), var(--foreground) 5%);",
+        "--radius-checkbox: 4px;",
+        "--layout-max-w-dialog-viewport: calc(100% - 2rem);",
+        "--ease-message-scroll-in: cubic-bezier(0.23, 1, 0.32, 1);",
+        "--ease-message-scroll-out: cubic-bezier(0.7, 0, 0.84, 0);",
+        "@utility card-spacing {\n  --card-spacing: --spacing(4);\n}",
+        "@utility card-spacing-sm {\n  --card-spacing: --spacing(3);\n}",
+        "@utility grid-cols-content-action {\n  grid-template-columns: 1fr auto;\n}",
+        "@utility grid-rows-card-header {\n  grid-template-rows: auto auto;\n}",
+        "@utility toaster {\n  --normal-bg: var(--popover);\n  --normal-text: var(--popover-foreground);\n  --normal-border: var(--border);\n  --border-radius: var(--radius);\n}",
+        "@utility transition-input {\n  transition-property: color, box-shadow;\n  transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));\n  transition-duration: var(--tw-duration, var(--default-transition-duration));\n}",
+        "@utility contain-intrinsic-message {\n  contain-intrinsic-size: auto 10rem;\n}",
+        "@utility content-visibility-auto {\n  content-visibility: auto;\n}",
+        "@utility transition-message-scroll {\n  transition-property: translate, scale, opacity;\n}"
+      ]
+    }
+  ]
+}

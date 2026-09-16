@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { SignOutButton } from "@repo/ui/components/sign-out-button";
+import { SignOutButton } from "@repo/ui/compositions/sign-out-button";
 import { ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -26,7 +26,9 @@ const NoAccessPage = () => (
         >
           <ShieldAlert />
         </div>
-        <CardTitle className="text-2xl">Sem acesso ao chat</CardTitle>
+        <CardTitle className="text-2xl">
+          <h2>Sem acesso ao chat</h2>
+        </CardTitle>
         <CardDescription>
           Esta conta não tem acesso ao chat do cliente. Acesse o painel operacional ou peça ao dono
           para criar um convite.
