@@ -14,6 +14,7 @@ jobs:
     timeout-minutes: 15
     env:
       DATABASE_URL: postgresql://qolmeia:qolmeia@localhost:5432/qolmeia_test
+      PGAPPNAME: qolmeia:ci:test
     services:
       postgres:
         image: postgres:18-alpine
