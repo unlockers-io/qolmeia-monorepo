@@ -8,16 +8,15 @@ test.describe("Backoffice reset-password form", () => {
     await backofficeResetPasswordPage.expectHeadingVisible();
   });
 
-  test("shows error toast when submitted without a token", async ({
+  test("offers a new link when opened without a token", async ({
     backofficeResetPasswordPage,
     page,
   }) => {
     await page.context().clearCookies();
 
     await backofficeResetPasswordPage.goto();
-    await backofficeResetPasswordPage.submit("NewPassword123!", "NewPassword123!");
 
-    await backofficeResetPasswordPage.expectErrorToast();
+    await backofficeResetPasswordPage.expectInvalidLinkVisible();
     expect(page.url()).toContain("/reset-password");
   });
 
