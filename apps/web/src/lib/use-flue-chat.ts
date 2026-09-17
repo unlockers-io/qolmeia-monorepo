@@ -1,14 +1,14 @@
 "use client";
 
-import { useFlueAgent } from "@flue/react";
+import { type AgentStatus, useFlueAgent } from "@flue/react";
 import type { DeliveredAttachment, FlueConversationMessage } from "@flue/sdk";
-import type { FileUIPart } from "ai";
+import type { ChatStatus, FileUIPart } from "ai";
 
 import { useFlueClient } from "./use-flue-client";
 
 type ChatMessage = FlueConversationMessage;
 
-type FlueChatStatus = "error" | "ready" | "streaming" | "submitted";
+type FlueChatStatus = ChatStatus;
 
 type SendInput = {
   files: Array<FileUIPart>;
@@ -47,7 +47,7 @@ const STATUS_MAP = {
   idle: "ready",
   streaming: "streaming",
   submitted: "submitted",
-} as const satisfies Record<string, FlueChatStatus>;
+} as const satisfies Record<AgentStatus, FlueChatStatus>;
 
 const BASE64_CHUNK = 0x80_00;
 

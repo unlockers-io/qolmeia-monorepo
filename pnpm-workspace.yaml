@@ -23,6 +23,11 @@ overrides:
   # declarations resolve to a broken sibling .d.mts and every OpenAPI route
   # helper degrades to the error type (~40 type-aware lint errors in apps/api).
   "@hono/zod-openapi": "1.5.1"
+  # @flue/runtime pins hono to exactly 4.12.32 (withastro/flue#591: two Hono
+  # copies break `app.route(path, createAgentRouter(...))` types). Lift only that
+  # pin onto the workspace range so runtime and app share one Hono; bump it
+  # together with the apps' hono range.
+  "@flue/runtime>hono": "^4.13.5"
   # Security: force patched transitive releases to clear pnpm audit advisories.
   # Each pin is the lowest patched version within the already-resolved major.
   deepmerge-ts: "^8.0.0"
