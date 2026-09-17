@@ -89,8 +89,10 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 - **Pre-commit**: Husky + lint-staged runs `oxlint` + `oxfmt`.
 - **Testing**: Vitest. `apps/agents` uses `@cloudflare/vitest-pool-workers` against Miniflare.
 - **Bundler (api)**: tsdown. **Bundler (agents)**: Vite, via `@flue/vite` + `@cloudflare/vite-plugin`. The
-  Worker entry and the per-agent Durable Object bindings are generated (`.flue-vite/`,
-  `.flue-vite.wrangler.jsonc`); `wrangler.jsonc` has no `main`. Deploy is `vite build && wrangler deploy`.
+  Worker entry is the virtual module `virtual:flue/worker`; `flueWorkerConfig()` merges the per-agent
+  Durable Object bindings into the Cloudflare plugin's config, and `vite build` writes the merged
+  `dist/worker_bees/wrangler.json` (with a `.wrangler/deploy/config.json` redirect that `wrangler deploy`
+  follows). `wrangler.jsonc` has no `main`. Deploy is `vite build && wrangler deploy`.
 
 ## Environment
 

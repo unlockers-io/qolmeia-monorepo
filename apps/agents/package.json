@@ -9,7 +9,7 @@
   "scripts": {
     "build": "vite build",
     "cf-typegen": "wrangler types",
-    "clean": "rm -rf .turbo node_modules .wrangler .flue-vite .flue-vite.wrangler.jsonc",
+    "clean": "rm -rf .turbo node_modules .wrangler dist",
     "deploy": "vite build && wrangler deploy",
     "dev": "portless run --name qolmeia.agents --app-port 8787 vite dev",
     "lint": "oxlint src",
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.43",
-    "@flue/runtime": "2.0.3",
+    "@flue/runtime": "2.0.7",
     "@repo/observability": "workspace:*",
     "@repo/worker-api": "workspace:*",
     "agents": "^0.22.0",
@@ -30,7 +30,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.54.3",
     "@cloudflare/vitest-pool-workers": "^0.22.0",
-    "@flue/vite": "2.0.3",
+    "@flue/vite": "2.0.7",
     "@repo/portless-env": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "typescript": "^7.0.2",

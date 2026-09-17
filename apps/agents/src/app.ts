@@ -17,6 +17,13 @@ import { backofficeRoutes } from "#/routes/backoffice";
 import { meRoutes } from "#/routes/me";
 import { teamsRoutes } from "#/routes/teams";
 
+export const FLUE_CLIENT_EXPOSED_HEADERS = [
+  "Stream-Next-Offset",
+  "Stream-Up-To-Date",
+  "flue-error-ref",
+  "Location",
+];
+
 const app = new Hono<SessionEnv>();
 
 app.use("*", honoEvlog());
@@ -26,6 +33,7 @@ app.use(
   cors({
     allowHeaders: ["Content-Type", "Authorization", "X-Org-Id"],
     credentials: true,
+    exposeHeaders: FLUE_CLIENT_EXPOSED_HEADERS,
     origin: (origin, c: Context<{ Bindings: Env }>) => {
       const allowed = c.env.CLIENT_ORIGINS.split(",").map((value) => value.trim());
       return allowed.includes(origin) ? origin : null;

@@ -6,7 +6,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build", "db:generate"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "outputs": ["dist/**", ".wrangler/deploy/**", ".next/**", "!.next/cache/**"],
       "env": [
         "AGENTS_INTERNAL_URL",
         "API_INTERNAL_URL",

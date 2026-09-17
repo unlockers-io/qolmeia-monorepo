@@ -4,8 +4,10 @@
   // Pinned because this login can reach two accounts; without it wrangler and
   // the vitest remote proxy both fail with "More than one account available".
   "account_id": "e0d80dc903c7091fc398c6729971d0a7",
-  // No "main": the flue() Vite plugin generates the Worker entry and merges it
-  // (with the per-agent Durable Object bindings) into .flue-vite.wrangler.jsonc.
+  // No "main": the flue() Vite plugin serves the Worker entry as the virtual
+  // module `virtual:flue/worker`, and flueWorkerConfig() merges it plus the
+  // per-agent Durable Object bindings into the Cloudflare plugin's config,
+  // which `vite build` writes to dist/worker_bees/wrangler.json.
   "compatibility_date": "2026-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },

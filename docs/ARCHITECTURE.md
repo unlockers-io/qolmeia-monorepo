@@ -94,7 +94,7 @@ Schema in [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.pris
 
 ## §6. The agent layer (Flue)
 
-The two conversational agents run on **[Flue](https://flueframework.com)** 2 (`@flue/runtime` 2.0.0), a Claude-Code-style harness (sessions, tool loop, compaction) on Cloudflare. Each agent is a `'use agent'` function under [`apps/agents/src/agents/`](../apps/agents/src/agents). Its exported function name determines the generated Durable Object class and storage identity, so renames require an explicit `agentName` pin. ADR 0004 ("Flue rejected") is superseded by the 2026-06 decision to adopt Flue.
+The two conversational agents run on **[Flue](https://flueframework.com)** 2, a Claude-Code-style harness (sessions, tool loop, compaction) on Cloudflare. Each agent is a `'use agent'` function under [`apps/agents/src/agents/`](../apps/agents/src/agents). Its exported function name determines the generated Durable Object class and storage identity, so renames require an explicit `agentName` pin. ADR 0004 ("Flue rejected") is superseded by the 2026-06 decision to adopt Flue.
 
 | Agent             | Instance key | Role                                                                                                                            |
 | ----------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
