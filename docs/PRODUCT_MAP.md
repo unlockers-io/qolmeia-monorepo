@@ -82,7 +82,7 @@ magic link -> /auth/verify -> /
 
 ## 2. Operator surface (`apps/backoffice`)
 
-Operators (OWNER/STAFF) use email + password (12+ chars), with register, recover, and reset-password screens. Gating is enforced twice: in Next middleware plus `requireStaff()`, and again by the Worker on every `/api/backoffice/*` call.
+Operators (OWNER/STAFF) use email + password (12+ chars), with register, recover, and reset-password screens. Registration is open only until the first OWNER/STAFF membership exists: `@repo/auth` rejects `/sign-up/email` after that, and the register page and the login link go away with it. Gating is enforced twice: in Next middleware plus `requireStaff()`, and again by the Worker on every `/api/backoffice/*` call.
 
 ![Backoffice login](product-map/backoffice-login.png)
 

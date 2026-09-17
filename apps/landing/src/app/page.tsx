@@ -45,35 +45,40 @@ const ROSTER = [
 
 const Page = () => (
   <>
-    <section className="relative isolate overflow-hidden border-b border-border">
-      <div className="mx-auto max-w-6xl px-6 py-24 sm:px-8 lg:py-32">
-        <p className="font-mono text-sm font-medium tracking-wide text-primary uppercase">
-          Chat com seu Time de IA
-        </p>
-        <h1 className="mt-5 max-w-(--container-measure-hero) font-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-          Um time inteiro, na mesma conversa.
-        </h1>
-        <p className="mt-6 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground">
-          A Qolmeia monta um time de agentes de IA para a sua marca. Você pede no chat, acompanha o
-          trabalho acontecendo e aprova cada entrega.
-        </p>
-        <div className="mt-10 flex flex-wrap items-center gap-3">
-          <a className={cn(buttonVariants({ size: "lg" }))} href={webAppUrl("/login")}>
-            Entrar na conversa
-          </a>
-          <a className={cn(buttonVariants({ size: "lg", variant: "ghost" }))} href="#como-funciona">
-            Ver como funciona
-          </a>
+    <section className="border-b border-border">
+      <div className="mx-auto max-w-6xl px-6 py-24 sm:px-8 lg:grid lg:grid-cols-3 lg:items-center lg:gap-8 lg:py-32">
+        <div className="lg:col-span-2">
+          <p className="font-mono text-sm font-medium tracking-wide text-primary uppercase">
+            Chat com seu Time de IA
+          </p>
+          <h1 className="mt-5 max-w-(--container-measure-hero) font-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+            Um time inteiro, na mesma conversa.
+          </h1>
+          <p className="mt-6 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground">
+            A Qolmeia monta um time de agentes de IA para a sua marca. Você pede no chat, acompanha
+            o trabalho acontecendo e aprova cada entrega.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center gap-3">
+            <a className={cn(buttonVariants({ size: "lg" }))} href={webAppUrl("/login")}>
+              Entrar na conversa
+            </a>
+            <a
+              className={cn(buttonVariants({ size: "lg", variant: "ghost" }))}
+              href="#como-funciona"
+            >
+              Ver como funciona
+            </a>
+          </div>
         </div>
-      </div>
 
-      <div
-        aria-hidden="true"
-        className="absolute -right-32 -bottom-28 -z-10 honeycomb text-primary/10 max-lg:hidden"
-      >
-        {Array.from({ length: 9 }, (_, index) => (
-          <span key={index} />
-        ))}
+        <div
+          aria-hidden="true"
+          className="honeycomb justify-self-end text-primary/15 max-lg:hidden"
+        >
+          {Array.from({ length: 9 }, (_, index) => (
+            <span key={index} />
+          ))}
+        </div>
       </div>
     </section>
 

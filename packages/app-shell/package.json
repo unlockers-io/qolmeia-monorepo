@@ -7,7 +7,8 @@
     "./agents-url": "./src/agents-url.ts",
     "./auth-client": "./src/auth-client.ts",
     "./auth-server": "./src/auth-server.ts",
-    "./session": "./src/session.ts"
+    "./session": "./src/session.ts",
+    "./signup": "./src/signup.ts"
   },
   "scripts": {
     "lint": "oxlint src",

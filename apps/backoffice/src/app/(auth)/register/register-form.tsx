@@ -1,0 +1,260 @@
+"use client";
+
+import { authClient } from "@repo/app-shell/auth-client";
+import { Button } from "@repo/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/components/card";
+import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
+import { Input } from "@repo/ui/components/input";
+import { FormFieldError } from "@repo/ui/compositions/form-field-error";
+import { useForm } from "@tanstack/react-form";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Suspense, use, useState } from "react";
+import { toast } from "sonner";
+
+import { registerSchema } from "@/lib/form-schemas";
+import { safeRedirectPath } from "@/lib/redirect-validation";
+
+type Props = {
+  searchParams: Promise<{ from?: string }>;
+};
+
+const LoginLinkFallback = () => (
+  <Link className="font-medium text-primary underline-offset-4 hover:underline" href="/login">
+    Entrar
+  </Link>
+);
+
+const LoginLink = ({ searchParams }: Props) => {
+  const { from } = use(searchParams);
+  const redirectTo = safeRedirectPath(from);
+
+  return (
+    <Link
+      className="font-medium text-primary underline-offset-4 hover:underline"
+      href={redirectTo === "/" ? "/login" : `/login?from=${encodeURIComponent(redirectTo)}`}
+    >
+      Entrar
+    </Link>
+  );
+};
+
+const RegisterForm = ({ searchParams }: Props) => {
+  const { push, refresh } = useRouter();
+  const [sentToEmail, setSentToEmail] = useState<string | null>(null);
+
+  const form = useForm({
+    defaultValues: { confirmPassword: "", email: "", name: "", password: "" },
+    onSubmit: async ({ value }) => {
+      if (value.password !== value.confirmPassword) {
+        toast.error("As senhas não conferem.");
+        return;
+      }
+      const { from } = await searchParams;
+      const redirectTo = safeRedirectPath(from);
+      try {
+        const result = await authClient.signUp.email({
+          callbackURL: redirectTo,
+          email: value.email,
+          name: value.name,
+          password: value.password,
+        });
+        if (result.error) {
+          toast.error(result.error.message ?? "Não foi possível criar a conta.");
+          return;
+        }
+        const token = result.data?.token;
+        if (token === undefined || token === null || token === "") {
+          setSentToEmail(value.email);
+          return;
+        }
+      } catch {
+        toast.error("Não foi possível conectar ao servidor. Tente novamente.");
+        return;
+      }
+      toast.success("Conta criada. Bem-vindo à Qolmeia!");
+      push(redirectTo);
+      refresh();
+    },
+    validators: { onSubmit: registerSchema },
+  });
+
+  const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void form.handleSubmit();
+  };
+
+  if (sentToEmail !== null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            <h2>Verifique seu e-mail</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <output aria-live="polite" className="block text-sm text-muted-foreground">
+            Enviamos um link de verificação para{" "}
+            <span className="font-medium text-foreground">{sentToEmail}</span>. Clique nele para
+            confirmar sua conta e entrar.
+          </output>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl">
+          <h2>Criar conta</h2>
+        </CardTitle>
+        <CardDescription>Cadastre-se para acessar o painel da Qolmeia.</CardDescription>
+      </CardHeader>
+      <form className="flex flex-col gap-(--card-spacing)" noValidate onSubmit={handleSubmit}>
+        <CardContent>
+          <FieldGroup>
+            <form.Field name="name">
+              {(field) => {
+                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                return (
+                  <Field data-invalid={isInvalid || undefined}>
+                    <FieldLabel htmlFor={field.name}>Nome</FieldLabel>
+                    <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                      aria-invalid={isInvalid}
+                      autoComplete="name"
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => {
+                        field.handleChange(event.target.value);
+                      }}
+                      type="text"
+                      value={field.state.value}
+                    />
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
+                  </Field>
+                );
+              }}
+            </form.Field>
+
+            <form.Field name="email">
+              {(field) => {
+                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                return (
+                  <Field data-invalid={isInvalid || undefined}>
+                    <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
+                    <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                      aria-invalid={isInvalid}
+                      autoComplete="email"
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => {
+                        field.handleChange(event.target.value);
+                      }}
+                      placeholder="voce@empresa.com"
+                      type="email"
+                      value={field.state.value}
+                    />
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
+                  </Field>
+                );
+              }}
+            </form.Field>
+
+            <form.Field name="password">
+              {(field) => {
+                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                return (
+                  <Field data-invalid={isInvalid || undefined}>
+                    <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
+                    <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                      aria-invalid={isInvalid}
+                      autoComplete="new-password"
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => {
+                        field.handleChange(event.target.value);
+                      }}
+                      type="password"
+                      value={field.state.value}
+                    />
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
+                  </Field>
+                );
+              }}
+            </form.Field>
+
+            <form.Field name="confirmPassword">
+              {(field) => {
+                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                return (
+                  <Field data-invalid={isInvalid || undefined}>
+                    <FieldLabel htmlFor={field.name}>Confirmar senha</FieldLabel>
+                    <Input
+                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                      aria-invalid={isInvalid}
+                      autoComplete="new-password"
+                      id={field.name}
+                      name={field.name}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => {
+                        field.handleChange(event.target.value);
+                      }}
+                      type="password"
+                      value={field.state.value}
+                    />
+                    {isInvalid && (
+                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                    )}
+                  </Field>
+                );
+              }}
+            </form.Field>
+          </FieldGroup>
+        </CardContent>
+        <CardFooter className="flex flex-col gap-3">
+          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
+            {([canSubmit, isSubmitting]) => (
+              <Button
+                className="w-full"
+                disabled={!canSubmit || isSubmitting}
+                size="lg"
+                type="submit"
+              >
+                {isSubmitting ? "Criando conta…" : "Criar conta"}
+              </Button>
+            )}
+          </form.Subscribe>
+          <p className="text-center text-sm text-muted-foreground">
+            Já tem conta?{" "}
+            <Suspense fallback={<LoginLinkFallback />}>
+              <LoginLink searchParams={searchParams} />
+            </Suspense>
+          </p>
+        </CardFooter>
+      </form>
+    </Card>
+  );
+};
+
+export { RegisterForm };

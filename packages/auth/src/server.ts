@@ -9,6 +9,8 @@ import { magicLink } from "better-auth/plugins/magic-link";
 import { username } from "better-auth/plugins/username";
 import type { BetterAuthPlugin } from "better-auth/types";
 
+import { countOperators, createSignupGuard } from "./signup";
+
 const CALLBACK_FALLBACK_PATH = "/";
 
 const CALLBACK_ANCHOR_ORIGIN = "https://qolmeia.invalid";
@@ -178,6 +180,10 @@ export const createAuth = (config: AuthConfig) => {
           throw new Error(`Failed to send verification email: ${result.error}`);
         }
       },
+    },
+
+    hooks: {
+      before: createSignupGuard(() => countOperators(prisma)),
     },
 
     plugins: [
