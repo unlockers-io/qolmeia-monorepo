@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { SITE_URL } from "@/lib/urls";
 
 const hanken = Hanken_Grotesk({ display: "swap", subsets: ["latin"], variable: "--font-hanken" });
 const sora = Sora({ display: "swap", subsets: ["latin"], variable: "--font-sora" });
@@ -16,8 +17,6 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 const SHORT_DESCRIPTION = "Um time de IA que trabalha na conversa";
-const metadataBase =
-  URL.parse(process.env.NEXT_PUBLIC_LANDING_URL ?? "") ?? new URL("https://www.qolmeia.com");
 
 export const metadata: Metadata = {
   authors: [{ name: "Qolmeia" }],
@@ -26,7 +25,7 @@ export const metadata: Metadata = {
   description:
     "A Qolmeia monta um time de agentes de IA para a sua marca. Peça na conversa, acompanhe o trabalho e aprove as entregas.",
   keywords: ["qolmeia", "agentes de ia", "marketing", "marca", "campanhas"],
-  metadataBase,
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     description: SHORT_DESCRIPTION,
     locale: "pt_BR",

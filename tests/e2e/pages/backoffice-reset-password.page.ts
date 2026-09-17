@@ -8,6 +8,8 @@ export class BackofficeResetPasswordPage {
   private readonly submitButton: Locator;
   private readonly errorToast: Locator;
   private readonly successToast: Locator;
+  private readonly invalidLinkHeading: Locator;
+  private readonly requestNewLink: Locator;
 
   constructor(private readonly page: Page) {
     this.heading = page.locator('[data-slot="card-title"]').filter({
@@ -18,6 +20,8 @@ export class BackofficeResetPasswordPage {
     this.submitButton = page.getByRole("button", { name: /redefinir senha|reset password/iu });
     this.errorToast = page.locator('[data-sonner-toast][data-type="error"]');
     this.successToast = page.locator('[data-sonner-toast][data-type="success"]');
+    this.invalidLinkHeading = page.getByRole("heading", { name: /link inválido ou expirado/iu });
+    this.requestNewLink = page.getByRole("link", { name: /solicitar novo link/iu });
   }
 
   goto = async (token?: string) => {
@@ -37,5 +41,10 @@ export class BackofficeResetPasswordPage {
 
   expectErrorToast = async () => {
     await expect(this.errorToast).toBeVisible();
+  };
+
+  expectInvalidLinkVisible = async () => {
+    await expect(this.invalidLinkHeading).toBeVisible();
+    await expect(this.requestNewLink).toHaveAttribute("href", "/recover");
   };
 }

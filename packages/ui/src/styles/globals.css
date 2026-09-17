@@ -24,6 +24,7 @@
   display: grid;
   grid-template-columns: repeat(3, 7rem);
   gap: --spacing(2.5);
+  padding-bottom: --spacing(13.5);
   rotate: -8deg;
   mask-image: linear-gradient(to top left, #000, transparent 70%);
 
