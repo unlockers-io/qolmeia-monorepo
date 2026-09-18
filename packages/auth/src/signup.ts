@@ -20,4 +20,4 @@ const createSignupGuard = (countOperatorsFn: () => Promise<number>) =>
     }
   });
 
-export { countOperators, createSignupGuard, isSignupOpen, SIGNUP_CLOSED_MESSAGE };
+export { countOperators, createSignupGuard, isSignupOpen, OPERATOR_ROLES, SIGNUP_CLOSED_MESSAGE };

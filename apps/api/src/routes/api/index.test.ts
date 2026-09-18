@@ -35,7 +35,9 @@ const buildMockPrisma = () => {
       findUnique: vi.fn().mockResolvedValue(null),
     },
     orgMembership: {
+      count: vi.fn().mockResolvedValue(0),
       create: vi.fn().mockResolvedValue({}),
+      findFirst: vi.fn().mockResolvedValue(null),
       findMany: vi.fn().mockResolvedValue([
         {
           createdAt: new Date("2026-01-01"),
