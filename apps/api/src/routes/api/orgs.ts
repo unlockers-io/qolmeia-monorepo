@@ -1,13 +1,14 @@
+import { countOperators, OPERATOR_ROLES } from "@repo/auth/signup";
 import type { PrismaClient } from "@repo/db";
 import { Prisma, prisma as defaultPrisma } from "@repo/db";
 import { Hono } from "hono";
 import { z } from "zod";
 
 import { provisionCompany } from "@/data/agents/companies";
-import { jsonError, unauthorized } from "@/lib/api-response";
+import { forbidden, jsonError, unauthorized } from "@/lib/api-response";
 import { auth as defaultAuth } from "@/lib/auth";
 
-type OrgsPrisma = Pick<PrismaClient, "$transaction">;
+type OrgsPrisma = Pick<PrismaClient, "$transaction" | "orgMembership">;
 
 type AuthLike = {
   api: {
@@ -41,6 +42,24 @@ const isValidSlug = (slug: string): boolean => {
   return true;
 };
 
+/**
+ * Creating an organization makes the caller its OWNER, and every operator
+ * surface authorizes on an OWNER or STAFF membership, so an open endpoint let
+ * any signed-in customer mint themselves an operator account. Before the first
+ * operator exists there is nobody who could authorize the call, so that one
+ * bootstraps; afterwards only an existing operator may provision another org.
+ */
+const mayCreateOrg = async (prisma: OrgsPrisma, userId: string): Promise<boolean> => {
+  if ((await countOperators(prisma)) === 0) {
+    return true;
+  }
+  const membership = await prisma.orgMembership.findFirst({
+    select: { id: true },
+    where: { role: { in: [...OPERATOR_ROLES] }, userId },
+  });
+  return membership !== null;
+};
+
 const createOrgSchema = z.object({
   name: z.string().min(1).max(120),
   slug: z
@@ -60,6 +79,10 @@ const buildOrgsRoutes = (deps: OrgsRouteDeps = {}): Hono => {
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
     if (!session) {
       return unauthorized(c, "Sign in first");
+    }
+
+    if (!(await mayCreateOrg(prisma, session.user.id))) {
+      return forbidden(c, `Requires one of: ${OPERATOR_ROLES.join(", ")}`);
     }
 
     let body: unknown;

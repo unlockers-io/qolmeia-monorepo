@@ -27,14 +27,26 @@ const buildPrisma = () => {
       create: vi.fn().mockResolvedValue({}),
     },
   };
+  const orgMembership = {
+    count: vi.fn().mockResolvedValue(0),
+    create: transactionClient.orgMembership.create,
+    findFirst: vi.fn().mockResolvedValue(null),
+  };
   const prisma = {
     $transaction: vi.fn(<Result>(callback: (tx: typeof transactionClient) => Promise<Result>) =>
       callback(transactionClient),
     ),
     organization: transactionClient.organization,
-    orgMembership: transactionClient.orgMembership,
+    orgMembership,
     transactionClient,
   };
+  return prisma;
+};
+
+/** An already-bootstrapped instance: operators exist, so the caller needs to be one. */
+const withOperators = (prisma: ReturnType<typeof buildPrisma>, callerIsOperator: boolean) => {
+  prisma.orgMembership.count.mockResolvedValue(1);
+  prisma.orgMembership.findFirst.mockResolvedValue(callerIsOperator ? { id: "mem_1" } : null);
   return prisma;
 };
 
@@ -106,7 +118,40 @@ describe("POST /api/orgs", () => {
     expect(res.status).toBe(400);
   });
 
-  it("201 happy path: creates org + OWNER membership + product company", async () => {
+  it("403 once an operator exists and the caller is not one", async () => {
+    const prisma = withOperators(buildPrisma(), false);
+    const provision = vi.fn().mockResolvedValue({ ok: true as const });
+    const app = buildOrgsRoutes({
+      auth: buildAuth(sessionA),
+      prisma: prisma as never,
+      provision,
+    });
+
+    const res = await postOrgs(app, { name: "Escalated Co", slug: "escalated-co" });
+
+    expect(res.status).toBe(403);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(provision).not.toHaveBeenCalled();
+  });
+
+  it("201 when an operator provisions another organization", async () => {
+    const prisma = withOperators(buildPrisma(), true);
+    const app = buildOrgsRoutes({
+      auth: buildAuth(sessionA),
+      prisma: prisma as never,
+      provision: vi.fn().mockResolvedValue({ ok: true as const }),
+    });
+
+    const res = await postOrgs(app, { name: "Second Co", slug: "second-co" });
+
+    expect(res.status).toBe(201);
+    expect(prisma.orgMembership.findFirst).toHaveBeenCalledWith({
+      select: { id: true },
+      where: { role: { in: ["OWNER", "STAFF"] }, userId: "user_a" },
+    });
+  });
+
+  it("201 bootstraps the first organization when no operator exists yet", async () => {
     const prisma = buildPrisma();
     const provision = vi.fn().mockResolvedValue({ ok: true as const });
     const app = buildOrgsRoutes({
