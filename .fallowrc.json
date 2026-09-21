@@ -16,7 +16,7 @@
     "apps/agents/src/cloudflare.ts",
     "apps/agents/src/agents/*.ts"
   ],
-  "ignorePatterns": [],
+  "ignorePatterns": [".github/ci/*.mjs"],
   "ignoreExports": [
     {
       "file": "apps/api/src/middleware/error-handler.ts",

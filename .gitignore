@@ -75,3 +75,6 @@ test-results/
 playwright-report/
 blob-report/
 tests/e2e/.auth/
+
+# CI selection and execution reports
+.ci-results/
