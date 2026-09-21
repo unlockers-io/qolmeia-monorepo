@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { execFileSync } from "node:child_process";
 
 import { defineConfig, devices } from "@playwright/test";
@@ -93,6 +95,7 @@ export default defineConfig({
           command: "node apps/api/dist/index.mjs",
           env: {
             HOST: "127.0.0.1",
+            PGAPPNAME: "qolmeia:ci:api",
             PORT: "4000",
           },
           stderr: "pipe",
@@ -102,6 +105,7 @@ export default defineConfig({
         },
         {
           command: "node_modules/.bin/next start apps/backoffice --port 3000 --hostname 127.0.0.1",
+          env: { PGAPPNAME: "qolmeia:ci:backoffice" },
           stderr: "pipe",
           stdout: "pipe",
           timeout: 120_000,
@@ -109,6 +113,7 @@ export default defineConfig({
         },
         {
           command: "node_modules/.bin/next start apps/web --port 3001 --hostname 127.0.0.1",
+          env: { PGAPPNAME: "qolmeia:ci:web" },
           stderr: "pipe",
           stdout: "pipe",
           timeout: 120_000,
@@ -116,6 +121,7 @@ export default defineConfig({
         },
         {
           command: "node_modules/.bin/next start apps/landing --port 3002 --hostname 127.0.0.1",
+          env: { PGAPPNAME: "qolmeia:ci:landing" },
           stderr: "pipe",
           stdout: "pipe",
           timeout: 120_000,
