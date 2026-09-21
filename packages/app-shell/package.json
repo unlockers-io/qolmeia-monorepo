@@ -19,13 +19,13 @@
     "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/worker-api": "workspace:*",
-    "better-auth": "^1.7.3"
+    "better-auth": "^1.7.5"
   },
   "devDependencies": {
     "@repo/config-vitest": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "next": "^16.3.4",
-    "react": "^19.2.8",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
   }
