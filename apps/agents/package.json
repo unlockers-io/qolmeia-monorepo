@@ -35,7 +35,7 @@
     "@repo/typescript-config": "workspace:*",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11",
+    "vitest": "^5.0.1",
     "wrangler": "^4.128.0",
     "zod-compiler": "^2.0.3"
   }
