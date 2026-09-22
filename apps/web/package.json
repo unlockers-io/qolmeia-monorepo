@@ -19,6 +19,7 @@
     "@flue/sdk": "2.0.7",
     "@repo/app-shell": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@repo/social-image": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/worker-api": "workspace:*",
     "@tanstack/react-form": "^1.33.5",
