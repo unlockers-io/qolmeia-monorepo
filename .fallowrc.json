@@ -42,6 +42,7 @@
     "better-auth",
     "hono",
     "react",
+    "@react-email/ui",
     "postcss-load-config",
     "agents",
     "valibot"
