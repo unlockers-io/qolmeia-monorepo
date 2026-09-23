@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { SHORT_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import { SITE_URL } from "@/lib/urls";
 
 const hanken = Hanken_Grotesk({ display: "swap", subsets: ["latin"], variable: "--font-hanken" });
@@ -16,12 +17,10 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
 });
 
-const SHORT_DESCRIPTION = "Um time de IA que trabalha na conversa";
-
 export const metadata: Metadata = {
-  authors: [{ name: "Qolmeia" }],
+  authors: [{ name: SITE_NAME }],
   category: "technology",
-  creator: "Qolmeia",
+  creator: SITE_NAME,
   description:
     "A Qolmeia monta um time de agentes de IA para a sua marca. Peça na conversa, acompanhe o trabalho e aprove as entregas.",
   keywords: ["qolmeia", "agentes de ia", "marketing", "marca", "campanhas"],
@@ -29,24 +28,24 @@ export const metadata: Metadata = {
   openGraph: {
     description: SHORT_DESCRIPTION,
     locale: "pt_BR",
-    siteName: "Qolmeia",
-    title: `Qolmeia · ${SHORT_DESCRIPTION}`,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} · ${SHORT_DESCRIPTION}`,
     type: "website",
   },
-  publisher: "Qolmeia",
+  publisher: SITE_NAME,
   robots: {
     follow: true,
     googleBot: { follow: true, index: true },
     index: true,
   },
   title: {
-    default: `Qolmeia · ${SHORT_DESCRIPTION}`,
-    template: "%s · Qolmeia",
+    default: `${SITE_NAME} · ${SHORT_DESCRIPTION}`,
+    template: `%s · ${SITE_NAME}`,
   },
   twitter: {
     card: "summary_large_image",
     description: SHORT_DESCRIPTION,
-    title: `Qolmeia · ${SHORT_DESCRIPTION}`,
+    title: `${SITE_NAME} · ${SHORT_DESCRIPTION}`,
   },
 };
 

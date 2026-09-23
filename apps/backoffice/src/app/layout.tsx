@@ -31,14 +31,6 @@ export const metadata: Metadata = {
   metadataBase,
   openGraph: {
     description: "Painel operacional da Qolmeia.",
-    images: [
-      {
-        alt: "Qolmeia · Backoffice",
-        height: 630,
-        url: "/og-image.png",
-        width: 1200,
-      },
-    ],
     locale: "pt_BR",
     siteName: "Qolmeia",
     title: "Qolmeia · Backoffice",
