@@ -17,8 +17,8 @@ nodeLinker: hoisted
 # a null hook dispatcher ("Cannot read properties of null (reading 'useRef')")
 # in component tests. Keep these in step with the apps' react version on bump.
 overrides:
-  react: 19.2.8
-  react-dom: 19.2.8
+  react: 19.3.0
+  react-dom: 19.3.0
   # 1.5.2 dropped the "types" conditions from its exports map, so the type
   # declarations resolve to a broken sibling .d.mts and every OpenAPI route
   # helper degrades to the error type (~40 type-aware lint errors in apps/api).
@@ -27,7 +27,7 @@ overrides:
   # copies break `app.route(path, createAgentRouter(...))` types). Lift only that
   # pin onto the workspace range so runtime and app share one Hono; bump it
   # together with the apps' hono range.
-  "@flue/runtime>hono": "^4.13.5"
+  "@flue/runtime>hono": "^4.13.7"
   # Security: force patched transitive releases to clear pnpm audit advisories.
   # Each pin is the lowest patched version within the already-resolved major.
   deepmerge-ts: "^8.0.0"
