@@ -84,7 +84,7 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
       }}
       open={asset !== null}
     >
-      <DialogContent className="max-h-(--layout-max-h-dialog-viewport) max-w-2xl gap-4 overflow-hidden">
+      <DialogContent className="max-h-(--layout-max-h-dialog-viewport) gap-4 overflow-hidden sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="truncate pr-8">{asset?.name ?? "Arquivo"}</DialogTitle>
           <DialogDescription className="sr-only">Pré-visualização do arquivo</DialogDescription>

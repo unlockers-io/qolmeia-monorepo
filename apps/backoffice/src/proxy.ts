@@ -14,7 +14,9 @@ const protectedRoutes = [
   "/tickets",
 ];
 
-const authRoutes = ["/login", "/register", "/recover", "/reset-password"];
+// /reset-password is deliberately absent: bouncing an authenticated visitor to the dashboard would
+// make a reset link unusable for anyone still holding a session.
+const authRoutes = ["/login", "/register", "/recover"];
 
 const matchesRoute = (pathname: string, route: string): boolean => {
   if (route === "/") {

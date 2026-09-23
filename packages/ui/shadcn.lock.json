@@ -20,7 +20,7 @@
     "src/components/avatar.tsx": {
       "registry": "avatar",
       "registrySha256": "bbcabf0121fb2ff93a8522f8f80b74631e732a31399b1b7991c0b8c3167e2172",
-      "sha256": "a79b4914200000dac5ffaa30d71d9f41d80107f5ce8025efb1765705040a82a7"
+      "sha256": "ef707056cf90b9cce3c2dfc6bb95524030f18500bc9fb68752ed5c7b27d4c1a3"
     },
     "src/components/badge.tsx": {
       "registry": "badge",

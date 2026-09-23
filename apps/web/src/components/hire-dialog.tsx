@@ -56,7 +56,7 @@ const HireDialog = ({ onClose, onHired, open, template }: HireDialogProps) => {
       }}
       open={open}
     >
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Contratar {template?.displayName ?? ""}</DialogTitle>
           <DialogDescription>

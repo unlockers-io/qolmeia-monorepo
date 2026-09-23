@@ -317,7 +317,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
         }}
         open={confirmIds !== null}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               Excluir {confirmCount} {confirmCount > 1 ? "arquivos" : "arquivo"}?
