@@ -44,8 +44,7 @@ type MeFetch =
 const fetchMe = async (request: Request, env: Env): Promise<MeFetch> => {
   const tokenParam = new URL(request.url).searchParams.get("cf_session");
   const authHeader = request.headers.get("Authorization");
-  const bearerToken =
-    authHeader !== null && authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const bearerToken = authHeader?.startsWith("Bearer ") === true ? authHeader.slice(7) : null;
   const cookieHeader = request.headers.get("Cookie");
 
   const token = bearerToken ?? tokenParam;

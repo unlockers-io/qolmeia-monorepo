@@ -88,13 +88,13 @@ const buildInputSchema = (
   skillId: string,
 ): v.GenericSchema<Record<string, JsonValue>, unknown> => {
   // SAFETY: JsonSchemaNode is an all-optional view and convert validates every field it reads.
-  // oxlint-disable-next-line no-unsafe-type-assertion
+  // oxlint-disable-next-line no-unsafe-type-assertion -- zod's toJSONSchema returns an untyped JSON Schema document
   const node = z.toJSONSchema(schema) as JsonSchemaNode;
   if (node.type !== "object") {
     throw new Error(`Skill "${skillId}" input schema must be a top-level object`);
   }
   // SAFETY: The checked object node makes convert return a record-producing schema.
-  // oxlint-disable-next-line no-unsafe-type-assertion
+  // oxlint-disable-next-line no-unsafe-type-assertion -- convert is typed for any node, not the object node checked above
   return convert(node, skillId) as v.GenericSchema<Record<string, JsonValue>, unknown>;
 };
 
@@ -109,7 +109,7 @@ const buildFlueTools = (
       input: buildInputSchema(skill.inputSchema, skill.id),
       name: skill.id,
       // SAFETY: The skill contract restricts every output to JSON-compatible values.
-      // oxlint-disable-next-line no-unsafe-type-assertion
+      // oxlint-disable-next-line no-unsafe-type-assertion -- skill.execute is typed unknown across the skill registry
       run: async ({ data }) => ({ output: (await skill.execute(data)) as JsonValue }),
     }),
   );

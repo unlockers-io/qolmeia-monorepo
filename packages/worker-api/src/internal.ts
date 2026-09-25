@@ -361,7 +361,7 @@ const createAgentsApi = (config: AgentsApiConfig) => {
     }
     const body: unknown = await response.json();
     // SAFETY: The authenticated first-party endpoint dispatches this operation through the matching AgentsApiOperations contract.
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Response.json() is untyped and the operation name selects the contract
     return body as AgentsApiOperations[Operation]["output"];
   };
 };

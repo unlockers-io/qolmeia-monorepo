@@ -60,7 +60,9 @@ const mergeBrief = (
   updates: Partial<CompanyBrief>,
 ): CompanyBrief => {
   const definedUpdates = Object.fromEntries(
-    Object.entries(updates).filter(([, value]) => value !== undefined),
+    Object.entries<CompanyBrief[keyof CompanyBrief] | undefined>(updates).filter(
+      ([, value]) => value !== undefined,
+    ),
   );
   const parsed = companyBriefSchema.partial().parse({ ...existing, ...definedUpdates });
   return {

@@ -53,7 +53,7 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
 
   const { action, ageSeconds, ticket } = detail;
   const summary = typeof action.proposed.summary === "string" ? action.proposed.summary : null;
-  const policyCopy = POLICY_COPY[action.policy] ?? action.policy;
+  const policyCopy = POLICY_COPY[action.policy];
   const TypedRenderer = getActionRenderer(action.actionType);
   const waited = formatDurationSeconds(Math.max(0, ageSeconds));
 

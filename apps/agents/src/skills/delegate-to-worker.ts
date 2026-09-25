@@ -39,7 +39,7 @@ const pickWorker = (
   const idle = eligible.filter((c) => c.busyCount === 0);
   const pool = idle.length > 0 ? idle : eligible;
   const idx = Number(BigInt(Date.now()) % BigInt(pool.length));
-  const chosen = pool[idx] ?? pool[0];
+  const chosen = pool.at(idx) ?? pool.at(0);
   return chosen ?? null;
 };
 
@@ -62,7 +62,6 @@ const delegateToWorkerSkill: UnknownSkill = {
     }
 
     const ticketId = crypto.randomUUID();
-    // oxlint-disable-next-line react-doctor/async-parallel -- ordered: the ticket row must exist before the workflow starts, and the workflow id comes from the create call
     await db("tickets.createDelegated", {
       agentInstanceId: target.id,
       brief,

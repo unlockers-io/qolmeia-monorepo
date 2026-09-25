@@ -143,7 +143,6 @@ const listWorkerCandidates = async (db: Database, companyId: string, workerKind:
     },
   });
   return rows.map((row) => {
-    // oxlint-disable-next-line no-underscore-dangle -- Prisma exposes relation counts through its generated _count field.
     return { busyCount: row._count.tickets, id: row.id };
   });
 };

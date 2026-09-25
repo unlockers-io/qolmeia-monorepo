@@ -52,7 +52,7 @@ const upsertUser = async (
     return { created: false, userId: existing.id };
   }
   const result = await auth.api.signUpEmail({ body: { email, name, password } });
-  if (!result.user?.id) {
+  if (!result.user.id) {
     throw new Error(`Better Auth signUpEmail returned no user id for ${email}`);
   }
   return { created: true, userId: result.user.id };

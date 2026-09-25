@@ -17,7 +17,8 @@ export const metadata: Metadata = { title: "Tickets" };
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-const monogramOf = (value: string): string => (value.trim()[0] ?? "?").toLocaleUpperCase("pt-BR");
+const monogramOf = (value: string): string =>
+  (value.trim().at(0) ?? "?").toLocaleUpperCase("pt-BR");
 
 const TicketsContent = async () => {
   const res = await apiGetServer<TicketsResponse>("/tickets?limit=50");

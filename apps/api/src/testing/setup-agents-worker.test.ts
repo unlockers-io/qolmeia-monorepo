@@ -101,12 +101,14 @@ describe("agents worker test services", () => {
     spawn.mockReturnValue(fixture);
     fetchMock.mockRejectedValue(new Error("Service unavailable"));
     const starting = setup();
-    const failure = expect(starting).rejects.toThrow("Cannot spawn Node");
-    fixture.emit("error", new Error("Cannot spawn Node"));
-    closeChild(fixture);
-
-    await vi.advanceTimersByTimeAsync(100);
-    await failure;
+    await Promise.all([
+      expect(starting).rejects.toThrow("Cannot spawn Node"),
+      (async () => {
+        fixture.emit("error", new Error("Cannot spawn Node"));
+        closeChild(fixture);
+        await vi.advanceTimersByTimeAsync(100);
+      })(),
+    ]);
     expect(spawn).toHaveBeenCalledOnce();
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -122,14 +124,14 @@ describe("agents worker test services", () => {
     fetchMock
       .mockResolvedValueOnce(new Response(null, { status: 200 }))
       .mockRejectedValue(new Error("Service unavailable"));
-    const failure = expect(setup()).rejects.toThrow(
-      "Test service src/index.ts exited before it was ready",
-    );
-    await vi.advanceTimersByTimeAsync(0);
-    closeChild(api);
-
-    await vi.advanceTimersByTimeAsync(100);
-    await failure;
+    await Promise.all([
+      expect(setup()).rejects.toThrow("Test service src/index.ts exited before it was ready"),
+      (async () => {
+        await vi.advanceTimersByTimeAsync(0);
+        closeChild(api);
+        await vi.advanceTimersByTimeAsync(100);
+      })(),
+    ]);
     expect(fixture.kill).toHaveBeenCalledExactlyOnceWith("SIGTERM");
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -142,12 +144,10 @@ describe("agents worker test services", () => {
     });
     spawn.mockReturnValue(fixture);
     fetchMock.mockResolvedValue(new Response(null, { status: 503 }));
-    const failure = expect(setup()).rejects.toThrow(
-      "Timed out waiting for http://127.0.0.1:4011/healthz",
-    );
-
-    await vi.advanceTimersByTimeAsync(20_000);
-    await failure;
+    await Promise.all([
+      expect(setup()).rejects.toThrow("Timed out waiting for http://127.0.0.1:4011/healthz"),
+      vi.advanceTimersByTimeAsync(20_000),
+    ]);
     expect(fixture.kill).toHaveBeenCalledExactlyOnceWith("SIGTERM");
     expect(spawn).toHaveBeenCalledOnce();
     expect(vi.getTimerCount()).toBe(0);
@@ -158,10 +158,10 @@ describe("agents worker test services", () => {
     const api = createChild();
     spawn.mockReturnValueOnce(fixture).mockReturnValueOnce(api);
     const teardown = await setup();
-    const failure = expect(teardown()).rejects.toThrow("Failed to stop test services");
-
-    await vi.advanceTimersByTimeAsync(10_000);
-    await failure;
+    await Promise.all([
+      expect(teardown()).rejects.toThrow("Failed to stop test services"),
+      vi.advanceTimersByTimeAsync(10_000),
+    ]);
     expect(fixture.kill).toHaveBeenLastCalledWith("SIGKILL");
     expect(api.kill).toHaveBeenLastCalledWith("SIGKILL");
     expect(vi.getTimerCount()).toBe(0);

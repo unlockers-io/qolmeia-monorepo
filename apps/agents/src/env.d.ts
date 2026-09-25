@@ -1,4 +1,3 @@
-// oxlint-disable typescript/consistent-type-definitions
 interface Env {
   AI?: Ai;
   API_INTERNAL_URL: string;
@@ -12,7 +11,7 @@ interface Env {
 }
 
 namespace Cloudflare {
-  // oxlint-disable-next-line no-shadow
+  // oxlint-disable-next-line no-shadow -- Cloudflare.Env declaration merging requires the same name as the global Env
   interface Env {
     AI?: Ai;
     ASSETS_SIGNING_KEY: string;
@@ -24,4 +23,3 @@ namespace Cloudflare {
     VECTORIZE?: VectorizeIndex;
   }
 }
-// oxlint-enable typescript/consistent-type-definitions

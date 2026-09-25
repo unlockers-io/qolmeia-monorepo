@@ -37,7 +37,7 @@ const ROLE_LABEL = {
 } satisfies Record<TeamMemberView["role"], string>;
 
 const memberRoleLabel = (m: TeamMemberView): string =>
-  m.role === "worker" ? (m.workerKind ?? "Especialista") : ROLE_LABEL[m.role];
+  m.role === "worker" ? m.workerKind : ROLE_LABEL[m.role];
 
 const TeamsContent = async () => {
   await requireStaff();
