@@ -48,7 +48,7 @@ const fetchJson = async <T,>(
     throw new Error(`${url} responded ${res.status}`);
   }
   // SAFETY: Callers bind T to the contract of the first-party route they request.
-  // oxlint-disable-next-line no-unsafe-type-assertion
+  // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and callers own the route contract
   return { data: (await res.json()) as T, kind: "ok" };
 };
 

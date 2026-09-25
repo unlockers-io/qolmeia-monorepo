@@ -14,16 +14,10 @@ type AgentCardProps = {
 };
 
 const roleLabel = (m: TeamMemberView): string => {
-  if (m.role === "correspondent") {
-    return "Correspondente";
-  }
-  if (m.role === "planner") {
-    return "Planejador";
-  }
   if (m.role === "worker") {
     return m.workerKind;
   }
-  return m.role;
+  return m.role === "correspondent" ? "Correspondente" : "Planejador";
 };
 
 const WORKER_KIND_AVATAR: ReadonlyArray<{ cls: string; match: RegExp }> = [
@@ -45,7 +39,7 @@ const avatarClass = (m: TeamMemberView): string => {
   return hit?.cls ?? "bg-avatar-8";
 };
 
-const monogramOf = (name: string): string => (name.trim()[0] ?? "?").toLocaleUpperCase("pt-BR");
+const monogramOf = (name: string): string => (name.trim().at(0) ?? "?").toLocaleUpperCase("pt-BR");
 
 const STATUS_TONE = {
   available: "success",

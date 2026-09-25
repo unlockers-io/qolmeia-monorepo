@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export const instant = true;
 
 const NoAccessPage = () => (
-  <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
+  <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-12">
     <Card className="w-full max-w-md">
       <CardHeader>
         <div

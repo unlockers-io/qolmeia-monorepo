@@ -190,7 +190,7 @@ const SidebarView = ({
       </header>
       <aside
         aria-label="Navegação principal"
-        className="hidden h-screen w-59.5 shrink-0 flex-col border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
+        className="hidden h-dvh w-59.5 shrink-0 flex-col border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
       >
         <div className="px-1.5">
           <Link className="inline-flex transition-opacity hover:opacity-80" href="/">

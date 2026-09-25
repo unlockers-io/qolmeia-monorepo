@@ -87,7 +87,7 @@ const materializeTeam = async (
     });
     await settleValues(
       templates.map((template, index) => {
-        const id = workerIds[index];
+        const id = workerIds.at(index);
         if (id === undefined) {
           throw new Error(`Missing worker id for template ${template.id}`);
         }

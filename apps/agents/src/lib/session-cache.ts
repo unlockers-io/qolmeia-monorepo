@@ -34,8 +34,8 @@ const buildCacheKey = async (input: CacheKeyInput): Promise<string | null> => {
 };
 
 const describeCacheKey = (key: string): string => {
-  const [namespace, kind] = key.split(":");
-  return `${namespace ?? "unknown"}:${kind ?? "unknown"}`;
+  const [namespace = "unknown", kind = "unknown"] = key.split(":");
+  return `${namespace}:${kind}`;
 };
 
 const readCachedString = async (env: Env, key: string | null): Promise<string | null> => {

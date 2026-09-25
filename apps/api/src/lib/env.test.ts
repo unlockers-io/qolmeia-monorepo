@@ -22,20 +22,24 @@ describe("envSchema", () => {
   });
 
   it("rejects when BETTER_AUTH_SECRET is shorter than 32 chars", () => {
-    expect(() => envSchema.parse({ ...base, BETTER_AUTH_SECRET: "short" })).toThrow();
+    expect(() => envSchema.parse({ ...base, BETTER_AUTH_SECRET: "short" })).toThrow(
+      "BETTER_AUTH_SECRET",
+    );
   });
 
   it("rejects when DATABASE_URL is missing", () => {
     const { DATABASE_URL: _url, ...withoutDb } = base;
-    expect(() => envSchema.parse(withoutDb)).toThrow();
+    expect(() => envSchema.parse(withoutDb)).toThrow("DATABASE_URL");
   });
 
   it("rejects when INTERNAL_SHARED_SECRET is missing", () => {
     const { INTERNAL_SHARED_SECRET: _secret, ...withoutSecret } = base;
-    expect(() => envSchema.parse(withoutSecret)).toThrow();
+    expect(() => envSchema.parse(withoutSecret)).toThrow("INTERNAL_SHARED_SECRET");
   });
 
   it("rejects when INTERNAL_SHARED_SECRET is shorter than 32 chars", () => {
-    expect(() => envSchema.parse({ ...base, INTERNAL_SHARED_SECRET: "topsecret" })).toThrow();
+    expect(() => envSchema.parse({ ...base, INTERNAL_SHARED_SECRET: "topsecret" })).toThrow(
+      "INTERNAL_SHARED_SECRET",
+    );
   });
 });

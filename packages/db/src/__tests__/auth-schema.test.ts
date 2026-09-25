@@ -94,7 +94,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
         prisma.user.create({
           data: { email, name: "Other" },
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow("Unique constraint failed");
 
       const u = await prisma.user.create({
         data: { email: `${PREFIX}-tok@example.com`, name: "Token User" },
@@ -116,7 +116,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
             userId: u.id,
           },
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow("Unique constraint failed");
     });
 
     it("round-trips OrgMembership and enforces (userId, orgId) uniqueness", async () => {
@@ -136,7 +136,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
         prisma.orgMembership.create({
           data: { orgId: org.id, role: "STAFF", userId: user.id },
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow("Unique constraint failed");
 
       const reloadedUser = await prisma.user.findUnique({
         include: { memberships: { select: { orgId: true, role: true } } },

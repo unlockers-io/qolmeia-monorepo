@@ -132,7 +132,7 @@ const TEMPLATES = {
 const createTransactionalEmailSender =
   (send: SendEmail) => (email: TransactionalEmail, config: MailerConfig) => {
     // SAFETY: TEMPLATES satisfies a builder contract for every discriminant.
-    // oxlint-disable-next-line no-unsafe-type-assertion
+    // oxlint-disable-next-line no-unsafe-type-assertion -- indexing TEMPLATES by a union key loses the per-discriminant builder type
     const builder = TEMPLATES[email.type] as TemplateBuilder<typeof email>;
     const { subject, template, to } = builder(email);
     return send({
