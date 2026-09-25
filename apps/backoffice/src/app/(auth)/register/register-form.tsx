@@ -233,8 +233,10 @@ const RegisterForm = ({ searchParams }: Props) => {
           </FieldGroup>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-            {([canSubmit, isSubmitting]) => (
+          <form.Subscribe
+            selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
+          >
+            {({ canSubmit, isSubmitting }) => (
               <Button
                 className="w-full"
                 disabled={!canSubmit || isSubmitting}

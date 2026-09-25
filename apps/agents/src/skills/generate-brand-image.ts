@@ -82,7 +82,7 @@ const parseDataUrl = (url: string): { bytes: Uint8Array; mime: string } | null =
     return null;
   }
   const { b64, mime } = match.groups ?? {};
-  if (!mime || !b64) {
+  if (mime === undefined || b64 === undefined) {
     return null;
   }
   return { bytes: decodeBase64(b64), mime };

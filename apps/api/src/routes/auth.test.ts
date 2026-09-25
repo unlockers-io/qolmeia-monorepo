@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 
 import { buildAuthRoutes } from "./auth";
 
@@ -26,7 +26,9 @@ describe("authRoutes adapter", () => {
     const res = await authRoutes.fetch(req);
 
     expect(handlerMock).toHaveBeenCalledTimes(1);
-    const forwarded = handlerMock.mock.calls[0][0];
+    const [firstCall] = handlerMock.mock.calls;
+    assert(firstCall, "auth.handler was not called");
+    const [forwarded] = firstCall;
     expect(forwarded.url).toBe("http://localhost:4000/auth/sign-in/email");
     expect(forwarded.method).toBe("POST");
     expect(res.status).toBe(200);
