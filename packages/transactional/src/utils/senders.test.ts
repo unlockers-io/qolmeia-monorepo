@@ -125,15 +125,18 @@ describe("sendTransactionalEmail", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(sendMock.mock.calls[0][0]).toMatchObject({
-      from: "Qolmeia <noreply@email.qolmeia.com>",
-      subject: "Welcome to Qolmeia, Pedro! Please verify your email",
-      tags: [
-        { name: "type", value: "welcome" },
-        { name: "userId", value: "user_1" },
-      ],
-      to: "user@example.com",
-    });
+    expect(sendMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        from: "Qolmeia <noreply@email.qolmeia.com>",
+        subject: "Welcome to Qolmeia, Pedro! Please verify your email",
+        tags: [
+          { name: "type", value: "welcome" },
+          { name: "userId", value: "user_1" },
+        ],
+        to: "user@example.com",
+      }),
+    );
   });
 
   it("sends a magic-link email without a userId tag when the account does not exist yet", async () => {
@@ -147,14 +150,15 @@ describe("sendTransactionalEmail", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(sendMock.mock.calls[0][0]).toMatchObject({
-      from: "noreply@email.qolmeia.com",
-      subject: "Seu link de acesso à Qolmeia",
-      tags: [{ name: "type", value: "magic-link" }],
-      to: "user@example.com",
-    });
-    expect(sendMock.mock.calls[0][0].html).toContain(
-      "https://app.qolmeia.com/auth/magic?token=mlk-123",
+    expect(sendMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        from: "noreply@email.qolmeia.com",
+        html: expect.stringContaining("https://app.qolmeia.com/auth/magic?token=mlk-123"),
+        subject: "Seu link de acesso à Qolmeia",
+        tags: [{ name: "type", value: "magic-link" }],
+        to: "user@example.com",
+      }),
     );
   });
 
@@ -171,9 +175,12 @@ describe("sendTransactionalEmail", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(sendMock.mock.calls[0][0]).toMatchObject({
-      subject: "Confirm change of your Qolmeia account email",
-      to: "old@example.com",
-    });
+    expect(sendMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        subject: "Confirm change of your Qolmeia account email",
+        to: "old@example.com",
+      }),
+    );
   });
 });

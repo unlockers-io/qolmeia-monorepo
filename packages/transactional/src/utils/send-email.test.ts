@@ -31,9 +31,10 @@ describe("sendEmail from validation", () => {
 
     expect(result.success).toBe(true);
     expect(sendMock).toHaveBeenCalledOnce();
-    expect(sendMock.mock.calls[0][0]).toMatchObject({
-      from: "Qolmeia <noreply@email.qolmeia.com>",
-    });
+    expect(sendMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ from: "Qolmeia <noreply@email.qolmeia.com>" }),
+    );
   });
 
   it("accepts bare email in from", async () => {
@@ -63,9 +64,10 @@ describe("sendEmail from validation", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(sendMock.mock.calls[0][0]).toMatchObject({
-      from: "Qolmeia <noreply@email.qolmeia.com>",
-    });
+    expect(sendMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ from: "Qolmeia <noreply@email.qolmeia.com>" }),
+    );
   });
 
   it("rejects from values that are neither bare email nor wrapped form", async () => {

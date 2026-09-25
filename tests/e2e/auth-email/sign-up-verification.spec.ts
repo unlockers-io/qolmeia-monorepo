@@ -47,8 +47,10 @@ test.describe("Sign-up email verification", () => {
       .filter((header) => header.name.toLowerCase() === "set-cookie")
       .map((header) => header.value);
     expect(setCookies.some((cookie) => cookie.includes("qolmeia.session_token="))).toBe(true);
-    const location = verifyResponse.headers().location;
-    expect(location).toBeDefined();
+    const { location } = verifyResponse.headers();
+    if (location === undefined) {
+      throw new Error("verification response has no Location header");
+    }
     expect(new URL(location, authUrl).pathname).toBe("/");
 
     const postSignIn = await request.post(`${authUrl}/api/auth/sign-in/email`, {

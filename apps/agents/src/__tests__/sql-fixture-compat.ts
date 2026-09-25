@@ -73,19 +73,23 @@ const transformInsert = (input: string): string => {
   if (!match?.groups) {
     return sql;
   }
-  const columns = match.groups.columns.split(",").map((value) => value.trim().replaceAll('"', ""));
-  const values = match.groups.values.split(",").map((value) => value.trim());
+  const { columns: columnList, table, values: valueList } = match.groups;
+  if (columnList === undefined || table === undefined || valueList === undefined) {
+    throw new Error("transformInsert: INSERT pattern matched without its capture groups");
+  }
+  const columns = columnList.split(",").map((value) => value.trim().replaceAll('"', ""));
+  const values = valueList.split(",").map((value) => value.trim());
   const converted = values.map((value, index) =>
-    columns[index]?.endsWith("_at") && (value === "?" || /^\d+$/v.test(value))
+    columns[index]?.endsWith("_at") === true && (value === "?" || /^\d+$/v.test(value))
       ? `to_timestamp(${value} / 1000.0)`
       : value,
   );
-  sql = sql.replace(match.groups.values, converted.join(", ")).replace(/;$/v, "");
+  sql = sql.replace(valueList, converted.join(", ")).replace(/;$/v, "");
   if (behavior === "IGNORE") {
     return `${sql} ON CONFLICT DO NOTHING`;
   }
   if (behavior === "REPLACE") {
-    const keys = primaryKeyFor(match.groups.table);
+    const keys = primaryKeyFor(table);
     const updates = columns
       .filter((column) => !keys.includes(column))
       .map((column) => `"${column}" = EXCLUDED."${column}"`)
@@ -105,14 +109,20 @@ const transformInsertSelect = (input: string): string => {
   if (!match?.groups) {
     return sql;
   }
-  const columns = match.groups.columns.split(",").map((value) => value.trim().replaceAll('"', ""));
-  const values = match.groups.values.split(",").map((value) => value.trim());
+  const { columns: columnList, values: valueList } = match.groups;
+  if (columnList === undefined || valueList === undefined) {
+    throw new Error(
+      "transformInsertSelect: INSERT SELECT pattern matched without its capture groups",
+    );
+  }
+  const columns = columnList.split(",").map((value) => value.trim().replaceAll('"', ""));
+  const values = valueList.split(",").map((value) => value.trim());
   const converted = values.map((value, index) =>
-    columns[index]?.endsWith("_at") && (value === "?" || /^\d+$/v.test(value))
+    columns[index]?.endsWith("_at") === true && (value === "?" || /^\d+$/v.test(value))
       ? `to_timestamp(${value} / 1000.0)`
       : value,
   );
-  sql = sql.replace(match.groups.values, converted.join(", ")).replace(/;$/v, "");
+  sql = sql.replace(valueList, converted.join(", ")).replace(/;$/v, "");
   if (behavior === "IGNORE") {
     return `${sql} ON CONFLICT DO NOTHING`;
   }
