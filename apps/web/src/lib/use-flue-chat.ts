@@ -73,7 +73,7 @@ const toPromptImage = async (url: string, mimeType: string): Promise<DeliveredAt
 
 const toPromptImages = async (files: Array<FileUIPart>): Promise<Array<DeliveredAttachment>> => {
   const imageFiles = files.flatMap((file) =>
-    file.mediaType?.startsWith("image/") ? [{ mimeType: file.mediaType, url: file.url }] : [],
+    file.mediaType.startsWith("image/") ? [{ mimeType: file.mediaType, url: file.url }] : [],
   );
   const settled = await Promise.allSettled(
     imageFiles.map((file) => toPromptImage(file.url, file.mimeType)),

@@ -53,7 +53,6 @@ const projectMember = (row: ProjectableRow): TeamMemberView => {
     displayName: row.displayName,
     hasPromptOverride: row.promptOverride !== null,
     id: row.id,
-    // oxlint-disable-next-line no-underscore-dangle -- Prisma exposes relation counts through its generated _count field.
     lifetimeDone: row._count.tickets,
     status,
   };
@@ -153,7 +152,6 @@ const getCatalogue = async (
   ]);
   const countByTemplate = new Map(
     counts.map((row) => {
-      // oxlint-disable-next-line no-underscore-dangle -- Prisma groupBy exposes aggregate counts through generated _count and _all fields.
       return [row.templateId, row._count._all];
     }),
   );

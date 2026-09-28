@@ -45,7 +45,8 @@
     "@react-email/ui",
     "postcss-load-config",
     "agents",
-    "valibot"
+    "valibot",
+    "@shadcn/lint"
   ],
   "rules": {
     "unused-dependencies": "warn",

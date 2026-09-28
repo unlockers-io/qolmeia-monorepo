@@ -4,7 +4,6 @@ import type { TestDatabase } from "#/__tests__/sql-fixture-compat";
 import type * as WorkerEntry from "#/__tests__/worker-entry";
 
 declare global {
-  // oxlint-disable typescript/consistent-type-definitions
   interface Env {
     DB: TestDatabase;
     TEST_FIXTURE_SECRET: string;
@@ -21,5 +20,4 @@ declare global {
       mainModule: typeof WorkerEntry;
     }
   }
-  // oxlint-enable typescript/consistent-type-definitions
 }

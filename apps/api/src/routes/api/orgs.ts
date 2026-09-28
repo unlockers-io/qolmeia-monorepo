@@ -42,15 +42,11 @@ const isValidSlug = (slug: string): boolean => {
   return true;
 };
 
-/**
- * Creating an organization makes the caller its OWNER, and every operator
- * surface authorizes on an OWNER or STAFF membership, so an open endpoint let
- * any signed-in customer mint themselves an operator account. Before the first
- * operator exists there is nobody who could authorize the call, so that one
- * bootstraps; afterwards only an existing operator may provision another org.
- */
+// The creator becomes the org's OWNER, an operator role, so an open endpoint
+// would let any customer mint operator access.
 const mayCreateOrg = async (prisma: OrgsPrisma, userId: string): Promise<boolean> => {
-  if ((await countOperators(prisma)) === 0) {
+  const isFirstOperatorBootstrap = (await countOperators(prisma)) === 0;
+  if (isFirstOperatorBootstrap) {
     return true;
   }
   const membership = await prisma.orgMembership.findFirst({

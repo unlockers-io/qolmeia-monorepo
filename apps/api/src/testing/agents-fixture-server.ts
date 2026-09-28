@@ -68,7 +68,7 @@ const ensureSchema = async (): Promise<void> => {
   const existing = await prisma.$queryRawUnsafe<Array<{ table_name: string | null }>>(
     "SELECT to_regclass('company')::text AS table_name",
   );
-  if (existing[0]?.table_name === null || existing[0]?.table_name === undefined) {
+  if ((existing.at(0)?.table_name ?? null) === null) {
     await runDbPush(path.resolve(import.meta.dirname, "../../../.."));
   }
 };
@@ -153,10 +153,8 @@ const handleShutdown = async (): Promise<void> => {
 };
 
 process.on("SIGINT", () => {
-  // oxlint-disable-next-line no-void -- Node signal listeners cannot return the shutdown promise, but disconnecting Prisma keeps the process alive until cleanup finishes.
   void handleShutdown();
 });
 process.on("SIGTERM", () => {
-  // oxlint-disable-next-line no-void -- Node signal listeners cannot return the shutdown promise, but disconnecting Prisma keeps the process alive until cleanup finishes.
   void handleShutdown();
 });

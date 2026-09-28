@@ -23,7 +23,7 @@ class VectorizeMemoryAdapter implements MemoryAdapter {
       if (match.score < min) {
         continue;
       }
-      const m = match.metadata ?? {};
+      const m: Partial<Record<string, VectorizeVectorMetadata>> = match.metadata ?? {};
       records.push({
         agentInstanceId: metaString(m.agentInstanceId),
         companyId: metaString(m.companyId),

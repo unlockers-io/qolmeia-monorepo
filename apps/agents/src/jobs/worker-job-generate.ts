@@ -36,7 +36,6 @@ type SkillResultValue = z.infer<typeof skillResultSchema>;
 const escapeRegExp = (value: string): string =>
   value.replaceAll(/[.*+?^$\{\}\(\)\|\[\]\\]/gv, String.raw`\$&`);
 
-/* oxlint-disable react-doctor/js-hoist-regexp, react-doctor/js-set-map-lookups */
 const embedGeneratedImages = (
   summary: string,
   skillResults: Record<string, SkillResultValue>,
@@ -64,7 +63,6 @@ const embedGeneratedImages = (
   }
   return out;
 };
-/* oxlint-enable react-doctor/js-hoist-regexp, react-doctor/js-set-map-lookups */
 
 const generateDeliverable = async (
   ctx: JobContext,
@@ -106,8 +104,8 @@ const generateDeliverable = async (
   });
   const summary = result.text.trim();
   const skillResults: Record<string, SkillResultValue> = {};
-  for (const stepResult of result.steps ?? []) {
-    for (const toolResult of stepResult.toolResults ?? []) {
+  for (const stepResult of result.steps) {
+    for (const toolResult of stepResult.toolResults) {
       const name = toolResult.toolName;
       const output = skillResultSchema.safeParse(toolResult.output);
       if (typeof name === "string" && output.success) {
@@ -124,9 +122,7 @@ const generateDeliverable = async (
     revision: round,
     skillResultNames: Object.keys(skillResults),
     ticketId,
-    toolCallNames: (result.steps ?? []).flatMap((s) =>
-      (s.toolCalls ?? []).map((tc) => tc.toolName),
-    ),
+    toolCallNames: result.steps.flatMap((s) => s.toolCalls.map((tc) => tc.toolName)),
     usage: result.usage,
   });
   return {

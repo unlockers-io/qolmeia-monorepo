@@ -64,7 +64,7 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
     if (asset?.mimeType === "text/markdown") {
       return (
         <div className="text-sm leading-relaxed text-foreground">
-          <MarkdownResponse>{data ?? ""}</MarkdownResponse>
+          <MarkdownResponse>{data}</MarkdownResponse>
         </div>
       );
     }
