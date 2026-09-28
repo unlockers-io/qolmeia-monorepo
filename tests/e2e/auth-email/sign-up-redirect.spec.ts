@@ -54,8 +54,10 @@ test.describe("Sign-up with redirect context", () => {
       .map((header) => header.value);
     expect(setCookies.some((cookie) => cookie.includes("qolmeia.session_token="))).toBe(true);
 
-    const location = verifyResponse.headers().location;
-    expect(location).toBeDefined();
+    const { location } = verifyResponse.headers();
+    if (location === undefined) {
+      throw new Error("verification response has no Location header");
+    }
     expect(new URL(location, backofficeUrl).toString()).toBe(`${backofficeUrl}${fromPath}`);
   });
 });

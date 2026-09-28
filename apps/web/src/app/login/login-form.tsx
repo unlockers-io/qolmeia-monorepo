@@ -212,8 +212,10 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
             </form.Field>
           )}
         </FieldGroup>
-        <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
-          {([canSubmit, isSubmitting]) => (
+        <form.Subscribe
+          selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
+        >
+          {({ canSubmit, isSubmitting }) => (
             <div className="mt-6 flex flex-col gap-3">
               <Button
                 className="w-full"

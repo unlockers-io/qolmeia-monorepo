@@ -33,7 +33,7 @@ setup("create and authenticate test user", async ({ page, request }) => {
     .map((h) => h.value);
   const browserCookies = [];
   for (const part of setCookieHeaders) {
-    const [nameValue] = part.split(";");
+    const [nameValue = ""] = part.split(";");
     const eq = nameValue.indexOf("=");
     if (eq === -1) {
       continue;
