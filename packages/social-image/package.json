@@ -21,7 +21,7 @@
     "@repo/config-vitest": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/fontkit": "2.0.9",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"

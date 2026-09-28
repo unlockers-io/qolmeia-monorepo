@@ -17,26 +17,26 @@
     "typecheck": "wrangler types --strict-vars=false && tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^3.0.43",
-    "@flue/runtime": "2.0.7",
+    "@ai-sdk/openai-compatible": "^3.0.55",
+    "@flue/runtime": "2.1.1",
     "@repo/observability": "workspace:*",
     "@repo/worker-api": "workspace:*",
-    "agents": "^0.22.0",
-    "ai": "^7.0.91",
-    "hono": "^4.13.7",
-    "valibot": "^1.4.2",
-    "zod": "^4.6.1"
+    "agents": "^0.24.0",
+    "ai": "^7.0.113",
+    "hono": "^4.13.9",
+    "valibot": "^1.5.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.54.3",
+    "@cloudflare/vite-plugin": "^1.59.0",
     "@cloudflare/vitest-pool-workers": "^0.22.0",
-    "@flue/vite": "2.0.7",
+    "@flue/vite": "2.1.1",
     "@repo/portless-env": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2",
+    "vite": "^8.3.1",
     "vitest": "^4.1.11",
-    "wrangler": "^4.128.0",
-    "zod-compiler": "^2.0.3"
+    "wrangler": "^4.138.0",
+    "zod-compiler": "^2.0.7"
   }
 }

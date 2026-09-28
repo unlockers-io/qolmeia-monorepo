@@ -229,16 +229,16 @@ describe("tenant resolution", () => {
   });
 });
 
-describe("requireMemberForDiscovery", () => {
-  const buildDiscoveryApp = (memberships: ReadonlyArray<Membership>) =>
-    buildApp(
-      requireMemberForDiscovery({
-        auth: buildAuth(session),
-        prisma: buildPrisma(memberships) as never,
-      }),
-      (c) => c.json({ orgId: c.get("orgId"), role: c.get("role") }),
-    );
+const buildDiscoveryApp = (memberships: ReadonlyArray<Membership>) =>
+  buildApp(
+    requireMemberForDiscovery({
+      auth: buildAuth(session),
+      prisma: buildPrisma(memberships) as never,
+    }),
+    (c) => c.json({ orgId: c.get("orgId"), role: c.get("role") }),
+  );
 
+describe("requireMemberForDiscovery", () => {
   it("lets a multi-org user through with no X-Org-Id so it can read its org list", async () => {
     const res = await getAs(buildDiscoveryApp(MULTI_ORG_MEMBERSHIPS));
 
