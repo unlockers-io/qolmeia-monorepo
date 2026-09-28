@@ -8,13 +8,13 @@
   },
   "scripts": {
     "build": "vite build",
-    "cf-typegen": "wrangler types",
+    "cf-typegen": "wrangler types --strict-vars=false",
     "clean": "rm -rf .turbo node_modules .wrangler dist",
     "deploy": "vite build && wrangler deploy",
     "dev": "portless run --name qolmeia.agents --app-port 8787 vite dev",
     "lint": "oxlint src",
     "test": "vitest run",
-    "typecheck": "wrangler types && tsc --noEmit"
+    "typecheck": "wrangler types --strict-vars=false && tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.43",

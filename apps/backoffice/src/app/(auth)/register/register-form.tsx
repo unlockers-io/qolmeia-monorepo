@@ -70,8 +70,8 @@ const RegisterForm = ({ searchParams }: Props) => {
           toast.error(result.error.message ?? "Não foi possível criar a conta.");
           return;
         }
-        const token = result.data?.token;
-        if (token === undefined || token === null || token === "") {
+        const { token } = result.data;
+        if (token === null || token === "") {
           setSentToEmail(value.email);
           return;
         }

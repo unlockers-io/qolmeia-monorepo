@@ -2,9 +2,7 @@ import type { MemoryAdapter, MemoryRecord, RetrieveArgs, ScoredRecord } from "#/
 
 const DIM = 256;
 
-// oxlint-disable-next-line unicorn/number-literal-case -- oxfmt lower-cases; oxlint wants upper
 const FNV_OFFSET = 0x81_1c_9d_c5;
-// oxlint-disable-next-line unicorn/number-literal-case
 const FNV_PRIME = 0x01_00_01_93;
 
 const hash = (input: string): number => {

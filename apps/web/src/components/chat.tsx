@@ -58,8 +58,7 @@ const isKickoffMessage = (message: ChatMessage): boolean =>
   message.role === "user" &&
   message.parts.some((part) => part.type === "text" && part.text === PLANNER_KICKOFF);
 
-const isChatMessage = (message: ChatMessage): boolean =>
-  message.display === undefined || message.display === "visible";
+const isChatMessage = (message: ChatMessage): boolean => message.display === "visible";
 
 const hasVisibleContent = (message: ChatMessage): boolean =>
   message.parts.some((part) => {
@@ -112,7 +111,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
             </span>
           );
         }
-        if (part.type === "file" && part.mediaType?.startsWith("image/")) {
+        if (part.type === "file" && part.mediaType.startsWith("image/")) {
           if (part.url === undefined || part.url === "") {
             return (
               <span

@@ -137,7 +137,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
     });
   };
 
-  const monogram = (member.displayName.trim()[0] ?? "?").toLocaleUpperCase("pt-BR");
+  const monogram = (member.displayName.trim().at(0) ?? "?").toLocaleUpperCase("pt-BR");
   const memberSince = new Date(member.createdAt).toLocaleDateString("pt-BR", {
     month: "short",
     timeZone: "UTC",

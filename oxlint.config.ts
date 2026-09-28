@@ -1,11 +1,11 @@
 import { defineConfig } from "oxlint";
 import awesomeness from "oxlint-config-awesomeness";
+import shadcn from "oxlint-config-awesomeness/shadcn";
 
 export default defineConfig({
-  extends: [awesomeness],
+  extends: [awesomeness, shadcn],
   // Generated runtime is byte-verified and tested in the control plane.
   ignorePatterns: [".github/ci/*.mjs"],
-  jsPlugins: ["@shadcn/lint"],
   overrides: [
     {
       files: ["packages/ui/src/lib/utils.test.ts"],
@@ -14,17 +14,6 @@ export default defineConfig({
           "error",
           {
             allow: ["foo", "bar", "baz"],
-          },
-        ],
-      },
-    },
-    {
-      files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
-      rules: {
-        "new-cap": [
-          "error",
-          {
-            capIsNewExceptions: ["Inter", "Hanken_Grotesk", "Sora", "JetBrains_Mono", "Scalar"],
           },
         ],
       },
@@ -48,13 +37,6 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/api/src/scripts/**/*.ts"],
-      rules: {
-        "no-console": "off",
-        "unicorn/no-process-exit": "off",
-      },
-    },
-    {
       files: ["apps/agents/src/team/errors.ts"],
       rules: {
         "max-classes-per-file": "off",
@@ -64,7 +46,6 @@ export default defineConfig({
       files: ["tests/e2e/**/*.ts"],
       rules: {
         "no-console": "off",
-        "require-unicode-regexp": "off",
       },
     },
     {
@@ -75,9 +56,6 @@ export default defineConfig({
     },
   ],
   rules: {
-    "shadcn/no-arbitrary-values": "error",
-    "shadcn/no-inline-styles": "error",
-    "shadcn/no-raw-colors": "error",
     "shadcn/no-restyle": [
       "error",
       {
@@ -116,8 +94,6 @@ export default defineConfig({
         ],
       },
     ],
-    "shadcn/no-unknown-classes": "error",
-    "shadcn/require-static-classes": "error",
   },
   settings: { shadcn: { ui: "@repo/ui/components" } },
 });

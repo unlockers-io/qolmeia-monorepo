@@ -14,7 +14,7 @@ const SidebarData = async () => {
   ]);
 
   const pendingCount = pendingRes?.items.length ?? 0;
-  const displayName = me.user.displayName ?? me.user.name ?? me.user.email;
+  const displayName = me.user.displayName ?? me.user.name;
 
   return (
     <Sidebar
@@ -35,7 +35,7 @@ const SidebarSkeleton = () => (
     </div>
     <aside
       aria-hidden
-      className="hidden h-screen w-59.5 shrink-0 flex-col gap-2 border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
+      className="hidden h-dvh w-59.5 shrink-0 flex-col gap-2 border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
     >
       <Skeleton className="h-6 w-24" />
       <div className="mt-4 flex flex-col gap-1.5">

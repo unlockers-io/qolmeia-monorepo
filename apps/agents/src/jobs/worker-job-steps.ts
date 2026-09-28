@@ -85,7 +85,9 @@ const proposeDeliverable = async (
     return { actionId: null, policy };
   }
 
-  const skillResults = toRecord(JSON.parse(current.skillResultsJson));
+  const skillResults: Partial<Record<string, JsonValue>> = toRecord(
+    JSON.parse(current.skillResultsJson),
+  );
   const draft = skillResults.draftSocialPost;
   const proposedPayload: ProposedPayload =
     actionType === "publish_post" && draft !== undefined

@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client";
 
 // SAFETY: globalThis has no typed slot for Prisma's process-wide singleton.
-// oxlint-disable-next-line no-unsafe-type-assertion, anti-slop/no-chained-type-assertions
+// oxlint-disable-next-line no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- globalThis has no typed prisma slot to narrow to
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -37,7 +37,7 @@ const isPrismaClientKey = (client: PrismaClient, key: PropertyKey): key is keyof
 
 export const prisma = new Proxy(
   // SAFETY: The proxy target is never read because every access runs through get.
-  // oxlint-disable-next-line no-unsafe-type-assertion
+  // oxlint-disable-next-line no-unsafe-type-assertion -- the Proxy target only has to satisfy the PrismaClient type
   {} as PrismaClient,
   {
     get(_target, prop) {

@@ -84,7 +84,7 @@ const resolveMembership = async (
     take: 2,
     where,
   });
-  const single = memberships[0];
+  const single = memberships.at(0);
   if (single === undefined) {
     return { kind: "no-membership" };
   }

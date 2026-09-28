@@ -82,7 +82,8 @@ const runSkill = async (
   };
   log.info({ ...baseFields, message: "agent.tool.start" });
   try {
-    const [liveOverlay] = await listSkillOverlays(getDb(ctx.env), [id]);
+    const liveOverlays = await listSkillOverlays(getDb(ctx.env), [id]);
+    const liveOverlay = liveOverlays.at(0);
     if (liveOverlay !== undefined && !liveOverlay.enabled) {
       throw new Error(`Skill "${id}" is disabled`);
     }

@@ -30,7 +30,7 @@ const fetchActiveOrgId = async (): Promise<string | null> => {
     throw new Error(`GET ${ME_PATH} failed (${res.status})`);
   }
   // SAFETY: The first-party /api/me route owns the MeBody response contract.
-  // oxlint-disable-next-line no-unsafe-type-assertion
+  // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and /api/me owns the contract
   const body = (await res.json()) as MeBody;
   return body.currentOrg?.id ?? body.orgs.find((org) => org.role === "CUSTOMER")?.id ?? null;
 };
@@ -64,7 +64,7 @@ const request = async <T>(path: string, label: string, init?: RequestInit): Prom
     throw new Error(`${label} failed (${res.status})`);
   }
   // SAFETY: Callers bind T to the contract of the first-party route they request.
-  // oxlint-disable-next-line no-unsafe-type-assertion
+  // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and callers own the route contract
   return (await res.json()) as T;
 };
 

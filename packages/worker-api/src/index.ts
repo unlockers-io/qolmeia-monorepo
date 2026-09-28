@@ -36,11 +36,11 @@ const handleResponse = async <T>(res: Response): Promise<T> => {
   }
   if (res.status === 204) {
     // SAFETY: Delete endpoints bind T to null and HTTP 204 has no response body.
-    // oxlint-disable-next-line no-unsafe-type-assertion
+    // oxlint-disable-next-line no-unsafe-type-assertion -- a generic T cannot be narrowed to null from the status code
     return null as T;
   }
   // SAFETY: Callers bind T to the contract of the first-party route they request.
-  // oxlint-disable-next-line no-unsafe-type-assertion
+  // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and callers own the route contract
   return res.json() as Promise<T>;
 };
 
