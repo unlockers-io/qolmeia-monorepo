@@ -176,15 +176,16 @@ class HttpFixtureStatement implements FixtureStatement {
   }
 }
 
+const batch = async (statements: ReadonlyArray<FixtureStatement>) => {
+  const results: Array<FixtureResult<unknown>> = [];
+  for (const statement of statements) {
+    results.push(await statement.run());
+  }
+  return results;
+};
+
 const createSqlFixtureCompat = (config: SqlFixtureConfig): SqlFixtureCompat => {
   const prepare = (sql: string): HttpFixtureStatement => new HttpFixtureStatement(config, sql);
-  const batch = async (statements: ReadonlyArray<FixtureStatement>) => {
-    const results: Array<FixtureResult<unknown>> = [];
-    for (const statement of statements) {
-      results.push(await statement.run());
-    }
-    return results;
-  };
   return { batch, prepare };
 };
 
