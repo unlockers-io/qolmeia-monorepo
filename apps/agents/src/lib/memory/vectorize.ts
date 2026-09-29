@@ -1,6 +1,5 @@
 import type { MemoryAdapter, MemoryRecord, RetrieveArgs, ScoredRecord } from "#/lib/memory/adapter";
-
-const EMBEDDING_MODEL = "@cf/baai/bge-m3";
+import { EMBEDDING_MODEL, embeddingSchema } from "#/lib/memory/embedding";
 
 type Bindings = { AI: Ai; VECTORIZE: VectorizeIndex };
 
@@ -56,17 +55,7 @@ class VectorizeMemoryAdapter implements MemoryAdapter {
 
   private async embed(text: string): Promise<Array<number>> {
     const result: unknown = await this.env.AI.run(EMBEDDING_MODEL, { text: [text] });
-    const data =
-      typeof result === "object" && result !== null && "data" in result ? result.data : undefined;
-    const first: unknown = Array.isArray(data) ? data[0] : undefined;
-    if (!Array.isArray(first)) {
-      throw new TypeError("Workers AI embedding returned no vector");
-    }
-    const vector = first.filter((n): n is number => typeof n === "number");
-    if (vector.length !== first.length) {
-      throw new Error("Workers AI embedding returned a non-numeric vector");
-    }
-    return vector;
+    return embeddingSchema.parse(result);
   }
 }
 
