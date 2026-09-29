@@ -16,6 +16,7 @@ const ME_CACHE_TTL_SECONDS = 60;
 const ME_CACHE_NAMESPACE = "me";
 const ORG_ID_HEADER = "X-Org-Id";
 const ORG_ID_QUERY_PARAM = "org_id";
+const REJECTED_CREDENTIAL_STATUSES = new Set([401, 403]);
 
 const readOrgId = (request: Request): string | null => {
   const header = request.headers.get(ORG_ID_HEADER)?.trim() ?? "";
@@ -54,10 +55,15 @@ const fetchMe = async (request: Request, env: Env): Promise<MeFetch> => {
     Accept: string;
     Authorization?: string;
     Cookie?: string;
+    "X-Forwarded-For"?: string;
     "X-Org-Id"?: string;
   };
 
   const headers: HeadersContract = { Accept: "application/json" };
+  const clientIp = request.headers.get("CF-Connecting-IP");
+  if (clientIp !== null && clientIp !== "") {
+    headers["X-Forwarded-For"] = clientIp;
+  }
   if (token !== null && token !== "") {
     headers.Authorization = `Bearer ${token}`;
   } else if (cookieHeader !== null && cookieHeader !== "") {
@@ -127,8 +133,11 @@ const validateSession = async (request: Request, env: Env): Promise<SessionResul
   if (result.kind === "unreachable") {
     return { kind: "upstream-unavailable" };
   }
-  if (result.kind !== "upstream" || result.status !== 200) {
+  if (result.kind !== "upstream" || REJECTED_CREDENTIAL_STATUSES.has(result.status)) {
     return { kind: "unauthenticated" };
+  }
+  if (result.status !== 200) {
+    return { kind: "upstream-unavailable" };
   }
 
   const me = parseMeResponse(parseJson(result.body));
