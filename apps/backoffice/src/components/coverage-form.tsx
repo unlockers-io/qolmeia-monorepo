@@ -7,19 +7,12 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { apiSend, ApiError } from "@/lib/api-client";
+import { apiSend, describeRequestError } from "@/lib/api-client";
 
 type CoverageFormProps = {
   initial: CoverageResponse["assigned"];
   options: CoverageResponse["options"];
 };
-
-const disciplineLabel = (kind: string): string =>
-  kind
-    .split(/[\s_\-]+/v)
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toLocaleUpperCase("pt-BR") + w.slice(1))
-    .join(" ");
 
 const toggle = (set: ReadonlySet<string>, value: string): Set<string> => {
   const next = new Set(set);
@@ -55,11 +48,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
       toast.success("Cobertura salva.");
       refresh();
     } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? `Erro ${error.status}: ${error.body || "falha"}`
-          : "Não foi possível salvar a cobertura.";
-      toast.error(message);
+      toast.error(describeRequestError(error, "Não foi possível salvar a cobertura."));
     }
     setSubmitting(false);
   };
@@ -121,7 +110,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
         ) : (
           <div className="flex flex-wrap gap-2">
             {options.disciplines.map((discipline) => {
-              const checked = disciplines.has(discipline);
+              const checked = disciplines.has(discipline.id);
               return (
                 <label
                   className={cn(
@@ -130,21 +119,18 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
                       ? "border-primary bg-highlight-surface ring-1 ring-primary/40"
                       : "border-border hover:border-input hover:bg-accent",
                   )}
-                  key={discipline}
+                  key={discipline.id}
                 >
                   <input
-                    aria-label={disciplineLabel(discipline)}
                     checked={checked}
                     className="size-3.5 accent-primary"
                     name="disciplines"
                     onChange={() => {
-                      setDisciplines((s) => toggle(s, discipline));
+                      setDisciplines((s) => toggle(s, discipline.id));
                     }}
                     type="checkbox"
                   />
-                  <span className="text-sm font-medium text-foreground">
-                    {disciplineLabel(discipline)}
-                  </span>
+                  <span className="text-sm font-medium text-foreground">{discipline.name}</span>
                 </label>
               );
             })}

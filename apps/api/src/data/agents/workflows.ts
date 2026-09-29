@@ -102,7 +102,7 @@ const decisionActivity = (input: WorkflowDecisionInput) => {
     payload: { feedback: input.feedback ?? null },
     refId: input.actionId,
     refType: "action",
-    summary: "Alterações solicitadas.",
+    summary: "Ajustes pedidos.",
     type: "ACTION_CHANGES_REQUESTED",
   };
 };

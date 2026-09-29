@@ -5,13 +5,14 @@ import { Card, CardContent } from "@repo/ui/components/card";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
+import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
+import type { TeamMemberDetailView } from "@repo/worker-api/contracts";
 import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { PromptEditor } from "@/components/prompt-editor";
-import { apiSend } from "@/lib/api-client";
-import type { TeamMemberDetailView } from "@/lib/team-fetch";
+import { apiSend, describeRequestError } from "@/lib/api-client";
 
 type MemberEditFormProps = {
   companyId: string;
@@ -32,35 +33,6 @@ const STATUS_TONE = {
   paused: "neutral",
   working: "info",
 } satisfies Record<TeamMemberDetailView["status"], StatusTone>;
-
-const WORKER_KIND_AVATAR: ReadonlyArray<{ cls: string; match: RegExp }> = [
-  { cls: "bg-avatar-2", match: /design|art|imagem/iv },
-  { cls: "bg-avatar-3", match: /estrateg|strateg|plano/iv },
-  { cls: "bg-avatar-4", match: /redat|copy|escrit|texto/iv },
-  { cls: "bg-avatar-5", match: /social|m[ií]dia|community/iv },
-];
-
-const avatarClass = (m: TeamMemberDetailView): string => {
-  if (m.role === "correspondent") {
-    return "bg-avatar-1";
-  }
-  if (m.role === "planner") {
-    return "bg-avatar-6";
-  }
-  const kind = m.workerKind ?? "";
-  const hit = WORKER_KIND_AVATAR.find((w) => w.match.test(kind));
-  return hit?.cls ?? "bg-avatar-8";
-};
-
-const roleLabel = (m: TeamMemberDetailView): string => {
-  if (m.role === "correspondent") {
-    return "Correspondente";
-  }
-  if (m.role === "planner") {
-    return "Planejador";
-  }
-  return m.workerKind ?? "Especialista";
-};
 
 const applyStatus = (
   member: TeamMemberDetailView,
@@ -102,7 +74,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
       setNameDraft(null);
       toast.success("Nome atualizado.");
     } catch (error) {
-      toast.error(String(error));
+      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
     }
   };
 
@@ -111,7 +83,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
       await patch({ promptOverride: value });
       toast.success("Prompt atualizado.");
     } catch (error) {
-      toast.error(String(error));
+      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
     }
   };
 
@@ -120,7 +92,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
       await patch({ promptOverride: null });
       toast.success("Prompt restaurado.");
     } catch (error) {
-      toast.error(String(error));
+      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
     }
   };
 
@@ -132,12 +104,11 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
         await patch({ status: next });
         toast.success(next === "paused" ? "Agente pausado." : "Agente retomado.");
       } catch (error) {
-        toast.error(String(error));
+        toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
       }
     });
   };
 
-  const monogram = (member.displayName.trim().at(0) ?? "?").toLocaleUpperCase("pt-BR");
   const memberSince = new Date(member.createdAt).toLocaleDateString("pt-BR", {
     month: "short",
     timeZone: "UTC",
@@ -151,15 +122,15 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
           aria-hidden
           className={cn(
             "flex size-14 shrink-0 items-center justify-center rounded-member-card font-display text-xl font-bold text-white",
-            avatarClass(member),
+            agentAvatarClass(member.role, member.workerKind),
           )}
         >
-          {monogram}
+          {agentInitials(member.displayName)}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-              {roleLabel(member)}
+              {member.displayName}
             </h1>
             <StatusPill
               label={STATUS_LABEL[optimisticMember.status]}
@@ -168,10 +139,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
             />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {member.companyName}
-            {member.templateId !== null && member.templateId !== ""
-              ? ` · ${member.templateId}`
-              : ""}
+            {member.companyName} · {agentRoleLabel(member.role, member.templateName)}
           </p>
         </div>
         {member.role === "worker" ? (
@@ -181,32 +149,28 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
         ) : null}
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent>
-            <div className="text-(length:--text-label-sm) text-muted-foreground">Entregas</div>
-            <div className="mt-1.5 font-display text-2xl font-bold tracking-tight text-foreground">
-              {member.lifetimeDone}
+      <Card>
+        <CardContent>
+          <dl className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <dt className="text-xs text-muted-foreground">Entregas</dt>
+              <dd className="mt-1 text-base font-semibold text-foreground tabular-nums">
+                {member.lifetimeDone}
+              </dd>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <div className="text-(length:--text-label-sm) text-muted-foreground">Em andamento</div>
-            <div className="mt-1.5 font-display text-2xl font-bold tracking-tight text-foreground">
-              {member.currentWork.length}
+            <div>
+              <dt className="text-xs text-muted-foreground">Em andamento</dt>
+              <dd className="mt-1 text-base font-semibold text-foreground tabular-nums">
+                {member.currentWork.length}
+              </dd>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <div className="text-(length:--text-label-sm) text-muted-foreground">No time desde</div>
-            <div className="mt-1.5 font-display text-2xl font-bold tracking-tight text-foreground">
-              {memberSince}
+            <div>
+              <dt className="text-xs text-muted-foreground">No time desde</dt>
+              <dd className="mt-1 text-base font-semibold text-foreground">{memberSince}</dd>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </dl>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="flex flex-col gap-5">

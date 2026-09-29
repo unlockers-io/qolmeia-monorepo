@@ -10,15 +10,15 @@ import {
   AttachmentTitle,
 } from "@repo/ui/components/attachment";
 import { Button } from "@repo/ui/components/button";
-import { Spinner } from "@repo/ui/components/spinner";
+import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { cn } from "@repo/ui/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
-import { CornerDownLeft, Paperclip, Square, X } from "lucide-react";
+import { CornerDownLeft, Paperclip, X } from "lucide-react";
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent, SubmitEvent } from "react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { AssetImage } from "@/components/asset-image";
 import { apiSendForm } from "@/lib/api-client";
 
 type UploadState = "uploading" | "error" | "done";
@@ -173,10 +173,8 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
     !disabled && !isUploading && (input.trim().length > 0 || readyAttachments.length > 0);
 
   let submitIcon = <CornerDownLeft aria-hidden className="size-4" />;
-  if (status === "submitted") {
-    submitIcon = <Spinner className="size-4" />;
-  } else if (status === "streaming") {
-    submitIcon = <Square aria-hidden className="size-4" />;
+  if (status === "submitted" || status === "streaming") {
+    submitIcon = <LoadingSpinner className="size-4" />;
   } else if (status === "error") {
     submitIcon = <X aria-hidden className="size-4" />;
   }
@@ -204,7 +202,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
               <Attachment key={attachment.id} size="sm" state={attachment.state}>
                 <AttachmentMedia variant={attachment.state === "uploading" ? "icon" : "image"}>
                   {attachment.state === "uploading" ? (
-                    <Spinner />
+                    <LoadingSpinner />
                   ) : (
                     <AssetImage alt="" height={64} src={attachment.url} width={64} />
                   )}
@@ -258,7 +256,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
             variant="ghost"
           >
             {isUploading ? (
-              <Spinner className="size-4" />
+              <LoadingSpinner className="size-4" />
             ) : (
               <Paperclip aria-hidden className="size-4" />
             )}

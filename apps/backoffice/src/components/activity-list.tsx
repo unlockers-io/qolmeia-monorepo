@@ -6,7 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ActivityRow } from "@/components/activity-row";
-import { apiGet, ApiError } from "@/lib/api-client";
+import { apiGet, describeRequestError } from "@/lib/api-client";
 
 type ActivityListProps = {
   category?: string;
@@ -44,11 +44,7 @@ const ActivityList = ({ category, initial, pageSize = 50 }: ActivityListProps) =
         setFetchExhausted(true);
       }
     } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? `Erro ${error.status}`
-          : "Não foi possível carregar mais eventos.";
-      toast.error(message);
+      toast.error(describeRequestError(error, "Não foi possível carregar mais eventos."));
     }
     setLoading(false);
   };

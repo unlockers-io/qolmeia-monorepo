@@ -1,15 +1,23 @@
 import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import type { ActionDetailResponse } from "@repo/worker-api/contracts";
+import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
+import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
+import { cn } from "@repo/ui/lib/utils";
+import type {
+  Action,
+  ActionDetailResponse,
+  ActionStatus,
+  TicketDetailResponse,
+} from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, Suspense } from "react";
 
 import { getActionRenderer } from "@/components/action-renderers";
+import { ProposalCard, proposalSummary } from "@/components/action-renderers/proposal-card";
 import { BackLink } from "@/components/back-link";
 import { StatusPill } from "@/components/status-pill";
-import { agentAvatarClass, agentInitials } from "@/lib/agent-avatar";
 import { ApiError } from "@/lib/api-client";
 import { apiGetServer } from "@/lib/api-server";
 import {
@@ -36,6 +44,30 @@ const POLICY_COPY = {
   require_approval: "Sob aprovação",
 } satisfies Record<string, string>;
 
+const TITLE = {
+  approved: "Ação aprovada",
+  changes_requested: "Ajustes pedidos",
+  executed: "Ação executada",
+  pending: "Revisar ação",
+  rejected: "Ação rejeitada",
+} satisfies Record<ActionStatus, string>;
+
+const loadTicketActions = async (ticketId: string): Promise<ReadonlyArray<Action>> => {
+  try {
+    const detail = await apiGetServer<TicketDetailResponse>(`/tickets/${ticketId}`);
+    return detail.actions;
+  } catch {
+    return [];
+  }
+};
+
+const ContextRow = ({ children, label }: { children: React.ReactNode; label: string }) => (
+  <div className="flex items-center justify-between gap-3">
+    <dt className="text-muted-foreground">{label}</dt>
+    <dd className="flex min-w-0 items-center gap-2 font-medium text-foreground">{children}</dd>
+  </div>
+);
+
 const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
   const { id } = await params;
 
@@ -51,11 +83,14 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
     notFound();
   }
 
-  const { action, ageSeconds, ticket } = detail;
-  const summary = typeof action.proposed.summary === "string" ? action.proposed.summary : null;
+  const { action, ageSeconds, canRequestChanges, ticket } = detail;
   const policyCopy = POLICY_COPY[action.policy];
   const TypedRenderer = getActionRenderer(action.actionType);
-  const waited = formatDurationSeconds(Math.max(0, ageSeconds));
+  const rounds = ticket === null ? [] : await loadTicketActions(ticket.id);
+  const roundIndex = rounds.findIndex((round) => round.id === action.id);
+  const previousRound = roundIndex > 0 ? rounds[roundIndex - 1] : undefined;
+  const previousSummary =
+    previousRound === undefined ? null : proposalSummary(previousRound.proposed);
 
   return (
     <div className="flex flex-col gap-5">
@@ -63,15 +98,16 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-(length:--text-heading)">
-              Revisar ação
+              {TITLE[action.status]}
             </h1>
             <span className="font-mono text-xs text-muted-foreground">{action.id}</span>
           </div>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">
               {actionTypeLabel(action.actionType)}
-            </span>{" "}
-            · {policyCopy} · {formatRelative(action.createdAt)}
+            </span>
+            {rounds.length > 1 && roundIndex !== -1 ? ` · Rodada ${roundIndex + 1}` : ""} ·{" "}
+            {policyCopy} · {formatRelative(action.createdAt)}
           </p>
         </div>
         <StatusPill status={action.status} />
@@ -79,77 +115,75 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
 
       <div className="grid items-start gap-4 lg:grid-cols-approval">
         <div className="flex flex-col gap-4">
-          {TypedRenderer ? (
-            createElement(TypedRenderer, { proposed: action.proposed })
-          ) : (
-            <Card className="gap-4 p-5">
-              <span className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-                Proposta
-              </span>
-              {summary !== null && summary !== "" && (
-                <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-                  {summary}
+          {previousRound?.feedback !== undefined &&
+            previousRound.feedback !== null &&
+            previousRound.feedback !== "" && (
+              <Card className="gap-3 p-5">
+                <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
+                  Ajuste pedido na rodada {roundIndex}
+                </h2>
+                <p className="text-sm leading-relaxed text-foreground">
+                  “{previousRound.feedback}”
                 </p>
-              )}
-              <details className="text-xs text-muted-foreground">
-                <summary className="cursor-pointer text-sm font-medium text-foreground/80 transition-colors select-none hover:text-foreground">
-                  Ver proposta completa (JSON)
-                </summary>
-                <pre className="mt-3 max-h-96 overflow-auto rounded-lg border border-border bg-secondary/40 p-3 text-xs">
-                  {JSON.stringify(action.proposed, null, 2)}
-                </pre>
-              </details>
-            </Card>
+                {previousSummary !== null && (
+                  <details className="text-sm text-muted-foreground">
+                    <summary className="cursor-pointer font-medium text-foreground/80 select-none hover:text-foreground">
+                      Ver a versão anterior
+                    </summary>
+                    <div className="mt-3 leading-relaxed text-foreground">
+                      <MarkdownResponse>{previousSummary}</MarkdownResponse>
+                    </div>
+                  </details>
+                )}
+              </Card>
+            )}
+          {TypedRenderer ? (
+            createElement(TypedRenderer, { agent: action.agent, proposed: action.proposed })
+          ) : (
+            <ProposalCard proposed={action.proposed} />
           )}
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 lg:sticky lg:top-6">
+          <ApprovalDecision action={action} canRequestChanges={canRequestChanges} />
+
           <Card className="gap-3 p-5">
-            <span className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
+            <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
               Contexto
-            </span>
+            </h2>
             <dl className="flex flex-col gap-2.5 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Empresa</dt>
-                <dd className="truncate font-medium text-foreground">{action.companyName}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Agente</dt>
-                <dd className="flex min-w-0 items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className={`flex size-5 flex-none items-center justify-center rounded-lg text-xs font-bold text-white ${agentAvatarClass(action.agent.role, action.agent.workerKind)}`}
-                  >
-                    {agentInitials(action.agent.name)}
-                  </span>
-                  <span className="truncate font-medium text-foreground">{action.agent.name}</span>
-                </dd>
-              </div>
+              <ContextRow label="Empresa">
+                <span className="truncate">{action.companyName}</span>
+              </ContextRow>
+              <ContextRow label="Agente">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "flex size-5 flex-none items-center justify-center rounded-lg text-xs font-bold text-white",
+                    agentAvatarClass(action.agent.role, action.agent.workerKind),
+                  )}
+                >
+                  {agentInitials(action.agent.name)}
+                </span>
+                <span className="truncate">{action.agent.name}</span>
+              </ContextRow>
               {ticket && (
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">Ticket</dt>
-                  <dd>
-                    <Link
-                      className="font-mono text-xs text-primary transition-colors hover:text-primary/80"
-                      href={`/tickets/${ticket.id}`}
-                    >
-                      {ticket.id}
-                    </Link>
-                  </dd>
-                </div>
+                <ContextRow label="Ticket">
+                  <Link
+                    className="truncate rounded-sm font-mono text-xs text-primary transition-colors outline-none hover:text-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
+                    href={`/tickets/${ticket.id}`}
+                  >
+                    {ticket.id}
+                  </Link>
+                </ContextRow>
               )}
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Aguardando</dt>
-                <dd className="font-medium text-foreground">{waited}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Política</dt>
-                <dd className="font-medium text-foreground">{policyCopy}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Criado</dt>
-                <dd className="font-medium text-foreground">{formatDateTime(action.createdAt)}</dd>
-              </div>
+              {action.status === "pending" ? (
+                <ContextRow label="Aguardando">
+                  {formatDurationSeconds(Math.max(0, ageSeconds))}
+                </ContextRow>
+              ) : null}
+              <ContextRow label="Política">{policyCopy}</ContextRow>
+              <ContextRow label="Criado">{formatDateTime(action.createdAt)}</ContextRow>
             </dl>
             {ticket && (
               <p className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
@@ -157,8 +191,6 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
               </p>
             )}
           </Card>
-
-          <ApprovalDecision action={action} />
         </div>
       </div>
     </div>

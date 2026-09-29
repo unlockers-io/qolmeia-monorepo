@@ -1,39 +1,8 @@
 import { cn } from "@repo/ui/lib/utils";
 import type { ActivityEntry } from "@repo/worker-api/contracts";
 
+import { activityStyle } from "@/lib/activity-category";
 import { formatRelative } from "@/lib/format";
-
-type Category = "action" | "member" | "neutral" | "team" | "ticket" | "worker";
-
-const categoriseType = (type: string): Category => {
-  if (type.startsWith("ACTION_")) {
-    return "action";
-  }
-  if (type.startsWith("TICKET_")) {
-    return "ticket";
-  }
-  if (type.startsWith("WORKER_")) {
-    return "worker";
-  }
-  if (type.startsWith("TEAM_")) {
-    return "team";
-  }
-  if (type.startsWith("MEMBER_")) {
-    return "member";
-  }
-  return "neutral";
-};
-
-type CategoryClassesContract = Record<Category, string>;
-
-const CATEGORY_CLASSES = {
-  action: "bg-highlight-surface text-highlight-surface-foreground",
-  member: "bg-destructive-surface text-destructive-surface-foreground",
-  neutral: "bg-muted text-muted-foreground",
-  team: "bg-success-surface text-success-surface-foreground",
-  ticket: "bg-info-surface text-info-surface-foreground",
-  worker: "bg-worker-surface text-worker-surface-foreground",
-} satisfies CategoryClassesContract;
 
 type ActivityRowProps = {
   row: ActivityEntry;
@@ -43,35 +12,36 @@ const hasPayload = (payload: ActivityEntry["payload"]): boolean =>
   payload !== null && Object.keys(payload).length > 0;
 
 const ActivityRow = ({ row }: ActivityRowProps) => {
-  const category = categoriseType(row.type);
-  const tagClass = CATEGORY_CLASSES[category];
+  const style = activityStyle(row.type);
 
   return (
     <li className="flex flex-col gap-2 border-b border-border px-5 py-3 last:border-b-0">
-      <div className="flex items-center gap-3.5">
+      <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 md:flex-nowrap">
         <span
           className={cn(
-            "inline-flex w-47 shrink-0 items-center overflow-hidden rounded-md px-2 py-1 font-mono text-xs font-medium tracking-tight text-ellipsis whitespace-nowrap",
-            tagClass,
+            "inline-flex shrink-0 items-center rounded-md px-2 py-1 text-xs font-medium",
+            style.tag,
           )}
           title={row.type}
         >
-          {row.type}
+          {style.label}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-foreground">{row.summary}</span>
-        <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
+        <span className="order-last w-full text-sm text-foreground md:order-none md:w-auto md:min-w-0 md:flex-1 md:truncate">
+          {row.summary}
+        </span>
+        <span className="text-xs whitespace-nowrap text-muted-foreground md:shrink-0">
           {row.companyName}
         </span>
-        <time className="w-13.5 shrink-0 text-right font-mono text-xs whitespace-nowrap text-muted-foreground/80">
+        <time className="ml-auto text-xs whitespace-nowrap text-muted-foreground md:ml-0 md:min-w-24 md:shrink-0 md:text-right">
           {formatRelative(row.createdAt)}
         </time>
       </div>
       {hasPayload(row.payload) && (
-        <details className="pl-50.5 text-xs text-muted-foreground">
+        <details className="text-xs text-muted-foreground">
           <summary className="cursor-pointer text-xs font-medium select-none hover:text-foreground">
-            Ver payload
+            Ver detalhes técnicos
           </summary>
-          <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border bg-muted/50 p-3 text-xs">
+          <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border bg-muted/50 p-3 text-xs whitespace-pre-wrap">
             {JSON.stringify(row.payload, null, 2)}
           </pre>
         </details>

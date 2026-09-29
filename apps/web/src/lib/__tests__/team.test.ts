@@ -18,7 +18,12 @@ const okJson = (body: JsonBody): Response =>
   ({ json: () => Promise.resolve(body), ok: true, status: 200 }) as unknown as Response;
 
 const errorResponse = (status: number): Response =>
-  ({ json: () => Promise.resolve({}), ok: false, status }) as unknown as Response;
+  ({
+    json: () => Promise.resolve({}),
+    ok: false,
+    status,
+    text: () => Promise.resolve(""),
+  }) as unknown as Response;
 
 const ME = okJson({ currentOrg: { id: ORG_ID, role: "CUSTOMER" }, orgs: [] });
 
@@ -86,7 +91,7 @@ describe("org discovery", () => {
   it("surfaces a failed discovery instead of calling on with no org", async () => {
     respondWith({ "/api/me": errorResponse(502) });
 
-    await expect(team.fetchTeam()).rejects.toThrow("GET /api/me failed (502)");
+    await expect(team.fetchTeam()).rejects.toMatchObject({ name: "ApiError", status: 502 });
   });
 });
 
@@ -104,9 +109,9 @@ describe("fetchTeam", () => {
     expect(result).toBe(members);
   });
 
-  it("throws with the request label and status on failure", async () => {
+  it("throws an ApiError carrying the status on failure", async () => {
     respondWith({ "/api/me": ME, "/api/me/team": errorResponse(503) });
-    await expect(team.fetchTeam()).rejects.toThrow("GET /api/me/team failed (503)");
+    await expect(team.fetchTeam()).rejects.toMatchObject({ name: "ApiError", status: 503 });
   });
 });
 
@@ -126,7 +131,7 @@ describe("fetchCatalogue", () => {
 
   it("throws on failure", async () => {
     respondWith({ "/api/me": ME, "/api/me/catalogue": errorResponse(500) });
-    await expect(team.fetchCatalogue()).rejects.toThrow("GET /api/me/catalogue failed (500)");
+    await expect(team.fetchCatalogue()).rejects.toMatchObject({ name: "ApiError", status: 500 });
   });
 });
 
@@ -148,9 +153,10 @@ describe("hireMember", () => {
 
   it("throws on failure", async () => {
     respondWith({ "/api/me": ME, "/api/me/team/hire": errorResponse(400) });
-    await expect(team.hireMember({ templateId: "tpl-1" })).rejects.toThrow(
-      "POST /api/me/team/hire failed (400)",
-    );
+    await expect(team.hireMember({ templateId: "tpl-1" })).rejects.toMatchObject({
+      name: "ApiError",
+      status: 400,
+    });
   });
 });
 
@@ -170,11 +176,12 @@ describe("patchMember", () => {
     expect(result).toBe(member);
   });
 
-  it("throws with the member id in the label on failure", async () => {
+  it("throws an ApiError carrying the status on failure", async () => {
     respondWith({ "/api/me": ME, "/api/me/team/members/m3": errorResponse(404) });
-    await expect(team.patchMember("m3", {})).rejects.toThrow(
-      "PATCH /api/me/team/members/m3 failed (404)",
-    );
+    await expect(team.patchMember("m3", {})).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+    });
   });
 });
 
@@ -210,6 +217,9 @@ describe("setPaused", () => {
 
   it("throws on failure", async () => {
     respondWith({ "/api/me": ME, "/api/me/team/members/m4/pause": errorResponse(400) });
-    await expect(team.setPaused("m4", true)).rejects.toThrow("pause/resume failed (400)");
+    await expect(team.setPaused("m4", true)).rejects.toMatchObject({
+      name: "ApiError",
+      status: 400,
+    });
   });
 });

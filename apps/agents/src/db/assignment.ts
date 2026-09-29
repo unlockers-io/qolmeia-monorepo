@@ -13,7 +13,9 @@ const setCoverage = async (
   await db("assignments.set", { coverage, operatorUserId });
 };
 
-const listDisciplines = async (db: Database): Promise<ReadonlyArray<string>> => {
+const listDisciplines = async (
+  db: Database,
+): Promise<ReadonlyArray<{ id: string; name: string }>> => {
   const result = await db("assignments.options", {});
   return result.disciplines;
 };

@@ -8,8 +8,6 @@ import {
   type DecisionEvent,
   type GenerateResult,
   type JobContext,
-  logRevisionCapped,
-  MAX_REVISIONS,
   proposeDeliverable,
   type ProposeResult,
 } from "#/jobs/worker-job-steps";
@@ -22,10 +20,7 @@ type WorkerJobParams = {
 
 type WorkerJobResult =
   | { ok: true; summary: string }
-  | { decision: DecisionOutcome; revisionCapped?: true; revisions: number; summary: string };
-
-const isRevisionCapReached = (round: number, decision: DecisionOutcome): boolean =>
-  decision === "changes_requested" && round >= MAX_REVISIONS;
+  | { decision: DecisionOutcome; revisions: number; summary: string };
 
 class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
   async run(
@@ -102,18 +97,11 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
       priorSummary = current.summary;
       latestFeedback = evt.payload.feedback ?? null;
       revision = round + 1;
-
-      if (isRevisionCapReached(round, decision)) {
-        await step.do("revise-capped", () => logRevisionCapped(ctx, actionId));
-        log.info({ companyId, message: "workflow.revise.capped", revision, ticketId });
-        return { decision, revisionCapped: true, revisions: round, summary: current.summary };
-      }
       log.info({ companyId, message: "workflow.revise", revision, ticketId });
     }
   }
 }
 
 export { buildRevisionMessages } from "#/jobs/worker-job-generate";
-export { MAX_REVISIONS } from "#/jobs/worker-job-steps";
-export { isRevisionCapReached, WorkerJobWorkflow };
+export { WorkerJobWorkflow };
 export type { WorkerJobParams, WorkerJobResult };

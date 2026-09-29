@@ -10,6 +10,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ActivityList } from "@/components/activity-list";
+import {
+  ACTIVITY_CATEGORIES,
+  type ActivityCategory,
+  CATEGORY_STYLE,
+} from "@/lib/activity-category";
 import { apiGetServer } from "@/lib/api-server";
 
 export const metadata: Metadata = { title: "Atividade" };
@@ -17,9 +22,7 @@ export const metadata: Metadata = { title: "Atividade" };
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-const CATEGORIES = ["ACTION", "TICKET", "WORKER", "TEAM", "MEMBER"] as const;
-
-type Category = (typeof CATEGORIES)[number];
+type Category = ActivityCategory;
 
 const FilterChips = ({ active }: { active?: Category }) => (
   <nav aria-label="Filtrar por categoria" className="flex flex-wrap gap-2">
@@ -35,11 +38,11 @@ const FilterChips = ({ active }: { active?: Category }) => (
     >
       Tudo
     </Link>
-    {CATEGORIES.map((category) => (
+    {ACTIVITY_CATEGORIES.map((category) => (
       <Link
         aria-current={active === category ? "page" : undefined}
         className={cn(
-          "rounded-full px-3 py-1.5 font-mono text-(length:--text-caption) font-medium tracking-wide",
+          "rounded-full px-3 py-1.5 text-xs font-semibold",
           active === category
             ? "bg-primary text-primary-foreground"
             : "border border-border bg-card text-muted-foreground",
@@ -47,7 +50,7 @@ const FilterChips = ({ active }: { active?: Category }) => (
         href={`/activity?category=${category}`}
         key={category}
       >
-        {category}_*
+        {CATEGORY_STYLE[category].label}
       </Link>
     ))}
   </nav>
@@ -69,7 +72,7 @@ const ActivityFeed = async ({ category }: { category?: Category }) => {
           <EmptyState
             description={
               category
-                ? `Nenhum evento ${category}_* ainda.`
+                ? `Nenhum evento em ${CATEGORY_STYLE[category].label.toLocaleLowerCase("pt-BR")} ainda.`
                 : "Quando os agentes começarem a trabalhar, os eventos aparecem aqui."
             }
             icon={<Activity aria-hidden />}
@@ -99,7 +102,7 @@ const FeedSkeleton = () => (
 
 const ActivityContent = async ({ searchParams }: { searchParams: ActivitySearchParams }) => {
   const params = await searchParams;
-  const category = CATEGORIES.find((value) => value === params.category);
+  const category = ACTIVITY_CATEGORIES.find((value) => value === params.category);
 
   return (
     <>

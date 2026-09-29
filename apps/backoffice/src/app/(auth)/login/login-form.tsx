@@ -1,6 +1,6 @@
 "use client";
 
-import { authClient } from "@repo/app-shell/auth-client";
+import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -34,7 +34,7 @@ type LoginDependencies = {
   signInEmail: (credentials: {
     email: string;
     password: string;
-  }) => Promise<{ error: { code?: string; message?: string } | null }>;
+  }) => Promise<{ error: { code?: string; status?: number } | null }>;
   useAppRouter: () => Pick<ReturnType<typeof useRouter>, "push" | "refresh">;
 };
 
@@ -58,7 +58,7 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
               setShowUnverifiedNotice(true);
               return;
             }
-            showError(error.message ?? "Não foi possível entrar. Verifique seus dados.");
+            showError(authErrorMessage(error, "Não foi possível entrar. Verifique seus dados."));
             return;
           }
         } catch {
@@ -82,7 +82,7 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            <h2>Entrar</h2>
+            <h1>Entrar</h1>
           </CardTitle>
           <CardDescription>Acesse o painel operacional da Qolmeia.</CardDescription>
         </CardHeader>
@@ -126,15 +126,7 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
                     const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                     return (
                       <Field data-invalid={isInvalid || undefined}>
-                        <div className="flex items-center justify-between">
-                          <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
-                          <Link
-                            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                            href="/recover"
-                          >
-                            Esqueci minha senha
-                          </Link>
-                        </div>
+                        <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
                         <Input
                           aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                           aria-invalid={isInvalid}
@@ -184,6 +176,12 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
                   </Button>
                 )}
               </form.Subscribe>
+              <Link
+                className="rounded-sm py-2 text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                href="/recover"
+              >
+                Esqueci minha senha
+              </Link>
               {registerPrompt}
             </CardFooter>
           </fieldset>

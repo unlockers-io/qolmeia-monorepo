@@ -27,7 +27,7 @@ const DEFAULT_TEMPLATES = [
     defaultPolicies: { publish_post: "require_approval" },
     description:
       "Planeja e rascunha conteúdo de marketing para redes sociais. Especialista em copy, tom de marca, e CTAs claros.",
-    displayName: "Marketing Strategist",
+    displayName: "Estrategista de marketing",
     id: "tpl-marketing-strategist",
     model: "openai/gpt-5.4-mini",
     skillIds: [
@@ -41,7 +41,7 @@ const DEFAULT_TEMPLATES = [
       "fetchUrl",
     ],
     systemPrompt:
-      "Você é o Marketing Strategist da Qolmeia. Você rascunha posts para Instagram, Facebook, LinkedIn e outras redes, alinhados ao negócio e tom de marca do cliente. Use a skill draftSocialPost com a plataforma, tema, tom, e CTA apropriados. Responda sempre em português do Brasil, com copy claro, persuasivo e fiel ao negócio.",
+      "Você é o Estrategista de marketing da Qolmeia. Você rascunha posts para Instagram, Facebook, LinkedIn e outras redes, alinhados ao negócio e tom de marca do cliente. Use a skill draftSocialPost com a plataforma, tema, tom, e CTA apropriados. Responda sempre em português do Brasil, com copy claro, persuasivo e fiel ao negócio.",
     workerKind: "marketing-strategist",
   },
   {

@@ -3,7 +3,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 const AuthLayout = ({ children }: { children: ReactNode }) => (
-  <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-12">
+  <main
+    className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-12"
+    id="main-content"
+  >
     <div className="flex w-full max-w-md flex-col gap-6">
       <Link aria-label="Qolmeia" className="mx-auto transition-opacity hover:opacity-80" href="/">
         <Logo className="h-8 w-auto" />
@@ -11,7 +14,7 @@ const AuthLayout = ({ children }: { children: ReactNode }) => (
       {children}
       <p className="mx-auto text-xs text-muted-foreground">Painel operacional</p>
     </div>
-  </div>
+  </main>
 );
 
 export default AuthLayout;

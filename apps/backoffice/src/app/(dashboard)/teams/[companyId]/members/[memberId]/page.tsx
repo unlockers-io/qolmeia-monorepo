@@ -1,4 +1,6 @@
 import { Skeleton } from "@repo/ui/components/skeleton";
+import type { TeamMemberDetailView } from "@repo/worker-api/contracts";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -6,7 +8,8 @@ import { BackLink } from "@/components/back-link";
 import { MemberEditForm } from "@/components/member-edit-form";
 import { ApiError } from "@/lib/api-client";
 import { apiGetServer } from "@/lib/api-server";
-import type { TeamMemberDetailView } from "@/lib/team-fetch";
+
+export const metadata: Metadata = { title: "Agente" };
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;

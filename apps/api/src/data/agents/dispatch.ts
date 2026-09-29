@@ -275,7 +275,6 @@ const dispatchTemplateTicketOperation = async (
           brief: z.string().min(1),
           companyId: z.string().min(1),
           ticketId: z.string().min(1),
-          workerKind: z.string().min(1),
         })
         .parse(raw);
       await createDelegatedTicket(db, input);

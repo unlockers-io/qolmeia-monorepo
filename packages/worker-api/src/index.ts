@@ -20,6 +20,30 @@ class ApiError extends Error {
   }
 }
 
+const STATUS_MESSAGES = new Map<number, string>([
+  [401, "Sua sessão expirou. Entre de novo para continuar."],
+  [403, "Você não tem permissão para fazer isso."],
+  [404, "Não encontramos este item. Ele pode ter sido removido."],
+  [409, "Isso não é possível no estado atual. Atualize a página e tente de novo."],
+  [413, "O arquivo é grande demais."],
+  [429, "Muitas tentativas seguidas. Aguarde um instante e tente de novo."],
+]);
+
+const SERVER_ERROR = 500;
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- this is the parser for values thrown into catch clauses, which TypeScript types as unknown
+const describeRequestError = (error: unknown, fallback: string): string => {
+  if (!(error instanceof ApiError)) {
+    return error instanceof TypeError
+      ? "Não foi possível conectar. Verifique sua internet e tente de novo."
+      : fallback;
+  }
+  if (error.status >= SERVER_ERROR) {
+    return "Algo falhou do nosso lado. Tente de novo em instantes.";
+  }
+  return STATUS_MESSAGES.get(error.status) ?? fallback;
+};
+
 const buildHeaders = (init?: FetchInit, contentType?: string): Headers => {
   const headers = new Headers(init?.headers);
   headers.set("Accept", "application/json");
@@ -126,5 +150,5 @@ const createServerApi = (config: ServerApiConfig): ServerApi => ({
   },
 });
 
-export { ApiError, createBrowserApi, createServerApi, handleResponse };
+export { ApiError, createBrowserApi, createServerApi, describeRequestError, handleResponse };
 export type { BrowserApi, FetchInit, ServerApi, ServerApiConfig };

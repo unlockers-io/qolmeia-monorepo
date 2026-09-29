@@ -17,7 +17,10 @@ export const metadata: Metadata = {
 export const instant = true;
 
 const NoAccessPage = () => (
-  <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-12">
+  <main
+    className="flex min-h-dvh items-center justify-center bg-background px-4 py-12"
+    id="main-content"
+  >
     <Card className="w-full max-w-md">
       <CardHeader>
         <div
@@ -27,7 +30,7 @@ const NoAccessPage = () => (
           <ShieldAlert />
         </div>
         <CardTitle className="text-2xl">
-          <h2>Sem acesso ao chat</h2>
+          <h1>Sem acesso ao chat</h1>
         </CardTitle>
         <CardDescription>
           Esta conta não tem acesso ao chat do cliente. Acesse o painel operacional ou peça ao dono
@@ -38,7 +41,7 @@ const NoAccessPage = () => (
         <SignOutButton className="w-full" label="Sair desta conta" />
       </CardContent>
     </Card>
-  </div>
+  </main>
 );
 
 export default NoAccessPage;

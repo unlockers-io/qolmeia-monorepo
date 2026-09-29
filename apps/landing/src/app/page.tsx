@@ -1,4 +1,5 @@
 import { buttonVariants } from "@repo/ui/components/button";
+import { agentAvatarClass, type AgentRole } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import { CheckCircle2, MessagesSquare, Workflow } from "lucide-react";
 import type { Metadata } from "next";
@@ -32,26 +33,53 @@ const STEPS = [
   },
 ] as const;
 
-/* Tones are the role-keyed avatar hues from the design system, matching the
-   monograms the chat surface renders for the same agents. */
-const ROSTER = [
-  { name: "Correspondente", role: "Recebe seus pedidos e coordena o time", tone: "bg-avatar-1" },
-  { name: "Designer", role: "Cria as peças visuais", tone: "bg-avatar-2" },
-  { name: "Estrategista", role: "Traduz a marca em plano de campanha", tone: "bg-avatar-3" },
-  { name: "Redator", role: "Escreve os textos", tone: "bg-avatar-4" },
-  { name: "Social", role: "Adapta tudo para cada canal", tone: "bg-avatar-5" },
-  { name: "Planner", role: "Organiza o calendário de publicação", tone: "bg-avatar-6" },
-] as const;
+const ROSTER: ReadonlyArray<{
+  kind: string | null;
+  name: string;
+  role: AgentRole;
+  work: string;
+}> = [
+  {
+    kind: null,
+    name: "Correspondente",
+    role: "correspondent",
+    work: "Recebe seus pedidos e coordena o time",
+  },
+  {
+    kind: null,
+    name: "Planejador",
+    role: "planner",
+    work: "Entende a sua marca e monta o time com você",
+  },
+  { kind: "designer", name: "Designer", role: "worker", work: "Cria as peças visuais" },
+  {
+    kind: "marketing-strategist",
+    name: "Estrategista de marketing",
+    role: "worker",
+    work: "Planeja e rascunha posts para cada rede",
+  },
+  {
+    kind: "redator",
+    name: "Redator",
+    role: "worker",
+    work: "Escreve legendas, e-mails e anúncios",
+  },
+  {
+    kind: "seo-researcher",
+    name: "Pesquisador SEO",
+    role: "worker",
+    work: "Pesquisa palavras-chave, concorrentes e tendências",
+  },
+];
+
+const CONTACT_URL = "mailto:contato@qolmeia.com?subject=Quero%20um%20convite%20para%20a%20Qolmeia";
 
 const Page = () => (
   <>
     <section className="border-b border-border">
       <div className="mx-auto max-w-6xl px-6 py-24 sm:px-8 lg:grid lg:grid-cols-3 lg:items-center lg:gap-8 lg:py-32">
         <div className="lg:col-span-2">
-          <p className="font-mono text-sm font-medium tracking-wide text-primary uppercase">
-            Chat com seu Time de IA
-          </p>
-          <h1 className="mt-5 max-w-(--container-measure-hero) font-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+          <h1 className="max-w-(--container-measure-hero) font-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
             Um time inteiro, na mesma conversa.
           </h1>
           <p className="mt-6 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground">
@@ -59,16 +87,34 @@ const Page = () => (
             o trabalho acontecendo e aprova cada entrega.
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-3">
-            <a className={cn(buttonVariants({ size: "lg" }))} href={webAppUrl("/login")}>
+            <a
+              className={cn(buttonVariants({ className: "pointer-coarse:min-h-11", size: "lg" }))}
+              href={webAppUrl("/login")}
+            >
               Entrar na conversa
             </a>
             <a
-              className={cn(buttonVariants({ size: "lg", variant: "ghost" }))}
+              className={cn(
+                buttonVariants({
+                  className: "pointer-coarse:min-h-11",
+                  size: "lg",
+                  variant: "outline",
+                }),
+              )}
               href="#como-funciona"
             >
               Ver como funciona
             </a>
           </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Acesso por convite.{" "}
+            <a
+              className="rounded-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+              href={CONTACT_URL}
+            >
+              Peça o seu
+            </a>
+          </p>
         </div>
 
         <div
@@ -115,24 +161,27 @@ const Page = () => (
         <p className="mt-5 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground">
           Cada agente tem uma função clara. O time é montado a partir do que a sua marca precisa.
         </p>
-        <dl className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-          {ROSTER.map(({ name, role, tone }) => (
-            <div className="flex items-start gap-4" key={name}>
+        <ul className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+          {ROSTER.map(({ kind, name, role, work }) => (
+            <li className="flex items-start gap-4" key={name}>
               <span
                 aria-hidden="true"
-                className={`inline-flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${tone}`}
+                className={cn(
+                  "inline-flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white",
+                  agentAvatarClass(role, kind),
+                )}
               >
-                {name[0]}
+                {name.at(0)}
               </span>
               <div>
-                <dt className="font-medium">{name}</dt>
-                <dd className="mt-1 max-w-(--container-measure-body) text-base text-pretty text-muted-foreground">
-                  {role}
-                </dd>
+                <h3 className="font-medium">{name}</h3>
+                <p className="mt-1 max-w-(--container-measure-body) text-base text-pretty text-muted-foreground">
+                  {work}
+                </p>
               </div>
-            </div>
+            </li>
           ))}
-        </dl>
+        </ul>
       </div>
     </section>
 
@@ -145,12 +194,26 @@ const Page = () => (
           O acesso é exclusivo para clientes convidados. Use o e-mail no qual você recebeu o
           convite.
         </p>
-        <a
-          className={cn(buttonVariants({ size: "lg", variant: "secondary" }))}
-          href={webAppUrl("/login")}
-        >
-          Entrar na conversa
-        </a>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <a
+            className={cn(buttonVariants({ className: "pointer-coarse:min-h-11", size: "lg" }))}
+            href={webAppUrl("/login")}
+          >
+            Entrar na conversa
+          </a>
+          <a
+            className={cn(
+              buttonVariants({
+                className: "pointer-coarse:min-h-11",
+                size: "lg",
+                variant: "outline",
+              }),
+            )}
+            href={CONTACT_URL}
+          >
+            Quero um convite
+          </a>
+        </div>
       </div>
     </section>
   </>

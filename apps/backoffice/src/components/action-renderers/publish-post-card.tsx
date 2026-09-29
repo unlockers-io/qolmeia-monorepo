@@ -1,6 +1,11 @@
 import { Card } from "@repo/ui/components/card";
-import type { Action } from "@repo/worker-api/contracts";
+import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
+import { cn } from "@repo/ui/lib/utils";
+import type { Action, AgentSummary } from "@repo/worker-api/contracts";
 import { z } from "zod";
+
+import { ProposalCard, proposalSummary } from "./proposal-card";
 
 type PlatformCopyContract = Record<string, string>;
 
@@ -53,15 +58,24 @@ const readDraft = (proposed: Action["proposed"]): Draft | null => {
   };
 };
 
+const MARKDOWN_IMAGE = /!\[[^\]]*\]\((?<url>[^\s\)]+)\)/gv;
+
+const summaryImages = (proposed: Action["proposed"]): ReadonlyArray<string> =>
+  [...(proposalSummary(proposed) ?? "").matchAll(MARKDOWN_IMAGE)].flatMap((match) =>
+    match.groups?.url === undefined ? [] : [match.groups.url],
+  );
+
 type PublishPostCardProps = {
+  agent: AgentSummary;
   proposed: Action["proposed"];
 };
 
-const PublishPostCard = ({ proposed }: PublishPostCardProps) => {
+const PublishPostCard = ({ agent, proposed }: PublishPostCardProps) => {
   const draft = readDraft(proposed);
   if (!draft) {
-    return null;
+    return <ProposalCard proposed={proposed} />;
   }
+  const images = summaryImages(proposed);
 
   const platformLabel = hasText(draft.platform)
     ? (platformCopy.get(draft.platform) ?? draft.platform)
@@ -75,7 +89,7 @@ const PublishPostCard = ({ proposed }: PublishPostCardProps) => {
       <div className="flex items-center gap-2.5 border-b border-border/60 px-4 py-3.5">
         <div
           aria-hidden
-          className="flex size-7 items-center justify-center rounded-panel bg-destructive-surface text-xs font-bold text-destructive-surface-foreground"
+          className="flex size-7 items-center justify-center rounded-panel bg-muted text-xs font-bold text-foreground"
         >
           {platformAbbr}
         </div>
@@ -85,17 +99,19 @@ const PublishPostCard = ({ proposed }: PublishPostCardProps) => {
             <div className="text-xs text-muted-foreground">Tom · {draft.tone}</div>
           )}
         </div>
-        <span className="ml-auto font-mono text-xs text-muted-foreground">feed · 1080×1080</span>
       </div>
 
-      <div
-        aria-label="Pré-visualização da arte gerada pelo Designer"
-        className="flex h-80 items-center justify-center publish-placeholder-surface"
-      >
-        <span className="rounded-md border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
-          arte gerada pelo Designer
-        </span>
-      </div>
+      {images.map((url) => (
+        <AssetImage
+          alt={`Arte proposta por ${agent.name}`}
+          className="h-auto max-h-(--layout-max-h-dialog-viewport) w-full object-contain"
+          height={1024}
+          key={url}
+          loading="eager"
+          src={url}
+          width={1024}
+        />
+      ))}
 
       <div className="flex flex-col gap-3 px-4 py-4">
         {hasText(draft.body) && (
@@ -124,11 +140,14 @@ const PublishPostCard = ({ proposed }: PublishPostCardProps) => {
         <div className="flex items-center gap-2 border-t border-border/60 pt-3">
           <div
             aria-hidden
-            className="flex size-5.5 items-center justify-center rounded-control-inset text-xs font-bold text-white publish-avatar"
+            className={cn(
+              "flex size-5.5 items-center justify-center rounded-control-inset text-xs font-bold text-white",
+              agentAvatarClass(agent.role, agent.workerKind),
+            )}
           >
-            DE
+            {agentInitials(agent.name)}
           </div>
-          <span className="text-xs text-muted-foreground">Gerado pelo Designer</span>
+          <span className="text-xs text-muted-foreground">Proposto por {agent.name}</span>
         </div>
       </div>
     </Card>

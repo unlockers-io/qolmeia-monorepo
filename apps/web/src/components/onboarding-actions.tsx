@@ -2,6 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
+import { ApiError, describeRequestError } from "@repo/worker-api";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -60,8 +61,10 @@ const OnboardingActions = ({
         toast.success("Time confirmado! Redirecionando…");
         globalThis.location.assign("/");
       } else {
-        const body = await response.text();
-        toast.error(`Não foi possível confirmar: ${body.slice(0, 120)}`);
+        const failure = new ApiError(response.status, await response.text());
+        toast.error(
+          describeRequestError(failure, "Não foi possível confirmar o Time. Tente de novo."),
+        );
       }
     } catch {
       toast.error("Erro ao confirmar o Time. Tente novamente.");

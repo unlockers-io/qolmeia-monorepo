@@ -2,6 +2,7 @@
 
 import { Logo } from "@repo/ui/compositions/logo";
 import { SignOutButton } from "@repo/ui/compositions/sign-out-button";
+import { agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -92,17 +93,10 @@ const isActive = (pathname: string, href: string): boolean => {
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
-const initialsFrom = (name: string): string => {
-  const parts = name.trim().split(/\s+/v).filter(Boolean);
-  const first = parts.at(0);
-  if (first === undefined || first === "") {
-    return "?";
-  }
-  if (parts.length === 1) {
-    return first.slice(0, 2).toUpperCase();
-  }
-  return `${first[0]}${parts.at(-1)?.[0] ?? ""}`.toUpperCase();
-};
+const ROLE_LABEL = new Map<string, string>([
+  ["OWNER", "Dono"],
+  ["STAFF", "Equipe"],
+]);
 
 type SidebarUser = {
   email: string;
@@ -111,7 +105,7 @@ type SidebarUser = {
 };
 
 type SidebarProps = {
-  pendingCount?: number;
+  pendingCount?: number | null;
   user?: SidebarUser;
 };
 
@@ -123,14 +117,14 @@ type SidebarDependencies = {
 type SidebarNavProps = {
   mobile?: boolean;
   pathname: string;
-  pendingCount: number;
+  pendingCount: number | null;
 };
 
 const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps) => (
   <nav className={cn("flex gap-0.5", mobile ? "overflow-x-auto px-3 pb-2" : "flex-col")}>
     {NAV_ITEMS.map((item) => {
       const active = isActive(pathname, item.href);
-      const showBadge = item.href === "/approvals" && pendingCount > 0;
+      const isQueue = item.href === "/approvals";
       return (
         <Link
           aria-current={active ? "page" : undefined}
@@ -147,9 +141,19 @@ const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps)
         >
           {item.icon}
           {item.label}
-          {showBadge ? (
-            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 font-mono text-(length:--text-caption-xs) font-semibold text-white">
+          {isQueue && pendingCount === null ? (
+            <span
+              className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warning px-1.5 text-xs font-semibold text-warning-foreground"
+              title="Não foi possível carregar a fila"
+            >
+              <span aria-hidden>!</span>
+              <span className="sr-only">Fila indisponível</span>
+            </span>
+          ) : null}
+          {isQueue && pendingCount !== null && pendingCount > 0 ? (
+            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold text-white tabular-nums">
               {pendingCount}
+              <span className="sr-only"> pendentes</span>
             </span>
           ) : null}
         </Link>
@@ -197,9 +201,7 @@ const SidebarView = ({
             <Logo className="h-6 w-auto" />
           </Link>
         </div>
-        <p className="px-2 pt-4 pb-2 font-mono text-(length:--text-micro) tracking-wide text-muted-foreground uppercase">
-          Painel operador
-        </p>
+        <p className="px-2 pt-4 pb-2 text-xs font-medium text-muted-foreground">Painel operador</p>
         <SidebarNav pathname={pathname} pendingCount={pendingCount} />
         <div className="mt-auto border-t border-border pt-3.5">
           {user ? (
@@ -208,16 +210,18 @@ const SidebarView = ({
                 aria-hidden
                 className="flex size-8.5 shrink-0 items-center justify-center rounded-panel bg-foreground text-(length:--text-label) font-bold text-background"
               >
-                {initialsFrom(user.name)}
+                {agentInitials(user.name)}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-(length:--text-label) font-bold text-foreground">
                   {user.name}
                 </p>
-                <p className="truncate font-mono text-xs text-muted-foreground">{user.email}</p>
+                <p className="truncate text-xs text-muted-foreground" title={user.email}>
+                  {user.email}
+                </p>
               </div>
-              <span className="rounded-md bg-highlight-surface px-1.5 py-1 font-mono text-xs font-semibold text-highlight-surface-foreground">
-                {user.role}
+              <span className="rounded-md bg-highlight-surface px-1.5 py-1 text-xs font-semibold text-highlight-surface-foreground">
+                {ROLE_LABEL.get(user.role) ?? user.role}
               </span>
             </div>
           ) : null}

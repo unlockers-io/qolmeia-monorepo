@@ -19,14 +19,16 @@ const ClientError = ({ error, reset }: ClientErrorProps) => {
   }, [error]);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-6 text-center">
+    <main
+      className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-6 text-center"
+      id="main-content"
+    >
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-foreground" ref={headingRef} tabIndex={-1}>
-          Não foi possível conectar ao chat
+          Não foi possível carregar esta página
         </h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          O serviço de autenticação pode ter ficado indisponível por um instante. Tente novamente em
-          instantes.
+          Algo falhou do nosso lado. Tente de novo em instantes; seus dados continuam salvos.
         </p>
       </div>
       <Button
@@ -36,7 +38,7 @@ const ClientError = ({ error, reset }: ClientErrorProps) => {
       >
         Tentar novamente
       </Button>
-    </div>
+    </main>
   );
 };
 

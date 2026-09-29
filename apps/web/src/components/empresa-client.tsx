@@ -10,6 +10,7 @@ import {
 } from "@repo/ui/components/card";
 import { PageContainer } from "@repo/ui/compositions/page-container";
 import { PageHeader } from "@repo/ui/compositions/page-header";
+import { describeRequestError } from "@repo/worker-api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -85,7 +86,7 @@ const EmpresaClient = ({
       await handleOpenDetail(id);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
     }
     setBusyId(null);
   };
@@ -98,7 +99,7 @@ const EmpresaClient = ({
       await handleOpenDetail(id);
       await refetch();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
     }
     setBusyId(null);
   };
@@ -121,7 +122,7 @@ const EmpresaClient = ({
       if (previousMembers !== undefined) {
         queryClient.setQueryData(rosterQueryKey, previousMembers);
       }
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
     }
     setBusyId(null);
   };
@@ -134,7 +135,7 @@ const EmpresaClient = ({
   return (
     <PageContainer>
       <PageHeader
-        description="Veja seu time e contrate mais agentes. Personalize o comportamento de cada um."
+        description="Os dados da sua marca e o seu time: o que eles sabem sobre você, quem trabalha e quem mais contratar."
         title="Minha empresa"
       />
 
@@ -144,7 +145,7 @@ const EmpresaClient = ({
 
       <section aria-label="Meu time" className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-semibold tracking-tight">Meu time</h2>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid items-start gap-3 md:grid-cols-2">
           {members.map((m) => (
             <Card key={m.id}>
               <CardContent className="flex flex-col gap-4">
@@ -170,7 +171,7 @@ const EmpresaClient = ({
                           size="sm"
                           variant="outline"
                         >
-                          Editar prompt
+                          Personalizar instruções
                         </Button>
                       )}
                       <Button
@@ -192,7 +193,6 @@ const EmpresaClient = ({
                     initialValue={detail.promptOverride}
                     onReset={() => handleResetPrompt(m.id)}
                     onSave={(v) => handleSavePrompt(m.id, v)}
-                    templatePrompt={detail.templateSystemPrompt}
                     updatedAt={detail.promptOverrideUpdatedAt}
                   />
                 )}
@@ -206,24 +206,26 @@ const EmpresaClient = ({
         <h2 className="font-display text-lg font-semibold tracking-tight">
           Contratar mais agentes
         </h2>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid items-start gap-3 md:grid-cols-2">
           {catalogue.map((t) => (
             <Card key={t.id}>
               <CardHeader>
                 <CardTitle className="text-base">
-                  <h2>{t.displayName}</h2>
+                  <h3>{t.displayName}</h3>
                 </CardTitle>
                 <CardDescription>{t.description}</CardDescription>
               </CardHeader>
               <CardContent className="flex items-center justify-between gap-2">
-                <span className="font-mono text-xs tracking-wide text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   {t.hiredCount > 0 ? `Você já tem ${t.hiredCount}` : "Nenhum ainda"}
                 </span>
                 <Button
+                  aria-label={`Contratar ${t.displayName}`}
                   onClick={() => {
                     setHireTemplate(t);
                   }}
                   size="sm"
+                  variant="outline"
                 >
                   Contratar
                 </Button>

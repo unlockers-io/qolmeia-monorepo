@@ -2,15 +2,18 @@ import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
+import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
+import type { CompanyOverview, CompanyRoster, TeamMemberView } from "@repo/worker-api/contracts";
 import { ChevronRight } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { agentAvatarClass, agentInitials } from "@/lib/agent-avatar";
 import { apiGetServer } from "@/lib/api-server";
 import { requireStaff } from "@/lib/auth-helpers";
-import type { CompanyOverview, TeamMemberView } from "@/lib/team-fetch";
+
+export const metadata: Metadata = { title: "Times" };
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
@@ -30,18 +33,9 @@ const MEMBER_STATUS = {
   working: { label: "Trabalhando", pulse: true, tone: "info" },
 } satisfies Record<TeamMemberView["status"], { label: string; pulse: boolean; tone: StatusTone }>;
 
-const ROLE_LABEL = {
-  correspondent: "Correspondente",
-  planner: "Planejador",
-  worker: "",
-} satisfies Record<TeamMemberView["role"], string>;
-
-const memberRoleLabel = (m: TeamMemberView): string =>
-  m.role === "worker" ? m.workerKind : ROLE_LABEL[m.role];
-
 const TeamsContent = async () => {
   await requireStaff();
-  const { companies } = await apiGetServer<{ companies: Array<CompanyOverview> }>("/companies");
+  const { companies } = await apiGetServer<{ companies: Array<CompanyRoster> }>("/companies");
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -73,7 +67,7 @@ const TeamsContent = async () => {
                 const memberStatus = MEMBER_STATUS[m.status];
                 return (
                   <Link
-                    className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none"
+                    className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors outline-none hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
                     href={`/teams/${company.id}/members/${m.id}`}
                     key={m.id}
                   >
@@ -86,8 +80,13 @@ const TeamsContent = async () => {
                     >
                       {agentInitials(m.displayName)}
                     </span>
-                    <span className="flex-1 truncate text-(length:--text-label-lg) font-semibold text-foreground">
-                      {memberRoleLabel(m)}
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-(length:--text-label-lg) font-semibold text-foreground">
+                        {m.displayName}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {agentRoleLabel(m.role, m.templateName)}
+                      </span>
                     </span>
                     <StatusPill
                       className="shrink-0"

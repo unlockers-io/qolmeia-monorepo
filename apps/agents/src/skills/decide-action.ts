@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getAction } from "#/db/action";
 import { getDb } from "#/db/client";
 import { loadTicket } from "#/db/ticket";
+import { canRequestChanges, MAX_REVISIONS } from "#/lib/revisions";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
 
 const decideActionInputSchema = z.object({
@@ -33,6 +34,11 @@ const decideActionSkill: UnknownSkill = {
     }
     if (action.status !== "pending") {
       return { error: `Ação já está em estado '${action.status}', não é mais pendente.` };
+    }
+    if (decision === "changes_requested" && !(await canRequestChanges(db, action.ticketId))) {
+      return {
+        error: `Limite de ${MAX_REVISIONS} revisões atingido: peça ao cliente para aprovar ou rejeitar esta versão.`,
+      };
     }
 
     const ticket = await loadTicket(db, action.ticketId);

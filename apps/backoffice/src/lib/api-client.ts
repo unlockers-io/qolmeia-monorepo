@@ -6,4 +6,4 @@ const { apiGet, apiSend } = createBrowserApi(
 );
 
 export { apiGet, apiSend };
-export { ApiError } from "@repo/worker-api";
+export { ApiError, describeRequestError } from "@repo/worker-api";

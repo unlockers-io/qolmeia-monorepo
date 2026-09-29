@@ -1,6 +1,7 @@
 import type { CompanyBrief } from "./brief";
 import type {
   Action,
+  ActionDetail,
   ActivityEntry,
   AssetKind,
   AssetSummary,
@@ -123,7 +124,7 @@ type AgentsApiOperations = {
     };
     output: boolean;
   };
-  "actions.get": { input: { actionId: string }; output: Action | null };
+  "actions.get": { input: { actionId: string }; output: ActionDetail | null };
   "actions.list": {
     input: { companyId?: string; limit?: number };
     output: ReadonlyArray<Action>;
@@ -194,7 +195,10 @@ type AgentsApiOperations = {
   "assignments.get": { input: { operatorUserId: string }; output: OperatorCoverage };
   "assignments.options": {
     input: Record<string, never>;
-    output: { companies: ReadonlyArray<CompanyOverview>; disciplines: ReadonlyArray<string> };
+    output: {
+      companies: ReadonlyArray<CompanyOverview>;
+      disciplines: ReadonlyArray<{ id: string; name: string }>;
+    };
   };
   "assignments.set": {
     input: { coverage: OperatorCoverage; operatorUserId: string };
@@ -278,7 +282,6 @@ type AgentsApiOperations = {
       brief: string;
       companyId: string;
       ticketId: string;
-      workerKind: string;
     };
     output: null;
   };

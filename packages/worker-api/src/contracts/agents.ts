@@ -30,12 +30,14 @@ type TeamMemberBase = {
 type TeamMemberNonWorker = TeamMemberBase & {
   role: "correspondent" | "planner";
   templateId: null;
+  templateName: null;
   workerKind: null;
 };
 
 type TeamMemberWorker = TeamMemberBase & {
   role: "worker";
   templateId: string;
+  templateName: string;
   workerKind: string;
 };
 
@@ -79,6 +81,8 @@ type CompanyOverview = {
   status: CompanyStatus;
 };
 
+type CompanyRoster = CompanyOverview & { members: ReadonlyArray<TeamMemberView> };
+
 type SkillConfigValue = boolean | number | string;
 
 type SkillOverlay = {
@@ -117,6 +121,7 @@ export type {
   AssetSummary,
   Company,
   CompanyOverview,
+  CompanyRoster,
   HireableTemplate,
   InstanceWithTemplate,
   MaterializeResult,

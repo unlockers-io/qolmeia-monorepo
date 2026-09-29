@@ -92,7 +92,8 @@ describe("operator coverage DB", () => {
     expect(coverage.companies).toEqual([]);
     expect(coverage.disciplines).toEqual(["redator"]);
 
-    const disciplines = await listDisciplines(env.DB);
+    const options = await listDisciplines(env.DB);
+    const disciplines = options.map((discipline) => discipline.id);
     expect(disciplines).toContain("designer");
     expect(disciplines).toContain("redator");
   });
@@ -106,11 +107,14 @@ describe("GET/PUT /api/backoffice/assignments/me", () => {
     );
     const beforeBody = await before.json<{
       assigned: { companies: Array<string>; disciplines: Array<string> };
-      options: { companies: Array<{ id: string }>; disciplines: Array<string> };
+      options: {
+        companies: Array<{ id: string }>;
+        disciplines: Array<{ id: string; name: string }>;
+      };
     }>();
     expect(beforeBody.assigned.companies).toEqual([]);
     expect(beforeBody.options.companies.some((co) => co.id === COMPANY_A)).toBe(true);
-    expect(beforeBody.options.disciplines).toContain("designer");
+    expect(beforeBody.options.disciplines.map((discipline) => discipline.id)).toContain("designer");
 
     const put = await exports.default.fetch(
       "https://agents.test/api/backoffice/assignments/me?cf_session=covtok",
