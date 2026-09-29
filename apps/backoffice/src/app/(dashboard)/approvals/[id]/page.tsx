@@ -1,8 +1,4 @@
-import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
-import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
-import { cn } from "@repo/ui/lib/utils";
 import type {
   Action,
   ActionDetailResponse,
@@ -10,24 +6,20 @@ import type {
   TicketDetailResponse,
 } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, Suspense } from "react";
 
 import { getActionRenderer } from "@/components/action-renderers";
-import { ProposalCard, proposalSummary } from "@/components/action-renderers/proposal-card";
+import { ProposalCard } from "@/components/action-renderers/proposal-card";
 import { BackLink } from "@/components/back-link";
 import { StatusPill } from "@/components/status-pill";
 import { ApiError } from "@/lib/api-client";
 import { apiGetServer } from "@/lib/api-server";
-import {
-  actionTypeLabel,
-  formatDateTime,
-  formatDurationSeconds,
-  formatRelative,
-} from "@/lib/format";
+import { actionTypeLabel, formatRelative } from "@/lib/format";
 
+import { ApprovalContext } from "./approval-context";
 import { ApprovalDecision } from "./approval-decision";
+import { PreviousRound } from "./previous-round";
 
 export const metadata: Metadata = { title: "Revisar aprovação" };
 
@@ -61,13 +53,6 @@ const loadTicketActions = async (ticketId: string): Promise<ReadonlyArray<Action
   }
 };
 
-const ContextRow = ({ children, label }: { children: React.ReactNode; label: string }) => (
-  <div className="flex items-center justify-between gap-3">
-    <dt className="text-muted-foreground">{label}</dt>
-    <dd className="flex min-w-0 items-center gap-2 font-medium text-foreground">{children}</dd>
-  </div>
-);
-
 const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
   const { id } = await params;
 
@@ -89,8 +74,6 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
   const rounds = ticket === null ? [] : await loadTicketActions(ticket.id);
   const roundIndex = rounds.findIndex((round) => round.id === action.id);
   const previousRound = roundIndex > 0 ? rounds[roundIndex - 1] : undefined;
-  const previousSummary =
-    previousRound === undefined ? null : proposalSummary(previousRound.proposed);
 
   return (
     <div className="flex flex-col gap-5">
@@ -115,28 +98,7 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
 
       <div className="grid items-start gap-4 lg:grid-cols-approval">
         <div className="flex flex-col gap-4">
-          {previousRound?.feedback !== undefined &&
-            previousRound.feedback !== null &&
-            previousRound.feedback !== "" && (
-              <Card className="gap-3 p-5">
-                <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-                  Ajuste pedido na rodada {roundIndex}
-                </h2>
-                <p className="text-sm leading-relaxed text-foreground">
-                  “{previousRound.feedback}”
-                </p>
-                {previousSummary !== null && (
-                  <details className="text-sm text-muted-foreground">
-                    <summary className="cursor-pointer font-medium text-foreground/80 select-none hover:text-foreground">
-                      Ver a versão anterior
-                    </summary>
-                    <div className="mt-3 leading-relaxed text-foreground">
-                      <MarkdownResponse>{previousSummary}</MarkdownResponse>
-                    </div>
-                  </details>
-                )}
-              </Card>
-            )}
+          <PreviousRound round={previousRound} roundIndex={roundIndex} />
           {TypedRenderer ? (
             createElement(TypedRenderer, { agent: action.agent, proposed: action.proposed })
           ) : (
@@ -147,50 +109,12 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
         <div className="flex flex-col gap-4 lg:sticky lg:top-6">
           <ApprovalDecision action={action} canRequestChanges={canRequestChanges} />
 
-          <Card className="gap-3 p-5">
-            <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-              Contexto
-            </h2>
-            <dl className="flex flex-col gap-2.5 text-sm">
-              <ContextRow label="Empresa">
-                <span className="truncate">{action.companyName}</span>
-              </ContextRow>
-              <ContextRow label="Agente">
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "flex size-5 flex-none items-center justify-center rounded-lg text-xs font-bold text-white",
-                    agentAvatarClass(action.agent.role, action.agent.workerKind),
-                  )}
-                >
-                  {agentInitials(action.agent.name)}
-                </span>
-                <span className="truncate">{action.agent.name}</span>
-              </ContextRow>
-              {ticket && (
-                <ContextRow label="Ticket">
-                  <Link
-                    className="truncate rounded-sm font-mono text-xs text-primary transition-colors outline-none hover:text-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
-                    href={`/tickets/${ticket.id}`}
-                  >
-                    {ticket.id}
-                  </Link>
-                </ContextRow>
-              )}
-              {action.status === "pending" ? (
-                <ContextRow label="Aguardando">
-                  {formatDurationSeconds(Math.max(0, ageSeconds))}
-                </ContextRow>
-              ) : null}
-              <ContextRow label="Política">{policyCopy}</ContextRow>
-              <ContextRow label="Criado">{formatDateTime(action.createdAt)}</ContextRow>
-            </dl>
-            {ticket && (
-              <p className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
-                {ticket.brief}
-              </p>
-            )}
-          </Card>
+          <ApprovalContext
+            action={action}
+            ageSeconds={ageSeconds}
+            policyCopy={policyCopy}
+            ticket={ticket}
+          />
         </div>
       </div>
     </div>

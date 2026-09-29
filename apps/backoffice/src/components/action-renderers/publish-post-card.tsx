@@ -5,7 +5,8 @@ import { cn } from "@repo/ui/lib/utils";
 import type { Action, AgentSummary } from "@repo/worker-api/contracts";
 import { z } from "zod";
 
-import { ProposalCard, proposalSummary } from "./proposal-card";
+import { ProposalCard } from "./proposal-card";
+import { proposalSummary } from "./proposal-summary";
 
 type PlatformCopyContract = Record<string, string>;
 

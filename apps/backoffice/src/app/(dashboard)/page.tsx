@@ -20,47 +20,14 @@ import { apiGetServer } from "@/lib/api-server";
 import { actionTypeLabel, formatDurationSeconds, formatRelative } from "@/lib/format";
 import { log } from "@/lib/observability";
 
+import { CompanySummary, PendingSummary, TicketSummary } from "./home-summary";
+
 export const metadata: Metadata = { title: "Início" };
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
 const UNAVAILABLE = "Não foi possível carregar";
-
-type SummaryItemProps = {
-  emphasis?: boolean;
-  href?: string;
-  label: string;
-  sub?: string;
-  value: number | null;
-};
-
-const SummaryItem = ({ emphasis = false, href, label, sub, value }: SummaryItemProps) => {
-  const content = (
-    <>
-      <dt className="text-(length:--text-label) text-muted-foreground">{label}</dt>
-      <dd
-        className={cn(
-          "mt-1 text-2xl font-semibold tracking-tight tabular-nums",
-          emphasis ? "text-warning-surface-foreground" : "text-foreground",
-        )}
-      >
-        {value ?? "—"}
-      </dd>
-      <dd className="mt-0.5 text-xs text-muted-foreground">{value === null ? UNAVAILABLE : sub}</dd>
-    </>
-  );
-  return href === undefined ? (
-    <div className="px-5 py-4">{content}</div>
-  ) : (
-    <Link
-      className="block px-5 py-4 transition-colors outline-none hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
-      href={href}
-    >
-      {content}
-    </Link>
-  );
-};
 
 const loadRecentEvents = async (): Promise<ActivityResponse | null> => {
   try {
@@ -124,11 +91,6 @@ const RecentEventsSkeleton = () => (
   </div>
 );
 
-const OPEN_STATUSES = new Set(["in_progress", "open", "awaiting_approval"]);
-
-const startOfMonth = (now: Date): number =>
-  new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
 const HomeContent = async () => {
   const activity = loadRecentEvents();
 
@@ -142,43 +104,13 @@ const HomeContent = async () => {
   const tickets = ticketsRes.status === "fulfilled" ? ticketsRes.value.items : null;
   const companies = companiesRes.status === "fulfilled" ? companiesRes.value.companies : null;
 
-  const monthStart = startOfMonth(new Date());
-  const openTickets = tickets?.filter((t) => OPEN_STATUSES.has(t.status)).length ?? null;
-  const doneThisMonth =
-    tickets?.filter((t) => t.status === "done" && t.updatedAt >= monthStart).length ?? null;
-  const oldestPendingAge = pending?.[0]?.ageSeconds;
-  const activeCompanies = companies?.filter((c) => c.status === "active").length ?? null;
-  const onboardingCompanies = companies?.filter((c) => c.status === "onboarding").length ?? 0;
-  const pendingCount = pending?.length ?? null;
-
   return (
     <div className="flex flex-col gap-6">
       <Card className="gap-0 overflow-hidden p-0">
         <dl className="grid divide-border max-lg:divide-y sm:grid-cols-2 lg:grid-cols-4 lg:divide-x">
-          <SummaryItem
-            emphasis={pendingCount !== null && pendingCount > 0}
-            href="/approvals"
-            label="Aprovações pendentes"
-            sub={
-              oldestPendingAge === undefined
-                ? "Fila em dia"
-                : `A mais antiga há ${formatDurationSeconds(oldestPendingAge)}`
-            }
-            value={pendingCount}
-          />
-          <SummaryItem
-            href="/tickets"
-            label="Tickets abertos"
-            sub={tickets === null ? undefined : `De ${tickets.length} no total`}
-            value={openTickets}
-          />
-          <SummaryItem label="Concluídos no mês" sub="Tickets entregues" value={doneThisMonth} />
-          <SummaryItem
-            href="/teams"
-            label="Empresas ativas"
-            sub={`${onboardingCompanies} em onboarding`}
-            value={activeCompanies}
-          />
+          <PendingSummary pending={pending} />
+          <TicketSummary tickets={tickets} />
+          <CompanySummary companies={companies} />
         </dl>
       </Card>
 

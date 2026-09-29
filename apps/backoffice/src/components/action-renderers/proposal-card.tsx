@@ -2,8 +2,7 @@ import { Card } from "@repo/ui/components/card";
 import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import type { Action } from "@repo/worker-api/contracts";
 
-const proposalSummary = (proposed: Action["proposed"]): string | null =>
-  typeof proposed.summary === "string" && proposed.summary !== "" ? proposed.summary : null;
+import { proposalSummary } from "./proposal-summary";
 
 const ProposalCard = ({ proposed }: { proposed: Action["proposed"] }) => {
   const summary = proposalSummary(proposed);
@@ -27,4 +26,4 @@ const ProposalCard = ({ proposed }: { proposed: Action["proposed"] }) => {
   );
 };
 
-export { ProposalCard, proposalSummary };
+export { ProposalCard };
