@@ -35,10 +35,17 @@ describe("envAuthConfig", () => {
   it("includes the localhost host patterns and loopback origins by default", () => {
     const config = envAuthConfig();
     expect(config.allowedHosts).toEqual(
-      expect.arrayContaining(["**.localhost", "localhost:*", "127.0.0.1:*"]),
+      expect.arrayContaining(["**.localhost", "**.localhost:*", "localhost:*", "127.0.0.1:*"]),
     );
     expect(config.trustedOrigins).toContain("http://localhost:3000");
     expect(config.trustedOrigins).toContain("http://127.0.0.1:3000");
+  });
+
+  it("trusts forwarded host headers only outside production, where the Next rewrite proxies auth", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    expect(envAuthConfig().trustedProxyHeaders).toBe(true);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(envAuthConfig().trustedProxyHeaders).toBe(false);
   });
 
   it("extends allowedHosts from AUTH_ALLOWED_HOSTS", () => {

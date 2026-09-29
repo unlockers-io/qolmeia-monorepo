@@ -1,4 +1,4 @@
-const LOCALHOST_ALLOWED_HOSTS = ["**.localhost", "localhost:*", "127.0.0.1:*"];
+const LOCALHOST_ALLOWED_HOSTS = ["**.localhost", "**.localhost:*", "localhost:*", "127.0.0.1:*"];
 
 const LOOPBACK_TRUSTED_ORIGINS = [
   "http://localhost:3000",
@@ -27,6 +27,7 @@ type EnvAuthConfig = {
   allowedHosts: Array<string>;
   rateLimitEnabled: boolean;
   trustedOrigins: Array<string>;
+  trustedProxyHeaders: boolean;
   useSecureCookies: boolean;
 };
 
@@ -62,6 +63,7 @@ const envAuthConfig = (options: EnvAuthConfigOptions = {}): EnvAuthConfig => {
       ...parseEnvList(process.env.TRUSTED_ORIGINS),
       ...(options.additionalTrustedOrigins ?? []),
     ],
+    trustedProxyHeaders: process.env.NODE_ENV !== "production",
     useSecureCookies:
       (options.secureUrl ?? process.env.WEB_APP_URL)?.startsWith("https://") === true,
   };
