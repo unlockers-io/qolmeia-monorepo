@@ -21,7 +21,7 @@ export class ClientLoginPage {
   };
 
   requestLink = async (email: string) => {
-    await this.emailInput.pressSequentially(email);
+    await this.emailInput.fill(email);
     await this.submitButton.click();
   };
 

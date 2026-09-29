@@ -1,9 +1,11 @@
+import { randomUUID } from "node:crypto";
+
 import { backofficeUrl } from "../../../playwright.config";
 import { expect, test } from "../fixtures/auth.fixture";
 
 test.describe("Backoffice register", () => {
   test("registers with valid data", async ({ backofficeRegisterPage, page }) => {
-    const uniqueEmail = `e2e-reg-${Date.now()}@qolmeia.localhost`;
+    const uniqueEmail = `e2e-reg-${randomUUID()}@qolmeia.localhost`;
 
     await page.context().clearCookies();
 
@@ -25,7 +27,7 @@ test.describe("Backoffice register", () => {
     await backofficeRegisterPage.goto();
     await backofficeRegisterPage.register(
       "Mismatch User",
-      `mismatch-${Date.now()}@qolmeia.localhost`,
+      `mismatch-${randomUUID()}@qolmeia.localhost`,
       "SecurePassword1!",
       "DifferentPassword!",
     );

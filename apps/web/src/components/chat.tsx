@@ -12,11 +12,11 @@ import {
 } from "@repo/ui/components/message-scroller";
 import { Spinner } from "@repo/ui/components/spinner";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
+import { useIsHydrated } from "@repo/ui/hooks/use-is-hydrated";
 import { cn } from "@repo/ui/lib/utils";
 import type { FileUIPart } from "ai";
 import { ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
-import { useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
 import { AssetImage } from "@/components/asset-image";
@@ -332,8 +332,6 @@ const ChatView = ({
   );
 };
 
-const subscribeNoop = () => () => {};
-
 const ChatClient = ({ agent = "correspondent", agentsUrl, companyId, sessionToken }: ChatProps) => {
   const chat = useFlueChat({
     agent,
@@ -346,13 +344,9 @@ const ChatClient = ({ agent = "correspondent", agentsUrl, companyId, sessionToke
 };
 
 const Chat = (props: ChatProps) => {
-  const isClient = useSyncExternalStore(
-    subscribeNoop,
-    () => true,
-    () => false,
-  );
+  const isHydrated = useIsHydrated();
 
-  if (!isClient) {
+  if (!isHydrated) {
     return <ChatSkeleton />;
   }
 

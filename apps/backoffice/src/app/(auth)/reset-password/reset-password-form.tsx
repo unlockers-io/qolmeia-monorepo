@@ -13,6 +13,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
+import { useIsHydrated } from "@repo/ui/hooks/use-is-hydrated";
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,7 @@ import { resetPasswordSchema } from "@/lib/form-schemas";
 
 const ResetPasswordForm = ({ token }: { token: string }) => {
   const { push } = useRouter();
+  const isHydrated = useIsHydrated();
 
   const form = useForm({
     defaultValues: { confirmPassword: "", password: "" },
@@ -63,88 +65,99 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
         </CardTitle>
         <CardDescription>Crie uma nova senha para sua conta.</CardDescription>
       </CardHeader>
-      <form className="flex flex-col gap-(--card-spacing)" noValidate onSubmit={handleSubmit}>
-        <CardContent>
-          <FieldGroup>
-            <form.Field name="password">
-              {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Nova senha</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="new-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
-            </form.Field>
+      <form noValidate onSubmit={handleSubmit}>
+        <fieldset className="flex flex-col gap-(--card-spacing)" disabled={!isHydrated}>
+          <CardContent>
+            <FieldGroup>
+              <form.Field name="password">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid || undefined}>
+                      <FieldLabel htmlFor={field.name}>Nova senha</FieldLabel>
+                      <Input
+                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                        aria-invalid={isInvalid}
+                        autoComplete="new-password"
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value);
+                        }}
+                        type="password"
+                        value={field.state.value}
+                      />
+                      {isInvalid && (
+                        <FormFieldError
+                          errors={field.state.meta.errors}
+                          id={`${field.name}-error`}
+                        />
+                      )}
+                    </Field>
+                  );
+                }}
+              </form.Field>
 
-            <form.Field name="confirmPassword">
-              {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Confirmar nova senha</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="new-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
-            </form.Field>
-          </FieldGroup>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <form.Subscribe
-            selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-          >
-            {({ canSubmit, isSubmitting }) => (
-              <Button
-                className="w-full"
-                disabled={!canSubmit || isSubmitting}
-                size="lg"
-                type="submit"
-              >
-                {isSubmitting ? "Salvando…" : "Redefinir senha"}
-              </Button>
-            )}
-          </form.Subscribe>
-          <p className="text-center text-sm text-muted-foreground">
-            <Link
-              className="font-medium text-primary underline-offset-4 hover:underline"
-              href="/login"
+              <form.Field name="confirmPassword">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid || undefined}>
+                      <FieldLabel htmlFor={field.name}>Confirmar nova senha</FieldLabel>
+                      <Input
+                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                        aria-invalid={isInvalid}
+                        autoComplete="new-password"
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value);
+                        }}
+                        type="password"
+                        value={field.state.value}
+                      />
+                      {isInvalid && (
+                        <FormFieldError
+                          errors={field.state.meta.errors}
+                          id={`${field.name}-error`}
+                        />
+                      )}
+                    </Field>
+                  );
+                }}
+              </form.Field>
+            </FieldGroup>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            <form.Subscribe
+              selector={(state) => ({
+                canSubmit: state.canSubmit,
+                isSubmitting: state.isSubmitting,
+              })}
             >
-              Voltar para o login
-            </Link>
-          </p>
-        </CardFooter>
+              {({ canSubmit, isSubmitting }) => (
+                <Button
+                  className="w-full"
+                  disabled={!canSubmit || isSubmitting}
+                  size="lg"
+                  type="submit"
+                >
+                  {isSubmitting ? "Salvando…" : "Redefinir senha"}
+                </Button>
+              )}
+            </form.Subscribe>
+            <p className="text-center text-sm text-muted-foreground">
+              <Link
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                href="/login"
+              >
+                Voltar para o login
+              </Link>
+            </p>
+          </CardFooter>
+        </fieldset>
       </form>
     </Card>
   );
