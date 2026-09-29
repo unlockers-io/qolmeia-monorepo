@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./database": "./database.ts",
     "./react": "./react.ts",
     "./node": "./node.ts",
     "./setup-react": "./setup-react.ts"

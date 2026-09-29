@@ -131,7 +131,7 @@ pnpm dev
 | Backoffice: `https://qolmeia.backoffice.localhost` | OWNER    | `operator@qolmeia.dev` | `Qolmeia-Dev-OperatorPass!` |
 | Client: `https://qolmeia.web.localhost`            | CUSTOMER | `customer@qolmeia.dev` | `Qolmeia-Dev-CustomerPass!` |
 
-The dev org is pinned to `cmpg10ke30000147uj4gpeadb` (slug `qolmeia-dev`). The client login is magic-link only; the password above only works on the backoffice. Watch `apps/api` logs for the magic link in dev.
+The dev org is pinned to `cmpg10ke30000147uj4gpeadb` (slug `qolmeia-dev`). The client login defaults to e-mail and password and also offers a magic link. The seed only sets a password when it creates the user, so an account first created through a magic link has none. Without `RESEND_API_KEY`, `apps/api` logs every magic-link and password-reset URL; open it as-is and it signs you in on the app that requested it.
 
 App configs resolve those URLs through `@repo/portless-env` rather than hardcoding them. `applyPortlessUrls({ ENV_VAR: ["<subdomain>"] })` runs at the top of each `next.config.ts` / `tsdown.config.ts` and shells out to `portless get` for every name, filling the env var only when it is unset or still holds the canonical `*.localhost` default. It is a no-op unless `PORTLESS_URL` is set, so CI and production keep their real values. Import it by bare specifier (`@repo/portless-env`): a relative path resolves from the process cwd and breaks `next start apps/web` from the repo root.
 
