@@ -30,8 +30,8 @@ export class BackofficeResetPasswordPage {
   };
 
   submit = async (password: string, confirmPassword: string) => {
-    await this.passwordInput.pressSequentially(password);
-    await this.confirmPasswordInput.pressSequentially(confirmPassword);
+    await this.passwordInput.fill(password);
+    await this.confirmPasswordInput.fill(confirmPassword);
     await this.submitButton.click();
   };
 

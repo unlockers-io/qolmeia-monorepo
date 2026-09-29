@@ -13,6 +13,7 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
+import { useIsHydrated } from "@repo/ui/hooks/use-is-hydrated";
 import { useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -49,6 +50,7 @@ const LoginLink = ({ searchParams }: Props) => {
 const RegisterForm = ({ searchParams }: Props) => {
   const { push, refresh } = useRouter();
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
+  const isHydrated = useIsHydrated();
 
   const form = useForm({
     defaultValues: { confirmPassword: "", email: "", name: "", password: "" },
@@ -119,141 +121,158 @@ const RegisterForm = ({ searchParams }: Props) => {
         </CardTitle>
         <CardDescription>Cadastre-se para acessar o painel da Qolmeia.</CardDescription>
       </CardHeader>
-      <form className="flex flex-col gap-(--card-spacing)" noValidate onSubmit={handleSubmit}>
-        <CardContent>
-          <FieldGroup>
-            <form.Field name="name">
-              {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Nome</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="name"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="text"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
-            </form.Field>
+      <form noValidate onSubmit={handleSubmit}>
+        <fieldset className="flex flex-col gap-(--card-spacing)" disabled={!isHydrated}>
+          <CardContent>
+            <FieldGroup>
+              <form.Field name="name">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid || undefined}>
+                      <FieldLabel htmlFor={field.name}>Nome</FieldLabel>
+                      <Input
+                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                        aria-invalid={isInvalid}
+                        autoComplete="name"
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value);
+                        }}
+                        type="text"
+                        value={field.state.value}
+                      />
+                      {isInvalid && (
+                        <FormFieldError
+                          errors={field.state.meta.errors}
+                          id={`${field.name}-error`}
+                        />
+                      )}
+                    </Field>
+                  );
+                }}
+              </form.Field>
 
-            <form.Field name="email">
-              {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="email"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      placeholder="voce@empresa.com"
-                      type="email"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
-            </form.Field>
+              <form.Field name="email">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid || undefined}>
+                      <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
+                      <Input
+                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                        aria-invalid={isInvalid}
+                        autoComplete="email"
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value);
+                        }}
+                        placeholder="voce@empresa.com"
+                        type="email"
+                        value={field.state.value}
+                      />
+                      {isInvalid && (
+                        <FormFieldError
+                          errors={field.state.meta.errors}
+                          id={`${field.name}-error`}
+                        />
+                      )}
+                    </Field>
+                  );
+                }}
+              </form.Field>
 
-            <form.Field name="password">
-              {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="new-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
-            </form.Field>
+              <form.Field name="password">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid || undefined}>
+                      <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
+                      <Input
+                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                        aria-invalid={isInvalid}
+                        autoComplete="new-password"
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value);
+                        }}
+                        type="password"
+                        value={field.state.value}
+                      />
+                      {isInvalid && (
+                        <FormFieldError
+                          errors={field.state.meta.errors}
+                          id={`${field.name}-error`}
+                        />
+                      )}
+                    </Field>
+                  );
+                }}
+              </form.Field>
 
-            <form.Field name="confirmPassword">
-              {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Confirmar senha</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="new-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
-            </form.Field>
-          </FieldGroup>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <form.Subscribe
-            selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-          >
-            {({ canSubmit, isSubmitting }) => (
-              <Button
-                className="w-full"
-                disabled={!canSubmit || isSubmitting}
-                size="lg"
-                type="submit"
-              >
-                {isSubmitting ? "Criando conta…" : "Criar conta"}
-              </Button>
-            )}
-          </form.Subscribe>
-          <p className="text-center text-sm text-muted-foreground">
-            Já tem conta?{" "}
-            <Suspense fallback={<LoginLinkFallback />}>
-              <LoginLink searchParams={searchParams} />
-            </Suspense>
-          </p>
-        </CardFooter>
+              <form.Field name="confirmPassword">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid || undefined}>
+                      <FieldLabel htmlFor={field.name}>Confirmar senha</FieldLabel>
+                      <Input
+                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                        aria-invalid={isInvalid}
+                        autoComplete="new-password"
+                        id={field.name}
+                        name={field.name}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => {
+                          field.handleChange(event.target.value);
+                        }}
+                        type="password"
+                        value={field.state.value}
+                      />
+                      {isInvalid && (
+                        <FormFieldError
+                          errors={field.state.meta.errors}
+                          id={`${field.name}-error`}
+                        />
+                      )}
+                    </Field>
+                  );
+                }}
+              </form.Field>
+            </FieldGroup>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            <form.Subscribe
+              selector={(state) => ({
+                canSubmit: state.canSubmit,
+                isSubmitting: state.isSubmitting,
+              })}
+            >
+              {({ canSubmit, isSubmitting }) => (
+                <Button
+                  className="w-full"
+                  disabled={!canSubmit || isSubmitting}
+                  size="lg"
+                  type="submit"
+                >
+                  {isSubmitting ? "Criando conta…" : "Criar conta"}
+                </Button>
+              )}
+            </form.Subscribe>
+            <p className="text-center text-sm text-muted-foreground">
+              Já tem conta?{" "}
+              <Suspense fallback={<LoginLinkFallback />}>
+                <LoginLink searchParams={searchParams} />
+              </Suspense>
+            </p>
+          </CardFooter>
+        </fieldset>
       </form>
     </Card>
   );
