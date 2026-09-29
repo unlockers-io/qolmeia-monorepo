@@ -249,7 +249,8 @@ const assignmentOptions = async (db: Database) => {
   ]);
   return {
     companies,
-    disciplines: rows.map((row) => ({ id: row.workerKind, name: row.displayName })),
+    disciplineNames: Object.fromEntries(rows.map((row) => [row.workerKind, row.displayName])),
+    disciplines: rows.map((row) => row.workerKind),
   };
 };
 

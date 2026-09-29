@@ -102,7 +102,9 @@ type CoverageResponse = {
   assigned: OperatorCoverage;
   options: {
     companies: ReadonlyArray<{ id: string; name: string }>;
-    disciplines: ReadonlyArray<{ id: string; name: string }>;
+    disciplineNames?: Readonly<Record<string, string>>;
+    // Keep IDs as strings for clients deployed before discipline labels were added.
+    disciplines: ReadonlyArray<string>;
   };
 };
 

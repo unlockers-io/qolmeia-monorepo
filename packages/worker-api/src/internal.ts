@@ -197,7 +197,8 @@ type AgentsApiOperations = {
     input: Record<string, never>;
     output: {
       companies: ReadonlyArray<CompanyOverview>;
-      disciplines: ReadonlyArray<{ id: string; name: string }>;
+      disciplineNames?: Readonly<Record<string, string>>;
+      disciplines: ReadonlyArray<string>;
     };
   };
   "assignments.set": {

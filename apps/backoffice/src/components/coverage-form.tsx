@@ -14,6 +14,13 @@ type CoverageFormProps = {
   options: CoverageResponse["options"];
 };
 
+const disciplineLabel = (kind: string): string =>
+  kind
+    .split(/[\s_\-]+/v)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toLocaleUpperCase("pt-BR") + word.slice(1))
+    .join(" ");
+
 const toggle = (set: ReadonlySet<string>, value: string): Set<string> => {
   const next = new Set(set);
   if (next.has(value)) {
@@ -110,7 +117,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
         ) : (
           <div className="flex flex-wrap gap-2">
             {options.disciplines.map((discipline) => {
-              const checked = disciplines.has(discipline.id);
+              const checked = disciplines.has(discipline);
               return (
                 <label
                   className={cn(
@@ -119,18 +126,20 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
                       ? "border-primary bg-highlight-surface ring-1 ring-primary/40"
                       : "border-border hover:border-input hover:bg-accent",
                   )}
-                  key={discipline.id}
+                  key={discipline}
                 >
                   <input
                     checked={checked}
                     className="size-3.5 accent-primary"
                     name="disciplines"
                     onChange={() => {
-                      setDisciplines((s) => toggle(s, discipline.id));
+                      setDisciplines((s) => toggle(s, discipline));
                     }}
                     type="checkbox"
                   />
-                  <span className="text-sm font-medium text-foreground">{discipline.name}</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {options.disciplineNames?.[discipline] ?? disciplineLabel(discipline)}
+                  </span>
                 </label>
               );
             })}

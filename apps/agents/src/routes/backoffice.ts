@@ -17,7 +17,7 @@ import { z } from "zod";
 
 import { ACTIVITY_CATEGORIES, listActivity } from "#/activity/log";
 import { getAction, listActions, listActionsForTicket, listPendingActions } from "#/db/action";
-import { listCoverage, listDisciplines, setCoverage } from "#/db/assignment";
+import { getDisciplineOptions, listCoverage, setCoverage } from "#/db/assignment";
 import { getDb } from "#/db/client";
 import { listCompaniesOverview } from "#/db/schema";
 import {
@@ -231,16 +231,16 @@ backofficeRoutes.get("/companies", async (c) => {
 
 backofficeRoutes.get("/assignments/me", async (c) => {
   const db = getDb(c.env);
-  const [coverage, disciplines, companies] = await Promise.all([
+  const [coverage, disciplineOptions, companies] = await Promise.all([
     listCoverage(db, c.get("session").userId),
-    listDisciplines(db),
+    getDisciplineOptions(db),
     listCompaniesOverview(db),
   ]);
   const body: CoverageResponse = {
     assigned: coverage,
     options: {
       companies: companies.map((co) => ({ id: co.id, name: co.name })),
-      disciplines,
+      ...disciplineOptions,
     },
   };
   return c.json(body);

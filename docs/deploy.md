@@ -204,6 +204,13 @@ tab, or an A record to `216.150.1.1` / `216.150.16.1`.
 
 ## 7. Order of operations
 
+For an existing installation, deploy API changes before the Worker, then the Next
+apps. Keep existing response fields compatible throughout the rollout. Coverage
+options retain string IDs in `disciplines`; the optional `disciplineNames` map
+adds display labels without breaking older Workers or backoffice clients.
+
+For the initial setup:
+
 1. **Cloudflare** first; you need `agents.qolmeia.com` for `AGENTS_INTERNAL_URL`.
 2. **Railway**: auth + Postgres; gives you `api.qolmeia.com`.
 3. **Vercel**: the two Next apps, pointed at both.
