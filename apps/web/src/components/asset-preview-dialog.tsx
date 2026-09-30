@@ -9,12 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
+import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { DialogCloseButton } from "@repo/ui/compositions/dialog-close-button";
+import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import { cn } from "@repo/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Loader2 } from "lucide-react";
 
-import { AssetImage } from "@/components/asset-image";
-import { MarkdownResponse } from "@/components/markdown-response";
 import type { WebChatAsset } from "@/lib/api-types";
 
 type AssetPreviewDialogProps = {
@@ -84,7 +85,11 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
       }}
       open={asset !== null}
     >
-      <DialogContent className="max-h-(--layout-max-h-dialog-viewport) gap-4 overflow-hidden sm:max-w-2xl">
+      <DialogContent
+        className="max-h-(--layout-max-h-dialog-viewport) gap-4 overflow-hidden sm:max-w-2xl"
+        showCloseButton={false}
+      >
+        <DialogCloseButton />
         <DialogHeader>
           <DialogTitle className="truncate pr-8">{asset?.name ?? "Arquivo"}</DialogTitle>
           <DialogDescription className="sr-only">Pré-visualização do arquivo</DialogDescription>

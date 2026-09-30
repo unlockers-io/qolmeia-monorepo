@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { apiSend, ApiError } from "@/lib/api-client";
+import { apiSend, describeRequestError } from "@/lib/api-client";
 
 type CoverageFormProps = {
   initial: CoverageResponse["assigned"];
@@ -18,7 +18,7 @@ const disciplineLabel = (kind: string): string =>
   kind
     .split(/[\s_\-]+/v)
     .filter(Boolean)
-    .map((w) => w.charAt(0).toLocaleUpperCase("pt-BR") + w.slice(1))
+    .map((word) => word.charAt(0).toLocaleUpperCase("pt-BR") + word.slice(1))
     .join(" ");
 
 const toggle = (set: ReadonlySet<string>, value: string): Set<string> => {
@@ -55,11 +55,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
       toast.success("Cobertura salva.");
       refresh();
     } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? `Erro ${error.status}: ${error.body || "falha"}`
-          : "Não foi possível salvar a cobertura.";
-      toast.error(message);
+      toast.error(describeRequestError(error, "Não foi possível salvar a cobertura."));
     }
     setSubmitting(false);
   };
@@ -133,7 +129,6 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
                   key={discipline}
                 >
                   <input
-                    aria-label={disciplineLabel(discipline)}
                     checked={checked}
                     className="size-3.5 accent-primary"
                     name="disciplines"
@@ -143,7 +138,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
                     type="checkbox"
                   />
                   <span className="text-sm font-medium text-foreground">
-                    {disciplineLabel(discipline)}
+                    {options.disciplineNames?.[discipline] ?? disciplineLabel(discipline)}
                   </span>
                 </label>
               );

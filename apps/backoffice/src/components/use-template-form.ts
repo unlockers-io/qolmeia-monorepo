@@ -1,11 +1,11 @@
-import type { Template, TemplateInput } from "@repo/worker-api/contracts";
+import type { ActionPolicy, Template, TemplateInput } from "@repo/worker-api/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { ApiError } from "@/lib/api-client";
+import { describeRequestError } from "@/lib/api-client";
 import {
   createTemplate,
   fetchSkillCatalog,
@@ -23,7 +23,13 @@ type FieldKey =
   | "systemPrompt"
   | "workerKind";
 
-const policiesRecordSchema = z.record(z.string(), z.string());
+const ACTION_POLICIES = [
+  "auto_execute",
+  "notify_only",
+  "require_approval",
+] as const satisfies ReadonlyArray<ActionPolicy>;
+
+const policiesRecordSchema = z.record(z.string(), z.enum(ACTION_POLICIES));
 
 const formSchema = z.object({
   defaultActionType: z.string().trim().min(1, "Informe o tipo de ação."),
@@ -39,7 +45,7 @@ const formSchema = z.object({
       } catch {
         return false;
       }
-    }, "JSON inválido. Use um objeto { tipoDeAção: política }."),
+    }, "Use um objeto { tipoDeAção: política } com require_approval, notify_only ou auto_execute."),
   description: z.string().trim().min(1, "Informe uma descrição."),
   displayName: z.string().trim().min(1, "Informe o nome de exibição."),
   model: z.string().trim().min(1, "Informe o modelo."),
@@ -87,11 +93,7 @@ const useTemplateForm = (initial: Template | undefined) => {
     mutationFn: (input: TemplateInput) =>
       isEdit ? updateTemplate(initial.id, input) : createTemplate(input),
     onError: (error) => {
-      const message =
-        error instanceof ApiError
-          ? `Erro ${error.status}: ${error.body || "falha ao salvar"}`
-          : "Não foi possível salvar o modelo.";
-      toast.error(message);
+      toast.error(describeRequestError(error, "Não foi possível salvar o modelo."));
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: templateKeys.all });
@@ -103,11 +105,7 @@ const useTemplateForm = (initial: Template | undefined) => {
   const statusMutation = useMutation({
     mutationFn: (status: Template["status"]) => setTemplateStatus(initial?.id ?? "", status),
     onError: (error) => {
-      const message =
-        error instanceof ApiError
-          ? `Erro ${error.status}: ${error.body || "falha"}`
-          : "Não foi possível alterar o status.";
-      toast.error(message);
+      toast.error(describeRequestError(error, "Não foi possível alterar o status."));
     },
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: templateKeys.all });

@@ -21,11 +21,13 @@ const NavSkeleton = () => (
 );
 
 const ClientLayout = ({ children }: { children: ReactNode }) => (
-  <div className="flex min-h-svh flex-col bg-background">
+  <div className="flex min-h-dvh flex-col bg-background has-data-chat:h-dvh">
     <Suspense fallback={<NavSkeleton />}>
       <NavData />
     </Suspense>
-    <div className="flex-1">{children}</div>
+    <main className="flex min-h-0 flex-1 flex-col" id="main-content">
+      {children}
+    </main>
   </div>
 );
 

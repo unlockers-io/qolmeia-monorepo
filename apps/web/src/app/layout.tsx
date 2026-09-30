@@ -74,14 +74,13 @@ const RootLayout = ({ children }: { children: ReactNode }) => {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <a
             className="sr-only fixed top-2 left-2 z-50 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground ring-1 ring-ring focus:not-sr-only"
+            // oxlint-disable-next-line react-doctor/anchor-target-exists -- every page shell renders the one <main id="main-content">
             href="#main-content"
           >
             Pular para o conteúdo
           </a>
-          <main id="main-content">
-            <Providers>{children}</Providers>
-          </main>
-          <Toaster />
+          <Providers>{children}</Providers>
+          <Toaster containerAriaLabel="Notificações" />
         </ThemeProvider>
       </body>
     </html>

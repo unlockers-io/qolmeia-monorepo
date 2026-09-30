@@ -2,7 +2,8 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { proposeAction } from "#/db/action";
-import { listCoverage, listDisciplines, setCoverage } from "#/db/assignment";
+import { listCoverage, setCoverage } from "#/db/assignment";
+import { getDb } from "#/db/client";
 
 const COMPANY_A = "co_cov_a";
 const COMPANY_B = "co_cov_b";
@@ -81,7 +82,7 @@ const pendingCompanyIds = async (query = ""): Promise<Array<string>> => {
 };
 
 describe("operator coverage DB", () => {
-  it("setCoverage replaces; listCoverage round-trips; listDisciplines covers templates", async () => {
+  it("round-trips coverage and preserves string discipline IDs in the internal API", async () => {
     await setCoverage(env.DB, OPERATOR, { companies: [COMPANY_A], disciplines: ["designer"] });
     let coverage = await listCoverage(env.DB, OPERATOR);
     expect(coverage.companies).toEqual([COMPANY_A]);
@@ -92,9 +93,10 @@ describe("operator coverage DB", () => {
     expect(coverage.companies).toEqual([]);
     expect(coverage.disciplines).toEqual(["redator"]);
 
-    const disciplines = await listDisciplines(env.DB);
-    expect(disciplines).toContain("designer");
-    expect(disciplines).toContain("redator");
+    const options = await getDb(env)("assignments.options", {});
+    expect(options.disciplines).toContain("designer");
+    expect(options.disciplines).toContain("redator");
+    expect(options.disciplineNames).toMatchObject({ designer: "Designer", redator: "Redator" });
   });
 });
 
@@ -106,11 +108,16 @@ describe("GET/PUT /api/backoffice/assignments/me", () => {
     );
     const beforeBody = await before.json<{
       assigned: { companies: Array<string>; disciplines: Array<string> };
-      options: { companies: Array<{ id: string }>; disciplines: Array<string> };
+      options: {
+        companies: Array<{ id: string }>;
+        disciplineNames?: Record<string, string>;
+        disciplines: Array<string>;
+      };
     }>();
     expect(beforeBody.assigned.companies).toEqual([]);
     expect(beforeBody.options.companies.some((co) => co.id === COMPANY_A)).toBe(true);
     expect(beforeBody.options.disciplines).toContain("designer");
+    expect(beforeBody.options.disciplineNames).toMatchObject({ designer: "Designer" });
 
     const put = await exports.default.fetch(
       "https://agents.test/api/backoffice/assignments/me?cf_session=covtok",

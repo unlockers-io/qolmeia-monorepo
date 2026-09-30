@@ -1,6 +1,6 @@
 "use client";
 
-import { authClient } from "@repo/app-shell/auth-client";
+import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
@@ -18,12 +18,12 @@ type LoginFormDependencies = {
   sendMagicLink: (input: {
     callbackURL: string;
     email: string;
-  }) => Promise<{ error: { message?: string } | null }>;
+  }) => Promise<{ error: { code?: string; status?: number } | null }>;
   showError: (message: string) => void;
   signInEmail: (credentials: {
     email: string;
     password: string;
-  }) => Promise<{ error: { message?: string } | null }>;
+  }) => Promise<{ error: { code?: string; status?: number } | null }>;
 };
 
 type SubmitLabelState = {
@@ -71,7 +71,9 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
           password: value.password,
         });
         if (error) {
-          showError("Não foi possível entrar. Verifique seu e-mail e sua senha.");
+          showError(
+            authErrorMessage(error, "Não foi possível entrar. Verifique seu e-mail e sua senha."),
+          );
           return;
         }
       } catch {
@@ -96,7 +98,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
       try {
         const { error } = await sendMagicLink({ callbackURL, email: result.data.email });
         if (error) {
-          showError(error.message ?? "Não foi possível enviar o link. Tente novamente.");
+          showError(authErrorMessage(error, "Não foi possível enviar o link. Tente novamente."));
           return;
         }
         setSent(true);

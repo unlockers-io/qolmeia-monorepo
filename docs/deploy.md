@@ -60,7 +60,8 @@ Auth runs), `agents.` (the Cloudflare Worker). The session is one cookie on the
 ```bash
 wrangler r2 bucket create qolmeia-assets
 wrangler kv namespace create qolmeia-sessions           # → copy id
-wrangler vectorize create qolmeia-memory --dimensions=1024 --metric=cosine
+wrangler vectorize create qolmeia-memory-qwen3 --dimensions=1024 --metric=cosine
+wrangler vectorize create-metadata-index qolmeia-memory-qwen3 --property-name=agentInstanceId --type=string
 ```
 
 In the Cloudflare dashboard: create an **AI Gateway** named `qolmeia`, and note
@@ -96,6 +97,10 @@ wrangler secret put FIRECRAWL_API_KEY       # optional (fetchUrl skill)
 ```
 
 ### 4d. Initialize Postgres
+
+For an existing deployment, follow [the model upgrade and memory cutover](./model-upgrade.md)
+before deploying this Worker. Backfill the new Qwen3 index first; upgrade template
+models only after the new Worker is live. The old memory index is retained.
 
 Push the shared Prisma schema and seed the default template/skill catalog before
 deploying the Worker:
@@ -203,6 +208,13 @@ each host needs a CNAME to the value Vercel shows under the project's Domains
 tab, or an A record to `216.150.1.1` / `216.150.16.1`.
 
 ## 7. Order of operations
+
+For an existing installation, deploy API changes before the Worker, then the Next
+apps. Keep existing response fields compatible throughout the rollout. Coverage
+options retain string IDs in `disciplines`; the optional `disciplineNames` map
+adds display labels without breaking older Workers or backoffice clients.
+
+For the initial setup:
 
 1. **Cloudflare** first; you need `agents.qolmeia.com` for `AGENTS_INTERNAL_URL`.
 2. **Railway**: auth + Postgres; gives you `api.qolmeia.com`.

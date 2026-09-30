@@ -1,7 +1,9 @@
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
+import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
-import type { Action, TicketDetailResponse } from "@repo/worker-api/contracts";
+import type { Action, TicketDetailResponse, WireObject } from "@repo/worker-api/contracts";
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -12,7 +14,7 @@ import { BackLink } from "@/components/back-link";
 import { StatusPill } from "@/components/status-pill";
 import { ApiError } from "@/lib/api-client";
 import { apiGetServer } from "@/lib/api-server";
-import { formatRelative, truncate } from "@/lib/format";
+import { actionTypeLabel, formatRelative, truncate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Ticket" };
 
@@ -44,6 +46,19 @@ const STEP_DOT = {
   waiting: "border-warning bg-warning",
 } satisfies StepDotContract;
 
+const PENDING_DELIVERABLE = {
+  awaiting_approval: "Aguardando aprovação",
+  blocked: "Não entregue",
+  cancelled: "Não entregue",
+  done: "Concluído sem material",
+  in_progress: "Em produção",
+  open: "Na fila",
+  rejected: "Rejeitado: não será entregue",
+} satisfies Record<TicketDetailResponse["ticket"]["status"], string>;
+
+const deliverableSummary = (result: WireObject | null): string | null =>
+  typeof result?.summary === "string" && result.summary !== "" ? result.summary : null;
+
 const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
   const { id } = await params;
 
@@ -60,7 +75,8 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
   }
 
   const { actions, ticket } = detail;
-  const relatedAction = actions.at(0) ?? null;
+  const relatedAction = actions.at(-1) ?? null;
+  const summary = deliverableSummary(ticket.result);
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,9 +87,9 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
             {truncate(ticket.brief, 80)}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span>{ticket.companyId}</span>
+            <span>{ticket.companyName}</span>
             <span aria-hidden>·</span>
-            <span>{ticket.agentInstanceId}</span>
+            <span>{ticket.agent.name}</span>
           </div>
         </div>
         <StatusPill status={ticket.status} />
@@ -93,10 +109,6 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
                   {actions.map((action, index) => {
                     const tone = STEP_TONE[action.status];
                     const isLast = index === actions.length - 1;
-                    const summary =
-                      typeof action.proposed.summary === "string"
-                        ? action.proposed.summary
-                        : action.actionType;
                     return (
                       <li className="flex gap-3.5" key={action.id}>
                         <div className="flex flex-col items-center">
@@ -106,11 +118,22 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
                           />
                           {!isLast && <span className="min-h-4.5 w-0.5 flex-1 bg-border" />}
                         </div>
-                        <div className={cn("pb-4", isLast && "pb-0")}>
-                          <div className="text-sm leading-snug font-medium text-foreground">
-                            {truncate(summary, 120)}
+                        <div className={cn("flex min-w-0 flex-col gap-1 pb-4", isLast && "pb-0")}>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                              className="text-sm leading-snug font-medium text-foreground transition-colors hover:text-primary"
+                              href={`/approvals/${action.id}`}
+                            >
+                              {actions.length > 1
+                                ? `Rodada ${index + 1} · ${actionTypeLabel(action.actionType)}`
+                                : actionTypeLabel(action.actionType)}
+                            </Link>
+                            <StatusPill status={action.status} />
                           </div>
-                          <div className="mt-1 font-mono text-xs text-muted-foreground">
+                          {action.feedback !== null && action.feedback !== "" && (
+                            <p className="text-sm text-muted-foreground">“{action.feedback}”</p>
+                          )}
+                          <div className="font-mono text-xs text-muted-foreground">
                             {formatRelative(action.createdAt)}
                           </div>
                         </div>
@@ -126,18 +149,18 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
             <div className="border-b border-border px-5 py-3.5 text-sm font-bold text-foreground">
               Entregável
             </div>
-            {ticket.result ? (
-              <pre className="max-h-96 overflow-auto bg-muted/40 p-4 text-xs leading-relaxed text-foreground">
-                {JSON.stringify(ticket.result, null, 2)}
-              </pre>
-            ) : (
+            {summary === null ? (
               <div className="flex h-40 items-center justify-center bg-muted/40">
-                <span className="rounded-md border border-border bg-card px-2.5 py-1.5 font-mono text-xs text-muted-foreground">
-                  aguardando entrega
+                <span className="rounded-md border border-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground">
+                  {PENDING_DELIVERABLE[ticket.status]}
                 </span>
               </div>
+            ) : (
+              <div className="bg-muted/40 px-5 py-4 text-sm leading-relaxed text-foreground">
+                <MarkdownResponse>{summary}</MarkdownResponse>
+              </div>
             )}
-            <div className="px-5 py-3.5 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+            <div className="border-t border-border px-5 py-3.5 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
               {ticket.brief}
             </div>
           </Card>
@@ -151,19 +174,30 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
             <div className="flex flex-col gap-2.5 text-(length:--text-label)">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Empresa</span>
-                <span className="truncate font-semibold text-foreground">{ticket.companyId}</span>
+                <span className="truncate font-semibold text-foreground">{ticket.companyName}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Agente</span>
-                <span className="truncate font-semibold text-foreground">
-                  {ticket.agentInstanceId}
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "flex size-5 flex-none items-center justify-center rounded-lg text-xs font-bold text-white",
+                      agentAvatarClass(ticket.agent.role, ticket.agent.workerKind),
+                    )}
+                  >
+                    {agentInitials(ticket.agent.name)}
+                  </span>
+                  <span className="truncate font-semibold text-foreground">
+                    {ticket.agent.name}
+                  </span>
                 </span>
               </div>
               {relatedAction && (
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">Tipo</span>
                   <span className="truncate font-semibold text-foreground">
-                    {relatedAction.actionType}
+                    {actionTypeLabel(relatedAction.actionType)}
                   </span>
                 </div>
               )}
@@ -183,12 +217,18 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
               <div className="mt-4 border-t border-border pt-3.5">
                 <div className="mb-2 text-xs text-muted-foreground">Ação relacionada</div>
                 <Link
-                  className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none"
+                  className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 transition-colors outline-none hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   href={`/approvals/${relatedAction.id}`}
                 >
-                  <span aria-hidden className="size-2 shrink-0 rounded-full bg-warning" />
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-2 shrink-0 rounded-full",
+                      STEP_DOT[STEP_TONE[relatedAction.status]],
+                    )}
+                  />
                   <span className="min-w-0 flex-1 truncate text-(length:--text-label) font-semibold text-foreground">
-                    {relatedAction.actionType}
+                    {actionTypeLabel(relatedAction.actionType)}
                   </span>
                   <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
                 </Link>

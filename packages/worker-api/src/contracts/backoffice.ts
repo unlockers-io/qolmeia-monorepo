@@ -21,10 +21,18 @@ type WireObject = Readonly<Record<string, WireValue>>;
  * between producers and consumers.
  */
 
+type AgentSummary = {
+  name: string;
+  role: AgentRole;
+  workerKind: string | null;
+};
+
 type Ticket = {
+  agent: AgentSummary;
   agentInstanceId: string;
   brief: string;
   companyId: string;
+  companyName: string;
   id: string;
   result: WireObject | null;
   status: TicketStatus;
@@ -32,22 +40,15 @@ type Ticket = {
 };
 
 type TicketListRow = Ticket & {
-  companyName: string;
   createdAt: number;
   origin: string;
   title: string;
   updatedAt: number;
 };
 
-type ActionAgent = {
-  name: string;
-  role: AgentRole;
-  workerKind: string | null;
-};
-
 type Action = {
   actionType: string;
-  agent: ActionAgent;
+  agent: AgentSummary;
   companyId: string;
   companyName: string;
   createdAt: number;
@@ -82,7 +83,13 @@ type TicketsResponse = { items: ReadonlyArray<TicketListRow> };
 type ActionsResponse = { items: ReadonlyArray<ActionListRow> };
 type ActivityResponse = { items: ReadonlyArray<ActivityEntry> };
 type TicketDetailResponse = { actions: ReadonlyArray<Action>; ticket: Ticket };
-type ActionDetailResponse = { action: Action; ageSeconds: number; ticket: Ticket | null };
+type ActionDetail = Action & { decidedByName: string | null };
+type ActionDetailResponse = {
+  action: ActionDetail;
+  ageSeconds: number;
+  canRequestChanges: boolean;
+  ticket: Ticket | null;
+};
 
 type DecisionOutcome = "approved" | "changes_requested" | "rejected";
 
@@ -95,6 +102,8 @@ type CoverageResponse = {
   assigned: OperatorCoverage;
   options: {
     companies: ReadonlyArray<{ id: string; name: string }>;
+    disciplineNames?: Readonly<Record<string, string>>;
+    // Keep IDs as strings for clients deployed before discipline labels were added.
     disciplines: ReadonlyArray<string>;
   };
 };
@@ -138,12 +147,13 @@ type SkillCatalogResponse = { items: ReadonlyArray<SkillCatalogEntry> };
 
 export type {
   Action,
-  ActionAgent,
+  ActionDetail,
   ActionDetailResponse,
   ActionListRow,
   ActionsResponse,
   ActivityEntry,
   ActivityResponse,
+  AgentSummary,
   CoverageResponse,
   DecisionOutcome,
   OperatorCoverage,

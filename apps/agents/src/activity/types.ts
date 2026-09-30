@@ -33,13 +33,6 @@ type ActionRevisedEvent = {
   type: "ACTION_REVISED";
 };
 
-type ActionRevisionCappedEvent = {
-  payload: { revisions: number };
-  refId: string;
-  refType: "action";
-  type: "ACTION_REVISION_CAPPED";
-};
-
 type ActionNotifyEvent = {
   payload: { summary: string };
   refId: string;
@@ -120,7 +113,6 @@ type ActivityEvent =
   | ActionRejectedEvent
   | ActionChangesRequestedEvent
   | ActionRevisedEvent
-  | ActionRevisionCappedEvent
   | ActionNotifyEvent
   | TicketDoneEvent
   | TeamConfirmedEvent

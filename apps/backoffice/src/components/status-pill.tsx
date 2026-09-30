@@ -10,7 +10,7 @@ const STATUS_COPY = {
   awaiting_approval: "Aguardando aprovação",
   blocked: "Bloqueado",
   cancelled: "Cancelado",
-  changes_requested: "Mudanças pedidas",
+  changes_requested: "Ajustes pedidos",
   done: "Concluído",
   executed: "Executado",
   in_progress: "Em andamento",

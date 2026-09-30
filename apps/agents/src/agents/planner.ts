@@ -9,6 +9,7 @@ import {
 import { plannerIdFor } from "@repo/worker-api/contracts";
 import { env } from "cloudflare:workers";
 
+import { CONVERSATION_MODEL } from "#/lib/flue-models";
 import { buildFlueTools } from "#/lib/skill-tool";
 import { loadSkillOverlays, type SkillContext, type SkillOverlayMap } from "#/skills/registry";
 
@@ -24,15 +25,13 @@ Sua missão tem duas etapas:
 
 O cliente confirma fora do chat (botão na UI). Quando isso acontecer, o Correspondente assume; você fica em standby para um futuro re-plano se ele quiser ajustar o Time.`;
 
-const DEFAULT_MODEL = "openrouter/anthropic/claude-sonnet-4.5";
-
 export function PlannerV2({ id }: AgentProps): string {
   const [overlays, setOverlays] = usePersistentState<SkillOverlayMap | null>("skillOverlays", null);
   useAgentStart(async () => {
     setOverlays(await loadSkillOverlays(env, PLANNER_SKILLS));
   });
 
-  useModel(DEFAULT_MODEL);
+  useModel(`openrouter/${CONVERSATION_MODEL}`, { thinkingLevel: "low" });
 
   const ctx: SkillContext = { agentInstanceId: plannerIdFor(id), companyId: id, env };
   for (const skillTool of buildFlueTools(ctx, PLANNER_SKILLS, overlays)) {

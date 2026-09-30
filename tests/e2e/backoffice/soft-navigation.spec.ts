@@ -53,7 +53,7 @@ test.describe("Instant navigation", () => {
       async () => {
         await page.goto("/");
         await expect(page.getByRole("heading", { level: 1, name: "Início" })).toBeVisible();
-        await expect(page.getByText("Últimos 7 dias")).toBeVisible();
+        await expect(page.getByText("Visão operacional de todas as empresas")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Eventos recentes" })).toBeHidden();
       },
       { baseURL: backofficeUrl },

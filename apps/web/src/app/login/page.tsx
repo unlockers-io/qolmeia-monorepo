@@ -30,14 +30,11 @@ const CAPABILITIES = [
 ] as const;
 
 const LoginPage = () => (
-  <div className="flex min-h-svh flex-col lg:grid lg:grid-cols-login">
+  <main className="flex min-h-svh flex-col lg:grid lg:grid-cols-login" id="main-content">
     <section className="relative isolate flex flex-col justify-between gap-12 overflow-hidden border-b border-border px-6 pt-10 pb-9 sm:px-8 lg:border-r lg:border-b-0 lg:px-12 lg:py-14 xl:px-20">
       <Logo className="h-8 w-auto self-start" />
 
       <div>
-        <p className="font-mono text-sm font-medium tracking-wide text-primary uppercase">
-          Chat com seu Time de IA
-        </p>
         <h1 className="mt-4 max-w-(--container-measure-30) font-display text-3xl font-semibold tracking-tight text-balance lg:text-5xl">
           Um time inteiro, na mesma conversa.
         </h1>
@@ -77,7 +74,7 @@ const LoginPage = () => (
     <section className="flex flex-1 items-center bg-card px-6 py-12 sm:px-8 lg:justify-center lg:px-12">
       <LoginForm />
     </section>
-  </div>
+  </main>
 );
 
 export { metadata };

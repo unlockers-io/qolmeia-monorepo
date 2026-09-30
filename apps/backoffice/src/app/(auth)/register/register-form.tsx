@@ -1,6 +1,6 @@
 "use client";
 
-import { authClient } from "@repo/app-shell/auth-client";
+import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -69,7 +69,7 @@ const RegisterForm = ({ searchParams }: Props) => {
           password: value.password,
         });
         if (result.error) {
-          toast.error(result.error.message ?? "Não foi possível criar a conta.");
+          toast.error(authErrorMessage(result.error, "Não foi possível criar a conta."));
           return;
         }
         const { token } = result.data;
@@ -99,7 +99,7 @@ const RegisterForm = ({ searchParams }: Props) => {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            <h2>Verifique seu e-mail</h2>
+            <h1>Verifique seu e-mail</h1>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -117,7 +117,7 @@ const RegisterForm = ({ searchParams }: Props) => {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">
-          <h2>Criar conta</h2>
+          <h1>Criar conta</h1>
         </CardTitle>
         <CardDescription>Cadastre-se para acessar o painel da Qolmeia.</CardDescription>
       </CardHeader>

@@ -13,7 +13,7 @@ const SidebarData = async () => {
     apiGetServer<ActionsResponse>("/actions?status=pending&sort=age").catch(() => null),
   ]);
 
-  const pendingCount = pendingRes?.items.length ?? 0;
+  const pendingCount = pendingRes?.items.length ?? null;
   const displayName = me.user.displayName ?? me.user.name;
 
   return (
