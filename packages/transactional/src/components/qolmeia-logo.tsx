@@ -5,12 +5,12 @@ type QolmeiaLogoProps = {
   width?: number;
 };
 
-const QolmeiaLogo = ({ height = 32, width = 120 }: QolmeiaLogoProps) => {
+const QolmeiaLogo = ({ height = 36, width = 126 }: QolmeiaLogoProps) => {
   return (
     <Img
       alt="Qolmeia"
       height={height}
-      src="https://www.qolmeia.com/logo-wordmark.svg"
+      src="https://www.qolmeia.com/logo-wordmark.png"
       width={width}
     />
   );

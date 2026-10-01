@@ -22,50 +22,50 @@ const PasswordResetEmail = ({
   username,
 }: PasswordResetEmailProps) => {
   return (
-    <BaseLayout preview="Reset your Qolmeia password">
+    <BaseLayout preview="Redefina sua senha da Qolmeia">
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
-        Reset your password
+        Redefina sua senha
       </Heading>
 
       <Text className="m-0 mb-2 text-base text-pretty break-words text-muted-foreground">
-        Hi{username !== undefined && username !== "" ? ` ${username}` : ""},
+        Olá{username !== undefined && username !== "" ? ` ${username}` : ""},
       </Text>
 
       <Text className="m-0 mb-6 text-base text-pretty break-words text-muted-foreground">
-        We received a request to reset the password on your Qolmeia account. If you made this
-        request, use the button below to set a new password.
+        Recebemos um pedido para redefinir a senha da sua conta Qolmeia. Se foi você, use o botão
+        abaixo para criar uma nova senha.
       </Text>
 
       <div className="mb-6">
         <Button fullWidth href={resetUrl} variant="primary">
-          Reset password
+          Redefinir senha
         </Button>
       </div>
 
       <Divider />
 
-      <Card accent title="Request details">
+      <Card accent title="Detalhes do pedido">
         <ul className="m-0 list-none p-0 text-base text-muted-foreground">
-          <li className="py-1">Email: {userEmail}</li>
+          <li className="py-1">E-mail: {userEmail}</li>
           {ipAddress !== undefined && ipAddress !== "" && (
-            <li className="py-1">IP address: {ipAddress}</li>
+            <li className="py-1">Endereço IP: {ipAddress}</li>
           )}
           {browserInfo !== undefined && browserInfo !== "" && (
-            <li className="py-1">Browser: {browserInfo}</li>
+            <li className="py-1">Navegador: {browserInfo}</li>
           )}
         </ul>
-        <Text className="m-0 mt-3 mb-2 text-base font-semibold text-foreground">Important</Text>
+        <Text className="m-0 mt-3 mb-2 text-base font-semibold text-foreground">Importante</Text>
         <ul className="m-0 list-inside list-disc text-base text-muted-foreground">
-          <li className="py-1">This link expires in 1 hour</li>
-          <li className="py-1">It can only be used once</li>
-          <li className="py-1">If you didn&apos;t request this, secure your account</li>
+          <li className="py-1">O link expira em 1 hora</li>
+          <li className="py-1">Ele só pode ser usado uma vez</li>
+          <li className="py-1">Se você não fez este pedido, proteja sua conta</li>
         </ul>
       </Card>
 
       <Divider spacing="sm" />
 
       <Text className="m-0 text-xs text-muted-foreground">
-        If the button above doesn&apos;t work, copy and paste this link into your browser:
+        Se o botão acima não funcionar, copie e cole este link no seu navegador:
         <br />
         <Link className="break-all text-foreground underline" href={resetUrl}>
           {resetUrl}
