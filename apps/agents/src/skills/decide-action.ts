@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getAction } from "#/db/action";
 import { getDb } from "#/db/client";
 import { loadTicket } from "#/db/ticket";
+import { decisionEventType } from "#/jobs/decision-event";
 import { canRequestChanges, MAX_REVISIONS } from "#/lib/revisions";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
 
@@ -53,7 +54,7 @@ const decideActionSkill: UnknownSkill = {
         decision,
         feedback,
       },
-      type: `decision:${actionId}`,
+      type: decisionEventType(actionId),
     });
 
     return { decision, ok: true };

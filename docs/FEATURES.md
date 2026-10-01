@@ -224,7 +224,7 @@ load the current overlay when assembling their tools.
 1. Load the ticket, specialist instance, current template, model, prompt override, and live skills.
 2. Generate the deliverable with up to five model/tool steps.
 3. Resolve the template policy. Missing or invalid policies fail closed to `require-approval`.
-4. For `require-approval`, create an action and wait for `decision:<actionId>` for up to 60 days.
+4. For `require-approval`, create an action and wait for `decision-<actionId>` for up to 60 days.
 5. Approve and deliver, reject and close, or regenerate with feedback for at most three revisions.
 
 `auto-execute` and `notify-only` skip the blocking gate and deliver immediately. `notify-only` also

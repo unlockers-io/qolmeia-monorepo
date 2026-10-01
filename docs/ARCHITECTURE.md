@@ -131,7 +131,7 @@ The highest-stakes path, kept on a Cloudflare Workflow for durability ([ADR 0003
 
 1. The Correspondent calls **`delegateToWorker`** → inserts a `ticket` and creates a **`WorkerJobWorkflow`** run directly (no Worker-DO hop).
 2. The Workflow generates the deliverable using the Worker template's skills, then **proposes an `action`** (the backoffice approval card) for high-impact side-effects only ([ADR 0006](adr/0006-approval-gates-only-high-impact-actions.md)).
-3. It **pauses at `step.waitForEvent("decision:<actionId>")`**: surviving DO eviction for as long as the operator takes.
+3. It **pauses at `step.waitForEvent("decision-<actionId>")`**: surviving DO eviction for as long as the operator takes.
 4. An operator on the backoffice opens `/approvals`, decides, and `POST /api/backoffice/actions/:id/decide` resumes the Workflow.
 5. On approval the side-effect runs (e.g. `generateBrandImage` → R2 → signed URL), the action is marked `executed`, the ticket `done`, and the Workflow **`dispatch()`es the result to the Correspondent**, which presents it in chat (markdown, so images render inline).
 

@@ -28,6 +28,7 @@ import {
   updateTemplate,
 } from "#/db/template";
 import { listTickets, loadTicket } from "#/db/ticket";
+import { decisionEventType } from "#/jobs/decision-event";
 import { requireStaffSession, type ValidatedSession } from "#/lib/auth";
 import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
 import { canRequestChanges } from "#/lib/revisions";
@@ -161,7 +162,7 @@ backofficeRoutes.post("/actions/:id/decide", async (c) => {
       decision: parsed.data.decision,
       feedback: parsed.data.feedback,
     },
-    type: `decision:${id}`,
+    type: decisionEventType(id),
   });
 
   return c.json({ ok: true });
