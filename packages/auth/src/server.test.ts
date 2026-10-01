@@ -69,6 +69,10 @@ describe("Auth Server Configuration", () => {
     );
   });
 
+  it("trusts forwarded host headers, since every app reaches auth through its Next rewrite", () => {
+    expect(auth.options.advanced?.trustedProxyHeaders).toBe(true);
+  });
+
   it("should configure dynamic baseURL with allowedHosts + protocol auto", () => {
     const baseURL = auth.options.baseURL;
     if (typeof baseURL !== "object" || baseURL === null) {

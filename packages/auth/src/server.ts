@@ -73,6 +73,7 @@ export const createAuth = (config: AuthConfig) => {
         httpOnly: true,
         sameSite: "lax" as const,
       },
+      trustedProxyHeaders: true,
       useSecureCookies,
     },
 
