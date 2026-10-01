@@ -9,7 +9,7 @@ ADR 0005 made Operators the human quality layer. That could have meant "a human 
 - **Three policy tiers**, declared per action-type on the producing agent's template (`default_policies`):
   - **auto-execute** — runs immediately, nobody notified (deliverables, internal work).
   - **notify-only** — runs immediately (non-blocking) but is surfaced to an operator feed for after-the-fact spot-check / audit. The home for "lighter-touch monitoring."
-  - **require-approval** — blocks on the Workflow's `waitForEvent("decision:<id>")` until an operator decides.
+  - **require-approval** — blocks on the Workflow's `waitForEvent("decision-<id>")` until an operator decides.
 
 - **Gated actions are discipline-routed** to the matching operator (ADR 0005): a `publish_post` from the Designer's work reaches the design reviewer, etc.
 

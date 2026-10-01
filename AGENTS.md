@@ -50,7 +50,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
   modules whose exported function names generate `FlueCorrespondentV2Agent` / `FluePlannerV2Agent` (one DO
   instance per company id). Renaming a function changes its storage identity unless pinned with `agentName`.
   Both are mounted explicitly in `app.ts` via `createAgentRouter`, behind `requireCustomerAgent` middleware.
-- **Approvals run on Workflows**: every Worker job spawns a `WorkerJobWorkflow`; gated actions pause on `waitForEvent("decision:<actionId>")` until an operator decides via `/api/backoffice/actions/:id/decide`.
+- **Approvals run on Workflows**: every Worker job spawns a `WorkerJobWorkflow`; gated actions pause on `waitForEvent("decision-<actionId>")` until an operator decides via `/api/backoffice/actions/:id/decide`.
 - **Postgres is the system of record for auth and product data**, accessed through Prisma from both `apps/api` and the agents Worker. Schema in `packages/db/prisma/schema.prisma`.
 - **R2 holds binary assets** (`ASSETS` binding), served via HMAC-signed URLs from `/assets/:id`.
 - **KV holds a session-validation cache** (`SESSIONS` binding) to keep the auth service off the hot path.
@@ -78,7 +78,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 3. **status === "onboarding"**: chat against `/agents/planner/<companyId>`. Planner calls `extractBrief` and `proposeTeam`, then surfaces a "Confirmar Time" button.
 4. **Customer confirms**: `POST /api/teams/:companyId/confirm` materialises `team` + `team_member`, flips `company.status = 'active'`, and seeds Correspondent memory.
 5. **status === "active"**: chat against `/agents/correspondent/<companyId>`. Correspondent uses `delegateToWorker` to spawn child tickets, each of which instantiates a `WorkerJobWorkflow` (the deliverable is generated with `generateText`, not a Flue agent).
-6. **Workflow proposes a `require-approval` action**: injects a 🟡 message via Correspondent, then `waitForEvent("decision:<actionId>")`.
+6. **Workflow proposes a `require-approval` action**: injects a 🟡 message via Correspondent, then `waitForEvent("decision-<actionId>")`.
 7. **Operator on `apps/backoffice`**: `requireStaff` → `/approvals` lists pending oldest-first → `/approvals/:id` shows the decide form → POST `/api/backoffice/actions/:id/decide` resumes the Workflow.
 8. **Workflow executes**: side-effect (e.g. `generateBrandImage` → R2 → signed URL) → marks the action `executed` and ticket `done` → dispatches a `worker.deliverable_ready` **signal** to Correspondent, which renders the result in chat (markdown, so images appear inline). Internal dispatches must be signals: Flue marks them `display: "diagnostic"` so the prompt itself stays out of the customer's transcript, and the client filters on that field.
 

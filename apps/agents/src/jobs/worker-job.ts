@@ -2,6 +2,7 @@ import { log } from "@repo/observability";
 import type { DecisionOutcome } from "@repo/worker-api/contracts";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
+import { decisionEventType } from "#/jobs/decision-event";
 import { generateDeliverable } from "#/jobs/worker-job-generate";
 import {
   applyDecision,
@@ -74,7 +75,7 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
 
       const evt = await step.waitForEvent<DecisionEvent>(`wait-${actionId}`, {
         timeout: "60 days",
-        type: `decision:${actionId}`,
+        type: decisionEventType(actionId),
       });
 
       const decision = await step.do(`decide-${round}`, (): Promise<DecisionOutcome> =>
