@@ -14,7 +14,7 @@ type MagicLinkEmailProps = {
 const MagicLinkEmail = ({ url, userEmail, username }: MagicLinkEmailProps) => {
   return (
     <BaseLayout
-      footerText="Você está recebendo este email porque alguém solicitou acesso à sua conta Qolmeia."
+      footerText="Você está recebendo este e-mail porque alguém pediu acesso à sua conta Qolmeia."
       preview="Seu link de acesso à Qolmeia"
     >
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
@@ -39,14 +39,14 @@ const MagicLinkEmail = ({ url, userEmail, username }: MagicLinkEmailProps) => {
       <Divider />
 
       <Text className="m-0 mb-4 text-sm text-muted-foreground">
-        Se você não solicitou este email, pode ignorá-lo com segurança: ninguém terá acesso à sua
-        conta sem clicar no link.
+        Se você não pediu este e-mail, pode ignorá-lo: ninguém entra na sua conta sem clicar no
+        link.
       </Text>
 
       <Text className="m-0 mb-4 text-sm text-muted-foreground">
         <strong>Detalhes da conta</strong>
         <br />
-        Email: {userEmail}
+        E-mail: {userEmail}
       </Text>
 
       <Divider spacing="sm" />

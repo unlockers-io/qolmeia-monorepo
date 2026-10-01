@@ -20,53 +20,51 @@ const SignUpAttemptEmail = ({
   username,
 }: SignUpAttemptEmailProps) => {
   return (
-    <BaseLayout preview="A sign-up attempt was made with your Qolmeia account email">
+    <BaseLayout preview="Alguém tentou criar uma conta Qolmeia com o seu e-mail">
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
-        Did you try to sign up?
+        Você tentou criar uma conta?
       </Heading>
 
       <Text className="m-0 mb-2 text-base text-pretty break-words text-muted-foreground">
-        Hi{username !== undefined && username !== "" ? ` ${username}` : ""},
+        Olá{username !== undefined && username !== "" ? ` ${username}` : ""},
       </Text>
 
       <Text className="m-0 mb-2 text-base text-pretty break-words text-muted-foreground">
-        Someone just tried to create a new Qolmeia account using your email (
-        <strong>{userEmail}</strong>). You already have an account with us, so we didn&apos;t create
-        a new one.
+        Alguém tentou criar uma conta Qolmeia com o seu e-mail (<strong>{userEmail}</strong>). Você
+        já tem uma conta, então nenhuma conta nova foi criada.
       </Text>
 
       <Text className="m-0 mb-6 text-base text-pretty break-words text-muted-foreground">
-        If this was you, sign in to your existing account below. If you forgot your password, you
-        can reset it.
+        Se foi você, entre na sua conta pelo botão abaixo. Se esqueceu a senha, é possível
+        redefini-la.
       </Text>
 
       <div className="mb-6">
         <Button fullWidth href={signInUrl} variant="primary">
-          Sign in
+          Entrar
         </Button>
       </div>
 
       <Text className="m-0 mb-6 text-base text-muted-foreground">
-        Or{" "}
+        Ou{" "}
         <Link className="text-foreground underline" href={resetPasswordUrl}>
-          reset your password
+          redefina sua senha
         </Link>{" "}
-        if you don&apos;t remember it.
+        se não lembrar dela.
       </Text>
 
       <Divider />
 
-      <Card accent title="Didn't try to sign up?">
+      <Card accent title="Não foi você?">
         <Text className="m-0 mb-2 text-base text-muted-foreground">
-          You can safely ignore this email. No account changes were made. If you keep getting these
-          notifications, someone may be probing for accounts using your email. We recommend:
+          Pode ignorar este e-mail: nada mudou na sua conta. Se esses avisos continuarem chegando,
+          alguém pode estar testando contas com o seu e-mail. Recomendamos:
         </Text>
         <ul className="m-0 list-inside list-disc text-base text-muted-foreground">
-          <li className="py-1">Confirm your email account is secure</li>
-          <li className="py-1">Enable two-factor authentication on Qolmeia</li>
+          <li className="py-1">Verificar se a sua conta de e-mail está segura</li>
           <li className="py-1">
             <Link className="text-foreground underline" href="mailto:security@qolmeia.com">
-              Let our security team know
+              Avisar nosso time de segurança
             </Link>
           </li>
         </ul>
@@ -75,7 +73,7 @@ const SignUpAttemptEmail = ({
       <Divider spacing="sm" />
 
       <Text className="m-0 text-xs text-muted-foreground">
-        If the button above doesn&apos;t work, copy and paste this link into your browser:
+        Se o botão acima não funcionar, copie e cole este link no seu navegador:
         <br />
         <Link className="break-all text-foreground underline" href={signInUrl}>
           {signInUrl}

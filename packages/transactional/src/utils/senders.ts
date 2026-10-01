@@ -75,7 +75,7 @@ const TEMPLATES = {
     newEmail,
     username,
   }: ChangeEmailPayload) => ({
-    subject: "Confirm change of your Qolmeia account email",
+    subject: "Confirme a troca de e-mail da sua conta Qolmeia",
     template: React.createElement(ChangeEmail, { changeUrl, currentEmail, newEmail, username }),
     to: currentEmail,
   }),
@@ -91,7 +91,7 @@ const TEMPLATES = {
     userEmail,
     username,
   }: PasswordResetPayload) => ({
-    subject: "Reset your Qolmeia password",
+    subject: "Redefina sua senha da Qolmeia",
     template: React.createElement(PasswordResetEmail, {
       browserInfo,
       ipAddress,
@@ -107,7 +107,7 @@ const TEMPLATES = {
     userEmail,
     username,
   }: SignUpAttemptPayload) => ({
-    subject: "Sign-up attempt with your Qolmeia account",
+    subject: "Tentativa de cadastro com o seu e-mail na Qolmeia",
     template: React.createElement(SignUpAttemptEmail, {
       resetPasswordUrl,
       signInUrl,
@@ -117,7 +117,7 @@ const TEMPLATES = {
     to: userEmail,
   }),
   welcome: ({ userEmail, username, verificationUrl }: WelcomePayload) => ({
-    subject: `Welcome to Qolmeia${username !== undefined && username !== "" ? `, ${username}` : ""}! Please verify your email`,
+    subject: `Boas-vindas à Qolmeia${username !== undefined && username !== "" ? `, ${username}` : ""}! Confirme seu e-mail`,
     template: React.createElement(WelcomeEmail, { userEmail, username, verificationUrl }),
     to: userEmail,
   }),
