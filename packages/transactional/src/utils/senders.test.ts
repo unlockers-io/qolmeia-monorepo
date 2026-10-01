@@ -90,6 +90,7 @@ describe("MagicLinkEmail render", () => {
     );
     expect(html).toContain("https://app.qolmeia.com/auth/magic?token=mlk-123");
     expect(html).toContain("Entre na Qolmeia");
+    expect(html).not.toContain('lang="en"');
     expect(text).toMatch(/entre na qolmeia/iv);
     expect(html).toContain("user@example.com");
   });
