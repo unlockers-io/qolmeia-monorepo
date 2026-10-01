@@ -69,10 +69,8 @@ describe("Auth Server Configuration", () => {
     );
   });
 
-  it("ignores forwarded host headers unless the caller opts in", () => {
-    expect(auth.options.advanced?.trustedProxyHeaders).toBe(false);
-    const proxied = createAuth({ ...baseConfig, trustedProxyHeaders: true });
-    expect(proxied.options.advanced?.trustedProxyHeaders).toBe(true);
+  it("trusts forwarded host headers, since every app reaches auth through its Next rewrite", () => {
+    expect(auth.options.advanced?.trustedProxyHeaders).toBe(true);
   });
 
   it("should configure dynamic baseURL with allowedHosts + protocol auto", () => {

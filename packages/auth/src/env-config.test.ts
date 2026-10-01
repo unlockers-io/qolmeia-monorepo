@@ -41,13 +41,6 @@ describe("envAuthConfig", () => {
     expect(config.trustedOrigins).toContain("http://127.0.0.1:3000");
   });
 
-  it("trusts forwarded host headers only outside production, where the Next rewrite proxies auth", () => {
-    vi.stubEnv("NODE_ENV", "development");
-    expect(envAuthConfig().trustedProxyHeaders).toBe(true);
-    vi.stubEnv("NODE_ENV", "production");
-    expect(envAuthConfig().trustedProxyHeaders).toBe(false);
-  });
-
   it("extends allowedHosts from AUTH_ALLOWED_HOSTS", () => {
     vi.stubEnv("AUTH_ALLOWED_HOSTS", "qolmeia.com,*.qolmeia.com,*.vercel.app");
     expect(envAuthConfig().allowedHosts).toEqual(

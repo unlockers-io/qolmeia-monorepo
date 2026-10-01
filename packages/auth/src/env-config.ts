@@ -27,7 +27,6 @@ type EnvAuthConfig = {
   allowedHosts: Array<string>;
   rateLimitEnabled: boolean;
   trustedOrigins: Array<string>;
-  trustedProxyHeaders: boolean;
   useSecureCookies: boolean;
 };
 
@@ -63,7 +62,6 @@ const envAuthConfig = (options: EnvAuthConfigOptions = {}): EnvAuthConfig => {
       ...parseEnvList(process.env.TRUSTED_ORIGINS),
       ...(options.additionalTrustedOrigins ?? []),
     ],
-    trustedProxyHeaders: process.env.NODE_ENV !== "production",
     useSecureCookies:
       (options.secureUrl ?? process.env.WEB_APP_URL)?.startsWith("https://") === true,
   };

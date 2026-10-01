@@ -38,7 +38,6 @@ type AuthConfig = {
   resendApiKey?: string;
   secret: string;
   trustedOrigins?: Array<string>;
-  trustedProxyHeaders?: boolean;
   useSecureCookies?: boolean;
 };
 
@@ -52,7 +51,6 @@ export const createAuth = (config: AuthConfig) => {
     resendApiKey,
     secret,
     trustedOrigins = [],
-    trustedProxyHeaders = false,
     useSecureCookies = false,
   } = config;
 
@@ -75,7 +73,7 @@ export const createAuth = (config: AuthConfig) => {
         httpOnly: true,
         sameSite: "lax" as const,
       },
-      trustedProxyHeaders,
+      trustedProxyHeaders: true,
       useSecureCookies,
     },
 
