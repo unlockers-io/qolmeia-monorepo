@@ -2,13 +2,14 @@ import type { PrismaClient } from "@repo/db";
 import { log } from "@repo/observability";
 import type { MailerConfig } from "@repo/transactional";
 import { sendTransactionalEmail } from "@repo/transactional";
-import { betterAuth } from "better-auth";
+import { betterAuth, matchesHostPattern } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer } from "better-auth/plugins/bearer";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { username } from "better-auth/plugins/username";
 import type { BetterAuthPlugin } from "better-auth/types";
 
+import { LOCALHOST_ALLOWED_HOSTS } from "./env-config";
 import { countOperators, createSignupGuard } from "./signup";
 
 const CALLBACK_FALLBACK_PATH = "/";
@@ -27,6 +28,27 @@ export const safeCallbackPath = (value: string | null): string => {
     return CALLBACK_FALLBACK_PATH;
   }
   return value;
+};
+
+const isLinkOrigin = (origin: URL, trustedOrigins: ReadonlyArray<string>): boolean =>
+  trustedOrigins.includes(origin.origin) ||
+  LOCALHOST_ALLOWED_HOSTS.some((pattern) => matchesHostPattern(origin.host, pattern));
+
+export const linkOnRequestOrigin = (
+  url: string,
+  headers: Headers | undefined,
+  trustedOrigins: ReadonlyArray<string>,
+): string => {
+  const origin = headers?.get("origin");
+  if (origin === undefined || origin === null || !URL.canParse(origin) || !URL.canParse(url)) {
+    return url;
+  }
+  const requestOrigin = new URL(origin);
+  if (!isLinkOrigin(requestOrigin, trustedOrigins)) {
+    return url;
+  }
+  const link = new URL(url);
+  return new URL(`${link.pathname}${link.search}`, requestOrigin.origin).toString();
 };
 
 type AuthConfig = {
@@ -73,7 +95,6 @@ export const createAuth = (config: AuthConfig) => {
         httpOnly: true,
         sameSite: "lax" as const,
       },
-      trustedProxyHeaders: true,
       useSecureCookies,
     },
 
@@ -116,18 +137,19 @@ export const createAuth = (config: AuthConfig) => {
           }
         : undefined,
       requireEmailVerification: Boolean(mailer),
-      sendResetPassword: async ({ url, user }) => {
+      sendResetPassword: async ({ url, user }, request) => {
+        const resetUrl = linkOnRequestOrigin(url, request?.headers, trustedOrigins);
         if (!mailer) {
           log.info({
             message: "auth: password-reset link (no Resend key)",
-            url,
+            url: resetUrl,
             userEmail: user.email,
           });
           return;
         }
         const result = await sendTransactionalEmail(
           {
-            resetUrl: url,
+            resetUrl,
             type: "password-reset",
             userEmail: user.email,
             userId: user.id,
@@ -146,19 +168,23 @@ export const createAuth = (config: AuthConfig) => {
       sendOnSignIn: true,
       sendVerificationEmail: async ({ url, user }, request) => {
         const origin = request?.headers.get("origin");
-        const verificationUrl = (() => {
-          if (origin === undefined || origin === null || origin === "") {
-            return url;
-          }
-          try {
-            const target = new URL(url);
-            const callbackPath = safeCallbackPath(target.searchParams.get("callbackURL"));
-            target.searchParams.set("callbackURL", `${origin}${callbackPath}`);
-            return target.toString();
-          } catch {
-            return url;
-          }
-        })();
+        const verificationUrl = linkOnRequestOrigin(
+          (() => {
+            if (origin === undefined || origin === null || origin === "") {
+              return url;
+            }
+            try {
+              const target = new URL(url);
+              const callbackPath = safeCallbackPath(target.searchParams.get("callbackURL"));
+              target.searchParams.set("callbackURL", `${origin}${callbackPath}`);
+              return target.toString();
+            } catch {
+              return url;
+            }
+          })(),
+          request?.headers,
+          trustedOrigins,
+        );
         if (!mailer) {
           log.info({
             message: "auth: verification link (no Resend key)",
@@ -191,15 +217,16 @@ export const createAuth = (config: AuthConfig) => {
       username(),
       bearer(),
       magicLink({
-        sendMagicLink: async ({ email, url }) => {
+        sendMagicLink: async ({ email, url }, ctx) => {
+          const link = linkOnRequestOrigin(url, ctx?.headers, trustedOrigins);
           if (!mailer) {
-            log.info({ message: "auth: magic-link (no Resend key)", url, userEmail: email });
+            log.info({ message: "auth: magic-link (no Resend key)", url: link, userEmail: email });
             return;
           }
           const result = await sendTransactionalEmail(
             {
               type: "magic-link",
-              url,
+              url: link,
               userEmail: email,
             },
             mailer,
@@ -241,13 +268,13 @@ export const createAuth = (config: AuthConfig) => {
       },
       changeEmail: {
         enabled: true,
-        sendChangeEmailConfirmation: async ({ newEmail, url, user }) => {
+        sendChangeEmailConfirmation: async ({ newEmail, url, user }, request) => {
           if (!mailer) {
             return;
           }
           const result = await sendTransactionalEmail(
             {
-              changeUrl: url,
+              changeUrl: linkOnRequestOrigin(url, request?.headers, trustedOrigins),
               currentEmail: user.email,
               newEmail,
               type: "change-email-confirmation",

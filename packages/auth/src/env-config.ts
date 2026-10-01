@@ -67,5 +67,5 @@ const envAuthConfig = (options: EnvAuthConfigOptions = {}): EnvAuthConfig => {
   };
 };
 
-export { DEFAULT_CORS_ORIGINS, envAuthConfig, parseEnvList };
+export { DEFAULT_CORS_ORIGINS, envAuthConfig, LOCALHOST_ALLOWED_HOSTS, parseEnvList };
 export type { EnvAuthConfig, EnvAuthConfigOptions };
