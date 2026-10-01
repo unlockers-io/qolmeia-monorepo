@@ -15,8 +15,6 @@ export const metadata: Metadata = {
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-const AGENTS_URL = process.env.NEXT_PUBLIC_AGENTS_URL ?? "";
-
 type CompanyResponse = {
   company: { id: string; slug: string; status: string };
 };
@@ -73,10 +71,9 @@ const ChatContent = async () => {
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-background" data-chat>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <Chat agent="planner" agentsUrl={AGENTS_URL} companyId={companyId} sessionToken={token} />
+          <Chat agent="planner" companyId={companyId} sessionToken={token} />
         </div>
         <OnboardingActions
-          agentsUrl={AGENTS_URL}
           companyId={companyId}
           sessionToken={token}
           templates={templatesRes.kind === "ok" ? templatesRes.data.templates : []}
@@ -88,12 +85,7 @@ const ChatContent = async () => {
   return (
     <div className="flex min-h-0 flex-1 bg-background" data-chat>
       <div className="flex min-w-0 flex-1 flex-col">
-        <Chat
-          agent="correspondent"
-          agentsUrl={AGENTS_URL}
-          companyId={companyId}
-          sessionToken={token}
-        />
+        <Chat agent="correspondent" companyId={companyId} sessionToken={token} />
       </div>
       <div className="hidden lg:flex">
         <TeamSidebar companyId={companyId} />
