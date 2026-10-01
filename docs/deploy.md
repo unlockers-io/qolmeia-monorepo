@@ -2,8 +2,8 @@
 
 The single source of truth for taking Qolmeia live. Deploys are **manual** today
 (no CD pipeline). The dev `.localhost` / portless proxy is **dev-only**; prod
-uses real subdomains of one parent and a cross-subdomain session cookie
-(ADR 0008).
+uses real subdomains, and each Next app proxies auth and the Worker through its
+own origin, so every session cookie is host-only on its app.
 
 ## 1. The stack at a glance
 
@@ -36,19 +36,19 @@ memory in **Vectorize**.
 See [`docs/agent-tools.md`](./agent-tools.md) for the full agent-integration
 catalog (current tools and which agent uses each).
 
-## 3. Domains + the cross-subdomain cookie (ADR 0008)
+## 3. Domains + same-origin auth
 
 Everything lives under **`qolmeia.com`**: `www.` (landing), `app.` (web),
 `admin.` (backoffice), `api.` (the Railway api service, which is where Better
-Auth runs), `agents.` (the Cloudflare Worker). The session is one cookie on the
-`.qolmeia.com` parent so every subdomain sends it:
+Auth runs), `agents.` (the Cloudflare Worker). The browser only talks to the
+app it is on:
 
-- `apps/api` sets `COOKIE_DOMAIN=.qolmeia.com` → Better Auth writes the cookie
-  on the parent (the `crossSubDomainCookies` config, gated on that env).
-- `CORS_ORIGINS` (auth) and `CLIENT_ORIGINS` (Worker) list the real app
-  subdomains; browser calls use `credentials: include`.
-- The Next apps call auth and the Worker **directly** at their subdomains
-  (`NEXT_PUBLIC_AUTH_URL`, `NEXT_PUBLIC_AGENTS_URL`); no proxy hop.
+- Each Next app rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` and its
+  Worker routes to `AGENTS_INTERNAL_URL` (`next.config.ts`).
+- Better Auth sets a host-only session cookie, so `app.` and `admin.` each hold
+  their own session.
+- `TRUSTED_ORIGINS` on `apps/api` lists the app origins, which Better Auth
+  checks against the forwarded `Origin` header.
 
 ## 4. Cloudflare Worker: `apps/agents`
 
@@ -139,7 +139,6 @@ Environment:
 | `DATABASE_URL`           | Railway Postgres connection string                      |
 | `BETTER_AUTH_SECRET`     | `openssl rand -base64 48` (shared with the Next apps)   |
 | `CORS_ORIGINS`           | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
-| `COOKIE_DOMAIN`          | `.qolmeia.com`                                          |
 | `AUTH_ALLOWED_HOSTS`     | `qolmeia.com,*.qolmeia.com`                             |
 | `TRUSTED_ORIGINS`        | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
 | `AGENTS_INTERNAL_URL`    | `https://agents.qolmeia.com` (org-create relay target)  |
@@ -169,30 +168,26 @@ needs only two vars:
 | `NEXT_PUBLIC_LANDING_URL` | `https://www.qolmeia.com` |
 
 `apps/web` and `apps/backoffice` both construct their own Better Auth instance
-in `proxy.ts`, so they need the full cookie configuration, not just the first
-four rows:
+in `proxy.ts` and proxy auth and the Worker through their own origin:
 
-| Var                      | Value                                                                  |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`     | same secret as `apps/api`; a mismatch invalidates every session cookie |
-| `DATABASE_URL`           | Railway Postgres, `sslmode=require` (see the TLS note below)           |
-| `NEXT_PUBLIC_AUTH_URL`   | `https://api.qolmeia.com`                                              |
-| `NEXT_PUBLIC_AGENTS_URL` | `https://agents.qolmeia.com`                                           |
-| `WEB_APP_URL`            | `https://app.qolmeia.com`                                              |
-| `COOKIE_DOMAIN`          | `.qolmeia.com`                                                         |
-| `AUTH_ALLOWED_HOSTS`     | `qolmeia.com,*.qolmeia.com`                                            |
-| `TRUSTED_ORIGINS`        | `https://app.qolmeia.com,https://admin.qolmeia.com`                    |
+| Var                         | Value                                                                  |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`        | same secret as `apps/api`; a mismatch invalidates every session cookie |
+| `DATABASE_URL`              | Railway Postgres, `sslmode=require` (see the TLS note below)           |
+| `AUTH_SERVICE_INTERNAL_URL` | `https://api.qolmeia.com`                                              |
+| `AGENTS_INTERNAL_URL`       | `https://agents.qolmeia.com`                                           |
+| `WEB_APP_URL`               | `https://app.qolmeia.com`                                              |
+| `AUTH_ALLOWED_HOSTS`        | `qolmeia.com,*.qolmeia.com`                                            |
+| `TRUSTED_ORIGINS`           | `https://app.qolmeia.com,https://admin.qolmeia.com`                    |
 
-The last four are load-bearing and easy to miss:
+Two are load-bearing and easy to miss:
 
+- **`AUTH_SERVICE_INTERNAL_URL` and `AGENTS_INTERNAL_URL` are read by
+  `next build`**, not at runtime. Unset at build time, the rewrites point at
+  `127.0.0.1` and every sign-in 404s. Redeploy after changing them.
 - **`WEB_APP_URL` is the only input to `useSecureCookies`**
   (`packages/auth/src/env-config.ts`). Unset, or not starting with `https://`,
-  and Better Auth issues the cross-subdomain `.qolmeia.com` session cookie
-  **without the `Secure` flag**.
-- **`COOKIE_DOMAIN` belongs on the Vercel projects too**, not only on Railway.
-  `nextCookies()` can write a cookie from a Next server action; without the
-  domain that write lands a host-only cookie on `app.qolmeia.com` which shadows
-  the parent-domain one.
+  and Better Auth issues the session cookie **without the `Secure` flag**.
 
 **Database TLS.** Railway exposes two public endpoints. The **Postgres** one
 answers the Postgres `SSLRequest` with `S` (TLS available); the **PgBouncer**
@@ -226,7 +221,7 @@ until both the Worker and `apps/api` are redeployed.
 
 ## 8. Smoke test after deploy
 
-1. Sign up / magic-link on `app.qolmeia.com` → cookie set on `.qolmeia.com`.
+1. Sign in on `app.qolmeia.com` → session cookie set on `app.qolmeia.com`.
 2. Client onboarding chat (Planner) → confirm a team.
 3. Customer chat → Correspondent delegates → a Worker job runs.
 4. A gated action lands on `admin.qolmeia.com` `/approvals` → decide it.

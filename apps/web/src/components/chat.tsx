@@ -28,7 +28,6 @@ import { useFlueChat } from "@/lib/use-flue-chat";
 
 type ChatProps = {
   agent?: "correspondent" | "planner";
-  agentsUrl: string;
   companyId: string;
   sessionToken: string;
 };
@@ -348,10 +347,9 @@ const ChatView = ({
   );
 };
 
-const ChatClient = ({ agent = "correspondent", agentsUrl, companyId, sessionToken }: ChatProps) => {
+const ChatClient = ({ agent = "correspondent", companyId, sessionToken }: ChatProps) => {
   const chat = useFlueChat({
     agent,
-    baseUrl: agentsUrl,
     companyId,
     sessionToken,
   });

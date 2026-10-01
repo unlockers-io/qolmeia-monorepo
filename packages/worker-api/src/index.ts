@@ -81,8 +81,8 @@ type BrowserApi = {
   apiSendForm: <T>(path: string, formData: FormData, init?: FetchInit) => Promise<T>;
 };
 
-const createBrowserApi = (agentsUrl: string, basePath = ""): BrowserApi => {
-  const url = (path: string): string => `${agentsUrl}${basePath}${path}`;
+const createBrowserApi = (basePath = ""): BrowserApi => {
+  const url = (path: string): string => `${basePath}${path}`;
   return {
     apiGet: async <T>(path: string, init?: FetchInit): Promise<T> => {
       const res = await fetch(url(path), {

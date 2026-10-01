@@ -1,6 +1,5 @@
 import { ApiError } from "@repo/worker-api";
 
-const AGENTS_URL = process.env.NEXT_PUBLIC_AGENTS_URL ?? "";
 type JsonRequestValue =
   | boolean
   | number
@@ -12,11 +11,10 @@ type JsonRequestValue =
 const ME_PATH = "/api/me";
 
 const apiUrl = (path: string, orgId?: string | null): string => {
-  const base = `${AGENTS_URL}${path}`;
   if (orgId === undefined || orgId === null) {
-    return base;
+    return path;
   }
-  return `${base}${path.includes("?") ? "&" : "?"}org_id=${encodeURIComponent(orgId)}`;
+  return `${path}${path.includes("?") ? "&" : "?"}org_id=${encodeURIComponent(orgId)}`;
 };
 
 type MeOrg = { id: string; role: string };

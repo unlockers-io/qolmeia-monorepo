@@ -42,7 +42,7 @@ Monorepo managed by pnpm workspaces + Turborepo. Node 24, pnpm 10. Mid-migration
 | `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` (portless) | Operator panel (OWNER/STAFF roles).                                                                                                 |
 | `apps/landing`    | `landing`     | Next.js 16        | `https://qolmeia.landing.localhost` (portless)    | Public marketing site. No auth, no Worker calls.                                                                                    |
 
-The browser never talks to `:8787` directly in dev: each Next app rewrites the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code reaches the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`); `NEXT_PUBLIC_AGENTS_URL` is only for a cross-origin prod Worker.
+The browser never talks to `:8787` directly in dev: each Next app rewrites the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code and the rewrites reach the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). Prod works the same way: every session cookie is host-only on its app.
 
 ### Key runtime moves (P1–P7)
 
@@ -100,7 +100,7 @@ Each app has its own `.env.example`:
 
 - **apps/api**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CORS_ORIGINS` (must be explicit; Better Auth refuses `*` for cross-origin cookies), optional `RESEND_API_KEY`, `AUTH_FROM_EMAIL`.
 - **apps/agents**: `.dev.vars` (not `.env`). Holds `DATABASE_URL`, `OPENROUTER_API_KEY`, and `ASSETS_SIGNING_KEY`. `wrangler.jsonc` defines the rest in its `vars` block (`CORRESPONDENT_MODEL`, `IMAGE_GEN_MODEL`, `AUTH_SERVICE_URL`, `WORKER_PUBLIC_URL`, `CLIENT_ORIGINS`).
-- **apps/web**: `BETTER_AUTH_SECRET` (matches `apps/api`), `DATABASE_URL` (Next `proxy.ts` validates sessions via Prisma). Auth and the agents Worker are same-origin: `next.config.ts` rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` (default `http://127.0.0.1:4000`) and `/api/me/*` + `/api/teams/*` + `/agents/*` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`); `NEXT_PUBLIC_AUTH_URL` / `NEXT_PUBLIC_AGENTS_URL` only override for cross-origin prod deployments.
+- **apps/web**: `BETTER_AUTH_SECRET` (matches `apps/api`), `DATABASE_URL` (Next `proxy.ts` validates sessions via Prisma). Auth and the agents Worker are same-origin: `next.config.ts` rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` (default `http://127.0.0.1:4000`) and `/api/me/*` + `/api/teams/*` + `/agents/*` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). `next build` bakes both URLs into the rewrites, so prod sets them on the Vercel project.
 - **apps/backoffice**: same as client (its Worker rewrite covers `/api/backoffice/*`).
 
 `.env` files are git-ignored; `.env.example` is committed.

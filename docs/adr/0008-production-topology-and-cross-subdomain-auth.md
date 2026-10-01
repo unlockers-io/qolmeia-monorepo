@@ -1,5 +1,7 @@
 # Production topology: split hosting under one parent domain, cross-subdomain auth cookie
 
+> **⚠️ SUPERSEDED (2026-08), auth cookie only.** The hosting split stands, but the cross-subdomain cookie was dropped: Better Auth now sets host-only cookies and each Next app proxies `/api/auth/*` and its Worker routes through its own origin, the same model as dev. See [`docs/deploy.md`](../deploy.md) §3. The record below is retained as the original rationale.
+
 The repo only codifies the Worker deploy; auth and the Next apps had no target, and the dev auth flow relies on a `.localhost` proxy trick that doesn't translate to prod. This fixes where each piece runs and how the session survives across them.
 
 **Decision — hosting:**
