@@ -20,7 +20,7 @@ const InvalidLink = () => (
   <Card>
     <CardHeader>
       <CardTitle className="text-2xl">
-        <h2>Link inválido ou expirado</h2>
+        <h1>Link inválido ou expirado</h1>
       </CardTitle>
       <CardDescription>Solicite um novo link de redefinição para continuar.</CardDescription>
     </CardHeader>

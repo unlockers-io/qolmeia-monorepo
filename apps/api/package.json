@@ -13,7 +13,8 @@
     "start": "node --env-file-if-exists=.env dist/index.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "memory:reindex": "tsx src/scripts/reindex-memory.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

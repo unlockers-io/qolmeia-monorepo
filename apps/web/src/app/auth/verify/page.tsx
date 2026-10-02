@@ -30,7 +30,7 @@ const VerifyContent = async ({ searchParams }: VerifyPageProps) => {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">
-          <h2>Não conseguimos entrar</h2>
+          <h1>Não conseguimos entrar</h1>
         </CardTitle>
         <CardDescription>
           O link mágico expirou ou já foi usado. Solicite um novo no login.
@@ -46,9 +46,16 @@ const VerifyContent = async ({ searchParams }: VerifyPageProps) => {
 };
 
 const VerifyPage = (props: VerifyPageProps) => (
-  <Suspense fallback={null}>
-    <VerifyContent {...props} />
-  </Suspense>
+  <main
+    className="flex min-h-dvh items-center justify-center bg-background px-4 py-12"
+    id="main-content"
+  >
+    <div className="w-full max-w-md">
+      <Suspense fallback={null}>
+        <VerifyContent {...props} />
+      </Suspense>
+    </div>
+  </main>
 );
 
 export default VerifyPage;

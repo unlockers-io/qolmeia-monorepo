@@ -17,7 +17,6 @@ type SendInput = {
 
 type UseFlueChatOptions = {
   agent: "correspondent" | "planner";
-  baseUrl: string;
   companyId: string;
   sessionToken?: string;
 };
@@ -97,13 +96,12 @@ const useConversation: UseConversation = ({ sessionToken, url }) => {
 const createUseFlueChat = (useAgentConversation: UseConversation) => {
   const useFlueChatWithDependencies = ({
     agent,
-    baseUrl,
     companyId,
     sessionToken,
   }: UseFlueChatOptions): UseFlueChatResult => {
     const conversation = useAgentConversation({
       sessionToken,
-      url: `${(baseUrl || "").replace(/\/+$/v, "")}/agents/${agent}/${companyId}`,
+      url: `/agents/${agent}/${companyId}`,
     });
 
     const sendMessage = async (input: SendInput) => {

@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 
-import { ApiError } from "@/lib/api-client";
+import { describeRequestError } from "@/lib/api-client";
 import { fetchTemplates, setTemplateStatus, templateKeys } from "@/lib/templates-api";
 
 type StatusLabelContract = Record<TemplateStatus, { label: string; tone: StatusTone }>;
@@ -34,7 +34,7 @@ const TemplateRow = ({ busy, onToggle, template }: TemplateRowProps) => {
     <tr className="border-b border-border last:border-0 hover:bg-accent/40">
       <td className="px-5 py-3">
         <Link
-          className="font-semibold text-foreground transition-colors hover:text-primary focus-visible:text-primary focus-visible:outline-none"
+          className="rounded-sm font-semibold text-foreground transition-colors outline-none hover:text-primary focus-visible:text-primary focus-visible:ring-3 focus-visible:ring-ring/50"
           href={`/templates/${template.id}`}
         >
           {template.displayName}
@@ -162,11 +162,7 @@ const TemplatesList = () => {
         await queryClient.invalidateQueries({ queryKey: templateKeys.all });
         toast.success(status === "retired" ? "Modelo desativado." : "Modelo reativado.");
       } catch (error) {
-        const message =
-          error instanceof ApiError
-            ? `Erro ${error.status}: ${error.body || "falha"}`
-            : "Não foi possível alterar o status.";
-        toast.error(message);
+        toast.error(describeRequestError(error, "Não foi possível alterar o status."));
       }
     });
   };

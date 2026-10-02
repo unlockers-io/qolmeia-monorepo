@@ -17,7 +17,9 @@
     "typecheck": "wrangler types --strict-vars=false && tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.79",
     "@ai-sdk/openai-compatible": "^3.0.55",
+    "@earendil-works/pi-ai": "0.83.0",
     "@flue/runtime": "2.1.1",
     "@repo/observability": "workspace:*",
     "@repo/worker-api": "workspace:*",

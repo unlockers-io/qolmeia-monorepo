@@ -1,7 +1,7 @@
 import { prisma } from "@repo/db";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { createAuth, safeCallbackPath } from "./server";
+import { createAuth, linkOnRequestOrigin, safeCallbackPath } from "./server";
 import type { AuthConfig } from "./server";
 
 type Plugin = NonNullable<AuthConfig["extraPlugins"]>[number];
@@ -19,6 +19,8 @@ const baseConfig = {
     "http://127.0.0.1:4000",
   ],
 } satisfies AuthConfig;
+
+const from = (origin: string) => new Headers({ origin });
 
 describe("Auth Server Configuration", () => {
   let auth: ReturnType<typeof createAuth>;
@@ -222,6 +224,34 @@ describe("Auth Server Configuration", () => {
     expect(safeCallbackPath("https://evil.com/phish")).toBe("/");
     expect(safeCallbackPath(["javascript", "alert(1)"].join(":"))).toBe("/");
     expect(safeCallbackPath("evil.com")).toBe("/");
+  });
+
+  describe("linkOnRequestOrigin", () => {
+    const apiLink = "https://api.qolmeia.com/api/auth/magic-link/verify?token=t&callbackURL=%2F";
+    const trusted = ["https://app.qolmeia.com", "https://admin.qolmeia.com"];
+
+    it("moves the link onto the trusted app origin that asked for it", () => {
+      expect(linkOnRequestOrigin(apiLink, from("https://app.qolmeia.com"), trusted)).toBe(
+        "https://app.qolmeia.com/api/auth/magic-link/verify?token=t&callbackURL=%2F",
+      );
+    });
+
+    it("moves the link onto a dev localhost origin", () => {
+      expect(linkOnRequestOrigin(apiLink, from("http://qolmeia.web.localhost:1355"), trusted)).toBe(
+        "http://qolmeia.web.localhost:1355/api/auth/magic-link/verify?token=t&callbackURL=%2F",
+      );
+    });
+
+    it("keeps the link when the origin is untrusted, so a spoofed header cannot capture the token", () => {
+      expect(linkOnRequestOrigin(apiLink, from("https://evil.up.railway.app"), trusted)).toBe(
+        apiLink,
+      );
+    });
+
+    it("keeps the link when the request carries no usable origin", () => {
+      expect(linkOnRequestOrigin(apiLink, undefined, trusted)).toBe(apiLink);
+      expect(linkOnRequestOrigin(apiLink, from("null"), trusted)).toBe(apiLink);
+    });
   });
 
   it("should have displayName as optional additional user field", () => {

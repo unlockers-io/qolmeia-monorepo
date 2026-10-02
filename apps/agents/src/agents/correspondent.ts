@@ -9,6 +9,7 @@ import {
 import { correspondentIdFor } from "@repo/worker-api/contracts";
 import { env } from "cloudflare:workers";
 
+import { CONVERSATION_MODEL } from "#/lib/flue-models";
 import { buildFlueTools } from "#/lib/skill-tool";
 import { loadSkillOverlays, type SkillContext, type SkillOverlayMap } from "#/skills/registry";
 
@@ -32,15 +33,13 @@ Ao mostrar imagens geradas, inclua a URL no formato markdown ![descrição curta
 
 Use recallMemory no início de pedidos relevantes para lembrar o que já sabe sobre o cliente, e rememberFact para guardar fatos novos importantes.`;
 
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4.5";
-
 export function CorrespondentV2({ id }: AgentProps): string {
   const [overlays, setOverlays] = usePersistentState<SkillOverlayMap | null>("skillOverlays", null);
   useAgentStart(async () => {
     setOverlays(await loadSkillOverlays(env, CORRESPONDENT_SKILLS));
   });
 
-  useModel(`openrouter/${env.CORRESPONDENT_MODEL || DEFAULT_MODEL}`);
+  useModel(`openrouter/${env.CORRESPONDENT_MODEL || CONVERSATION_MODEL}`, { thinkingLevel: "low" });
 
   const ctx: SkillContext = { agentInstanceId: correspondentIdFor(id), companyId: id, env };
   for (const skillTool of buildFlueTools(ctx, CORRESPONDENT_SKILLS, overlays)) {

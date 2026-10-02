@@ -2,6 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
+import { ApiError, describeRequestError } from "@repo/worker-api";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -14,18 +15,12 @@ type Template = {
 };
 
 type OnboardingActionsProps = {
-  agentsUrl: string;
   companyId: string;
   sessionToken: string;
   templates: ReadonlyArray<Template>;
 };
 
-const OnboardingActions = ({
-  agentsUrl,
-  companyId,
-  sessionToken,
-  templates,
-}: OnboardingActionsProps) => {
+const OnboardingActions = ({ companyId, sessionToken, templates }: OnboardingActionsProps) => {
   const [selected, setSelected] = useState<ReadonlySet<string>>(
     () => new Set(templates.map((t) => t.id)),
   );
@@ -48,7 +43,7 @@ const OnboardingActions = ({
     }
     setSubmitting(true);
     try {
-      const response = await fetch(`${agentsUrl}/api/teams/${companyId}/confirm`, {
+      const response = await fetch(`/api/teams/${companyId}/confirm`, {
         body: JSON.stringify({ templateIds: [...selected] }),
         headers: {
           Authorization: `Bearer ${sessionToken}`,
@@ -60,8 +55,10 @@ const OnboardingActions = ({
         toast.success("Time confirmado! Redirecionando…");
         globalThis.location.assign("/");
       } else {
-        const body = await response.text();
-        toast.error(`Não foi possível confirmar: ${body.slice(0, 120)}`);
+        const failure = new ApiError(response.status, await response.text());
+        toast.error(
+          describeRequestError(failure, "Não foi possível confirmar o Time. Tente de novo."),
+        );
       }
     } catch {
       toast.error("Erro ao confirmar o Time. Tente novamente.");

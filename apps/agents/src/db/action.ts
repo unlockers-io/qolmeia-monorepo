@@ -1,4 +1,9 @@
-import type { Action, ActionPolicy, DecisionOutcome } from "@repo/worker-api/contracts";
+import type {
+  Action,
+  ActionDetail,
+  ActionPolicy,
+  DecisionOutcome,
+} from "@repo/worker-api/contracts";
 import type { JsonRecord } from "@repo/worker-api/internal";
 
 import type { Database } from "#/db/client";
@@ -28,7 +33,7 @@ const markExecuted = async (db: Database, actionId: string): Promise<void> => {
   await db("actions.markExecuted", { actionId });
 };
 
-const getAction = (db: Database, actionId: string): Promise<Action | null> =>
+const getAction = (db: Database, actionId: string): Promise<ActionDetail | null> =>
   db("actions.get", { actionId });
 
 type PendingOptions = {

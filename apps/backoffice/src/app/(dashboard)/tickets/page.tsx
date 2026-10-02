@@ -2,6 +2,8 @@ import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
+import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
+import { cn } from "@repo/ui/lib/utils";
 import type { TicketsResponse } from "@repo/worker-api/contracts";
 import { Ticket as TicketIcon } from "lucide-react";
 import type { Metadata } from "next";
@@ -17,9 +19,6 @@ export const metadata: Metadata = { title: "Tickets" };
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-const monogramOf = (value: string): string =>
-  (value.trim().at(0) ?? "?").toLocaleUpperCase("pt-BR");
-
 const TicketsContent = async () => {
   const res = await apiGetServer<TicketsResponse>("/tickets?limit=50");
 
@@ -34,7 +33,10 @@ const TicketsContent = async () => {
           />
         ) : (
           <div>
-            <div className="hidden grid-cols-tickets gap-3 border-b border-border bg-muted/40 px-6 py-3 font-mono text-(length:--text-micro-lg) tracking-wide text-muted-foreground uppercase md:grid">
+            <div
+              aria-hidden
+              className="hidden grid-cols-tickets gap-3 border-b border-border bg-muted/40 px-6 py-3 font-mono text-xs tracking-wide text-muted-foreground uppercase md:grid"
+            >
               <span>Entregável</span>
               <span>Empresa</span>
               <span>Agente</span>
@@ -45,7 +47,7 @@ const TicketsContent = async () => {
               {res.items.map((ticket) => (
                 <li key={ticket.id}>
                   <Link
-                    className="grid gap-3 border-b border-border/60 px-4 py-4 transition-colors last:border-b-0 hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:outline-none sm:grid-cols-2 md:grid-cols-tickets md:items-center md:px-6 md:py-3.5"
+                    className="grid gap-3 border-b border-border/60 px-4 py-4 transition-colors outline-none last:border-b-0 hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset sm:grid-cols-2 md:grid-cols-tickets md:items-center md:px-6 md:py-3.5"
                     href={`/tickets/${ticket.id}`}
                   >
                     <div className="min-w-0 sm:col-span-2 md:col-span-1">
@@ -69,12 +71,15 @@ const TicketsContent = async () => {
                       <div className="flex items-center gap-2">
                         <span
                           aria-hidden
-                          className="flex size-6 shrink-0 items-center justify-center rounded-cell bg-avatar-1 text-(length:--text-micro) font-bold text-white"
+                          className={cn(
+                            "flex size-6 shrink-0 items-center justify-center rounded-cell text-(length:--text-micro) font-bold text-white",
+                            agentAvatarClass(ticket.agent.role, ticket.agent.workerKind),
+                          )}
                         >
-                          {monogramOf(ticket.agentInstanceId)}
+                          {agentInitials(ticket.agent.name)}
                         </span>
                         <span className="truncate text-(length:--text-label) text-foreground/70">
-                          {ticket.agentInstanceId}
+                          {ticket.agent.name}
                         </span>
                       </div>
                     </div>

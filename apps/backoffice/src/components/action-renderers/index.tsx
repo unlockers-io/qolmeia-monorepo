@@ -1,9 +1,9 @@
-import type { Action } from "@repo/worker-api/contracts";
+import type { Action, AgentSummary } from "@repo/worker-api/contracts";
 import type { ComponentType } from "react";
 
 import { PublishPostCard } from "./publish-post-card";
 
-type ActionRendererProps = { proposed: Action["proposed"] };
+type ActionRendererProps = { agent: AgentSummary; proposed: Action["proposed"] };
 type ActionRenderer = ComponentType<ActionRendererProps>;
 
 type RenderersContract = Record<string, ActionRenderer>;

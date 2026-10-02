@@ -10,9 +10,7 @@ import { toast } from "sonner";
 import { Button } from "../components/button";
 import { runWithCleanup } from "../lib/run-with-cleanup";
 
-const authUrl = process.env.NEXT_PUBLIC_AUTH_URL;
 const authClient = createBetterAuthClient({
-  baseURL: authUrl !== undefined && authUrl !== "" ? `${authUrl}/api/auth` : "",
   plugins: [usernameClient(), magicLinkClient()],
 });
 

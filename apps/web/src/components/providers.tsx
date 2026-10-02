@@ -1,5 +1,6 @@
 "use client";
 
+import { describeRequestError } from "@repo/worker-api";
 import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
@@ -20,11 +21,12 @@ const Providers = ({ children }: { children: ReactNode }) => {
           if (typeof prefix !== "string") {
             return;
           }
-          if (lastToastedByQuery.get(query.queryHash) === error.message) {
+          const message = describeRequestError(error, `${prefix}. Tente de novo.`);
+          if (lastToastedByQuery.get(query.queryHash) === message) {
             return;
           }
-          lastToastedByQuery.set(query.queryHash, error.message);
-          toast.error(`${prefix}: ${error.message}`);
+          lastToastedByQuery.set(query.queryHash, message);
+          toast.error(message);
         },
         onSuccess: (_data, query) => {
           lastToastedByQuery.delete(query.queryHash);

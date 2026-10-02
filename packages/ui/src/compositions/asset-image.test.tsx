@@ -10,16 +10,16 @@ describe("AssetImage", () => {
   ])("fetches %s directly without putting private content in the optimizer cache", (src) => {
     render(<AssetImage alt="Referência de marca" height={800} src={src} width={800} />);
     const image = screen.getByRole("img", { name: "Referência de marca" });
-    expect(image).toHaveAttribute("src", src);
-    expect(image).toHaveAttribute("height", "800");
-    expect(image).toHaveAttribute("width", "800");
-    expect(image).toHaveAttribute("decoding", "async");
+    expect(image.getAttribute("src")).toBe(src);
+    expect(image.getAttribute("height")).toBe("800");
+    expect(image.getAttribute("width")).toBe("800");
+    expect(image.getAttribute("decoding")).toBe("async");
   });
 
   it("lazy-loads remote asset thumbnails", () => {
     render(
       <AssetImage alt="Arquivo" height={64} src="https://assets.example.com/a.png" width={64} />,
     );
-    expect(screen.getByRole("img", { name: "Arquivo" })).toHaveAttribute("loading", "lazy");
+    expect(screen.getByRole("img", { name: "Arquivo" }).getAttribute("loading")).toBe("lazy");
   });
 });

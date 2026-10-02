@@ -42,7 +42,7 @@ Monorepo managed by pnpm workspaces + Turborepo. Node 24, pnpm 10. Mid-migration
 | `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` (portless) | Operator panel (OWNER/STAFF roles).                                                                                                 |
 | `apps/landing`    | `landing`     | Next.js 16        | `https://qolmeia.landing.localhost` (portless)    | Public marketing site. No auth, no Worker calls.                                                                                    |
 
-The browser never talks to `:8787` directly in dev: each Next app rewrites the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code reaches the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`); `NEXT_PUBLIC_AGENTS_URL` is only for a cross-origin prod Worker.
+The browser never talks to `:8787` directly in dev: each Next app rewrites the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code and the rewrites reach the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). Prod works the same way: every session cookie is host-only on its app.
 
 ### Key runtime moves (P1–P7)
 
@@ -50,7 +50,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
   modules whose exported function names generate `FlueCorrespondentV2Agent` / `FluePlannerV2Agent` (one DO
   instance per company id). Renaming a function changes its storage identity unless pinned with `agentName`.
   Both are mounted explicitly in `app.ts` via `createAgentRouter`, behind `requireCustomerAgent` middleware.
-- **Approvals run on Workflows**: every Worker job spawns a `WorkerJobWorkflow`; gated actions pause on `waitForEvent("decision:<actionId>")` until an operator decides via `/api/backoffice/actions/:id/decide`.
+- **Approvals run on Workflows**: every Worker job spawns a `WorkerJobWorkflow`; gated actions pause on `waitForEvent("decision-<actionId>")` until an operator decides via `/api/backoffice/actions/:id/decide`.
 - **Postgres is the system of record for auth and product data**, accessed through Prisma from both `apps/api` and the agents Worker. Schema in `packages/db/prisma/schema.prisma`.
 - **R2 holds binary assets** (`ASSETS` binding), served via HMAC-signed URLs from `/assets/:id`.
 - **KV holds a session-validation cache** (`SESSIONS` binding) to keep the auth service off the hot path.
@@ -78,7 +78,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 3. **status === "onboarding"**: chat against `/agents/planner/<companyId>`. Planner calls `extractBrief` and `proposeTeam`, then surfaces a "Confirmar Time" button.
 4. **Customer confirms**: `POST /api/teams/:companyId/confirm` materialises `team` + `team_member`, flips `company.status = 'active'`, and seeds Correspondent memory.
 5. **status === "active"**: chat against `/agents/correspondent/<companyId>`. Correspondent uses `delegateToWorker` to spawn child tickets, each of which instantiates a `WorkerJobWorkflow` (the deliverable is generated with `generateText`, not a Flue agent).
-6. **Workflow proposes a `require-approval` action**: injects a 🟡 message via Correspondent, then `waitForEvent("decision:<actionId>")`.
+6. **Workflow proposes a `require-approval` action**: injects a 🟡 message via Correspondent, then `waitForEvent("decision-<actionId>")`.
 7. **Operator on `apps/backoffice`**: `requireStaff` → `/approvals` lists pending oldest-first → `/approvals/:id` shows the decide form → POST `/api/backoffice/actions/:id/decide` resumes the Workflow.
 8. **Workflow executes**: side-effect (e.g. `generateBrandImage` → R2 → signed URL) → marks the action `executed` and ticket `done` → dispatches a `worker.deliverable_ready` **signal** to Correspondent, which renders the result in chat (markdown, so images appear inline). Internal dispatches must be signals: Flue marks them `display: "diagnostic"` so the prompt itself stays out of the customer's transcript, and the client filters on that field.
 
@@ -100,7 +100,7 @@ Each app has its own `.env.example`:
 
 - **apps/api**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CORS_ORIGINS` (must be explicit; Better Auth refuses `*` for cross-origin cookies), optional `RESEND_API_KEY`, `AUTH_FROM_EMAIL`.
 - **apps/agents**: `.dev.vars` (not `.env`). Holds `DATABASE_URL`, `OPENROUTER_API_KEY`, and `ASSETS_SIGNING_KEY`. `wrangler.jsonc` defines the rest in its `vars` block (`CORRESPONDENT_MODEL`, `IMAGE_GEN_MODEL`, `AUTH_SERVICE_URL`, `WORKER_PUBLIC_URL`, `CLIENT_ORIGINS`).
-- **apps/web**: `BETTER_AUTH_SECRET` (matches `apps/api`), `DATABASE_URL` (Next `proxy.ts` validates sessions via Prisma). Auth and the agents Worker are same-origin: `next.config.ts` rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` (default `http://127.0.0.1:4000`) and `/api/me/*` + `/api/teams/*` + `/agents/*` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`); `NEXT_PUBLIC_AUTH_URL` / `NEXT_PUBLIC_AGENTS_URL` only override for cross-origin prod deployments.
+- **apps/web**: `BETTER_AUTH_SECRET` (matches `apps/api`), `DATABASE_URL` (Next `proxy.ts` validates sessions via Prisma). Auth and the agents Worker are same-origin: `next.config.ts` rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` (default `http://127.0.0.1:4000`) and `/api/me/*` + `/api/teams/*` + `/agents/*` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). `next build` bakes both URLs into the rewrites, so prod sets them on the Vercel project.
 - **apps/backoffice**: same as client (its Worker rewrite covers `/api/backoffice/*`).
 
 `.env` files are git-ignored; `.env.example` is committed.
@@ -131,7 +131,7 @@ pnpm dev
 | Backoffice: `https://qolmeia.backoffice.localhost` | OWNER    | `operator@qolmeia.dev` | `Qolmeia-Dev-OperatorPass!` |
 | Client: `https://qolmeia.web.localhost`            | CUSTOMER | `customer@qolmeia.dev` | `Qolmeia-Dev-CustomerPass!` |
 
-The dev org is pinned to `cmpg10ke30000147uj4gpeadb` (slug `qolmeia-dev`). The client login is magic-link only; the password above only works on the backoffice. Watch `apps/api` logs for the magic link in dev.
+The dev org is pinned to `cmpg10ke30000147uj4gpeadb` (slug `qolmeia-dev`). Both logins accept the passwords above; the client also offers a magic link, which `apps/api` logs in dev when `RESEND_API_KEY` is unset.
 
 App configs resolve those URLs through `@repo/portless-env` rather than hardcoding them. `applyPortlessUrls({ ENV_VAR: ["<subdomain>"] })` runs at the top of each `next.config.ts` / `tsdown.config.ts` and shells out to `portless get` for every name, filling the env var only when it is unset or still holds the canonical `*.localhost` default. It is a no-op unless `PORTLESS_URL` is set, so CI and production keep their real values. Import it by bare specifier (`@repo/portless-env`): a relative path resolves from the process cwd and breaks `next start apps/web` from the repo root.
 

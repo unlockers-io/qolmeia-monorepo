@@ -10,7 +10,6 @@ type PromptEditorProps = {
   initialValue: string | null;
   onReset: () => Promise<void>;
   onSave: (value: string) => Promise<void>;
-  templatePrompt: string;
   updatedAt: number | null;
 };
 
@@ -22,41 +21,28 @@ const formatDate = (ms: number): string =>
     month: "short",
   });
 
-const PromptEditor = ({
-  busy,
-  initialValue,
-  onReset,
-  onSave,
-  templatePrompt,
-  updatedAt,
-}: PromptEditorProps) => {
+const PromptEditor = ({ busy, initialValue, onReset, onSave, updatedAt }: PromptEditorProps) => {
   const [value, setValue] = useState(initialValue ?? "");
   const overridden = initialValue !== null;
   const dirty = value !== (initialValue ?? "");
 
   return (
     <section aria-label="Comportamento do agente" className="flex flex-col gap-3">
-      <details className="rounded-md border border-border p-3">
-        <summary className="cursor-pointer text-sm font-medium">Padrão do template</summary>
-        <pre className="mt-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
-          {templatePrompt}
-        </pre>
-      </details>
       <Field>
-        <FieldLabel htmlFor="prompt-editor">Sua personalização</FieldLabel>
+        <FieldLabel htmlFor="prompt-editor">Instruções para este agente</FieldLabel>
         <Textarea
           disabled={busy}
           id="prompt-editor"
           onChange={(e) => {
             setValue(e.target.value);
           }}
-          placeholder="Escreva instruções específicas para este agente, em pt-BR."
+          placeholder="Ex.: Use um tom descontraído e sempre inclua o endereço da loja."
           rows={8}
           value={value}
         />
         <FieldDescription>
           {overridden && updatedAt !== null
-            ? `Você modificou este prompt em ${formatDate(updatedAt)}. Mudanças passam a valer na próxima interação.`
+            ? `Você personalizou estas instruções em ${formatDate(updatedAt)}. Mudanças passam a valer na próxima interação.`
             : "Mudanças passam a valer na próxima interação."}
         </FieldDescription>
       </Field>

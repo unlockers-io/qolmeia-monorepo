@@ -3,15 +3,17 @@
 import { Button } from "@repo/ui/components/button";
 import { Textarea } from "@repo/ui/components/textarea";
 import { cn } from "@repo/ui/lib/utils";
-import type { DecisionOutcome } from "@repo/worker-api/contracts";
+import type { ActionsResponse, DecisionOutcome } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiSend, ApiError } from "@/lib/api-client";
+import { apiGet, apiSend, describeRequestError } from "@/lib/api-client";
 
 type DecisionFormProps = {
   actionId: string;
+  allowChanges: boolean;
+  defaultDecision: DecisionOutcome | null;
 };
 
 const PLACEHOLDER = {
@@ -50,21 +52,45 @@ const SUBMIT_LABEL = {
 
 const MAX_FEEDBACK = 2000;
 
-const DecisionForm = ({ actionId }: DecisionFormProps) => {
+const SUCCESS_COPY = {
+  approved: "Aprovado. O especialista vai executar.",
+  changes_requested: "Ajustes pedidos. O especialista vai revisar.",
+  rejected: "Rejeitado. O especialista foi avisado.",
+} satisfies Record<DecisionOutcome, string>;
+
+const submitLabel = (decision: DecisionOutcome | null): string =>
+  decision === null ? "Escolha uma decisão" : SUBMIT_LABEL[decision];
+
+const nextPendingId = async (currentId: string): Promise<string | null> => {
+  try {
+    const { items } = await apiGet<ActionsResponse>("/actions?status=pending");
+    return items.find((item) => item.id !== currentId)?.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormProps) => {
   const { push, refresh } = useRouter();
-  const [decision, setDecision] = useState<DecisionOutcome>("approved");
+  const [decision, setDecision] = useState<DecisionOutcome | null>(defaultDecision);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [feedbackMissing, setFeedbackMissing] = useState(false);
+  const feedbackRef = useRef<HTMLTextAreaElement>(null);
 
-  const feedbackRequired = decision !== "approved";
+  const feedbackRequired = decision !== null && decision !== "approved";
+  const options = allowChanges
+    ? OPTIONS
+    : OPTIONS.filter((opt) => opt.value !== "changes_requested");
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (submitting) {
+    if (submitting || decision === null) {
       return;
     }
     if (feedbackRequired && feedback.trim().length === 0) {
-      toast.error("Adicione um motivo para pedir ajustes ou rejeitar.");
+      setFeedbackMissing(true);
+      feedbackRef.current?.focus();
       return;
     }
     setSubmitting(true);
@@ -73,20 +99,14 @@ const DecisionForm = ({ actionId }: DecisionFormProps) => {
         decision,
         feedback: feedback.trim() || undefined,
       });
-      const successCopy = {
-        approved: "Aprovado. O especialista vai executar.",
-        changes_requested: "Ajustes pedidos. Especialista notificado.",
-        rejected: "Rejeitado.",
-      } satisfies Record<typeof decision, string>;
-      toast.success(successCopy[decision]);
-      push("/approvals");
+      const nextId = await nextPendingId(actionId);
+      toast.success(
+        nextId === null ? SUCCESS_COPY[decision] : `${SUCCESS_COPY[decision]} Abrindo a próxima.`,
+      );
+      push(nextId === null ? "/approvals" : `/approvals/${nextId}`);
       refresh();
     } catch (error) {
-      const message =
-        error instanceof ApiError
-          ? `Erro ${error.status}: ${error.body || "falha"}`
-          : "Não foi possível enviar a decisão.";
-      toast.error(message);
+      toast.error(describeRequestError(error, "Não foi possível enviar a decisão."));
     }
     setSubmitting(false);
   };
@@ -100,14 +120,14 @@ const DecisionForm = ({ actionId }: DecisionFormProps) => {
     >
       <fieldset className="flex flex-col gap-2">
         <legend className="sr-only">Decisão</legend>
-        {OPTIONS.map((opt) => {
+        {options.map((opt) => {
           const inputId = `decision-${opt.value}`;
+          const descriptionId = `${inputId}-description`;
           const selected = decision === opt.value;
           return (
             <label
-              aria-label={opt.label}
               className={cn(
-                "flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition-colors",
+                "flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition-colors has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                 selected
                   ? "border-primary bg-highlight-surface ring-1 ring-primary/40"
                   : "border-border hover:border-input hover:bg-accent",
@@ -116,13 +136,14 @@ const DecisionForm = ({ actionId }: DecisionFormProps) => {
               key={opt.value}
             >
               <input
-                aria-label={opt.label}
+                aria-describedby={descriptionId}
                 checked={selected}
                 className="sr-only"
                 id={inputId}
                 name="decision"
                 onChange={() => {
                   setDecision(opt.value);
+                  setFeedbackMissing(false);
                 }}
                 type="radio"
                 value={opt.value}
@@ -138,7 +159,7 @@ const DecisionForm = ({ actionId }: DecisionFormProps) => {
               </span>
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="text-sm font-semibold text-foreground">{opt.label}</span>
-                <span className="text-xs leading-snug text-muted-foreground">
+                <span className="text-xs leading-snug text-muted-foreground" id={descriptionId}>
                   {opt.description}
                 </span>
               </span>
@@ -146,6 +167,11 @@ const DecisionForm = ({ actionId }: DecisionFormProps) => {
           );
         })}
       </fieldset>
+      {!allowChanges && (
+        <p className="text-xs text-muted-foreground">
+          Esta é a última revisão permitida: aprove ou rejeite esta versão.
+        </p>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <label className="flex items-center justify-between" htmlFor="decision-feedback">
@@ -165,18 +191,34 @@ const DecisionForm = ({ actionId }: DecisionFormProps) => {
           </span>
         </label>
         <Textarea
+          aria-describedby={feedbackMissing ? "decision-feedback-error" : undefined}
+          aria-invalid={feedbackMissing}
+          aria-required={feedbackRequired}
           id="decision-feedback"
           maxLength={MAX_FEEDBACK}
           onChange={(e) => {
             setFeedback(e.target.value);
+            setFeedbackMissing(false);
           }}
-          placeholder={PLACEHOLDER[decision]}
+          placeholder={decision === null ? "Escolha uma decisão acima." : PLACEHOLDER[decision]}
+          ref={feedbackRef}
           value={feedback}
         />
+        {feedbackMissing && (
+          <p className="text-xs text-destructive" id="decision-feedback-error" role="alert">
+            Escreva o motivo: o especialista usa isso para entender a decisão.
+          </p>
+        )}
       </div>
 
-      <Button className="w-full" disabled={submitting} size="lg" type="submit">
-        {submitting ? "Enviando…" : SUBMIT_LABEL[decision]}
+      <Button
+        className="w-full"
+        disabled={submitting || decision === null}
+        size="lg"
+        type="submit"
+        variant={decision === "rejected" ? "destructive" : "default"}
+      >
+        {submitting ? "Enviando…" : submitLabel(decision)}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
         A decisão retoma o fluxo de trabalho do agente.

@@ -54,11 +54,10 @@ type BriefPatch = {
   primaryGoal?: string;
 };
 
-const fetchCompany = (): Promise<CompanyResponse> =>
-  request<CompanyResponse>("/api/me/company", "GET /api/me/company");
+const fetchCompany = (): Promise<CompanyResponse> => request<CompanyResponse>("/api/me/company");
 
 const patchCompanyBrief = (patch: BriefPatch): Promise<CompanyResponse> =>
-  request<CompanyResponse>("/api/me/company", "PATCH /api/me/company", jsonInit("PATCH", patch));
+  request<CompanyResponse>("/api/me/company", jsonInit("PATCH", patch));
 
 type BrandCategory = "logo" | "other" | "post" | "reference";
 
@@ -86,10 +85,7 @@ type BrandAsset = {
 };
 
 const fetchBrandAssets = async (): Promise<Array<BrandAsset>> => {
-  const body = await request<{ items: Array<BrandAsset> }>(
-    "/api/me/brand-assets",
-    "GET /api/me/brand-assets",
-  );
+  const body = await request<{ items: Array<BrandAsset> }>("/api/me/brand-assets");
   return body.items;
 };
 
@@ -99,7 +95,6 @@ const uploadBrandAsset = async (file: File, category: BrandCategory): Promise<Br
   form.append("category", category);
   const uploaded = await request<{ assetId: string; mime: string; url: string }>(
     "/api/me/brand-assets",
-    "POST /api/me/brand-assets",
     {
       body: form,
       method: "POST",
@@ -116,7 +111,7 @@ const uploadBrandAsset = async (file: File, category: BrandCategory): Promise<Br
 };
 
 const deleteBrandAsset = async (id: string): Promise<boolean> => {
-  await request(`/api/me/brand-assets/${id}`, `DELETE /api/me/brand-assets/${id}`, {
+  await request(`/api/me/brand-assets/${id}`, {
     method: "DELETE",
   });
   return true;

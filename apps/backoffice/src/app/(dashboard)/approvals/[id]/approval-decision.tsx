@@ -1,39 +1,41 @@
 import { Card } from "@repo/ui/components/card";
-import type { ActionDetailResponse } from "@repo/worker-api/contracts";
+import type { ActionDetail } from "@repo/worker-api/contracts";
 
 import { DecisionForm } from "@/components/decision-form";
 import { StatusPill } from "@/components/status-pill";
 import { formatDateTime } from "@/lib/format";
 
-const ApprovalDecision = ({ action }: { action: ActionDetailResponse["action"] }) =>
+const OUTWARD_ACTION_TYPES = new Set(["publish_post", "send_collection_message"]);
+
+type ApprovalDecisionProps = { action: ActionDetail; canRequestChanges: boolean };
+
+const ApprovalDecision = ({ action, canRequestChanges }: ApprovalDecisionProps) =>
   action.status === "pending" ? (
     <Card className="gap-3 p-5">
-      <span className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-        Decisão
-      </span>
-      <DecisionForm actionId={action.id} />
+      <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">Decisão</h2>
+      <DecisionForm
+        actionId={action.id}
+        allowChanges={canRequestChanges}
+        defaultDecision={OUTWARD_ACTION_TYPES.has(action.actionType) ? null : "approved"}
+      />
     </Card>
   ) : (
     <Card className="gap-3 p-5">
-      <span className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-        Decidido
-      </span>
+      <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">Decidido</h2>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">Status final:</span>
         <StatusPill status={action.status} />
       </div>
       {action.decidedAt !== null && (
-        <p className="text-xs text-muted-foreground">
-          Decisão em {formatDateTime(action.decidedAt)}
-          {action.decidedByUserId !== null && action.decidedByUserId !== ""
-            ? ` por ${action.decidedByUserId}`
-            : ""}
+        <p className="text-sm text-muted-foreground">
+          {formatDateTime(action.decidedAt)}
+          {action.decidedByName === null ? "" : ` · ${action.decidedByName}`}
         </p>
       )}
       {action.feedback !== null && action.feedback !== "" && (
-        <div className="rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-          {action.feedback}
-        </div>
+        <p className="border-t border-border pt-3 text-sm leading-relaxed whitespace-pre-wrap text-foreground">
+          “{action.feedback}”
+        </p>
       )}
     </Card>
   );

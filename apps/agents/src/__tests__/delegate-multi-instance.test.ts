@@ -70,7 +70,7 @@ describe("delegateToWorker multi-instance dispatch", () => {
     )) as { error?: string; status?: string };
     expect("status" in result && result.status).toBe("queued");
     const tickets = await env.DB.prepare(
-      "SELECT agent_instance_id FROM ticket WHERE company_id = ? AND title LIKE 'designer:%'",
+      "SELECT agent_instance_id FROM ticket WHERE company_id = ? AND brief = 'fazer logo'",
     )
       .bind(COMPANY_ID)
       .all<{ agent_instance_id: string }>();
@@ -88,7 +88,7 @@ describe("delegateToWorker multi-instance dispatch", () => {
     )) as { error?: string; status?: string };
     expect("status" in result && result.status).toBe("queued");
     const tickets = await env.DB.prepare(
-      "SELECT agent_instance_id FROM ticket WHERE company_id = ? AND title LIKE 'designer:%'",
+      "SELECT agent_instance_id FROM ticket WHERE company_id = ? AND brief = 'fazer logo'",
     )
       .bind(COMPANY_ID)
       .all<{ agent_instance_id: string }>();

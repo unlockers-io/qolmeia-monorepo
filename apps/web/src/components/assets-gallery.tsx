@@ -10,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/components/dialog";
+import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { DialogCloseButton } from "@repo/ui/compositions/dialog-close-button";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { cn } from "@repo/ui/lib/utils";
 import { Eye, FileText, FolderOpen, Loader2, Music, Trash2 } from "lucide-react";
@@ -17,7 +19,6 @@ import { useRouter } from "next/navigation";
 import { useReducer, useState } from "react";
 import { toast } from "sonner";
 
-import { AssetImage } from "@/components/asset-image";
 import { AssetPreviewDialog } from "@/components/asset-preview-dialog";
 import type { WebChatAsset } from "@/lib/api-types";
 import { deleteAssets } from "@/lib/assets";
@@ -317,7 +318,8 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
         }}
         open={confirmIds !== null}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogCloseButton />
           <DialogHeader>
             <DialogTitle>
               Excluir {confirmCount} {confirmCount > 1 ? "arquivos" : "arquivo"}?

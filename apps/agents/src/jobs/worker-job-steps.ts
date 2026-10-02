@@ -3,16 +3,13 @@ import { log } from "@repo/observability";
 import type { DecisionOutcome } from "@repo/worker-api/contracts";
 import type { JsonValue } from "@repo/worker-api/internal";
 
-import { logActivity } from "#/activity/log";
 import { CorrespondentV2 } from "#/agents/correspondent";
 import { getDb } from "#/db/client";
 import { resolvePolicy } from "#/db/policy";
 import { getCompany } from "#/db/schema";
-import { loadInstanceWithTemplate } from "#/db/ticket";
+import { loadInstanceWithTemplate, loadTicket } from "#/db/ticket";
 import { toRecord } from "#/lib/records";
 import { emitTeamEvent } from "#/team/events";
-
-const MAX_REVISIONS = 3;
 
 type JobContext = {
   agentInstanceId: string;
@@ -38,21 +35,53 @@ type DecisionEvent = {
   feedback?: string;
 };
 
-const presentToCustomer = async (ctx: JobContext, result: string): Promise<void> => {
+const signalCorrespondent = async (ctx: JobContext, type: string, body: string): Promise<void> => {
   const { companyId, ticketId } = ctx;
   try {
-    await dispatch(CorrespondentV2, {
-      id: companyId,
-      message: {
-        body: `Um especialista do Time concluiu uma tarefa. Apresente este material ao cliente, em pt-BR, de forma calorosa e direta; mantenha as imagens em markdown e não altere o conteúdo:\n\n${result}`,
-        kind: "signal",
-        type: "worker.deliverable_ready",
-      },
-    });
+    await dispatch(CorrespondentV2, { id: companyId, message: { body, kind: "signal", type } });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    log.error({ companyId, error: message, message: "workflow.presentResult.err", ticketId });
+    log.error({
+      companyId,
+      error: message,
+      message: "workflow.signal.err",
+      signal: type,
+      ticketId,
+    });
   }
+};
+
+const presentToCustomer = (ctx: JobContext, result: string): Promise<void> =>
+  signalCorrespondent(
+    ctx,
+    "worker.deliverable_ready",
+    `Um especialista do Time concluiu uma tarefa. Apresente este material ao cliente, em pt-BR, de forma calorosa e direta; mantenha as imagens em markdown e não altere o conteúdo:\n\n${result}`,
+  );
+
+const CUSTOMER_UPDATES = {
+  changes_requested: {
+    instruction:
+      "O Time revisou o material do pedido abaixo e o especialista já está ajustando. Avise o cliente em uma frase curta, em pt-BR, que o ajuste está em andamento e que a nova versão aparece aqui no chat.",
+    type: "worker.revising",
+  },
+  rejected: {
+    instruction:
+      "O material do pedido abaixo foi revisado pelo Time e não será entregue. Avise o cliente em pt-BR, de forma breve e cordial, e pergunte se ele quer ajustar o pedido para o Time tentar de novo.",
+    type: "worker.deliverable_rejected",
+  },
+} satisfies Record<Exclude<DecisionOutcome, "approved">, { instruction: string; type: string }>;
+
+const reportDecision = async (
+  ctx: JobContext,
+  decision: Exclude<DecisionOutcome, "approved">,
+): Promise<void> => {
+  const ticket = await loadTicket(getDb(ctx.env), ctx.ticketId);
+  const update = CUSTOMER_UPDATES[decision];
+  await signalCorrespondent(
+    ctx,
+    update.type,
+    `${update.instruction}\n\nPedido: ${ticket?.brief ?? ""}`,
+  );
 };
 
 const proposeDeliverable = async (
@@ -145,22 +174,11 @@ const applyDecision = async (
     ticketId,
   });
   await emitTeamEvent(env, { companyId, reason: "ticket_changed", type: "team:status" });
-  if (decision === "approved") {
-    await presentToCustomer(ctx, current.summary);
-  }
+  await (decision === "approved"
+    ? presentToCustomer(ctx, current.summary)
+    : reportDecision(ctx, decision));
   return decision;
 };
 
-const logRevisionCapped = async (ctx: JobContext, actionId: string): Promise<void> => {
-  await logActivity(getDb(ctx.env), {
-    companyId: ctx.companyId,
-    payload: { revisions: MAX_REVISIONS },
-    refId: actionId,
-    refType: "action",
-    summary: `Limite de ${MAX_REVISIONS} revisões atingido: o agente não vai refazer de novo. Aprove ou rejeite a última versão.`,
-    type: "ACTION_REVISION_CAPPED",
-  });
-};
-
-export { applyDecision, logRevisionCapped, MAX_REVISIONS, proposeDeliverable };
+export { applyDecision, proposeDeliverable };
 export type { DecisionEvent, GenerateResult, JobContext, ProposeResult };

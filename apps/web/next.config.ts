@@ -44,8 +44,12 @@ const nextConfig: NextConfig = {
         source: "/api/auth/:path*",
       },
       {
-        destination: `${agentsUrl}/api/me/:path*`,
-        source: "/api/me/:path*",
+        destination: `${agentsUrl}/api/me`,
+        source: "/api/me",
+      },
+      {
+        destination: `${agentsUrl}/api/me/:path+`,
+        source: "/api/me/:path+",
       },
       {
         destination: `${agentsUrl}/api/teams/:path*`,

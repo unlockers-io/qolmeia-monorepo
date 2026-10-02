@@ -1,50 +1,11 @@
+import type {
+  AgentDisplayStatus,
+  HireableTemplate,
+  TeamMemberDetailView,
+  TeamMemberView,
+} from "@repo/worker-api/contracts";
+
 import { activeOrgId, apiUrl, jsonInit, request } from "@/lib/request";
-
-type AgentDisplayStatus = "available" | "awaiting_approval" | "paused" | "working";
-
-type OpenTicketSlim = {
-  status: "awaiting_approval" | "in_progress";
-  summary: string;
-  ticketId: string;
-};
-
-type TeamMemberBase = {
-  currentWork: ReadonlyArray<OpenTicketSlim>;
-  displayName: string;
-  hasPromptOverride: boolean;
-  id: string;
-  lifetimeDone: number;
-  status: AgentDisplayStatus;
-};
-
-type TeamMemberNonWorker = TeamMemberBase & {
-  role: "correspondent" | "planner";
-  templateId: null;
-  workerKind: null;
-};
-
-type TeamMemberWorker = TeamMemberBase & {
-  role: "worker";
-  templateId: string;
-  workerKind: string;
-};
-
-type TeamMemberView = TeamMemberNonWorker | TeamMemberWorker;
-
-type TeamMemberDetailView = TeamMemberView & {
-  capabilities: string;
-  promptOverride: string | null;
-  promptOverrideUpdatedAt: number | null;
-  templateSystemPrompt: string;
-};
-
-type HireableTemplate = {
-  description: string;
-  displayName: string;
-  hiredCount: number;
-  id: string;
-  workerKind: string;
-};
 
 const STATUS_LABEL = {
   available: "Disponível",
@@ -54,14 +15,12 @@ const STATUS_LABEL = {
 } satisfies Record<AgentDisplayStatus, string>;
 
 const fetchTeam = async (): Promise<Array<TeamMemberView>> => {
-  const body = await request<{ members: Array<TeamMemberView> }>(
-    "/api/me/team",
-    "GET /api/me/team",
-  );
+  const body = await request<{ members: Array<TeamMemberView> }>("/api/me/team");
   return body.members;
 };
 
 type SharedTeamEvents = {
+  failedAttempts: number;
   listeners: Set<() => void>;
   opening: boolean;
   reconnectTimer: ReturnType<typeof setTimeout> | null;
@@ -69,13 +28,18 @@ type SharedTeamEvents = {
 };
 
 const sharedTeamEvents: SharedTeamEvents = {
+  failedAttempts: 0,
   listeners: new Set(),
   opening: false,
   reconnectTimer: null,
   source: null,
 };
 
-const RECONNECT_MS = 2000;
+const RECONNECT_BASE_MS = 2000;
+const RECONNECT_MAX_MS = 60_000;
+
+const reconnectDelay = (failedAttempts: number): number =>
+  Math.min(RECONNECT_BASE_MS * 2 ** failedAttempts, RECONNECT_MAX_MS);
 
 const notifyTeamEventListeners = (): void => {
   for (const listener of sharedTeamEvents.listeners) {
@@ -115,6 +79,9 @@ const openSharedSource = async (): Promise<void> => {
     withCredentials: true,
   });
   sharedTeamEvents.source = source;
+  source.addEventListener("open", () => {
+    sharedTeamEvents.failedAttempts = 0;
+  });
   source.addEventListener("team:roster", notifyTeamEventListeners);
   source.addEventListener("team:status", notifyTeamEventListeners);
   source.addEventListener("error", () => {
@@ -125,10 +92,12 @@ const openSharedSource = async (): Promise<void> => {
     if (sharedTeamEvents.listeners.size === 0 || sharedTeamEvents.reconnectTimer !== null) {
       return;
     }
+    const delay = reconnectDelay(sharedTeamEvents.failedAttempts);
+    sharedTeamEvents.failedAttempts += 1;
     sharedTeamEvents.reconnectTimer = setTimeout(() => {
       sharedTeamEvents.reconnectTimer = null;
       void openSharedSource();
-    }, RECONNECT_MS);
+    }, delay);
   });
 };
 
@@ -147,10 +116,7 @@ const subscribeTeamEvents = (onEvent: () => void): (() => void) | null => {
 };
 
 const fetchCatalogue = async (): Promise<Array<HireableTemplate>> => {
-  const body = await request<{ templates: Array<HireableTemplate> }>(
-    "/api/me/catalogue",
-    "GET /api/me/catalogue",
-  );
+  const body = await request<{ templates: Array<HireableTemplate> }>("/api/me/catalogue");
   return body.templates;
 };
 
@@ -160,7 +126,6 @@ const hireMember = async (input: {
 }): Promise<TeamMemberView> => {
   const body = await request<{ member: TeamMemberView }>(
     "/api/me/team/hire",
-    "POST /api/me/team/hire",
     jsonInit("POST", input),
   );
   return body.member;
@@ -172,24 +137,19 @@ const patchMember = async (
 ): Promise<TeamMemberView> => {
   const body = await request<{ member: TeamMemberView }>(
     `/api/me/team/members/${id}`,
-    `PATCH /api/me/team/members/${id}`,
     jsonInit("PATCH", patch),
   );
   return body.member;
 };
 
 const fetchMemberDetail = async (id: string): Promise<TeamMemberDetailView> => {
-  const body = await request<{ member: TeamMemberDetailView }>(
-    `/api/me/team/members/${id}`,
-    `GET /api/me/team/members/${id}`,
-  );
+  const body = await request<{ member: TeamMemberDetailView }>(`/api/me/team/members/${id}`);
   return body.member;
 };
 
 const setPaused = async (id: string, paused: boolean): Promise<TeamMemberView> => {
   const body = await request<{ member: TeamMemberView }>(
     `/api/me/team/members/${id}/${paused ? "pause" : "resume"}`,
-    "pause/resume",
     { method: "POST" },
   );
   return body.member;
@@ -208,10 +168,6 @@ export {
 export type {
   AgentDisplayStatus,
   HireableTemplate,
-  OpenTicketSlim,
-  TeamMemberBase,
   TeamMemberDetailView,
-  TeamMemberNonWorker,
   TeamMemberView,
-  TeamMemberWorker,
-};
+} from "@repo/worker-api/contracts";

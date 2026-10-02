@@ -1,5 +1,6 @@
 import "#/lib/observability";
 
+import { setProvider } from "@flue/runtime";
 import { createAgentRouter } from "@flue/runtime/routing";
 import { log } from "@repo/observability";
 import { honoEvlog } from "@repo/observability/hono";
@@ -12,6 +13,7 @@ import { CorrespondentV2 } from "#/agents/correspondent";
 import { PlannerV2 } from "#/agents/planner";
 import { requireCustomerAgent } from "#/lib/agent-route-auth";
 import type { SessionEnv } from "#/lib/auth";
+import { conversationProvider } from "#/lib/flue-models";
 import { assetsRoutes } from "#/routes/assets";
 import { backofficeRoutes } from "#/routes/backoffice";
 import { meRoutes } from "#/routes/me";
@@ -23,6 +25,8 @@ export const FLUE_CLIENT_EXPOSED_HEADERS = [
   "flue-error-ref",
   "Location",
 ];
+
+setProvider(conversationProvider);
 
 const app = new Hono<SessionEnv>();
 

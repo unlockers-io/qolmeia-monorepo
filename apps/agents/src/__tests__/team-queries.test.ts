@@ -99,6 +99,7 @@ describe("getTeamRoster", () => {
       role: "correspondent",
       status: "available",
       templateId: null,
+      templateName: null,
       workerKind: null,
     });
 
@@ -109,6 +110,7 @@ describe("getTeamRoster", () => {
       role: "worker",
       status: "working",
       templateId: "tpl-designer",
+      templateName: "Designer",
       workerKind: "designer",
     });
     expect(designer?.currentWork).toEqual([

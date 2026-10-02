@@ -148,7 +148,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   onChange={(e) => {
                     setField("model", e.target.value);
                   }}
-                  placeholder="openai/gpt-4o-mini"
+                  placeholder="openai/gpt-6.1-sol"
                   value={values.model}
                 />
                 <FormFieldError errors={fieldError(errors.model)} id="model-error" />

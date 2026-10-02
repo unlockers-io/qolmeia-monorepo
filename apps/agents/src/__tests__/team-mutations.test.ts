@@ -177,7 +177,7 @@ describe("setMemberStatus", () => {
     )
       .bind(member.id)
       .first<{ summary: string; type: string }>();
-    expect(log).toEqual({ summary: "Agente retomado.", type: "MEMBER_RESUMED" });
+    expect(log).toEqual({ summary: `${member.displayName} foi retomado.`, type: "MEMBER_RESUMED" });
   });
 
   it("rejects pausing the correspondent", async () => {

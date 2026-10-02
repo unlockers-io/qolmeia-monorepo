@@ -35,7 +35,7 @@ describe("envAuthConfig", () => {
   it("includes the localhost host patterns and loopback origins by default", () => {
     const config = envAuthConfig();
     expect(config.allowedHosts).toEqual(
-      expect.arrayContaining(["**.localhost", "localhost:*", "127.0.0.1:*"]),
+      expect.arrayContaining(["**.localhost", "**.localhost:*", "localhost:*", "127.0.0.1:*"]),
     );
     expect(config.trustedOrigins).toContain("http://localhost:3000");
     expect(config.trustedOrigins).toContain("http://127.0.0.1:3000");
