@@ -1,6 +1,7 @@
 "use client";
 
 import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
+import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import { Pencil } from "lucide-react";
 
@@ -13,33 +14,8 @@ type AgentCardProps = {
   variant: Variant;
 };
 
-const roleLabel = (m: TeamMemberView): string => {
-  if (m.role === "worker") {
-    return m.workerKind;
-  }
-  return m.role === "correspondent" ? "Correspondente" : "Planejador";
-};
-
-const WORKER_KIND_AVATAR: ReadonlyArray<{ cls: string; match: RegExp }> = [
-  { cls: "bg-avatar-2", match: /design|art|imagem/iv },
-  { cls: "bg-avatar-3", match: /estrateg|strateg|plano/iv },
-  { cls: "bg-avatar-4", match: /redat|copy|escrit|texto/iv },
-  { cls: "bg-avatar-5", match: /social|m[ií]dia|community/iv },
-];
-
-const avatarClass = (m: TeamMemberView): string => {
-  if (m.role === "correspondent") {
-    return "bg-avatar-1";
-  }
-  if (m.role === "planner") {
-    return "bg-avatar-6";
-  }
-  const kind = m.workerKind ?? "";
-  const hit = WORKER_KIND_AVATAR.find((w) => w.match.test(kind));
-  return hit?.cls ?? "bg-avatar-8";
-};
-
-const monogramOf = (name: string): string => (name.trim().at(0) ?? "?").toLocaleUpperCase("pt-BR");
+const deliveriesLabel = (count: number): string =>
+  `${count} ${count === 1 ? "entrega" : "entregas"}`;
 
 const STATUS_TONE = {
   available: "success",
@@ -52,17 +28,26 @@ const AgentCard = ({ member, variant }: AgentCardProps) => {
   const currentWork = member.currentWork.at(0);
   const detailed = variant === "detailed";
   const tone = STATUS_TONE[member.status];
+  const deliveries = member.role === "worker" ? deliveriesLabel(member.lifetimeDone) : null;
+  const statusPill = (
+    <StatusPill
+      className="shrink-0"
+      label={STATUS_LABEL[member.status]}
+      pulse={member.status === "working"}
+      tone={tone}
+    />
+  );
   return (
     <article className="flex items-center gap-3">
       <span
         aria-hidden
         className={cn(
           "flex shrink-0 items-center justify-center rounded-panel font-display font-bold text-white",
-          avatarClass(member),
+          agentAvatarClass(member.role, member.workerKind),
           detailed ? "size-11 text-base" : "size-10 text-sm",
         )}
       >
-        {monogramOf(member.displayName)}
+        {agentInitials(member.displayName)}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -71,21 +56,25 @@ const AgentCard = ({ member, variant }: AgentCardProps) => {
             <Pencil aria-label="Prompt personalizado" className="size-3 text-muted-foreground" />
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          {detailed
-            ? `${roleLabel(member)} · ${member.lifetimeDone} entregas`
-            : `${member.lifetimeDone} entregas`}
-        </p>
+        {detailed ? (
+          <p className="text-xs text-muted-foreground">
+            {deliveries === null
+              ? agentRoleLabel(member.role, member.templateName)
+              : `${agentRoleLabel(member.role, member.templateName)} · ${deliveries}`}
+          </p>
+        ) : (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {statusPill}
+            {deliveries !== null && (
+              <span className="text-xs text-muted-foreground">{deliveries}</span>
+            )}
+          </div>
+        )}
         {detailed && currentWork !== undefined && (
           <p className="mt-1 truncate text-xs text-muted-foreground">→ {currentWork.summary}</p>
         )}
       </div>
-      <StatusPill
-        className="shrink-0"
-        label={STATUS_LABEL[member.status]}
-        pulse={member.status === "working"}
-        tone={tone}
-      />
+      {detailed && statusPill}
     </article>
   );
 };

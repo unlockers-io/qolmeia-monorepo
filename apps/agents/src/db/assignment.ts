@@ -1,4 +1,4 @@
-import type { OperatorCoverage } from "@repo/worker-api/contracts";
+import type { CoverageResponse, OperatorCoverage } from "@repo/worker-api/contracts";
 
 import type { Database } from "#/db/client";
 
@@ -13,10 +13,12 @@ const setCoverage = async (
   await db("assignments.set", { coverage, operatorUserId });
 };
 
-const listDisciplines = async (db: Database): Promise<ReadonlyArray<string>> => {
-  const result = await db("assignments.options", {});
-  return result.disciplines;
+const getDisciplineOptions = async (
+  db: Database,
+): Promise<Pick<CoverageResponse["options"], "disciplineNames" | "disciplines">> => {
+  const { disciplineNames, disciplines } = await db("assignments.options", {});
+  return { disciplineNames, disciplines };
 };
 
-export { listCoverage, listDisciplines, setCoverage };
+export { getDisciplineOptions, listCoverage, setCoverage };
 export type { OperatorCoverage } from "@repo/worker-api/contracts";

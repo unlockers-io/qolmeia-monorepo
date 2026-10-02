@@ -6,6 +6,7 @@
 
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
+@source "../../../../node_modules/streamdown/dist/*.js";
 
 /* Status "Trabalhando" dot: matches the design's qpulse (opacity 1 → .35, 1.4s). */
 @keyframes qpulse {
@@ -66,6 +67,17 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
+
+  @media (pointer: coarse) {
+    [data-slot="button"],
+    [data-slot="input"] {
+      min-height: 2.75rem;
+    }
+
+    [data-slot="button"] {
+      min-width: 2.75rem;
+    }
+  }
 }
 
 :root {
@@ -82,10 +94,10 @@
   --secondary: oklch(0.945 0.007 80);
   --secondary-foreground: oklch(0.23 0.006 65);
   --muted: oklch(0.945 0.007 80);
-  --muted-foreground: oklch(0.54 0.012 65);
+  --muted-foreground: oklch(0.51 0.012 65);
   --accent: oklch(0.962 0.005 84);
   --accent-foreground: oklch(0.23 0.006 65);
-  --destructive: oklch(0.6 0.18 22);
+  --destructive: oklch(0.55 0.18 22);
   --destructive-foreground: oklch(1 0 0);
   --destructive-surface: oklch(0.96 0.04 22);
   --destructive-surface-foreground: oklch(0.5 0.14 22);
@@ -138,8 +150,8 @@
   --popover-foreground: oklch(0.985 0.001 106.423);
   --primary: oklch(0.7 0.18 292.759);
   --primary-foreground: oklch(0.18 0.02 292.759);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.268 0.007 34.298);
+  --secondary-foreground: oklch(0.985 0.001 106.423);
   --muted: oklch(0.268 0.007 34.298);
   --muted-foreground: oklch(0.709 0.01 56.259);
   --accent: oklch(0.268 0.007 34.298);
@@ -160,13 +172,15 @@
   --info-foreground: oklch(0.145 0 0);
   --info-surface: oklch(28.2% 0.091 267.935 / 0.4);
   --info-surface-foreground: oklch(80.9% 0.105 251.813);
+  --worker-surface: oklch(28% 0.06 200 / 0.4);
+  --worker-surface-foreground: oklch(82% 0.1 200);
   --highlight: oklch(70.2% 0.183 293.541);
   --highlight-foreground: oklch(0.145 0 0);
   --highlight-surface: oklch(28.3% 0.141 291.089 / 0.4);
   --highlight-surface-foreground: oklch(81.1% 0.111 293.571);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.553 0.013 58.071);
+  --ring: oklch(0.7 0.18 292.759);
   --chart-1: oklch(0.905 0.182 98.111);
   --chart-2: oklch(0.795 0.184 86.047);
   --chart-3: oklch(0.681 0.162 75.834);
@@ -179,7 +193,7 @@
   --sidebar-accent: oklch(0.268 0.007 34.298);
   --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.553 0.013 58.071);
+  --sidebar-ring: oklch(0.7 0.18 292.759);
 }
 
 @theme inline {
@@ -246,13 +260,13 @@
   /* Role-keyed avatar hues from the design; white monogram on top.
      1 correspondent · 2 designer · 3 estrategista · 4 redator · 5 social · 6 planner · 7 company · 8 spare */
   --color-avatar-1: oklch(0.491 0.27 292.581);
-  --color-avatar-2: oklch(0.55 0.16 200);
-  --color-avatar-3: oklch(0.6 0.15 130);
-  --color-avatar-4: oklch(0.6 0.16 25);
+  --color-avatar-2: oklch(0.5 0.16 200);
+  --color-avatar-3: oklch(0.52 0.15 130);
+  --color-avatar-4: oklch(0.52 0.16 25);
   --color-avatar-5: oklch(0.55 0.15 255);
-  --color-avatar-6: oklch(0.66 0.14 70);
-  --color-avatar-7: oklch(0.6 0.13 40);
-  --color-avatar-8: oklch(0.6 0.16 330);
+  --color-avatar-6: oklch(0.52 0.14 70);
+  --color-avatar-7: oklch(0.52 0.13 40);
+  --color-avatar-8: oklch(0.52 0.16 330);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -373,16 +387,6 @@
   --radius-panel: 10px;
 }
 
-@utility publish-placeholder-surface {
-  background-image: repeating-linear-gradient(
-    45deg,
-    var(--color-muted),
-    var(--color-muted) 13px,
-    var(--color-secondary) 13px,
-    var(--color-secondary) 26px
-  );
-}
-
 @theme inline {
   --radius-control-inset: 6px;
 }
@@ -473,19 +477,11 @@
   grid-template-columns: 3fr 2fr;
 }
 
-@utility h-chat {
-  height: calc(100vh - 3.5rem);
-}
-
 @theme {
   --color-brand-ink: #27154d;
   --color-brand-purple: #6e2bf5;
   --color-brand-honey: #fcbd32;
   --color-brand-honey-shade: #ffbb32;
-}
-
-@utility publish-avatar {
-  background: var(--color-avatar-2);
 }
 
 @utility navigation-avatar {

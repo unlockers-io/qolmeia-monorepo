@@ -230,7 +230,7 @@ const setMemberStatus = async (
   input: TeamStatusInput,
 ): Promise<TeamMemberView> => {
   const row = await db.agentInstance.findFirst({
-    select: { role: true },
+    select: { displayName: true, role: true },
     where: { companyId: input.companyId, id: input.agentInstanceId },
   });
   if (!row) {
@@ -248,7 +248,10 @@ const setMemberStatus = async (
     companyId: input.companyId,
     refId: input.agentInstanceId,
     refType: "agent_instance",
-    summary: input.status === "active" ? "Agente retomado." : "Agente pausado.",
+    summary:
+      input.status === "active"
+        ? `${row.displayName} foi retomado.`
+        : `${row.displayName} foi pausado.`,
     type: input.status === "active" ? "MEMBER_RESUMED" : "MEMBER_PAUSED",
   });
   const member = await getTeamMember(db, input.companyId, input.agentInstanceId);
@@ -280,7 +283,7 @@ const updateMember = async (db: PrismaClient, input: TeamUpdateInput): Promise<T
         payload: { newName: displayName, oldName: existing.displayName },
         refId: input.agentInstanceId,
         refType: "agent_instance",
-        summary: `Renomeado de "${existing.displayName}" para "${displayName}".`,
+        summary: `${existing.displayName} agora se chama ${displayName}.`,
         type: "MEMBER_RENAMED",
       });
     }
@@ -301,8 +304,8 @@ const updateMember = async (db: PrismaClient, input: TeamUpdateInput): Promise<T
       refType: "agent_instance",
       summary:
         promptOverride === null
-          ? "Prompt restaurado ao padrão do template."
-          : "Prompt personalizado atualizado.",
+          ? `Instruções de ${existing.displayName} voltaram ao padrão.`
+          : `Instruções de ${existing.displayName} foram personalizadas.`,
       type: promptOverride === null ? "MEMBER_PROMPT_RESET" : "MEMBER_PROMPT_EDITED",
     });
   }

@@ -67,7 +67,6 @@ const delegateToWorkerSkill: UnknownSkill = {
       brief,
       companyId: ctx.companyId,
       ticketId,
-      workerKind,
     });
 
     const instance = await ctx.env.WORKER_JOB.create({

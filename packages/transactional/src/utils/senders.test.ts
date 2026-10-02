@@ -29,8 +29,8 @@ describe("WelcomeEmail render", () => {
       }),
     );
     expect(html).toContain("https://app.qolmeia.com/verify?token=abc");
-    expect(html).toContain("Welcome to Qolmeia");
-    expect(text).toMatch(/welcome to qolmeia/iv);
+    expect(html).toContain("Boas-vindas à Qolmeia");
+    expect(text).toMatch(/boas-vindas à qolmeia/iv);
     expect(html).not.toContain("Acme");
   });
 });
@@ -44,7 +44,7 @@ describe("PasswordResetEmail render", () => {
       }),
     );
     expect(html).toContain("https://app.qolmeia.com/reset?token=xyz");
-    expect(html).toContain("Reset your password");
+    expect(html).toContain("Redefina sua senha");
     expect(html).not.toContain("Acme");
   });
 });
@@ -90,6 +90,7 @@ describe("MagicLinkEmail render", () => {
     );
     expect(html).toContain("https://app.qolmeia.com/auth/magic?token=mlk-123");
     expect(html).toContain("Entre na Qolmeia");
+    expect(html).not.toContain('lang="en"');
     expect(text).toMatch(/entre na qolmeia/iv);
     expect(html).toContain("user@example.com");
   });
@@ -129,7 +130,7 @@ describe("sendTransactionalEmail", () => {
       1,
       expect.objectContaining({
         from: "Qolmeia <noreply@email.qolmeia.com>",
-        subject: "Welcome to Qolmeia, Pedro! Please verify your email",
+        subject: "Boas-vindas à Qolmeia, Pedro! Confirme seu e-mail",
         tags: [
           { name: "type", value: "welcome" },
           { name: "userId", value: "user_1" },
@@ -178,7 +179,7 @@ describe("sendTransactionalEmail", () => {
     expect(sendMock).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        subject: "Confirm change of your Qolmeia account email",
+        subject: "Confirme a troca de e-mail da sua conta Qolmeia",
         to: "old@example.com",
       }),
     );

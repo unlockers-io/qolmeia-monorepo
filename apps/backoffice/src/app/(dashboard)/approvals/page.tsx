@@ -3,14 +3,14 @@ import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
+import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
-import type { ActionsResponse } from "@repo/worker-api/contracts";
+import type { ActionsResponse, CoverageResponse } from "@repo/worker-api/contracts";
 import { Inbox } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { agentAvatarClass, agentInitials } from "@/lib/agent-avatar";
 import { apiGetServer } from "@/lib/api-server";
 import {
   actionTypeLabel,
@@ -37,8 +37,14 @@ const proposedSummary = (proposed: ActionsResponse["items"][number]["proposed"])
 };
 
 const ApprovalsContent = async () => {
-  const res = await apiGetServer<ActionsResponse>("/actions?status=pending&sort=age");
+  const [res, coverage] = await Promise.all([
+    apiGetServer<ActionsResponse>("/actions?status=pending&sort=age"),
+    apiGetServer<CoverageResponse>("/assignments/me").catch(() => null),
+  ]);
   const pendingCount = res.items.length;
+  const filtered =
+    coverage !== null &&
+    (coverage.assigned.companies.length > 0 || coverage.assigned.disciplines.length > 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -46,11 +52,25 @@ const ApprovalsContent = async () => {
         actions={
           pendingCount > 0 ? (
             <span className="rounded-full bg-warning-surface px-3 py-1.5 text-sm font-semibold text-warning-surface-foreground">
-              {pendingCount} pendentes
+              {pendingCount} {pendingCount === 1 ? "pendente" : "pendentes"}
             </span>
           ) : null
         }
-        description="Ações propostas pelos especialistas aguardando uma decisão, mais antigas primeiro."
+        description={
+          filtered ? (
+            <>
+              Mostrando só o que está na sua cobertura, mais antigas primeiro.{" "}
+              <Link
+                className="rounded-sm font-medium text-primary underline-offset-2 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                href="/cobertura"
+              >
+                Ajustar cobertura
+              </Link>
+            </>
+          ) : (
+            "Ações propostas pelos especialistas aguardando uma decisão, mais antigas primeiro."
+          )
+        }
         title="Aprovações"
       />
 
@@ -64,7 +84,10 @@ const ApprovalsContent = async () => {
           />
         ) : (
           <div>
-            <div className="grid grid-cols-approvals items-center gap-3 border-b border-border bg-secondary/40 px-5 py-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
+            <div
+              aria-hidden
+              className="hidden grid-cols-approvals items-center gap-3 border-b border-border bg-secondary/40 px-5 py-3 font-mono text-xs tracking-wide text-muted-foreground uppercase md:grid"
+            >
               <span>Ação</span>
               <span>Empresa</span>
               <span>Agente</span>
@@ -75,54 +98,58 @@ const ApprovalsContent = async () => {
               {res.items.map((action) => {
                 const preview = proposedSummary(action.proposed);
                 return (
-                  <li
-                    className="grid grid-cols-approvals items-center gap-3 border-b border-border/60 px-5 py-3.5 last:border-b-0"
-                    key={action.id}
-                  >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span aria-hidden className="size-2 shrink-0 rounded-full bg-warning" />
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-foreground">
-                          {actionTypeLabel(action.actionType)}
-                        </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {preview ? (
-                            truncate(preview, 72)
-                          ) : (
-                            <span className="font-mono">{action.id}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="truncate text-sm text-muted-foreground">
-                      {action.companyName}
-                    </span>
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        aria-hidden
-                        className={`flex size-6 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white ${agentAvatarClass(action.agent.role, action.agent.workerKind)}`}
-                      >
-                        {agentInitials(action.agent.name)}
-                      </span>
-                      <span className="truncate text-sm text-muted-foreground">
-                        {action.agent.name}
-                      </span>
-                    </div>
-                    <span
-                      className={cn(
-                        "font-mono text-xs tabular-nums",
-                        AGE_TIER_CLASS[ageTier(action.ageSeconds)],
-                      )}
-                    >
-                      {action.ageSeconds === undefined
-                        ? "—"
-                        : formatDurationSeconds(action.ageSeconds)}
-                    </span>
+                  <li className="border-b border-border/60 last:border-b-0" key={action.id}>
                     <Link
-                      className={cn(buttonVariants({ className: "w-full", size: "sm" }))}
+                      className="grid gap-3 px-4 py-4 transition-colors outline-none hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset sm:grid-cols-2 md:grid-cols-approvals md:items-center md:px-5 md:py-3.5"
                       href={`/approvals/${action.id}`}
                     >
-                      Revisar
+                      <div className="flex min-w-0 items-center gap-2.5 sm:col-span-2 md:col-span-1">
+                        <span aria-hidden className="size-2 shrink-0 rounded-full bg-warning" />
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-foreground">
+                            {actionTypeLabel(action.actionType)}
+                          </div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {preview ? (
+                              truncate(preview, 72)
+                            ) : (
+                              <span className="font-mono">{action.id}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="truncate text-sm text-muted-foreground">
+                        <span className="text-xs font-medium md:hidden">Empresa · </span>
+                        {action.companyName}
+                      </span>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          aria-hidden
+                          className={`flex size-6 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white ${agentAvatarClass(action.agent.role, action.agent.workerKind)}`}
+                        >
+                          {agentInitials(action.agent.name)}
+                        </span>
+                        <span className="truncate text-sm text-muted-foreground">
+                          {action.agent.name}
+                        </span>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-xs tabular-nums",
+                          AGE_TIER_CLASS[ageTier(action.ageSeconds)],
+                        )}
+                      >
+                        <span className="font-medium md:hidden">Aguardando · </span>
+                        {action.ageSeconds === undefined
+                          ? "—"
+                          : formatDurationSeconds(action.ageSeconds)}
+                      </span>
+                      <span
+                        aria-hidden
+                        className={cn(buttonVariants({ className: "w-full", size: "sm" }))}
+                      >
+                        Revisar
+                      </span>
                     </Link>
                   </li>
                 );

@@ -1,35 +1,22 @@
 import type { Prisma } from "@repo/db";
-import type { Action, DecisionOutcome } from "@repo/worker-api/contracts";
+import type { Action, ActionDetail, DecisionOutcome } from "@repo/worker-api/contracts";
 import type { ActivityInput, ActivityOptions } from "@repo/worker-api/internal";
 
 import { log } from "../../lib/logger";
 
+import { agentSummarySelect, toAgentSummary } from "./agent-summary";
 import { jsonRecordSchema, nullableJsonRecord, type Database, type JsonRecord } from "./types";
 
 const actionInclude = {
   company: { select: { name: true } },
-  ticket: {
-    select: {
-      agentInstance: {
-        select: {
-          displayName: true,
-          role: true,
-          template: { select: { workerKind: true } },
-        },
-      },
-    },
-  },
+  ticket: { select: { agentInstance: { select: agentSummarySelect } } },
 } as const satisfies Prisma.ActionInclude;
 
 type ActionRecord = Prisma.ActionGetPayload<{ include: typeof actionInclude }>;
 
 const mapAction = (row: ActionRecord): Action => ({
   actionType: row.actionType,
-  agent: {
-    name: row.ticket.agentInstance.displayName,
-    role: row.ticket.agentInstance.role,
-    workerKind: row.ticket.agentInstance.template?.workerKind ?? null,
-  },
+  agent: toAgentSummary(row.ticket.agentInstance),
   companyId: row.companyId,
   companyName: row.company.name,
   createdAt: row.createdAt.getTime(),
@@ -96,9 +83,30 @@ const markExecuted = async (db: Database, actionId: string): Promise<void> => {
   await db.action.updateMany({ data: { status: "executed" }, where: { id: actionId } });
 };
 
-const getAction = async (db: Database, actionId: string): Promise<Action | null> => {
+const deciderName = async (db: Database, decidedById: string | null): Promise<string | null> => {
+  if (decidedById === null || decidedById === "") {
+    return null;
+  }
+  const user = await db.user.findUnique({
+    select: { displayName: true, name: true },
+    where: { id: decidedById },
+  });
+  if (user) {
+    return user.displayName ?? user.name;
+  }
+  const agent = await db.agentInstance.findUnique({
+    select: { displayName: true },
+    where: { id: decidedById },
+  });
+  return agent ? `Cliente, pelo ${agent.displayName}` : null;
+};
+
+const getAction = async (db: Database, actionId: string): Promise<ActionDetail | null> => {
   const row = await db.action.findUnique({ include: actionInclude, where: { id: actionId } });
-  return row ? mapAction(row) : null;
+  if (!row) {
+    return null;
+  }
+  return { ...mapAction(row), decidedByName: await deciderName(db, row.decidedByUserId) };
 };
 
 const listPendingActions = async (

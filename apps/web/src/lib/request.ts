@@ -1,4 +1,5 @@
-const AGENTS_URL = process.env.NEXT_PUBLIC_AGENTS_URL ?? "";
+import { ApiError } from "@repo/worker-api";
+
 type JsonRequestValue =
   | boolean
   | number
@@ -10,11 +11,10 @@ type JsonRequestValue =
 const ME_PATH = "/api/me";
 
 const apiUrl = (path: string, orgId?: string | null): string => {
-  const base = `${AGENTS_URL}${path}`;
   if (orgId === undefined || orgId === null) {
-    return base;
+    return path;
   }
-  return `${base}${path.includes("?") ? "&" : "?"}org_id=${encodeURIComponent(orgId)}`;
+  return `${path}${path.includes("?") ? "&" : "?"}org_id=${encodeURIComponent(orgId)}`;
 };
 
 type MeOrg = { id: string; role: string };
@@ -27,7 +27,7 @@ type MeBody = {
 const fetchActiveOrgId = async (): Promise<string | null> => {
   const res = await fetch(apiUrl(ME_PATH), { credentials: "include" });
   if (!res.ok) {
-    throw new Error(`GET ${ME_PATH} failed (${res.status})`);
+    throw new ApiError(res.status, await res.text());
   }
   // SAFETY: The first-party /api/me route owns the MeBody response contract.
   // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and /api/me owns the contract
@@ -57,11 +57,11 @@ const withOrgId = (init: RequestInit | undefined, orgId: string | null): Request
   return { credentials: "include", ...init, headers: Object.fromEntries(headers) };
 };
 
-const request = async <T>(path: string, label: string, init?: RequestInit): Promise<T> => {
+const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const orgId = await activeOrgId();
   const res = await fetch(apiUrl(path), withOrgId(init, orgId));
   if (!res.ok) {
-    throw new Error(`${label} failed (${res.status})`);
+    throw new ApiError(res.status, await res.text());
   }
   // SAFETY: Callers bind T to the contract of the first-party route they request.
   // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and callers own the route contract

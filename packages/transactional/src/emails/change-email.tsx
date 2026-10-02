@@ -14,35 +14,35 @@ type ChangeEmailProps = {
 
 const ChangeEmail = ({ changeUrl, currentEmail, newEmail, username }: ChangeEmailProps) => {
   return (
-    <BaseLayout preview="Confirm your new Qolmeia account email address.">
+    <BaseLayout preview="Confirme o novo e-mail da sua conta Qolmeia.">
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
-        Confirm your new email
+        Confirme seu novo e-mail
       </Heading>
 
       <Text className="m-0 mb-6 text-base text-pretty break-words text-muted-foreground">
-        You requested to change the email on your Qolmeia account
-        {username !== undefined && username !== "" ? ` (${username})` : ""} from{" "}
-        <strong>{currentEmail}</strong> to <strong>{newEmail}</strong>. Confirm to complete the
-        change.
+        Você pediu para trocar o e-mail da sua conta Qolmeia
+        {username !== undefined && username !== "" ? ` (${username})` : ""} de{" "}
+        <strong>{currentEmail}</strong> para <strong>{newEmail}</strong>. Confirme para concluir a
+        troca.
       </Text>
 
       <div className="mb-6">
         <Button fullWidth href={changeUrl} variant="primary">
-          Confirm new email
+          Confirmar novo e-mail
         </Button>
       </div>
 
       <Divider />
 
       <Text className="m-0 mb-4 text-sm text-muted-foreground">
-        If you didn&apos;t request this change, ignore this email: the change won&apos;t happen and
-        your account email stays as {currentEmail}. The confirmation link expires in 24 hours.
+        Se você não pediu essa troca, ignore este e-mail: nada muda e sua conta continua com
+        {currentEmail}. O link de confirmação expira em 24 horas.
       </Text>
 
       <Divider spacing="sm" />
 
       <Text className="m-0 text-xs text-muted-foreground">
-        If the button above doesn&apos;t work, copy and paste this link into your browser:
+        Se o botão acima não funcionar, copie e cole este link no seu navegador:
         <br />
         <Link className="break-all text-foreground underline" href={changeUrl}>
           {changeUrl}

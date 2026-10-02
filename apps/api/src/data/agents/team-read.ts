@@ -15,7 +15,7 @@ const OPEN_TICKET_STATUSES: ReadonlyArray<TicketStatus> = ["in_progress", "await
 
 const rosterInclude = {
   _count: { select: { tickets: { where: { status: "done" } } } },
-  template: { select: { workerKind: true } },
+  template: { select: { displayName: true, workerKind: true } },
   tickets: {
     select: { id: true, status: true, title: true },
     where: { status: { in: [...OPEN_TICKET_STATUSES] } },
@@ -29,7 +29,7 @@ type ProjectableRow = {
   promptOverride: string | null;
   role: AgentRole;
   status: AgentInstanceStatus;
-  template: { workerKind: string | null } | null;
+  template: { displayName: string; workerKind: string | null } | null;
   templateId: string | null;
   tickets: ReadonlyArray<{ id: string; status: TicketStatus; title: string }>;
 };
@@ -67,9 +67,15 @@ const projectMember = (row: ProjectableRow): TeamMemberView => {
     ) {
       throw new Error(`worker ${row.id} missing template_id or worker_kind`);
     }
-    return { ...base, role: "worker", templateId: row.templateId, workerKind };
+    return {
+      ...base,
+      role: "worker",
+      templateId: row.templateId,
+      templateName: row.template?.displayName ?? workerKind,
+      workerKind,
+    };
   }
-  return { ...base, role: row.role, templateId: null, workerKind: null };
+  return { ...base, role: row.role, templateId: null, templateName: null, workerKind: null };
 };
 
 const sortRoster = (members: ReadonlyArray<TeamMemberView>): Array<TeamMemberView> => {
@@ -173,7 +179,9 @@ const getMemberDetail = async (
     include: {
       _count: { select: { tickets: { where: { status: "done" } } } },
       company: { select: { name: true } },
-      template: { select: { description: true, systemPrompt: true, workerKind: true } },
+      template: {
+        select: { description: true, displayName: true, systemPrompt: true, workerKind: true },
+      },
       tickets: {
         select: { id: true, status: true, title: true },
         where: { status: { in: [...OPEN_TICKET_STATUSES] } },
@@ -235,11 +243,15 @@ const assignmentOptions = async (db: Database) => {
     listCompaniesOverview(db),
     db.agentTemplate.findMany({
       distinct: ["workerKind"],
-      orderBy: { workerKind: "asc" },
-      select: { workerKind: true },
+      orderBy: { displayName: "asc" },
+      select: { displayName: true, workerKind: true },
     }),
   ]);
-  return { companies, disciplines: rows.map((row) => row.workerKind) };
+  return {
+    companies,
+    disciplineNames: Object.fromEntries(rows.map((row) => [row.workerKind, row.displayName])),
+    disciplines: rows.map((row) => row.workerKind),
+  };
 };
 
 export {

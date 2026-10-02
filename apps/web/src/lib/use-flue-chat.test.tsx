@@ -23,7 +23,6 @@ describe("useFlueChat", () => {
     const { result } = renderHook(() =>
       useFlueChat({
         agent: "planner",
-        baseUrl: "/",
         companyId: "co_test",
       }),
     );
@@ -39,11 +38,10 @@ describe("useFlueChat", () => {
     renderHook(() =>
       useFlueChat({
         agent: "correspondent",
-        baseUrl: "https://agents.test/",
         companyId: "co_test",
       }),
     );
 
-    expect(capturedOptions?.url).toBe("https://agents.test/agents/correspondent/co_test");
+    expect(capturedOptions?.url).toBe("/agents/correspondent/co_test");
   });
 });

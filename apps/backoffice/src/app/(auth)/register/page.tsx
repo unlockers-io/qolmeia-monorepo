@@ -19,7 +19,7 @@ const RegistrationClosed = () => (
   <Card>
     <CardHeader>
       <CardTitle className="text-2xl">
-        <h2>Cadastro encerrado</h2>
+        <h1>Cadastro encerrado</h1>
       </CardTitle>
       <CardDescription>{SIGNUP_CLOSED_MESSAGE}</CardDescription>
     </CardHeader>

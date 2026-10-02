@@ -10,12 +10,12 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { AssetImage } from "@repo/ui/compositions/asset-image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { AssetImage } from "@/components/asset-image";
 import {
   BRAND_CATEGORIES,
   BRAND_CATEGORY_LABEL,
@@ -221,7 +221,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
               >
                 <AssetImage
                   alt={asset.name ?? "Referência de marca"}
-                  className="aspect-square w-full object-cover"
+                  className="aspect-square w-full object-contain p-3"
                   height={800}
                   src={asset.url}
                   width={800}

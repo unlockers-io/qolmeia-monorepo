@@ -7,18 +7,18 @@ afterEach(() => {
 });
 
 describe("createBrowserApi", () => {
-  it("prefixes agentsUrl + basePath and parses JSON on apiGet", async () => {
+  it("prefixes basePath and parses JSON on apiGet", async () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(Response.json({ ok: true })),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const api = createBrowserApi("https://w.example", "/api/backoffice");
+    const api = createBrowserApi("/api/backoffice");
     const out = await api.apiGet<{ ok: boolean }>("/actions");
 
     expect(out).toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://w.example/api/backoffice/actions",
+      "/api/backoffice/actions",
       expect.objectContaining({ credentials: "include", method: "GET" }),
     );
   });
@@ -29,7 +29,7 @@ describe("createBrowserApi", () => {
       vi.fn(() => Promise.resolve(new Response("nope", { status: 403 }))),
     );
 
-    const api = createBrowserApi("");
+    const api = createBrowserApi();
     await expect(api.apiGet("/x")).rejects.toMatchObject({ body: "nope", status: 403 });
     await expect(api.apiGet("/x")).rejects.toBeInstanceOf(ApiError);
   });
@@ -40,7 +40,7 @@ describe("createBrowserApi", () => {
       vi.fn(() => Promise.resolve(new Response(null, { status: 204 }))),
     );
 
-    const api = createBrowserApi("");
+    const api = createBrowserApi();
     expect(await api.apiSend("DELETE", "/x")).toBeNull();
   });
 
@@ -50,7 +50,7 @@ describe("createBrowserApi", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const api = createBrowserApi("", "/api/backoffice");
+    const api = createBrowserApi("/api/backoffice");
     await api.apiSend("POST", "/templates", { name: "x" });
 
     const init = fetchMock.mock.calls[0]?.[1];
@@ -64,7 +64,7 @@ describe("createBrowserApi", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const api = createBrowserApi("");
+    const api = createBrowserApi();
     await api.apiSendForm("/uploads", new FormData());
 
     const init = fetchMock.mock.calls[0]?.[1];

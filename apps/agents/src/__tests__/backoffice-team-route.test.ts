@@ -81,6 +81,18 @@ describe("/api/backoffice/teams/:companyId/members", () => {
       },
     );
     expect(res.status).toBe(200);
+    const body = await res.json<{
+      member: {
+        companyName: string;
+        createdAt: number;
+        promptOverride: string | null;
+        templateSystemPrompt: string;
+      };
+    }>();
+    expect(body.member.companyName).toBe("BT");
+    expect(typeof body.member.createdAt).toBe("number");
+    expect(body.member.promptOverride).toBe("novo prompt");
+    expect(body.member.templateSystemPrompt).toBe("TPL_PROMPT");
     const log = await env.DB.prepare(
       "SELECT actor_id, payload FROM activity_log WHERE ref_id = 'ai_bot_d' AND type = 'MEMBER_PROMPT_EDITED'",
     ).first<{ actor_id: string; payload: string }>();

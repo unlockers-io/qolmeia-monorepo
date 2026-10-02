@@ -8,21 +8,23 @@ import type {
 import type { TicketTransitionInput } from "@repo/worker-api/internal";
 
 import { logActivity } from "./actions";
+import { agentSummarySelect, toAgentSummary } from "./agent-summary";
 import { getTemplate } from "./templates";
 import { jsonRecordSchema, nullableJsonRecord, type Database } from "./types";
 
-const mapTicket = (row: {
-  agentInstanceId: string;
-  brief: string;
-  companyId: string;
-  id: string;
-  result: Prisma.JsonValue;
-  status: TicketStatus;
-  workflowId: string | null;
-}): Ticket => ({
+const ticketInclude = {
+  agentInstance: { select: agentSummarySelect },
+  company: { select: { name: true } },
+} as const satisfies Prisma.TicketInclude;
+
+type TicketRecord = Prisma.TicketGetPayload<{ include: typeof ticketInclude }>;
+
+const mapTicket = (row: TicketRecord): Ticket => ({
+  agent: toAgentSummary(row.agentInstance),
   agentInstanceId: row.agentInstanceId,
   brief: row.brief,
   companyId: row.companyId,
+  companyName: row.company.name,
   id: row.id,
   result: nullableJsonRecord(row.result),
   status: row.status,
@@ -30,7 +32,7 @@ const mapTicket = (row: {
 });
 
 const loadTicket = async (db: Database, id: string): Promise<Ticket | null> => {
-  const row = await db.ticket.findUnique({ where: { id } });
+  const row = await db.ticket.findUnique({ include: ticketInclude, where: { id } });
   return row ? mapTicket(row) : null;
 };
 
@@ -39,14 +41,13 @@ const listTickets = async (
   options: { companyId?: string; limit?: number; status?: TicketStatus },
 ): Promise<ReadonlyArray<TicketListRow>> => {
   const rows = await db.ticket.findMany({
-    include: { company: { select: { name: true } } },
+    include: ticketInclude,
     orderBy: { createdAt: "desc" },
     take: Math.min(options.limit ?? 50, 200),
     where: { companyId: options.companyId, status: options.status },
   });
   return rows.map((row) =>
     Object.assign(mapTicket(row), {
-      companyName: row.company.name,
       createdAt: row.createdAt.getTime(),
       origin: row.origin,
       title: row.title,
@@ -111,7 +112,6 @@ const createDelegatedTicket = async (
     brief: string;
     companyId: string;
     ticketId: string;
-    workerKind: string;
   },
 ): Promise<void> => {
   await db.ticket.create({
@@ -121,7 +121,7 @@ const createDelegatedTicket = async (
       companyId: input.companyId,
       id: input.ticketId,
       origin: "delegation",
-      title: `${input.workerKind}: ${input.brief.slice(0, 80)}`,
+      title: input.brief.slice(0, 80),
     },
   });
 };

@@ -1,9 +1,10 @@
 # Deploying Qolmeia to production
 
-The single source of truth for taking Qolmeia live. Deploys are **manual** today
-(no CD pipeline). The dev `.localhost` / portless proxy is **dev-only**; prod
-uses real subdomains of one parent and a cross-subdomain session cookie
-(ADR 0008).
+The single source of truth for taking Qolmeia live. Merging to `main` deploys the
+api (Railway) and the three Next apps (Vercel); the Worker is deployed by hand
+(§4e). The dev `.localhost` / portless proxy is **dev-only**; prod
+uses real subdomains, and each Next app proxies auth and the Worker through its
+own origin, so every session cookie is host-only on its app.
 
 ## 1. The stack at a glance
 
@@ -36,19 +37,19 @@ memory in **Vectorize**.
 See [`docs/agent-tools.md`](./agent-tools.md) for the full agent-integration
 catalog (current tools and which agent uses each).
 
-## 3. Domains + the cross-subdomain cookie (ADR 0008)
+## 3. Domains + same-origin auth
 
 Everything lives under **`qolmeia.com`**: `www.` (landing), `app.` (web),
 `admin.` (backoffice), `api.` (the Railway api service, which is where Better
-Auth runs), `agents.` (the Cloudflare Worker). The session is one cookie on the
-`.qolmeia.com` parent so every subdomain sends it:
+Auth runs), `agents.` (the Cloudflare Worker). The browser only talks to the
+app it is on:
 
-- `apps/api` sets `COOKIE_DOMAIN=.qolmeia.com` → Better Auth writes the cookie
-  on the parent (the `crossSubDomainCookies` config, gated on that env).
-- `CORS_ORIGINS` (auth) and `CLIENT_ORIGINS` (Worker) list the real app
-  subdomains; browser calls use `credentials: include`.
-- The Next apps call auth and the Worker **directly** at their subdomains
-  (`NEXT_PUBLIC_AUTH_URL`, `NEXT_PUBLIC_AGENTS_URL`); no proxy hop.
+- Each Next app rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` and its
+  Worker routes to `AGENTS_INTERNAL_URL` (`next.config.ts`).
+- Better Auth sets a host-only session cookie, so `app.` and `admin.` each hold
+  their own session.
+- `TRUSTED_ORIGINS` on `apps/api` lists the app origins, which Better Auth
+  checks against the forwarded `Origin` header.
 
 ## 4. Cloudflare Worker: `apps/agents`
 
@@ -60,7 +61,8 @@ Auth runs), `agents.` (the Cloudflare Worker). The session is one cookie on the
 ```bash
 wrangler r2 bucket create qolmeia-assets
 wrangler kv namespace create qolmeia-sessions           # → copy id
-wrangler vectorize create qolmeia-memory --dimensions=1024 --metric=cosine
+wrangler vectorize create qolmeia-memory-qwen3 --dimensions=1024 --metric=cosine
+wrangler vectorize create-metadata-index qolmeia-memory-qwen3 --property-name=agentInstanceId --type=string
 ```
 
 In the Cloudflare dashboard: create an **AI Gateway** named `qolmeia`, and note
@@ -68,27 +70,21 @@ your **account id** (`wrangler whoami`).
 
 ### 4b. Fill `wrangler.jsonc`
 
-Replace every `PLACEHOLDER`:
-
-- the KV `id` (`SESSIONS`)
-- `AI_GATEWAY_ACCOUNT_ID` (your account id)
-
-Update the `vars` for prod:
+`wrangler.jsonc` already holds the production values. On a new account, replace
+the KV `id` (`SESSIONS`) and `AI_GATEWAY_ACCOUNT_ID`. The prod `vars`:
 
 - `WORKER_PUBLIC_URL=https://agents.qolmeia.com`
 - `AUTH_SERVICE_URL=https://api.qolmeia.com` (var name kept; auth is one feature of the api service)
+- `API_INTERNAL_URL=https://api.qolmeia.com` (every Postgres read and write goes through `/api/internal/*`)
 - `CLIENT_ORIGINS=https://app.qolmeia.com,https://admin.qolmeia.com`
 
-Uncomment the **prod-only** block at the bottom of `wrangler.jsonc` (custom
-domain route + the `ai` and `vectorize` bindings). Without `ai`+`vectorize` the
-Worker still runs, but agent **Memory** degrades to an in-process store that's
-lost on DO eviction.
+The custom-domain route and the `ai` and `vectorize` bindings are part of the
+production config; local Vite and Vitest runtimes drop the last two.
 
 ### 4c. Set secrets
 
 ```bash
 wrangler secret put OPENROUTER_API_KEY
-wrangler secret put DATABASE_URL            # shared Postgres connection string
 wrangler secret put ASSETS_SIGNING_KEY      # openssl rand -hex 32
 wrangler secret put INTERNAL_SHARED_SECRET  # MUST match apps/api
 wrangler secret put EXA_API_KEY             # optional (webSearch skill)
@@ -96,6 +92,10 @@ wrangler secret put FIRECRAWL_API_KEY       # optional (fetchUrl skill)
 ```
 
 ### 4d. Initialize Postgres
+
+For an existing deployment, follow [the model upgrade and memory cutover](./model-upgrade.md)
+before deploying this Worker. Backfill the new Qwen3 index first; upgrade template
+models only after the new Worker is live. The old memory index is retained.
 
 Push the shared Prisma schema and seed the default template/skill catalog before
 deploying the Worker:
@@ -108,8 +108,13 @@ DATABASE_URL=postgresql://... pnpm --filter=@repo/db db:seed
 ### 4e. Deploy
 
 ```bash
-pnpm deploy   # = wrangler deploy
+pnpm run deploy   # vite build && wrangler deploy
 ```
+
+Use `pnpm run deploy`: bare `pnpm deploy` is pnpm's own package-copy command.
+Merges do not deploy the Worker, so run this after merging changes to
+`apps/agents` or the packages it bundles, and compare
+`wrangler deployments list` with `git log -- apps/agents` when in doubt.
 
 The Durable Object + Workflow class migrations (`v1`–`v3` in `wrangler.jsonc`)
 apply automatically on first deploy. If you didn't put the custom-domain route
@@ -118,9 +123,11 @@ in the config, map `agents.qolmeia.com` to the Worker in the dashboard
 
 ## 5. Railway: `apps/api` + Postgres
 
-Build from the repo root with pnpm (it's a workspace). Build: the monorepo
-`pnpm build` (or filtered `--filter=api`); start: `node dist/index.mjs`
-(listens on `PORT`, default 4000). Create a Postgres service and run the schema:
+The `api` service deploys from GitHub on every push to `main`. Build from the
+repo root with pnpm (it's a workspace). Build: the monorepo `pnpm build` (or
+filtered `--filter=api`); start: `node dist/index.mjs` (listens on `PORT`,
+default 4000). Deploys never touch the schema: push schema changes before merging
+the code that needs them. Create a Postgres service and run the schema:
 
 ```bash
 pnpm --filter=@repo/db db:push   # against the prod DATABASE_URL
@@ -134,7 +141,6 @@ Environment:
 | `DATABASE_URL`           | Railway Postgres connection string                      |
 | `BETTER_AUTH_SECRET`     | `openssl rand -base64 48` (shared with the Next apps)   |
 | `CORS_ORIGINS`           | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
-| `COOKIE_DOMAIN`          | `.qolmeia.com`                                          |
 | `AUTH_ALLOWED_HOSTS`     | `qolmeia.com,*.qolmeia.com`                             |
 | `TRUSTED_ORIGINS`        | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
 | `AGENTS_INTERNAL_URL`    | `https://agents.qolmeia.com` (org-create relay target)  |
@@ -146,7 +152,9 @@ Environment:
 
 ## 6. Vercel: `apps/web`, `apps/backoffice`, `apps/landing`
 
-Three projects, each with **Root Directory** set to the app folder. Leave the
+Three projects, each with **Root Directory** set to the app folder. The Git
+integration deploys production on every push to `main` and a preview for every
+pull request; previews lack the internal URLs below, so their login does not work. Leave the
 build and install commands empty: Vercel's monorepo detection installs from the
 repo root (pnpm workspaces) and runs `next build` in the root directory. Node
 24.x, framework preset Next.js.
@@ -164,30 +172,26 @@ needs only two vars:
 | `NEXT_PUBLIC_LANDING_URL` | `https://www.qolmeia.com` |
 
 `apps/web` and `apps/backoffice` both construct their own Better Auth instance
-in `proxy.ts`, so they need the full cookie configuration, not just the first
-four rows:
+in `proxy.ts` and proxy auth and the Worker through their own origin:
 
-| Var                      | Value                                                                  |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET`     | same secret as `apps/api`; a mismatch invalidates every session cookie |
-| `DATABASE_URL`           | Railway Postgres, `sslmode=require` (see the TLS note below)           |
-| `NEXT_PUBLIC_AUTH_URL`   | `https://api.qolmeia.com`                                              |
-| `NEXT_PUBLIC_AGENTS_URL` | `https://agents.qolmeia.com`                                           |
-| `WEB_APP_URL`            | `https://app.qolmeia.com`                                              |
-| `COOKIE_DOMAIN`          | `.qolmeia.com`                                                         |
-| `AUTH_ALLOWED_HOSTS`     | `qolmeia.com,*.qolmeia.com`                                            |
-| `TRUSTED_ORIGINS`        | `https://app.qolmeia.com,https://admin.qolmeia.com`                    |
+| Var                         | Value                                                                  |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`        | same secret as `apps/api`; a mismatch invalidates every session cookie |
+| `DATABASE_URL`              | Railway Postgres, `sslmode=require` (see the TLS note below)           |
+| `AUTH_SERVICE_INTERNAL_URL` | `https://api.qolmeia.com`                                              |
+| `AGENTS_INTERNAL_URL`       | `https://agents.qolmeia.com`                                           |
+| `WEB_APP_URL`               | `https://app.qolmeia.com`                                              |
+| `AUTH_ALLOWED_HOSTS`        | `qolmeia.com,*.qolmeia.com`                                            |
+| `TRUSTED_ORIGINS`           | `https://app.qolmeia.com,https://admin.qolmeia.com`                    |
 
-The last four are load-bearing and easy to miss:
+Two are load-bearing and easy to miss:
 
+- **`AUTH_SERVICE_INTERNAL_URL` and `AGENTS_INTERNAL_URL` are read by
+  `next build`**, not at runtime. Unset at build time, the rewrites point at
+  `127.0.0.1` and every sign-in 404s. Redeploy after changing them.
 - **`WEB_APP_URL` is the only input to `useSecureCookies`**
   (`packages/auth/src/env-config.ts`). Unset, or not starting with `https://`,
-  and Better Auth issues the cross-subdomain `.qolmeia.com` session cookie
-  **without the `Secure` flag**.
-- **`COOKIE_DOMAIN` belongs on the Vercel projects too**, not only on Railway.
-  `nextCookies()` can write a cookie from a Next server action; without the
-  domain that write lands a host-only cookie on `app.qolmeia.com` which shadows
-  the parent-domain one.
+  and Better Auth issues the session cookie **without the `Secure` flag**.
 
 **Database TLS.** Railway exposes two public endpoints. The **Postgres** one
 answers the Postgres `SSLRequest` with `S` (TLS available); the **PgBouncer**
@@ -204,6 +208,14 @@ tab, or an A record to `216.150.1.1` / `216.150.16.1`.
 
 ## 7. Order of operations
 
+For an existing installation, merging deploys the api and the Next apps together;
+deploy the Worker by hand afterwards. Keep existing response fields compatible
+throughout the rollout. Coverage
+options retain string IDs in `disciplines`; the optional `disciplineNames` map
+adds display labels without breaking older Workers or backoffice clients.
+
+For the initial setup:
+
 1. **Cloudflare** first; you need `agents.qolmeia.com` for `AGENTS_INTERNAL_URL`.
 2. **Railway**: auth + Postgres; gives you `api.qolmeia.com`.
 3. **Vercel**: the two Next apps, pointed at both.
@@ -214,7 +226,7 @@ until both the Worker and `apps/api` are redeployed.
 
 ## 8. Smoke test after deploy
 
-1. Sign up / magic-link on `app.qolmeia.com` → cookie set on `.qolmeia.com`.
+1. Sign in on `app.qolmeia.com` → session cookie set on `app.qolmeia.com`.
 2. Client onboarding chat (Planner) → confirm a team.
 3. Customer chat → Correspondent delegates → a Worker job runs.
 4. A gated action lands on `admin.qolmeia.com` `/approvals` → decide it.
@@ -222,7 +234,7 @@ until both the Worker and `apps/api` are redeployed.
 
 ## 9. Still open before "done"
 
-- No CD pipeline: these three deploys are manual.
+- The Worker has no CD: deploy it by hand after merging (§4e).
 - An **operator directory** (listing OWNER/STAFF users) doesn't exist yet, so
   the backoffice ships **self-service** coverage; an admin-assigns-others
   surface needs that directory first (ADR 0005 / 0008).

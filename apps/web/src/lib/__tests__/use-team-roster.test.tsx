@@ -34,6 +34,7 @@ const initialMember: TeamMemberView = {
   role: "planner",
   status: "available",
   templateId: null,
+  templateName: null,
   workerKind: null,
 };
 

@@ -11,6 +11,8 @@ import {
 } from "@repo/ui/components/dialog";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
+import { DialogCloseButton } from "@repo/ui/compositions/dialog-close-button";
+import { describeRequestError } from "@repo/worker-api";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -42,7 +44,7 @@ const HireDialog = ({ onClose, onHired, open, template }: HireDialogProps) => {
       onClose();
       setName("");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao contratar.");
+      toast.error(describeRequestError(error, "Não foi possível contratar. Tente de novo."));
     }
     setBusy(false);
   };
@@ -56,12 +58,13 @@ const HireDialog = ({ onClose, onHired, open, template }: HireDialogProps) => {
       }}
       open={open}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" showCloseButton={false}>
+        <DialogCloseButton />
         <DialogHeader>
           <DialogTitle>Contratar {template?.displayName ?? ""}</DialogTitle>
           <DialogDescription>
-            Você pode dar um nome próprio a este agente. Se deixar em branco, usamos o nome do
-            template (com #2, #3, … se já existir).
+            Dê um nome próprio a este agente, se quiser. Em branco, ele se chama{" "}
+            {template?.displayName ?? "pelo nome da função"}.
           </DialogDescription>
         </DialogHeader>
         <Field>

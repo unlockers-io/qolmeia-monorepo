@@ -4,6 +4,8 @@ import { Body, Container, Head, Html, Link, Preview, Section, Tailwind, Text } f
 import { QolmeiaLogo } from "../components/qolmeia-logo";
 import { tailwindConfig } from "../styles/theme";
 
+const LOCALE = "pt-BR";
+
 type BaseLayoutProps = {
   children: React.ReactNode;
   footerText?: string;
@@ -13,14 +15,14 @@ type BaseLayoutProps = {
 
 const BaseLayout = ({
   children,
-  footerText = "You're receiving this email because you have an account with Qolmeia.",
+  footerText = "Você está recebendo este e-mail porque tem uma conta na Qolmeia.",
   preview,
   unsubscribeUrl,
 }: BaseLayoutProps) => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <Html>
+    <Html lang={LOCALE}>
       <Tailwind config={tailwindConfig}>
         <Head>
           <meta content="width=device-width, initial-scale=1" name="viewport" />
@@ -29,11 +31,11 @@ const BaseLayout = ({
           <meta content="light" name="supported-color-schemes" />
         </Head>
         <Preview>{preview}</Preview>
-        <Body className="m-0 bg-muted p-4 font-sans">
+        <Body className="m-0 bg-muted p-4 font-sans" lang={LOCALE}>
           <Container className="mx-auto w-full max-w-150 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-            <Section className="bg-primary px-6 py-8 text-center">
+            <Section className="border-b border-border bg-card px-6 py-6 text-center">
               <Link className="inline-block no-underline" href="https://qolmeia.com">
-                <QolmeiaLogo height={28} width={104} />
+                <QolmeiaLogo />
               </Link>
             </Section>
 
@@ -49,7 +51,7 @@ const BaseLayout = ({
                   className="text-sm font-semibold text-foreground no-underline"
                   href="https://qolmeia.com"
                 >
-                  Visit Qolmeia
+                  Visite a Qolmeia
                 </Link>
                 {unsubscribeUrl !== undefined && unsubscribeUrl !== "" && (
                   <>
@@ -58,14 +60,14 @@ const BaseLayout = ({
                       className="text-sm font-semibold text-muted-foreground no-underline"
                       href={unsubscribeUrl}
                     >
-                      Unsubscribe
+                      Cancelar inscrição
                     </Link>
                   </>
                 )}
               </Text>
 
               <Text className="m-0 text-xs text-muted-foreground">
-                © {currentYear} Qolmeia. All rights reserved.
+                © {currentYear} Qolmeia. Todos os direitos reservados.
               </Text>
             </Section>
           </Container>

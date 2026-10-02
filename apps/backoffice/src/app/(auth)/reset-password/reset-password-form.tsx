@@ -1,6 +1,6 @@
 "use client";
 
-import { authClient } from "@repo/app-shell/auth-client";
+import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -38,7 +38,7 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
           token,
         });
         if (error) {
-          toast.error(error.message ?? "Não foi possível redefinir a senha.");
+          toast.error(authErrorMessage(error, "Não foi possível redefinir a senha."));
           return;
         }
       } catch {
@@ -61,7 +61,7 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">
-          <h2>Redefinir senha</h2>
+          <h1>Redefinir senha</h1>
         </CardTitle>
         <CardDescription>Crie uma nova senha para sua conta.</CardDescription>
       </CardHeader>

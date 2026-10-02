@@ -2,6 +2,7 @@ import type {
   ActionDetailResponse,
   ActionsResponse,
   ActivityResponse,
+  CompanyRoster,
   CoverageResponse,
   SkillCatalogResponse,
   TemplateInput,
@@ -16,7 +17,7 @@ import { z } from "zod";
 
 import { ACTIVITY_CATEGORIES, listActivity } from "#/activity/log";
 import { getAction, listActions, listActionsForTicket, listPendingActions } from "#/db/action";
-import { listCoverage, listDisciplines, setCoverage } from "#/db/assignment";
+import { getDisciplineOptions, listCoverage, setCoverage } from "#/db/assignment";
 import { getDb } from "#/db/client";
 import { listCompaniesOverview } from "#/db/schema";
 import {
@@ -27,8 +28,10 @@ import {
   updateTemplate,
 } from "#/db/template";
 import { listTickets, loadTicket } from "#/db/ticket";
+import { decisionEventType } from "#/jobs/decision-event";
 import { requireStaffSession, type ValidatedSession } from "#/lib/auth";
 import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
+import { canRequestChanges } from "#/lib/revisions";
 import { isKnownSkill, listSkillCatalog } from "#/skills/registry";
 import {
   backofficeTeamMemberPatchSchema,
@@ -140,6 +143,12 @@ backofficeRoutes.post("/actions/:id/decide", async (c) => {
   if (action.status !== "pending") {
     return c.json({ error: `action already ${action.status}` }, 409);
   }
+  if (
+    parsed.data.decision === "changes_requested" &&
+    !(await canRequestChanges(db, action.ticketId))
+  ) {
+    return c.json({ error: "revision limit reached" }, 409);
+  }
 
   const ticket = await loadTicket(db, action.ticketId);
   if (ticket === null || ticket.workflowId === null || ticket.workflowId === "") {
@@ -153,7 +162,7 @@ backofficeRoutes.post("/actions/:id/decide", async (c) => {
       decision: parsed.data.decision,
       feedback: parsed.data.feedback,
     },
-    type: `decision:${id}`,
+    type: decisionEventType(id),
   });
 
   return c.json({ ok: true });
@@ -190,9 +199,17 @@ backofficeRoutes.get("/actions/:id", async (c) => {
   if (!action) {
     return c.text("Not found", 404);
   }
-  const ticket = await loadTicket(db, action.ticketId);
+  const [ticket, changesAllowed] = await Promise.all([
+    loadTicket(db, action.ticketId),
+    canRequestChanges(db, action.ticketId),
+  ]);
   const ageSeconds = Math.floor((Date.now() - action.createdAt) / 1000);
-  const body: ActionDetailResponse = { action, ageSeconds, ticket };
+  const body: ActionDetailResponse = {
+    action,
+    ageSeconds,
+    canRequestChanges: changesAllowed,
+    ticket,
+  };
   return c.json(body);
 });
 
@@ -203,7 +220,7 @@ backofficeRoutes.get("/companies", async (c) => {
     db,
     companies.map((company) => company.id),
   );
-  const withRosters = companies.map((company) => ({
+  const withRosters = companies.map((company): CompanyRoster => ({
     briefPercent: company.briefPercent,
     id: company.id,
     members: rosters.get(company.id) ?? [],
@@ -215,16 +232,16 @@ backofficeRoutes.get("/companies", async (c) => {
 
 backofficeRoutes.get("/assignments/me", async (c) => {
   const db = getDb(c.env);
-  const [coverage, disciplines, companies] = await Promise.all([
+  const [coverage, disciplineOptions, companies] = await Promise.all([
     listCoverage(db, c.get("session").userId),
-    listDisciplines(db),
+    getDisciplineOptions(db),
     listCompaniesOverview(db),
   ]);
   const body: CoverageResponse = {
     assigned: coverage,
     options: {
       companies: companies.map((co) => ({ id: co.id, name: co.name })),
-      disciplines,
+      ...disciplineOptions,
     },
   };
   return c.json(body);
@@ -265,24 +282,27 @@ backofficeRoutes.patch("/teams/:companyId/members/:id", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid body" }, 400);
   }
+  const db = getDb(c.env);
   try {
-    if (parsed.data.status !== undefined) {
-      const member = await setTeamMemberStatus(c.env, getDb(c.env), {
-        actorId: c.get("session").userId,
-        agentInstanceId: id,
-        companyId,
-        status: parsed.data.status,
-      });
-      return c.json({ member });
+    await (parsed.data.status === undefined
+      ? updateTeamMember(c.env, db, {
+          agentInstanceId: id,
+          companyId,
+          displayName: parsed.data.displayName,
+          editedBy: "operator",
+          operatorId: c.get("session").userId,
+          promptOverride: parsed.data.promptOverride,
+        })
+      : setTeamMemberStatus(c.env, db, {
+          actorId: c.get("session").userId,
+          agentInstanceId: id,
+          companyId,
+          status: parsed.data.status,
+        }));
+    const member = await getMemberDetail(db, companyId, id);
+    if (!member) {
+      return c.json({ error: "not found" }, 404);
     }
-    const member = await updateTeamMember(c.env, getDb(c.env), {
-      agentInstanceId: id,
-      companyId,
-      displayName: parsed.data.displayName,
-      editedBy: "operator",
-      operatorId: c.get("session").userId,
-      promptOverride: parsed.data.promptOverride,
-    });
     return c.json({ member });
   } catch (error) {
     if (error instanceof TeamDomainError) {

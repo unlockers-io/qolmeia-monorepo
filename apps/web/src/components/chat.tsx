@@ -10,24 +10,24 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "@repo/ui/components/message-scroller";
-import { Spinner } from "@repo/ui/components/spinner";
+import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
+import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { useIsHydrated } from "@repo/ui/hooks/use-is-hydrated";
+import { agentAvatarClass } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import type { FileUIPart } from "ai";
-import { ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
+import { ArrowDown, ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 
-import { AssetImage } from "@/components/asset-image";
 import { ChatComposer } from "@/components/chat-composer";
-import { MarkdownResponse } from "@/components/markdown-response";
 import type { ChatMessage, UseFlueChatResult } from "@/lib/use-flue-chat";
 import { useFlueChat } from "@/lib/use-flue-chat";
 
 type ChatProps = {
   agent?: "correspondent" | "planner";
-  agentsUrl: string;
   companyId: string;
   sessionToken: string;
 };
@@ -86,10 +86,10 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
   return (
     <div
       className={cn(
-        "w-fit max-w-full min-w-0 rounded-2xl px-4 py-2 text-sm",
+        "w-fit min-w-0 rounded-2xl px-4 py-2 text-sm",
         isUser
-          ? "ml-auto rounded-br-sm bg-primary text-primary-foreground"
-          : "rounded-bl-sm border border-border bg-card text-foreground",
+          ? "ml-auto max-w-full rounded-br-sm bg-primary text-primary-foreground"
+          : "max-w-prose rounded-bl-sm border border-border bg-card text-foreground",
       )}
     >
       {message.parts.map((part, index) => {
@@ -106,7 +106,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
               className="flex items-center gap-1.5 py-0.5 text-xs text-muted-foreground"
               key={partKey}
             >
-              <Spinner className="size-3" />
+              <LoadingSpinner className="size-3" />
               {toolActivityLabel(part.toolName)}
             </span>
           );
@@ -184,9 +184,9 @@ const ChatEmptyState = ({ description, icon, title }: ChatEmptyStateProps) => (
 );
 
 const ChatSkeleton = () => (
-  <div className="flex h-chat flex-col bg-background">
+  <div className="flex min-h-0 flex-1 flex-col bg-background">
     <div className="flex flex-1 items-center justify-center">
-      <Spinner className="size-5 text-muted-foreground" />
+      <LoadingSpinner className="size-5 text-muted-foreground" />
     </div>
     <div className="flex-none border-t border-border bg-card px-6 py-4">
       <div className="h-16 rounded-xl border border-input bg-background" />
@@ -194,14 +194,24 @@ const ChatSkeleton = () => (
   </div>
 );
 
+const AssistantAvatar = ({ agent }: { agent: "correspondent" | "planner" }) => (
+  <div
+    aria-hidden
+    className={cn(
+      "flex size-7 shrink-0 items-center justify-center self-end rounded-lg text-xs font-bold text-white",
+      agentAvatarClass(agent, null),
+    )}
+  >
+    {agent === "planner" ? "P" : "C"}
+  </div>
+);
+
 const PlannerGreeting = ({ scrollAnchor }: { scrollAnchor: boolean }) => (
   <MessageScrollerItem messageId="planner-greeting" scrollAnchor={scrollAnchor}>
     <Message align="start">
-      <div className="flex size-7 shrink-0 items-center justify-center self-end rounded-lg bg-avatar-1 text-xs font-bold text-white">
-        C
-      </div>
+      <AssistantAvatar agent="planner" />
       <MessageContent>
-        <div className="w-fit max-w-full min-w-0 rounded-2xl rounded-bl-sm border border-border bg-card px-4 py-2 text-sm text-foreground">
+        <div className="w-fit max-w-prose min-w-0 rounded-2xl rounded-bl-sm border border-border bg-card px-4 py-2 text-sm text-foreground">
           <MarkdownResponse>{PLANNER_GREETING}</MarkdownResponse>
         </div>
       </MessageContent>
@@ -244,7 +254,7 @@ const ChatView = ({
   }
 
   return (
-    <div className="flex h-chat flex-col bg-background">
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
       {isCorrespondent ? (
         <header className="flex h-13.5 flex-none items-center gap-3 border-b border-border bg-card px-6">
           <span
@@ -254,16 +264,22 @@ const ChatView = ({
             C
           </span>
           <div className="min-w-0">
-            <div className="font-display text-sm font-bold tracking-tight text-foreground">
+            <h1 className="font-display text-sm font-bold tracking-tight text-foreground">
               Correspondente
-            </div>
-            <div className="text-xs text-muted-foreground">Seu ponto de contato</div>
+            </h1>
+            <p className="text-xs text-muted-foreground">Seu ponto de contato</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <StatusPill label="Disponível" tone="success" />
+            <StatusPill
+              label={isThinking ? "Respondendo…" : "Disponível"}
+              pulse={isThinking}
+              tone={isThinking ? "info" : "success"}
+            />
           </div>
         </header>
-      ) : null}
+      ) : (
+        <h1 className="sr-only">Conversa com o Planejador</h1>
+      )}
 
       <MessageScrollerProvider autoScroll defaultScrollPosition="end">
         <MessageScroller className="flex-1">
@@ -284,11 +300,7 @@ const ChatView = ({
                       scrollAnchor={index === lastIndex}
                     >
                       <Message align={message.role === "user" ? "end" : "start"}>
-                        {message.role === "user" ? null : (
-                          <div className="flex size-7 shrink-0 items-center justify-center self-end rounded-lg bg-avatar-1 text-xs font-bold text-white">
-                            C
-                          </div>
-                        )}
+                        {message.role === "user" ? null : <AssistantAvatar agent={agentName} />}
                         <MessageContent>
                           <MessageBubble message={message} />
                         </MessageContent>
@@ -306,7 +318,7 @@ const ChatView = ({
 
               {isThinking ? (
                 <Marker className="pl-9">
-                  <Spinner className="size-4" />
+                  <LoadingSpinner className="size-4" />
                   <MarkerContent>Um agente está respondendo…</MarkerContent>
                 </Marker>
               ) : null}
@@ -323,7 +335,10 @@ const ChatView = ({
               ) : null}
             </MessageScrollerContent>
           </MessageScrollerViewport>
-          <MessageScrollerButton />
+          <MessageScrollerButton>
+            <ArrowDown aria-hidden />
+            <span className="sr-only">Ir para a mensagem mais recente</span>
+          </MessageScrollerButton>
         </MessageScroller>
       </MessageScrollerProvider>
 
@@ -332,10 +347,9 @@ const ChatView = ({
   );
 };
 
-const ChatClient = ({ agent = "correspondent", agentsUrl, companyId, sessionToken }: ChatProps) => {
+const ChatClient = ({ agent = "correspondent", companyId, sessionToken }: ChatProps) => {
   const chat = useFlueChat({
     agent,
-    baseUrl: agentsUrl,
     companyId,
     sessionToken,
   });

@@ -177,7 +177,7 @@ reject   -> ticket rejected, customer notified via chat
 
 Every delegation spawns a Cloudflare Workflow: generate the deliverable (LLM + skills, up to 5 steps), then check the template's policy for the action type.
 
-- `require-approval` (the default and the only policy shipped templates use): propose the action, set the ticket to `awaiting_approval`, and pause on `waitForEvent("decision:<id>")` for up to 60 days.
+- `require-approval` (the default and the only policy shipped templates use): propose the action, set the ticket to `awaiting_approval`, and pause on `waitForEvent("decision-<id>")` for up to 60 days.
 - `approved`: execute, mark the ticket done, push the result into the customer chat.
 - `changes_requested`: loop back with feedback, at most 3 revision rounds.
 - `rejected`: end the ticket.

@@ -1,5 +1,5 @@
 import { createBrowserApi } from "@repo/worker-api";
 
-const { apiSendForm } = createBrowserApi(process.env.NEXT_PUBLIC_AGENTS_URL ?? "");
+const { apiSendForm } = createBrowserApi();
 
 export { apiSendForm };

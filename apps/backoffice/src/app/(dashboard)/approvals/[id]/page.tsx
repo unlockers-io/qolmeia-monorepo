@@ -1,25 +1,25 @@
-import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import type { ActionDetailResponse } from "@repo/worker-api/contracts";
+import type {
+  Action,
+  ActionDetailResponse,
+  ActionStatus,
+  TicketDetailResponse,
+} from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createElement, Suspense } from "react";
 
 import { getActionRenderer } from "@/components/action-renderers";
+import { ProposalCard } from "@/components/action-renderers/proposal-card";
 import { BackLink } from "@/components/back-link";
 import { StatusPill } from "@/components/status-pill";
-import { agentAvatarClass, agentInitials } from "@/lib/agent-avatar";
 import { ApiError } from "@/lib/api-client";
 import { apiGetServer } from "@/lib/api-server";
-import {
-  actionTypeLabel,
-  formatDateTime,
-  formatDurationSeconds,
-  formatRelative,
-} from "@/lib/format";
+import { actionTypeLabel, formatRelative } from "@/lib/format";
 
+import { ApprovalContext } from "./approval-context";
 import { ApprovalDecision } from "./approval-decision";
+import { PreviousRound } from "./previous-round";
 
 export const metadata: Metadata = { title: "Revisar aprovação" };
 
@@ -36,6 +36,23 @@ const POLICY_COPY = {
   require_approval: "Sob aprovação",
 } satisfies Record<string, string>;
 
+const TITLE = {
+  approved: "Ação aprovada",
+  changes_requested: "Ajustes pedidos",
+  executed: "Ação executada",
+  pending: "Revisar ação",
+  rejected: "Ação rejeitada",
+} satisfies Record<ActionStatus, string>;
+
+const loadTicketActions = async (ticketId: string): Promise<ReadonlyArray<Action>> => {
+  try {
+    const detail = await apiGetServer<TicketDetailResponse>(`/tickets/${ticketId}`);
+    return detail.actions;
+  } catch {
+    return [];
+  }
+};
+
 const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
   const { id } = await params;
 
@@ -51,11 +68,12 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
     notFound();
   }
 
-  const { action, ageSeconds, ticket } = detail;
-  const summary = typeof action.proposed.summary === "string" ? action.proposed.summary : null;
+  const { action, ageSeconds, canRequestChanges, ticket } = detail;
   const policyCopy = POLICY_COPY[action.policy];
   const TypedRenderer = getActionRenderer(action.actionType);
-  const waited = formatDurationSeconds(Math.max(0, ageSeconds));
+  const rounds = ticket === null ? [] : await loadTicketActions(ticket.id);
+  const roundIndex = rounds.findIndex((round) => round.id === action.id);
+  const previousRound = roundIndex > 0 ? rounds[roundIndex - 1] : undefined;
 
   return (
     <div className="flex flex-col gap-5">
@@ -63,15 +81,16 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-(length:--text-heading)">
-              Revisar ação
+              {TITLE[action.status]}
             </h1>
             <span className="font-mono text-xs text-muted-foreground">{action.id}</span>
           </div>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">
               {actionTypeLabel(action.actionType)}
-            </span>{" "}
-            · {policyCopy} · {formatRelative(action.createdAt)}
+            </span>
+            {rounds.length > 1 && roundIndex !== -1 ? ` · Rodada ${roundIndex + 1}` : ""} ·{" "}
+            {policyCopy} · {formatRelative(action.createdAt)}
           </p>
         </div>
         <StatusPill status={action.status} />
@@ -79,86 +98,23 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
 
       <div className="grid items-start gap-4 lg:grid-cols-approval">
         <div className="flex flex-col gap-4">
+          <PreviousRound round={previousRound} roundIndex={roundIndex} />
           {TypedRenderer ? (
-            createElement(TypedRenderer, { proposed: action.proposed })
+            createElement(TypedRenderer, { agent: action.agent, proposed: action.proposed })
           ) : (
-            <Card className="gap-4 p-5">
-              <span className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-                Proposta
-              </span>
-              {summary !== null && summary !== "" && (
-                <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-                  {summary}
-                </p>
-              )}
-              <details className="text-xs text-muted-foreground">
-                <summary className="cursor-pointer text-sm font-medium text-foreground/80 transition-colors select-none hover:text-foreground">
-                  Ver proposta completa (JSON)
-                </summary>
-                <pre className="mt-3 max-h-96 overflow-auto rounded-lg border border-border bg-secondary/40 p-3 text-xs">
-                  {JSON.stringify(action.proposed, null, 2)}
-                </pre>
-              </details>
-            </Card>
+            <ProposalCard proposed={action.proposed} />
           )}
         </div>
 
-        <div className="flex flex-col gap-4">
-          <Card className="gap-3 p-5">
-            <span className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
-              Contexto
-            </span>
-            <dl className="flex flex-col gap-2.5 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Empresa</dt>
-                <dd className="truncate font-medium text-foreground">{action.companyName}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Agente</dt>
-                <dd className="flex min-w-0 items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className={`flex size-5 flex-none items-center justify-center rounded-lg text-xs font-bold text-white ${agentAvatarClass(action.agent.role, action.agent.workerKind)}`}
-                  >
-                    {agentInitials(action.agent.name)}
-                  </span>
-                  <span className="truncate font-medium text-foreground">{action.agent.name}</span>
-                </dd>
-              </div>
-              {ticket && (
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-muted-foreground">Ticket</dt>
-                  <dd>
-                    <Link
-                      className="font-mono text-xs text-primary transition-colors hover:text-primary/80"
-                      href={`/tickets/${ticket.id}`}
-                    >
-                      {ticket.id}
-                    </Link>
-                  </dd>
-                </div>
-              )}
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Aguardando</dt>
-                <dd className="font-medium text-foreground">{waited}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Política</dt>
-                <dd className="font-medium text-foreground">{policyCopy}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted-foreground">Criado</dt>
-                <dd className="font-medium text-foreground">{formatDateTime(action.createdAt)}</dd>
-              </div>
-            </dl>
-            {ticket && (
-              <p className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
-                {ticket.brief}
-              </p>
-            )}
-          </Card>
+        <div className="flex flex-col gap-4 lg:sticky lg:top-6">
+          <ApprovalDecision action={action} canRequestChanges={canRequestChanges} />
 
-          <ApprovalDecision action={action} />
+          <ApprovalContext
+            action={action}
+            ageSeconds={ageSeconds}
+            policyCopy={policyCopy}
+            ticket={ticket}
+          />
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { authClient } from "@repo/app-shell/auth-client";
+import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -32,7 +32,7 @@ const RecoverForm = () => {
           redirectTo: "/reset-password",
         });
         if (error) {
-          toast.error(error.message ?? "Não foi possível enviar o link.");
+          toast.error(authErrorMessage(error, "Não foi possível enviar o link."));
           return;
         }
       } catch {
@@ -54,7 +54,7 @@ const RecoverForm = () => {
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">
-          <h2>Recuperar senha</h2>
+          <h1>Recuperar senha</h1>
         </CardTitle>
         <CardDescription>
           Informe o e-mail cadastrado para receber o link de redefinição.
