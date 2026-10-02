@@ -13,6 +13,7 @@
     "deploy": "vite build && wrangler deploy",
     "dev": "portless run --name qolmeia.agents --app-port 8787 vite dev",
     "lint": "oxlint src",
+    "postinstall": "pnpm run cf-typegen",
     "test": "vitest run",
     "typecheck": "wrangler types --strict-vars=false && tsc --noEmit"
   },

@@ -1,9 +1,9 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import path from "node:path";
 
-const databaseUrl =
-  process.env.DATABASE_URL ??
-  "postgresql://qolmeia:qolmeia123@localhost:5436/qolmeia?schema=agents_test";
+import { LOCAL_TEST_DATABASE_URL } from "@repo/config-vitest/database";
+
+const databaseUrl = process.env.DATABASE_URL ?? LOCAL_TEST_DATABASE_URL;
 const FIXTURE_SECRET = "vitest-fixture-service-secret-value";
 const RETRY_DELAY_MS = 100;
 
