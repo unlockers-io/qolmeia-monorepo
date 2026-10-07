@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -24,6 +26,8 @@ const sendRequestSchema = z.object({
   text: z.string().optional(),
   to: recipientsSchema,
 });
+
+const batchRequestSchema = z.array(sendRequestSchema);
 
 type SendRequest = z.infer<typeof sendRequestSchema>;
 
@@ -109,7 +113,7 @@ const handle = async (request: IncomingMessage, response: ServerResponse) => {
   }
 
   if (request.method === "POST" && url.pathname === "/emails/batch") {
-    const sendRequests = z.array(sendRequestSchema).parse(JSON.parse(await readBody(request)));
+    const sendRequests = batchRequestSchema.parse(JSON.parse(await readBody(request)));
     respond(response, 200, {
       data: sendRequests.map((sendRequest) => ({ id: store(sendRequest).id })),
     });
