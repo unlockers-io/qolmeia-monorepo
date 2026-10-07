@@ -107,10 +107,9 @@ describe("Auth Server Configuration", () => {
     expect(noResendAuth.options.emailAndPassword?.requireEmailVerification).toBe(false);
   });
 
-  it("should have bearer token plugin enabled", () => {
+  it("should not resolve sessions from bearer tokens", () => {
     const plugins = auth.options.plugins;
-    const hasBearerToken = plugins.some((plugin) => plugin.id === "bearer");
-    expect(hasBearerToken).toBe(true);
+    expect(plugins.some((plugin) => plugin.id === "bearer")).toBe(false);
   });
 
   it("should have username plugin enabled", () => {

@@ -275,7 +275,7 @@ records an operator-facing notification event.
 - Durable chat submissions, replayable history, SSE reconnection, and polling fallback for roster
   state.
 - Workflow waits survive Worker and Durable Object eviction.
-- Session cache keys hash bearer tokens and cookies rather than storing credentials in keys.
+- Session cache keys hash the session cookie rather than storing credentials in keys.
 - HMAC-signed expiring asset URLs, content-type protection, and sandboxed SVG responses.
 - Explicit CORS origins, secure headers, request IDs, request-size limits, and API/auth rate limits.
 - Constant-time comparison protects the shared secret used for internal company provisioning.

@@ -5,7 +5,6 @@ import type { MailerConfig } from "@repo/transactional";
 import { sendTransactionalEmail } from "@repo/transactional";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { bearer } from "better-auth/plugins/bearer";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { username } from "better-auth/plugins/username";
 import type { BetterAuthPlugin } from "better-auth/types";
@@ -214,7 +213,6 @@ export const createAuth = (config: AuthConfig) => {
 
     plugins: [
       username(),
-      bearer(),
       magicLink({
         sendMagicLink: async ({ email, url }, ctx) => {
           const link = linkOnRequestOrigin(url, ctx?.headers, trustedOrigins);
