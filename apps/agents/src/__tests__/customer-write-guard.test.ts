@@ -1,6 +1,8 @@
 import { exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
+
 const COMPANY_ID = "co_write_guard_test";
 const ORIGINAL_FETCH = globalThis.fetch;
 
@@ -34,10 +36,13 @@ const WRITE_ROUTES: Array<WriteRoute> = [
 
 const callAs = (role: typeof meStaff, route: WriteRoute, token: string): Promise<Response> => {
   globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(role)));
-  return exports.default.fetch(`https://agents.test${route.path}?cf_session=${token}`, {
-    body: route.body,
-    method: route.method,
-  });
+  return exports.default.fetch(
+    `https://agents.test${route.path}`,
+    sessionInit(token, {
+      body: route.body,
+      method: route.method,
+    }),
+  );
 };
 
 afterEach(() => {

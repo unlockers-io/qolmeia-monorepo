@@ -1,6 +1,8 @@
 import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
+
 const originalFetch = globalThis.fetch;
 type JsonBody =
   | boolean
@@ -35,18 +37,24 @@ type Template = {
 };
 
 const post = (body: JsonBody) =>
-  exports.default.fetch("https://agents.test/api/backoffice/templates?cf_session=tok", {
-    body: JSON.stringify(body),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  });
+  exports.default.fetch(
+    "https://agents.test/api/backoffice/templates",
+    sessionInit("tok", {
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    }),
+  );
 
 const patch = (path: string, body: JsonBody) =>
-  exports.default.fetch(`https://agents.test/api/backoffice${path}?cf_session=tok`, {
-    body: JSON.stringify(body),
-    headers: { "Content-Type": "application/json" },
-    method: "PATCH",
-  });
+  exports.default.fetch(
+    `https://agents.test/api/backoffice${path}`,
+    sessionInit("tok", {
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      method: "PATCH",
+    }),
+  );
 
 beforeEach(() => {
   globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
@@ -59,7 +67,8 @@ afterEach(() => {
 describe("backoffice skill catalog", () => {
   it("returns the full 13-skill code registry with id + label", async () => {
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/skills?cf_session=tok",
+      "https://agents.test/api/backoffice/skills",
+      sessionInit("tok"),
     );
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -83,7 +92,8 @@ describe("backoffice template CRUD", () => {
     expect([...createdBody.template.skillIds]).toEqual(["webSearch", "fetchUrl"]);
 
     const list = await exports.default.fetch(
-      "https://agents.test/api/backoffice/templates?cf_session=tok",
+      "https://agents.test/api/backoffice/templates",
+      sessionInit("tok"),
     );
     expect(list.status).toBe(200);
     const listBody = await list.json<{ items: Array<Template> }>();
@@ -130,7 +140,8 @@ describe("backoffice template CRUD", () => {
     expect(retiredBody.template.status).toBe("retired");
 
     const list = await exports.default.fetch(
-      "https://agents.test/api/backoffice/templates?cf_session=tok",
+      "https://agents.test/api/backoffice/templates",
+      sessionInit("tok"),
     );
     const listBody = await list.json<{ items: Array<Template> }>();
     expect(listBody.items.find((t) => t.id === template.id)?.status).toBe("retired");

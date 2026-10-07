@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
 import {
   requireStaffSession,
   validateSession,
@@ -22,18 +23,16 @@ const meStaff = {
 };
 
 const buildRequest = (token: string) =>
-  new Request(`http://agents.test/agents/correspondent/co_1?cf_session=${token}`);
+  new Request("http://agents.test/agents/correspondent/co_1", sessionInit(token));
 
 const buildOrgScopedRequest = (orgId: string) =>
-  new Request("http://agents.test/api/me/company?cf_session=shared-tok", {
-    headers: { "X-Org-Id": orgId },
-  });
+  new Request(
+    "http://agents.test/api/me/company",
+    sessionInit("shared-tok", { headers: { "X-Org-Id": orgId } }),
+  );
 
 const outboundHeaders = (init: RequestInit | undefined): Record<string, string> =>
   (init?.headers as Record<string, string> | undefined) ?? {};
-
-const outboundAuthHeader = (init: RequestInit | undefined): string | undefined =>
-  outboundHeaders(init).Authorization;
 
 const expectOk = (result: SessionResult): ValidatedSession => {
   if (result.kind !== "ok") {
@@ -50,7 +49,7 @@ const buildStaffApp = () => {
 };
 
 const probe = (token: string) =>
-  buildStaffApp().fetch(new Request(`http://agents.test/probe?cf_session=${token}`), env);
+  buildStaffApp().fetch(new Request("http://agents.test/probe", sessionInit(token)), env);
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -69,29 +68,31 @@ describe("validateSession", () => {
     expect(expectOk(result).role).toBe("STAFF");
   });
 
-  it("resolves a session from an inbound Authorization: Bearer header (no cf_session/Cookie)", async () => {
+  it("relays the session cookie, and only the cookie, to the auth service", async () => {
     const fetchSpy = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
       Promise.resolve(Response.json(meCustomer)),
     );
     globalThis.fetch = fetchSpy;
-    const req = new Request("http://agents.test/api/me", {
-      headers: { Authorization: "Bearer header-tok" },
-    });
-    const result = await validateSession(req, env);
-    expect(expectOk(result)).toEqual({ companyId: "co_1", role: "CUSTOMER", userId: "u_1" });
-    expect(outboundAuthHeader(fetchSpy.mock.calls[0]?.[1])).toBe("Bearer header-tok");
+    await validateSession(buildRequest("cookie-tok"), env);
+    const outbound = outboundHeaders(fetchSpy.mock.calls[0]?.[1]);
+    expect(outbound.Cookie).toBe("qolmeia.session_token=cookie-tok");
+    expect(outbound.Authorization).toBeUndefined();
   });
 
-  it("prefers the inbound Authorization header over the cf_session query param", async () => {
-    const fetchSpy = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
-      Promise.resolve(Response.json(meCustomer)),
-    );
+  it.each([
+    ["a cf_session query token", new Request("http://agents.test/api/me?cf_session=query-tok")],
+    [
+      "an Authorization bearer token",
+      new Request("http://agents.test/api/me", {
+        headers: { Authorization: "Bearer header-tok" },
+      }),
+    ],
+  ])("does not authenticate %s", async (_label, request) => {
+    const fetchSpy = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
     globalThis.fetch = fetchSpy;
-    const req = new Request("http://agents.test/api/me?cf_session=query-tok", {
-      headers: { Authorization: "Bearer header-tok" },
-    });
-    await validateSession(req, env);
-    expect(outboundAuthHeader(fetchSpy.mock.calls[0]?.[1])).toBe("Bearer header-tok");
+    const result = await validateSession(request, env);
+    expect(result.kind).toBe("unauthenticated");
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("reports unauthenticated when /api/me responds 401", async () => {
@@ -114,9 +115,10 @@ describe("validateSession", () => {
       Promise.resolve(Response.json(meCustomer)),
     );
     globalThis.fetch = fetchSpy;
-    const req = new Request("http://agents.test/api/me?cf_session=ip-tok", {
-      headers: { "CF-Connecting-IP": "203.0.113.7" },
-    });
+    const req = new Request(
+      "http://agents.test/api/me",
+      sessionInit("ip-tok", { headers: { "CF-Connecting-IP": "203.0.113.7" } }),
+    );
     await validateSession(req, env);
     expect(outboundHeaders(fetchSpy.mock.calls[0]?.[1])["X-Forwarded-For"]).toBe("203.0.113.7");
   });
@@ -132,7 +134,7 @@ describe("validateSession", () => {
     consoleSpy.mockRestore();
   });
 
-  it("reports unauthenticated when no cf_session token and no cookie are present", async () => {
+  it("reports unauthenticated when no session cookie is present", async () => {
     const fetchSpy = vi.fn();
     globalThis.fetch = fetchSpy;
     const req = new Request("http://agents.test/agents/correspondent/co_1");
@@ -180,7 +182,7 @@ describe("validateSession", () => {
     );
 
     const session = await validateSession(
-      new Request("http://agents.test/api/me/team/events?cf_session=sse-tok&org_id=co_sse"),
+      new Request("http://agents.test/api/me/team/events?org_id=co_sse", sessionInit("sse-tok")),
       env,
     );
 

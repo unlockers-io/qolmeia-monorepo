@@ -1,6 +1,8 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
+
 const COMPANY_ID = "co_brandassets_test";
 const originalFetch = globalThis.fetch;
 
@@ -40,11 +42,11 @@ describe("POST /api/me/brand-assets", () => {
   it("stores a brand asset with its category for CUSTOMER", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/me/brand-assets?cf_session=tok",
-      {
+      "https://agents.test/api/me/brand-assets",
+      sessionInit("tok", {
         body: uploadForm("logo"),
         method: "POST",
-      },
+      }),
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ assetId: string; category: string }>();
@@ -55,11 +57,11 @@ describe("POST /api/me/brand-assets", () => {
   it("falls back to 'other' for an unknown category", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/me/brand-assets?cf_session=tok",
-      {
+      "https://agents.test/api/me/brand-assets",
+      sessionInit("tok", {
         body: uploadForm("bogus"),
         method: "POST",
-      },
+      }),
     );
     const body = await res.json<{ category: string }>();
     expect(body.category).toBe("other");
@@ -68,11 +70,11 @@ describe("POST /api/me/brand-assets", () => {
   it("403 when STAFF tries to upload", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/me/brand-assets?cf_session=tok",
-      {
+      "https://agents.test/api/me/brand-assets",
+      sessionInit("tok", {
         body: uploadForm("logo"),
         method: "POST",
-      },
+      }),
     );
     expect(res.status).toBe(403);
   });
@@ -82,28 +84,30 @@ describe("GET + DELETE /api/me/brand-assets", () => {
   it("lists then deletes a brand asset", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
     const created = await exports.default.fetch(
-      "https://agents.test/api/me/brand-assets?cf_session=tok",
-      {
+      "https://agents.test/api/me/brand-assets",
+      sessionInit("tok", {
         body: uploadForm("post"),
         method: "POST",
-      },
+      }),
     );
     const { assetId } = await created.json<{ assetId: string }>();
 
     const listRes = await exports.default.fetch(
-      "https://agents.test/api/me/brand-assets?cf_session=tok",
+      "https://agents.test/api/me/brand-assets",
+      sessionInit("tok"),
     );
     const list = await listRes.json<{ items: Array<{ category: string; id: string }> }>();
     expect(list.items.some((a) => a.id === assetId && a.category === "post")).toBe(true);
 
     const delRes = await exports.default.fetch(
-      `https://agents.test/api/me/brand-assets/${assetId}?cf_session=tok`,
-      { method: "DELETE" },
+      `https://agents.test/api/me/brand-assets/${assetId}`,
+      sessionInit("tok", { method: "DELETE" }),
     );
     expect(delRes.status).toBe(200);
 
     const afterRes = await exports.default.fetch(
-      "https://agents.test/api/me/brand-assets?cf_session=tok",
+      "https://agents.test/api/me/brand-assets",
+      sessionInit("tok"),
     );
     const after = await afterRes.json<{ items: Array<{ id: string }> }>();
     expect(after.items.some((a) => a.id === assetId)).toBe(false);

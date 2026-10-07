@@ -1,6 +1,8 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
+
 const COMPANY_ID = "co_mecompany_test";
 const originalFetch = globalThis.fetch;
 
@@ -34,7 +36,10 @@ afterEach(() => {
 describe("GET /api/me/company", () => {
   it("returns an empty brief with 0% completeness", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok");
+    const res = await exports.default.fetch(
+      "https://agents.test/api/me/company",
+      sessionInit("tok"),
+    );
     expect(res.status).toBe(200);
     const body = await res.json<CompanyBody>();
     expect(body.completeness.percent).toBe(0);
@@ -42,14 +47,16 @@ describe("GET /api/me/company", () => {
   });
 });
 
-describe("a bearer-token client", () => {
+describe("a session-cookie client", () => {
   it("gets the same answer from /api/me and /api/me/company", async () => {
     const fetchSpy = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
     globalThis.fetch = fetchSpy;
-    const headers = { Authorization: "Bearer BEARER_TOK" };
 
-    const me = await exports.default.fetch("https://agents.test/api/me", { headers });
-    const company = await exports.default.fetch("https://agents.test/api/me/company", { headers });
+    const me = await exports.default.fetch("https://agents.test/api/me", sessionInit("SAME_TOK"));
+    const company = await exports.default.fetch(
+      "https://agents.test/api/me/company",
+      sessionInit("SAME_TOK"),
+    );
 
     expect(me.status).toBe(200);
     expect(company.status).toBe(200);
@@ -77,7 +84,8 @@ describe("a multi-org client that named no org", () => {
     );
 
     const res = await exports.default.fetch(
-      "https://agents.test/api/me/company?cf_session=ambiguous-tok",
+      "https://agents.test/api/me/company",
+      sessionInit("ambiguous-tok"),
     );
 
     expect(res.status).toBe(400);
@@ -90,11 +98,14 @@ describe("a multi-org client that named no org", () => {
 describe("PATCH /api/me/company", () => {
   it("merges a partial brief and recomputes completeness", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
-      body: JSON.stringify({ industry: "alimentação" }),
-      headers: { "content-type": "application/json" },
-      method: "PATCH",
-    });
+    const res = await exports.default.fetch(
+      "https://agents.test/api/me/company",
+      sessionInit("tok", {
+        body: JSON.stringify({ industry: "alimentação" }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      }),
+    );
     expect(res.status).toBe(200);
     const body = await res.json<CompanyBody>();
     expect(body.company.brief.industry).toBe("alimentação");
@@ -104,16 +115,22 @@ describe("PATCH /api/me/company", () => {
 
   it("preserves earlier fields across successive patches", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
-      body: JSON.stringify({ industry: "alimentação" }),
-      headers: { "content-type": "application/json" },
-      method: "PATCH",
-    });
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
-      body: JSON.stringify({ primaryGoal: "vender mais" }),
-      headers: { "content-type": "application/json" },
-      method: "PATCH",
-    });
+    await exports.default.fetch(
+      "https://agents.test/api/me/company",
+      sessionInit("tok", {
+        body: JSON.stringify({ industry: "alimentação" }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      }),
+    );
+    const res = await exports.default.fetch(
+      "https://agents.test/api/me/company",
+      sessionInit("tok", {
+        body: JSON.stringify({ primaryGoal: "vender mais" }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      }),
+    );
     const body = await res.json<CompanyBody>();
     expect(body.company.brief.industry).toBe("alimentação");
     expect(body.company.brief.primaryGoal).toBe("vender mais");
@@ -121,21 +138,27 @@ describe("PATCH /api/me/company", () => {
 
   it("403 when STAFF tries to edit the brief", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
-      body: JSON.stringify({ industry: "x" }),
-      headers: { "content-type": "application/json" },
-      method: "PATCH",
-    });
+    const res = await exports.default.fetch(
+      "https://agents.test/api/me/company",
+      sessionInit("tok", {
+        body: JSON.stringify({ industry: "x" }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      }),
+    );
     expect(res.status).toBe(403);
   });
 
   it("400 on an invalid body", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
-      body: JSON.stringify({ channels: ["not-a-channel"] }),
-      headers: { "content-type": "application/json" },
-      method: "PATCH",
-    });
+    const res = await exports.default.fetch(
+      "https://agents.test/api/me/company",
+      sessionInit("tok", {
+        body: JSON.stringify({ channels: ["not-a-channel"] }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      }),
+    );
     expect(res.status).toBe(400);
   });
 });
