@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@better-auth/core": "^1.7.6",
     "@repo/db": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/transactional": "workspace:*",

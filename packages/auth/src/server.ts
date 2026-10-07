@@ -1,15 +1,15 @@
+import { isLoopbackHost } from "@better-auth/core/utils/host";
 import type { PrismaClient } from "@repo/db";
 import { log } from "@repo/observability";
 import type { MailerConfig } from "@repo/transactional";
 import { sendTransactionalEmail } from "@repo/transactional";
-import { betterAuth, matchesHostPattern } from "better-auth";
+import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer } from "better-auth/plugins/bearer";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { username } from "better-auth/plugins/username";
 import type { BetterAuthPlugin } from "better-auth/types";
 
-import { LOCALHOST_ALLOWED_HOSTS } from "./env-config";
 import { countOperators, createSignupGuard } from "./signup";
 
 const CALLBACK_FALLBACK_PATH = "/";
@@ -31,8 +31,7 @@ export const safeCallbackPath = (value: string | null): string => {
 };
 
 const isLinkOrigin = (origin: URL, trustedOrigins: ReadonlyArray<string>): boolean =>
-  trustedOrigins.includes(origin.origin) ||
-  LOCALHOST_ALLOWED_HOSTS.some((pattern) => matchesHostPattern(origin.host, pattern));
+  trustedOrigins.includes(origin.origin) || isLoopbackHost(origin.host);
 
 export const linkOnRequestOrigin = (
   url: string,
