@@ -2,8 +2,6 @@ import type { Prisma } from "@repo/db";
 import type { Action, ActionDetail, DecisionOutcome } from "@repo/worker-api/contracts";
 import type { ActivityInput, ActivityOptions } from "@repo/worker-api/internal";
 
-import { log } from "../../lib/logger";
-
 import { agentSummarySelect, toAgentSummary } from "./agent-summary";
 import { jsonRecordSchema, nullableJsonRecord, type Database, type JsonRecord } from "./types";
 
@@ -166,26 +164,18 @@ const listActionsForTicket = async (
 };
 
 const logActivity = async (db: Database, input: ActivityInput): Promise<void> => {
-  try {
-    await db.activityLog.create({
-      data: {
-        actorId: input.actorId,
-        companyId: input.companyId,
-        id: crypto.randomUUID(),
-        payload: input.payload === undefined ? undefined : jsonRecordSchema.parse(input.payload),
-        refId: input.refId,
-        refType: input.refType,
-        summary: input.summary,
-        type: input.type,
-      },
-    });
-  } catch (error) {
-    log.error({
-      error,
-      message: "activity log write failed (best-effort, continuing)",
+  await db.activityLog.create({
+    data: {
+      actorId: input.actorId,
+      companyId: input.companyId,
+      id: crypto.randomUUID(),
+      payload: input.payload === undefined ? undefined : jsonRecordSchema.parse(input.payload),
+      refId: input.refId,
+      refType: input.refType,
+      summary: input.summary,
       type: input.type,
-    });
-  }
+    },
+  });
 };
 
 const listActivity = async (db: Database, options: ActivityOptions) => {
