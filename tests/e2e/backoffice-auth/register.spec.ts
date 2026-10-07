@@ -3,8 +3,12 @@ import { randomUUID } from "node:crypto";
 import { backofficeUrl } from "../../../playwright.config";
 import { expect, test } from "../fixtures/auth.fixture";
 
+const skipUnderResend = Boolean(process.env.RESEND_API_KEY);
+
 test.describe("Backoffice register", () => {
   test("registers with valid data", async ({ backofficeRegisterPage, page }) => {
+    test.skip(skipUnderResend, "Resend-enabled flow is covered by auth-email/* specs");
+
     const uniqueEmail = `e2e-reg-${randomUUID()}@qolmeia.localhost`;
 
     await page.context().clearCookies();

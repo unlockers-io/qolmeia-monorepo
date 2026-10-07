@@ -39,7 +39,7 @@ test.describe("Sign-up for an existing email (enumeration prevention)", () => {
 
     const mail = await waitForEmail({
       sinceMs: since,
-      subject: /sign[\s-]?up|attempt|tried/i,
+      subject: /tentativa de cadastro/iu,
       to: email,
     });
     expect(mail.last_event).not.toBe("bounced");

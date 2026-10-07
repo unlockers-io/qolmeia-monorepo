@@ -6,7 +6,7 @@ import { makeTestEmail, makeTestUsername } from "../helpers/test-email";
 
 test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ extraHTTPHeaders: { Origin: authUrl }, storageState: { cookies: [], origins: [] } });
 
 test.describe("Sign-up email verification", () => {
   test("verify email is sent, clicking the link signs in the clicking context", async ({
@@ -30,7 +30,7 @@ test.describe("Sign-up email verification", () => {
 
     const mail = await waitForEmail({
       sinceMs: since,
-      subject: /verify|welcome/i,
+      subject: /boas-vindas/iu,
       to: email,
     });
     expect(mail.last_event).not.toBe("bounced");
