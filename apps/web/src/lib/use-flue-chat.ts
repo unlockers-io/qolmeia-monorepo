@@ -18,7 +18,6 @@ type SendInput = {
 type UseFlueChatOptions = {
   agent: "correspondent" | "planner";
   companyId: string;
-  sessionToken?: string;
 };
 
 type UseFlueChatResult = {
@@ -33,12 +32,7 @@ type Conversation = Pick<
   "error" | "historyReady" | "messages" | "sendMessage" | "status"
 >;
 
-type ConversationHookOptions = {
-  sessionToken?: string;
-  url: string;
-};
-
-type UseConversation = (options: ConversationHookOptions) => Conversation;
+type UseConversation = (url: string) => Conversation;
 
 const STATUS_MAP = {
   connecting: "ready",
@@ -87,8 +81,8 @@ const toPromptImages = async (files: Array<FileUIPart>): Promise<Array<Delivered
   return images;
 };
 
-const useConversation: UseConversation = ({ sessionToken, url }) => {
-  const client = useFlueClient({ sessionToken, url });
+const useConversation: UseConversation = (url) => {
+  const client = useFlueClient(url);
 
   return useFlueAgent({ client, live: "sse" });
 };
@@ -97,12 +91,8 @@ const createUseFlueChat = (useAgentConversation: UseConversation) => {
   const useFlueChatWithDependencies = ({
     agent,
     companyId,
-    sessionToken,
   }: UseFlueChatOptions): UseFlueChatResult => {
-    const conversation = useAgentConversation({
-      sessionToken,
-      url: `/agents/${agent}/${companyId}`,
-    });
+    const conversation = useAgentConversation(`/agents/${agent}/${companyId}`);
 
     const sendMessage = async (input: SendInput) => {
       const text = input.text.trim();
@@ -129,7 +119,6 @@ export { createUseFlueChat, useFlueChat };
 export type {
   ChatMessage,
   Conversation,
-  ConversationHookOptions,
   FlueChatStatus,
   SendInput,
   UseConversation,
