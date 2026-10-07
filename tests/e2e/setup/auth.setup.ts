@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { expect, test as setup } from "@playwright/test";
 
 import { authUrl, backofficeUrl } from "../../../playwright.config";
+import { verification } from "../fixtures/verification.fixture";
 
 const TEST_USER = {
   email: "e2e-test@qolmeia.localhost",
@@ -21,6 +22,11 @@ setup("create and authenticate test user", async ({ page, request }) => {
     },
   });
   expect([200, 201, 409, 422]).toContain(signUpResponse.status());
+  if (process.env.RESEND_API_KEY) {
+    const { url } = await verification.forVerifyEmail(TEST_USER.email);
+    const verified = await request.get(url, { failOnStatusCode: false, maxRedirects: 0 });
+    expect(verified.status()).toBe(302);
+  }
 
   const signIn = await request.post(`${authUrl}/api/auth/sign-in/email`, {
     data: { email: TEST_USER.email, password: TEST_USER.password },
