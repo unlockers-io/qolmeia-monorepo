@@ -1,3 +1,4 @@
+import { matchesHostPattern } from "better-auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_CORS_ORIGINS, envAuthConfig, parseEnvList } from "./env-config";
@@ -39,6 +40,13 @@ describe("envAuthConfig", () => {
     );
     expect(config.trustedOrigins).toContain("http://localhost:3000");
     expect(config.trustedOrigins).toContain("http://127.0.0.1:3000");
+  });
+
+  it("allows portless hosts on port 443 and on its unprivileged fallback port", () => {
+    const { allowedHosts } = envAuthConfig();
+    for (const host of ["qolmeia.web.localhost", "qolmeia.web.localhost:1355"]) {
+      expect(allowedHosts.some((pattern) => matchesHostPattern(host, pattern))).toBe(true);
+    }
   });
 
   it("extends allowedHosts from AUTH_ALLOWED_HOSTS", () => {
