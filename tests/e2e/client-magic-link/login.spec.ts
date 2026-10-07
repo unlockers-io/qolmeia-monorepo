@@ -16,9 +16,10 @@ test.describe("Client magic-link login", () => {
     const email = makeTestEmail(testInfo);
 
     await page.goto(`${webUrl}/login`);
-    await page.getByLabel(/e-?mail/iu).fill(email);
-    await page.getByRole("button", { name: /enviar link mágico|send magic link/iu }).click();
-    await expect(page.getByText(/verifique seu e-mail|check your email/iu)).toBeVisible();
+    await page.getByRole("button", { name: "Entrar com link mágico" }).click();
+    await page.getByLabel("E-mail").fill(email);
+    await page.getByRole("button", { name: "Enviar link mágico" }).click();
+    await expect(page.getByRole("heading", { name: "Verifique seu e-mail" })).toBeVisible();
 
     const mail = await waitForEmail({
       sinceMs: since,
@@ -40,7 +41,7 @@ test.describe("Client magic-link login", () => {
     page,
   }) => {
     await page.goto(`${webUrl}/auth/verify?error=expired_token`);
-    await expect(page.getByText(/não conseguimos|expirou|expired/iu)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Não conseguimos entrar" })).toBeVisible();
     expect(page.url()).toContain("/auth/verify");
   });
 });
@@ -48,10 +49,10 @@ test.describe("Client magic-link login", () => {
 test.describe("Client login form validation", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test("renders the request-link card without a sent state on first load", async ({ page }) => {
+  test("renders the sign-in card without a sent state on first load", async ({ page }) => {
     await page.goto(`${webUrl}/login`);
 
-    await expect(page.getByRole("button", { name: /enviar link mágico/iu })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Entrar com link mágico" })).toBeVisible();
     await expect(page.getByText(/verifique seu e-mail/iu)).toHaveCount(0);
   });
 });

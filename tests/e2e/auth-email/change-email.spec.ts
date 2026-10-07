@@ -8,7 +8,7 @@ import { makeTestEmail, makeTestUsername } from "../helpers/test-email";
 
 test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ extraHTTPHeaders: { Origin: authUrl }, storageState: { cookies: [], origins: [] } });
 
 test.describe("Change email (two-stage confirmation + verification)", () => {
   test("user changes email — both stage-1 and stage-2 mails leave Resend, new email signs in", async ({
@@ -49,7 +49,6 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
       data: { newEmail },
       headers: {
         Cookie: cookieHeader,
-        Origin: authUrl,
         Referer: `${authUrl}/`,
       },
     });
@@ -57,7 +56,7 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
 
     const stage1Mail = await waitForEmail({
       sinceMs: since,
-      subject: /confirm|change/i,
+      subject: /troca de e-mail/iu,
       to: currentEmail,
     });
     expect(stage1Mail.last_event).not.toBe("bounced");

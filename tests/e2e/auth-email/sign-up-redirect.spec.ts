@@ -34,7 +34,7 @@ test.describe("Sign-up with redirect context", () => {
 
     const mail = await waitForEmail({
       sinceMs: since,
-      subject: /verify|welcome/i,
+      subject: /boas-vindas/iu,
       to: email,
     });
     expect(mail.last_event).not.toBe("bounced");

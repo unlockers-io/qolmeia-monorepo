@@ -7,7 +7,7 @@ import { makeTestEmail, makeTestUsername } from "../helpers/test-email";
 
 test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({ extraHTTPHeaders: { Origin: authUrl }, storageState: { cookies: [], origins: [] } });
 
 test.describe("Password reset", () => {
   test("user can request reset, set a new password, and sign in", async ({ request }, testInfo) => {
@@ -32,7 +32,7 @@ test.describe("Password reset", () => {
 
     const mail = await waitForEmail({
       sinceMs: since,
-      subject: /reset/i,
+      subject: /redefina sua senha/iu,
       to: email,
     });
     expect(mail.last_event).not.toBe("bounced");
