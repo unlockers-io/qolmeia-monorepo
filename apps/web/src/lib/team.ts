@@ -1,3 +1,4 @@
+import { withOrgQuery } from "@repo/worker-api";
 import type {
   AgentDisplayStatus,
   HireableTemplate,
@@ -5,7 +6,7 @@ import type {
   TeamMemberView,
 } from "@repo/worker-api/contracts";
 
-import { activeOrgId, apiUrl, jsonInit, request } from "@/lib/request";
+import { activeOrgId, apiGet, apiSend } from "@/lib/api-client";
 
 const STATUS_LABEL = {
   available: "Disponível",
@@ -15,7 +16,7 @@ const STATUS_LABEL = {
 } satisfies Record<AgentDisplayStatus, string>;
 
 const fetchTeam = async (): Promise<Array<TeamMemberView>> => {
-  const body = await request<{ members: Array<TeamMemberView> }>("/api/me/team");
+  const body = await apiGet<{ members: Array<TeamMemberView> }>("/api/me/team");
   return body.members;
 };
 
@@ -75,7 +76,7 @@ const openSharedSource = async (): Promise<void> => {
   if (sharedTeamEvents.listeners.size === 0) {
     return;
   }
-  const source = new EventSource(apiUrl("/api/me/team/events", orgId), {
+  const source = new EventSource(withOrgQuery("/api/me/team/events", orgId), {
     withCredentials: true,
   });
   sharedTeamEvents.source = source;
@@ -116,7 +117,7 @@ const subscribeTeamEvents = (onEvent: () => void): (() => void) | null => {
 };
 
 const fetchCatalogue = async (): Promise<Array<HireableTemplate>> => {
-  const body = await request<{ templates: Array<HireableTemplate> }>("/api/me/catalogue");
+  const body = await apiGet<{ templates: Array<HireableTemplate> }>("/api/me/catalogue");
   return body.templates;
 };
 
@@ -124,10 +125,7 @@ const hireMember = async (input: {
   displayName?: string;
   templateId: string;
 }): Promise<TeamMemberView> => {
-  const body = await request<{ member: TeamMemberView }>(
-    "/api/me/team/hire",
-    jsonInit("POST", input),
-  );
+  const body = await apiSend<{ member: TeamMemberView }>("POST", "/api/me/team/hire", input);
   return body.member;
 };
 
@@ -135,22 +133,23 @@ const patchMember = async (
   id: string,
   patch: { displayName?: string; promptOverride?: string | null },
 ): Promise<TeamMemberView> => {
-  const body = await request<{ member: TeamMemberView }>(
+  const body = await apiSend<{ member: TeamMemberView }>(
+    "PATCH",
     `/api/me/team/members/${id}`,
-    jsonInit("PATCH", patch),
+    patch,
   );
   return body.member;
 };
 
 const fetchMemberDetail = async (id: string): Promise<TeamMemberDetailView> => {
-  const body = await request<{ member: TeamMemberDetailView }>(`/api/me/team/members/${id}`);
+  const body = await apiGet<{ member: TeamMemberDetailView }>(`/api/me/team/members/${id}`);
   return body.member;
 };
 
 const setPaused = async (id: string, paused: boolean): Promise<TeamMemberView> => {
-  const body = await request<{ member: TeamMemberView }>(
+  const body = await apiSend<{ member: TeamMemberView }>(
+    "POST",
     `/api/me/team/members/${id}/${paused ? "pause" : "resume"}`,
-    { method: "POST" },
   );
   return body.member;
 };

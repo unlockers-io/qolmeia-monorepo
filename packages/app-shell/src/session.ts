@@ -1,4 +1,4 @@
-import { handleResponse } from "@repo/worker-api";
+import { handleResponse, resolveActiveOrg } from "@repo/worker-api";
 import type { MeOrg, MeResponse, OrgRole } from "@repo/worker-api/contracts";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -84,7 +84,7 @@ const createSessionHelpers = <Role extends OrgRole>(config: {
    */
   const requireMembership = async (): Promise<ScopedMe<Role>> => {
     const me = await fetchMe();
-    const org = me.currentOrg ?? me.orgs.find((candidate) => isAllowed(candidate.role)) ?? null;
+    const org = resolveActiveOrg(me, config.allow);
     if (org === null || !isAllowed(org.role)) {
       redirect("/no-access");
     }
