@@ -109,16 +109,16 @@ describe("validateSession", () => {
     },
   );
 
-  it("forwards the end user's IP so the auth service rate-limits per client", async () => {
+  it("forwards no client IP, since the auth service budgets each session", async () => {
     const fetchSpy = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
       Promise.resolve(Response.json(meCustomer)),
     );
     globalThis.fetch = fetchSpy;
-    const req = new Request("http://agents.test/api/me?cf_session=ip-tok", {
-      headers: { "CF-Connecting-IP": "203.0.113.7" },
+    const req = new Request("http://agents.test/api/me", {
+      headers: { "CF-Connecting-IP": "203.0.113.7", Cookie: "qolmeia.session_token=ip-tok" },
     });
     await validateSession(req, env);
-    expect(outboundHeaders(fetchSpy.mock.calls[0]?.[1])["X-Forwarded-For"]).toBe("203.0.113.7");
+    expect(outboundHeaders(fetchSpy.mock.calls[0]?.[1])["X-Forwarded-For"]).toBeUndefined();
   });
 
   it("distinguishes an unreachable auth service from bad credentials, and logs", async () => {
