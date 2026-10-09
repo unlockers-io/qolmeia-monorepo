@@ -1,4 +1,9 @@
-import type { ActionPolicy, Template, TemplateInput } from "@repo/worker-api/contracts";
+import {
+  ACTION_TYPES,
+  type ActionPolicy,
+  type Template,
+  type TemplateInput,
+} from "@repo/worker-api/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -29,23 +34,30 @@ const ACTION_POLICIES = [
   "require_approval",
 ] as const satisfies ReadonlyArray<ActionPolicy>;
 
-const policiesRecordSchema = z.record(z.string(), z.enum(ACTION_POLICIES));
+const actionTypeSchema = z.enum(ACTION_TYPES, {
+  error: `Use um destes tipos: ${ACTION_TYPES.join(", ")}.`,
+});
+
+const policiesRecordSchema = z.partialRecord(actionTypeSchema, z.enum(ACTION_POLICIES));
 
 const formSchema = z.object({
-  defaultActionType: z.string().trim().min(1, "Informe o tipo de ação."),
+  defaultActionType: actionTypeSchema,
   defaultPolicies: z
     .string()
     .trim()
-    .refine((raw) => {
-      if (raw === "") {
-        return true;
-      }
-      try {
-        return policiesRecordSchema.safeParse(JSON.parse(raw)).success;
-      } catch {
-        return false;
-      }
-    }, "Use um objeto { tipoDeAção: política } com require_approval, notify_only ou auto_execute."),
+    .refine(
+      (raw) => {
+        if (raw === "") {
+          return true;
+        }
+        try {
+          return policiesRecordSchema.safeParse(JSON.parse(raw)).success;
+        } catch {
+          return false;
+        }
+      },
+      `Use um objeto { tipoDeAção: política } com ${ACTION_TYPES.join(", ")} e require_approval, notify_only ou auto_execute.`,
+    ),
   description: z.string().trim().min(1, "Informe uma descrição."),
   displayName: z.string().trim().min(1, "Informe o nome de exibição."),
   model: z.string().trim().min(1, "Informe o modelo."),
@@ -56,7 +68,7 @@ const formSchema = z.object({
 const isFieldKey = (key: PropertyKey | undefined): key is FieldKey =>
   typeof key === "string" && key in formSchema.shape;
 
-const parsePolicies = (raw: string): Record<string, string> => {
+const parsePolicies = (raw: string): TemplateInput["defaultPolicies"] => {
   const trimmed = raw.trim();
   if (trimmed === "") {
     return {};

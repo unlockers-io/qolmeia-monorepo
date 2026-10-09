@@ -1,3 +1,5 @@
+import type { ActionType } from "@repo/worker-api/contracts";
+
 const RTF = new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" });
 const DATE_SHORT = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -67,19 +69,10 @@ const truncate = (value: string, limit = 120): string => {
 
 const ACTION_TYPE_LABEL = {
   publish_post: "Publicar post",
-  send_collection_message: "Enviar cobrança",
   worker_deliverable: "Entrega",
-} satisfies Record<string, string>;
-const actionTypeLabelById = new Map<string, string>(Object.entries(ACTION_TYPE_LABEL));
+} satisfies Record<ActionType, string>;
 
-const actionTypeLabel = (actionType: string): string => {
-  const known = actionTypeLabelById.get(actionType);
-  if (known !== undefined && known !== "") {
-    return known;
-  }
-  const pretty = actionType.replaceAll(/[_\-]+/gv, " ").trim();
-  return pretty.charAt(0).toUpperCase() + pretty.slice(1);
-};
+const actionTypeLabel = (actionType: ActionType): string => ACTION_TYPE_LABEL[actionType];
 
 type AgeTier = "calm" | "urgent" | "warning";
 

@@ -122,9 +122,11 @@ Planner are protected from customer pause operations so the core experience rema
 - Feedback is required when requesting changes or rejecting, and is limited to 2,000 characters.
 - A decision resumes the exact Cloudflare Workflow that proposed the action.
 - Requesting changes regenerates the deliverable with the prior result and operator feedback. The
-  loop is capped at three revisions.
-- Approving marks the action executed and ticket done, then delivers the result to the customer.
-- Rejecting closes the ticket as rejected.
+  loop is capped at three revisions, in the decide route and inside the Workflow; a change request
+  past the cap closes the ticket as rejected.
+- Approving runs the action type's executor: the deliverable moves from the agent folder to the
+  customer folder, the ticket is marked done, and the result is delivered to the customer.
+- Rejecting closes the ticket as rejected; its drafts stay in the agent folder.
 
 ### 2.4 Tickets
 
@@ -188,7 +190,7 @@ approval policy. A customer can hire multiple instances of the same template.
 
 ### 3.3 Skill catalog
 
-There are 13 registered skills:
+There are 12 registered skills:
 
 | Skill                | Capability                                                                                                               |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -197,7 +199,6 @@ There are 13 registered skills:
 | `delegateToWorker`   | Selects an allowed active specialist, creates a ticket, and starts its Workflow.                                         |
 | `generateBrandImage` | Generates an image through OpenRouter, conditioned on up to three recent non-SVG brand references, then stores it in R2. |
 | `draftSocialPost`    | Produces a structured social post with platform, body, CTA, hashtags, and tone.                                          |
-| `decideAction`       | Sends an approval decision event to a waiting Workflow; implemented but not assigned to a customer-facing agent.         |
 | `extractBrief`       | Validates and merges partial company-brief information.                                                                  |
 | `proposeTeam`        | Recommends entitled active specialist templates from the brief.                                                          |
 | `listAssets`         | Lists the company's agent-readable assets.                                                                               |
@@ -222,13 +223,20 @@ load the current overlay when assembling their tools.
 ### 3.5 Durable workflow lifecycle
 
 1. Load the ticket, specialist instance, current template, model, prompt override, and live skills.
-2. Generate the deliverable with up to five model/tool steps.
-3. Resolve the template policy. Missing or invalid policies fail closed to `require-approval`.
-4. For `require-approval`, create an action and wait for `decision-<actionId>` for up to 60 days.
-5. Approve and deliver, reject and close, or regenerate with feedback for at most three revisions.
+2. Generate the deliverable with up to five model/tool steps. Files the specialist produces go to
+   the agent folder.
+3. Propose an action of the template's `defaultActionType`. The action type builds the proposed
+   payload and declares its default policy (`publish_post`: `require-approval`;
+   `worker_deliverable`: `auto-execute`); a template's `defaultPolicies` entry overrides it, and an
+   invalid entry fails closed to `require-approval`.
+4. For `require-approval`, wait for `decision-<actionId>` for up to 60 days, then approve, reject and
+   close, or regenerate with feedback for at most three revisions.
+5. Execute: the action type's executor promotes the deliverable's files to the customer folder and
+   the Correspondent presents the result.
 
-`auto-execute` and `notify-only` skip the blocking gate and deliver immediately. `notify-only` also
-records an operator-facing notification event.
+`auto-execute` and `notify-only` skip the wait and execute immediately. `notify-only` also records
+an operator-facing `ACTION_NOTIFY` activity entry. Each step is keyed by the ticket and revision
+round, so a retried step does not duplicate actions, activity, or released files.
 
 ### 3.6 Memory, research, and assets
 
@@ -285,14 +293,13 @@ records an operator-facing notification event.
 
 ## 5. Implemented but not part of the default customer flow
 
-| Capability                       | Current state                                                                                                                                    |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `auto-execute` and `notify-only` | Configurable in templates and implemented end to end; seeded templates still resolve to human approval.                                          |
-| Approval from agent chat         | The `decideAction` skill exists, but no customer-facing agent receives it. Operators decide in the backoffice.                                   |
-| Team re-planning                 | The Planner remains addressable after onboarding, but the customer UI has no re-plan entry point.                                                |
-| Image aspect-ratio controls      | Four ratios are supported by the skill, but chat has no explicit ratio picker.                                                                   |
-| Organization creation            | Authenticated API exists; there is no self-serve organization-creation screen.                                                                   |
-| Customer-side specialist rename  | The company-scoped API supports renaming, but the customer UI currently exposes naming only while hiring. Operators can rename existing members. |
+| Capability                      | Current state                                                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `notify-only`                   | Configurable in templates and implemented end to end; no seeded template uses it, and it surfaces only in the activity log.                      |
+| Team re-planning                | The Planner remains addressable after onboarding, but the customer UI has no re-plan entry point.                                                |
+| Image aspect-ratio controls     | Four ratios are supported by the skill, but chat has no explicit ratio picker.                                                                   |
+| Organization creation           | Authenticated API exists; there is no self-serve organization-creation screen.                                                                   |
+| Customer-side specialist rename | The company-scoped API supports renaming, but the customer UI currently exposes naming only while hiring. Operators can rename existing members. |
 
 ## 6. Explicitly not shipped
 

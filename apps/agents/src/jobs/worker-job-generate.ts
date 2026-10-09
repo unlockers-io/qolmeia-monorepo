@@ -1,8 +1,8 @@
 import { log } from "@repo/observability";
 import { generateText, isStepCount } from "ai";
-import { z } from "zod";
 
-import type { GenerateResult, JobContext } from "#/jobs/worker-job-steps";
+import type { Generation } from "#/action/action-type";
+import type { JobContext } from "#/jobs/worker-job-steps";
 import { getModel } from "#/lib/ai-gateway";
 import { withDb } from "#/lib/db";
 import { buildSkillTools } from "#/skills/registry";
@@ -29,48 +29,14 @@ const buildRevisionMessages = (
   return messages;
 };
 
-const IMAGE_SKILLS = ["generateBrandImage"] as const;
-const skillResultSchema = z.json();
-type SkillResultValue = z.infer<typeof skillResultSchema>;
-
-const escapeRegExp = (value: string): string =>
-  value.replaceAll(/[.*+?^$\{\}\(\)\|\[\]\\]/gv, String.raw`\$&`);
-
-const embedGeneratedImages = (
-  summary: string,
-  skillResults: Record<string, SkillResultValue>,
-): string => {
-  let out = summary;
-  for (const skillId of IMAGE_SKILLS) {
-    const result = skillResults[skillId];
-    const url =
-      typeof result === "object" && result !== null && "url" in result ? result.url : undefined;
-    if (typeof url !== "string" || url.length === 0) {
-      continue;
-    }
-    const escaped = escapeRegExp(url);
-    if (new RegExp(`!\\[[^\\]]*\\]\\(${escaped}\\)`, "v").test(out)) {
-      continue;
-    }
-    const linkPattern = new RegExp(`\\[([^\\]]*)\\]\\(${escaped}\\)`, "v");
-    if (linkPattern.test(out)) {
-      out = out.replace(linkPattern, (_match, label: string) => `![${label}](${url})`);
-    } else if (out.includes(url)) {
-      out = out.replace(url, `![](${url})`);
-    } else {
-      out = `${out}\n\n![](${url})`;
-    }
-  }
-  return out;
-};
+type Revision = { feedback: string | null; priorSummary: string };
 
 const generateDeliverable = async (
-  ctx: JobContext,
+  job: JobContext,
   round: number,
-  priorSummary: string | null,
-  feedback: string | null,
-): Promise<GenerateResult> => {
-  const { agentInstanceId, companyId, env, ticketId } = ctx;
+  revision: Revision | null,
+): Promise<Generation> => {
+  const { agentInstanceId, companyId, env, ticketId } = job;
   const stepStart = Date.now();
   const [ticket, { agentInstance, template }] = await withDb(env, (db) =>
     Promise.all([loadTicket(db, ticketId), loadInstanceWithTemplate(db, agentInstanceId)]),
@@ -90,27 +56,27 @@ const generateDeliverable = async (
     ticketId,
   });
   const tools = await buildSkillTools(
-    { agentInstanceId: agentInstance.id, companyId, env },
+    { agentInstanceId: agentInstance.id, companyId, deliverableFolder: "agent", env },
     template.skillIds,
   );
   const result = await generateText({
     instructions: resolveSystemPrompt(agentInstance, template),
-    messages: buildRevisionMessages(ticket.brief, priorSummary, feedback),
+    messages: buildRevisionMessages(
+      ticket.brief,
+      revision?.priorSummary ?? null,
+      revision?.feedback ?? null,
+    ),
     model: getModel(env, template.model),
     stopWhen: isStepCount(5),
     tools,
   });
   const summary = result.text.trim();
-  const skillResults: Record<string, SkillResultValue> = {};
-  for (const stepResult of result.steps) {
-    for (const toolResult of stepResult.toolResults) {
-      const name = toolResult.toolName;
-      const output = skillResultSchema.safeParse(toolResult.output);
-      if (typeof name === "string" && output.success) {
-        skillResults[name] = output.data;
-      }
-    }
-  }
+  const outputs = result.steps.flatMap(({ toolResults }) =>
+    toolResults.map(({ output, toolName }) => ({
+      json: JSON.stringify(output ?? null),
+      tool: toolName,
+    })),
+  );
   log.info({
     agentInstanceId,
     companyId,
@@ -118,15 +84,13 @@ const generateDeliverable = async (
     message: "workflow.generate.ok",
     replyText: summary,
     revision: round,
-    skillResultNames: Object.keys(skillResults),
     ticketId,
     toolCallNames: result.steps.flatMap((s) => s.toolCalls.map((tc) => tc.toolName)),
+    toolOutputNames: outputs.map(({ tool }) => tool),
     usage: result.usage,
   });
-  return {
-    skillResultsJson: JSON.stringify(skillResults),
-    summary: embedGeneratedImages(summary, skillResults),
-  };
+  return { outputs, summary };
 };
 
 export { buildRevisionMessages, generateDeliverable };
+export type { Revision };

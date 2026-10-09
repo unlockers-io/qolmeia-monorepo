@@ -50,4 +50,4 @@ const draftSocialPostSkill: UnknownSkill = {
   inputSchema: draftSocialPostInputSchema,
 };
 
-export { draftSocialPostSkill };
+export { draftSocialPostInputSchema, draftSocialPostSkill };

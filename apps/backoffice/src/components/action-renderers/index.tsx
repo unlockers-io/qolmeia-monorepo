@@ -1,20 +1,14 @@
-import type { Action, AgentSummary } from "@repo/worker-api/contracts";
+import type { Action, ActionType, AgentSummary } from "@repo/worker-api/contracts";
 import type { ComponentType } from "react";
 
+import { ProposalCard } from "./proposal-card";
 import { PublishPostCard } from "./publish-post-card";
 
 type ActionRendererProps = { agent: AgentSummary; proposed: Action["proposed"] };
-type ActionRenderer = ComponentType<ActionRendererProps>;
 
-type RenderersContract = Record<string, ActionRenderer>;
-
-const RENDERERS = {
+const ACTION_RENDERERS = {
   publish_post: PublishPostCard,
-} satisfies RenderersContract;
+  worker_deliverable: ProposalCard,
+} satisfies Record<ActionType, ComponentType<ActionRendererProps>>;
 
-const rendererByActionType = new Map<string, ActionRenderer>(Object.entries(RENDERERS));
-
-const getActionRenderer = (actionType: string): ActionRenderer | null =>
-  rendererByActionType.get(actionType) ?? null;
-
-export { getActionRenderer };
+export { ACTION_RENDERERS };

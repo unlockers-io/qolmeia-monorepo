@@ -11,11 +11,11 @@ A vertical plugs in through the existing seams — no change to the Planner→Co
 - **Templates** (D1 `template` rows, `db/template.ts`) — one per agent role. The vertical-specific fields are `workerKind`, `skillIds`, `systemPrompt`, `defaultActionType`, and `defaultPolicies`. `proposeTeam` already lists the live catalog, so a confirmed template set surfaces in onboarding automatically.
 - **Deliverable skills** (code modules in `ALL_SKILLS`, `skills/registry.ts`, + a D1 `skill` overlay row) — the domain verbs. Marketing ships `generateBrandImage` / `draftSocialPost`; a collections vertical adds e.g. `listOpenInvoices` / `draftCollectionReminder`.
 - **Connectors** (`CONNECTOR_SECRETS` KV + `connector` table) — the channels and external systems the vertical needs (WhatsApp, a financial system, NF/prefeitura), per the Telegram precedent.
-- **Action types + a backoffice renderer** (`components/action-renderers/`) — one branch at the `worker-job.ts` propose step (where `publish_post` attaches its draft) plus a card renderer.
+- **Action types + a backoffice renderer** (`components/action-renderers/`) — one module per type under `apps/agents/src/action/` (proposed payload, executor, default policy; `publish_post` attaches its draft) plus a card renderer.
 
 ## What stays domain-neutral (do not fork)
 
-- The **Worker job loop** (`workflows/worker-job.ts` `run()`): generate → propose `defaultActionType` → gate on `defaultPolicies` → `waitForEvent` → execute. A "draft cobrança → operator approves → send" flow is the same code path as "draft post → approve → publish." The most-validated customer requirement — `automação assistida, aprovação antes de qualquer ação sensível` — is already this loop (ADR 0006), unchanged.
+- The **Worker job loop** (`jobs/worker-job.ts` `run()`): generate → propose `defaultActionType` → gate on `defaultPolicies` → `waitForEvent` → execute. A "draft cobrança → operator approves → send" flow is the same code path as "draft post → approve → publish." The most-validated customer requirement — `automação assistida, aprovação antes de qualquer ação sensível` — is already this loop (ADR 0006), unchanged.
 - The **skill registry / overlay** split, **memory**, **asset library**, **operator coverage** (ADR 0005), and **tenant isolation** (ADR 0001) are all vertical-blind.
 
 ## What is currently marketing-locked and must generalize

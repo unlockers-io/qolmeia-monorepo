@@ -1,11 +1,14 @@
 import { Card } from "@repo/ui/components/card";
-import type { ActionDetail } from "@repo/worker-api/contracts";
+import type { ActionDetail, ActionType, DecisionOutcome } from "@repo/worker-api/contracts";
 
 import { DecisionForm } from "@/components/decision-form";
 import { StatusPill } from "@/components/status-pill";
 import { formatDateTime } from "@/lib/format";
 
-const OUTWARD_ACTION_TYPES = new Set(["publish_post", "send_collection_message"]);
+const DEFAULT_DECISION = {
+  publish_post: null,
+  worker_deliverable: "approved",
+} satisfies Record<ActionType, DecisionOutcome | null>;
 
 type ApprovalDecisionProps = { action: ActionDetail; canRequestChanges: boolean };
 
@@ -16,7 +19,7 @@ const ApprovalDecision = ({ action, canRequestChanges }: ApprovalDecisionProps) 
       <DecisionForm
         actionId={action.id}
         allowChanges={canRequestChanges}
-        defaultDecision={OUTWARD_ACTION_TYPES.has(action.actionType) ? null : "approved"}
+        defaultDecision={DEFAULT_DECISION[action.actionType]}
       />
     </Card>
   ) : (
