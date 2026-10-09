@@ -70,6 +70,10 @@
     // Comma-separated client origins allowed to call the Worker; matched exactly,
     // no wildcards. Local: http://localhost:3000,http://localhost:3001.
     "CLIENT_ORIGINS": "https://app.qolmeia.com,https://admin.qolmeia.com",
+    // Memory's vector index. "in-memory" is a per-isolate store for `vite dev` and
+    // tests, which run without the AI and VECTORIZE bindings; any other value
+    // requires both bindings and fails loudly without them.
+    "MEMORY_BACKEND": "vectorize",
   },
   // Postgres, the system of record (ADR 0010). Hyperdrive holds the origin
   // credentials and connects to Railway from Cloudflare's network, so workerd
@@ -108,6 +112,7 @@
         "WORKER_PUBLIC_URL": "http://127.0.0.1:8787",
         "AUTH_SERVICE_URL": "http://127.0.0.1:4000",
         "CLIENT_ORIGINS": "http://localhost:3000,http://localhost:3001",
+        "MEMORY_BACKEND": "in-memory",
       },
       "durable_objects": {
         "bindings": [{ "class_name": "TeamEvents", "name": "TEAM_EVENTS" }],
