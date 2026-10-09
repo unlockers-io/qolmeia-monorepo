@@ -34,13 +34,13 @@ Monorepo managed by pnpm workspaces + Turborepo. Node 24, pnpm 10. Mid-migration
 
 ### Apps
 
-| Folder            | Package name  | Framework         | Dev URL                                           | Audience                                                                                                                            |
-| ----------------- | ------------- | ----------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api`        | `api`         | Hono on Node 24   | `https://qolmeia.api.localhost` (portless)        | General API service: auth (`/api/auth/*` Better Auth) + `/api/v1/me` (relay target); home for future non-agent management features. |
-| `apps/agents`     | `worker-bees` | Cloudflare Worker | `http://127.0.0.1:8787` (vite dev)                | Customer chat (Flue HTTP+SSE), REST for operators (`/api/backoffice/*`) and customers (`/api/me/*`, `/api/teams/*`).                |
-| `apps/web`        | `web`         | Next.js 16        | `https://qolmeia.web.localhost` (portless)        | End-customer chat surface (CUSTOMER role).                                                                                          |
-| `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` (portless) | Operator panel (OWNER/STAFF roles).                                                                                                 |
-| `apps/landing`    | `landing`     | Next.js 16        | `https://qolmeia.landing.localhost` (portless)    | Public marketing site. No auth, no Worker calls.                                                                                    |
+| Folder            | Package name  | Framework         | Dev URL                                           | Audience                                                                                                                                |
+| ----------------- | ------------- | ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api`        | `api`         | Hono on Node 24   | `https://qolmeia.api.localhost` (portless)        | Auth service: Better Auth (`/api/auth/*`) and `/api/me` (the Worker relays session checks to it).                                       |
+| `apps/agents`     | `worker-bees` | Cloudflare Worker | `http://127.0.0.1:8787` (vite dev)                | Owns product data. Customer chat (Flue HTTP+SSE), REST for operators (`/api/backoffice/*`) and customers (`/api/me/*`, `/api/teams/*`). |
+| `apps/web`        | `web`         | Next.js 16        | `https://qolmeia.web.localhost` (portless)        | End-customer chat surface (CUSTOMER role).                                                                                              |
+| `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` (portless) | Operator panel (OWNER/STAFF roles).                                                                                                     |
+| `apps/landing`    | `landing`     | Next.js 16        | `https://qolmeia.landing.localhost` (portless)    | Public marketing site. No auth, no Worker calls.                                                                                        |
 
 The browser never talks to `:8787` directly in dev: each Next app rewrites the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code and the rewrites reach the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). Prod works the same way: every session cookie is host-only on its app.
 
@@ -51,7 +51,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
   instance per company id). Renaming a function changes its storage identity unless pinned with `agentName`.
   Both are mounted explicitly in `app.ts` via `createAgentRouter`, behind `requireCustomerAgent` middleware.
 - **Approvals run on Workflows**: every Worker job spawns a `WorkerJobWorkflow`; gated actions pause on `waitForEvent("decision-<actionId>")` until an operator decides via `/api/backoffice/actions/:id/decide`.
-- **Postgres is the system of record for auth and product data**, accessed through Prisma from both `apps/api` and the agents Worker. Schema in `packages/db/prisma/schema.prisma`.
+- **Postgres is the system of record for auth and product data.** `apps/api` reads the auth tables through Prisma. The Worker reaches Postgres through the `HYPERDRIVE` binding and Prisma's `cloudflare` client, with a short-lived client inside each request, Workflow step, or skill call (`lib/db.ts`). Product data lives in domain modules (`team/`, `ticket/`, `action/`, `company/`, `library/`, `memory/`, `activity/`, `template/`, `operator/`). Each use case is one interactive transaction, with its activity entry written inside it (ADR 0010). Schema in `packages/db/prisma/schema.prisma`.
 - **R2 holds binary assets** (`ASSETS` binding), served via HMAC-signed URLs from `/assets/:id`.
 - **KV holds a session-validation cache** (`SESSIONS` binding) to keep the auth service off the hot path.
 
@@ -66,8 +66,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 | `@repo/config-vitest`     | Shared Vitest config.                                                                                                                    |
 | `@repo/typescript-config` | Shared tsconfig bases.                                                                                                                   |
 | `@repo/app-shell`         | Next-side auth/session glue shared by `web` and `backoffice`: `./auth-client`, `./auth-server`, `./session`, `./signup`, `./agents-url`. |
-| `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`, `./internal`).                         |
-| `@repo/internal-auth`     | Constant-time bearer-token check guarding Worker-to-service internal routes.                                                             |
+| `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`).                                       |
 | `@repo/observability`     | Structured logging. Exports `./client`, `./fields`, `./next`, `./next/instrumentation`, `./hono`.                                        |
 | `@repo/portless-env`      | `applyPortlessUrls`: fills dev URL env vars from `portless get`.                                                                         |
 
@@ -87,7 +86,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 - **Linter**: oxlint (NOT ESLint). Config in `oxlint.config.ts`.
 - **Formatter**: oxfmt (NOT Prettier). Config in `.oxfmtrc.json`. Sorts imports.
 - **Pre-commit**: Husky + lint-staged runs `oxlint` + `oxfmt`.
-- **Testing**: Vitest. `apps/agents` uses `@cloudflare/vitest-pool-workers` against Miniflare.
+- **Testing**: Vitest. `apps/agents` uses `@cloudflare/vitest-pool-workers` against Miniflare; its tests reach Postgres through the local Hyperdrive binding, in a database named after the checkout path, so worktrees run the suite in parallel.
 - **Bundler (api)**: tsdown. **Bundler (agents)**: Vite, via `@flue/vite` + `@cloudflare/vite-plugin`. The
   Worker entry is the virtual module `virtual:flue/worker`; `flueWorkerConfig()` merges the per-agent
   Durable Object bindings into the Cloudflare plugin's config, and `vite build` writes the merged
@@ -99,7 +98,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 Each app has its own `.env.example`:
 
 - **apps/api**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CORS_ORIGINS` (must be explicit; Better Auth refuses `*` for cross-origin cookies), optional `RESEND_API_KEY`, `AUTH_FROM_EMAIL`.
-- **apps/agents**: `.dev.vars` (not `.env`). Holds `DATABASE_URL`, `OPENROUTER_API_KEY`, and `ASSETS_SIGNING_KEY`. `wrangler.jsonc` defines the rest in its `vars` block (`CORRESPONDENT_MODEL`, `IMAGE_GEN_MODEL`, `AUTH_SERVICE_URL`, `WORKER_PUBLIC_URL`, `CLIENT_ORIGINS`).
+- **apps/agents**: `.dev.vars` (not `.env`). Holds `OPENROUTER_API_KEY` and `ASSETS_SIGNING_KEY`, plus `DATABASE_URL` and `BETTER_AUTH_SECRET` for the Node scripts in `scripts/` (seed, memory reindex). `wrangler.jsonc` defines the rest in its `vars` block (`CORRESPONDENT_MODEL`, `IMAGE_GEN_MODEL`, `AUTH_SERVICE_URL`, `WORKER_PUBLIC_URL`, `CLIENT_ORIGINS`) and the `HYPERDRIVE` binding, whose `localConnectionString` points `vite dev` at the docker Postgres.
 - **apps/web**: `BETTER_AUTH_SECRET` (matches `apps/api`), `DATABASE_URL` (Next `proxy.ts` validates sessions via Prisma). Auth and the agents Worker are same-origin: `next.config.ts` rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` (default `http://127.0.0.1:4000`) and `/api/me/*` + `/api/teams/*` + `/agents/*` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). `next build` bakes both URLs into the rewrites, so prod sets them on the Vercel project.
 - **apps/backoffice**: same as client (its Worker rewrite covers `/api/backoffice/*`).
 
@@ -117,14 +116,15 @@ docker compose up -d
 DATABASE_URL=postgresql://qolmeia:qolmeia123@localhost:5436/qolmeia \
   pnpm --filter=@repo/db db:push
 
-# 3. Seed Postgres: creates auth users, product company, catalog, and team (idempotent)
-pnpm --filter=api exec tsx src/scripts/seed-dev.ts
+# 3. Seed Postgres: creates auth users, product company, catalog, and team (idempotent).
+#    Reads DATABASE_URL and BETTER_AUTH_SECRET from apps/agents/.dev.vars.
+pnpm --filter=worker-bees db:seed
 
 # 4. Run all five apps (or one per terminal with --filter)
 pnpm dev
 ```
 
-**Seeded dev credentials** (created by `apps/api/src/scripts/seed-dev.ts`):
+**Seeded dev credentials** (created by `apps/agents/scripts/seed-dev.ts`):
 
 | Surface                                            | Role     | Email                  | Password                    |
 | -------------------------------------------------- | -------- | ---------------------- | --------------------------- |

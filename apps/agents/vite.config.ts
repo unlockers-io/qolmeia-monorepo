@@ -4,11 +4,10 @@ import { applyPortlessUrls } from "@repo/portless-env";
 import { defineConfig } from "vite";
 import zodCompiler from "zod-compiler/vite";
 
-const DEV_VARS = ["API_INTERNAL_URL", "AUTH_SERVICE_URL", "CLIENT_ORIGINS", "WORKER_PUBLIC_URL"];
+const DEV_VARS = ["AUTH_SERVICE_URL", "CLIENT_ORIGINS", "WORKER_PUBLIC_URL"];
 
 export default defineConfig(({ command }) => {
   applyPortlessUrls({
-    API_INTERNAL_URL: ["qolmeia.api"],
     AUTH_SERVICE_URL: ["qolmeia.api"],
     CLIENT_ORIGINS: ["qolmeia.web", "qolmeia.backoffice"],
     WORKER_PUBLIC_URL: ["qolmeia.agents"],

@@ -1,5 +1,7 @@
-import { env, exports } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { seedCompany } from "#/__tests__/fixtures";
 
 const COMPANY_ID = "co_brandassets_test";
 const originalFetch = globalThis.fetch;
@@ -23,13 +25,7 @@ const uploadForm = (category: string): FormData => {
 };
 
 beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR REPLACE INTO company (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'BA', 'ba', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
-  await env.DB.prepare("DELETE FROM asset WHERE company_id = ?").bind(COMPANY_ID).run();
+  await seedCompany({ id: COMPANY_ID });
 });
 
 afterEach(() => {

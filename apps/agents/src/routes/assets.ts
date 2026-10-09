@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 
-import { getDb } from "#/db/client";
+import { withDb } from "#/lib/db";
 import { fetchAsset, verifyAssetToken } from "#/lib/r2";
+import { getAssetAccess } from "#/library/assets";
 
 const assetsRoutes = new Hono<{ Bindings: Env }>();
 
@@ -32,7 +33,7 @@ assetsRoutes.get("/:id", async (c) => {
     return c.text("Invalid or expired token", 401);
   }
 
-  const row = await getDb(c.env)("assets.access", { assetId: id });
+  const row = await withDb(c.env, (db) => getAssetAccess(db, id));
   if (!row) {
     return c.text("Not found", 404);
   }

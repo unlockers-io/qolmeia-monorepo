@@ -1,6 +1,7 @@
 import { companyBriefSchema, type CompanyBrief } from "@repo/worker-api/brief";
 
-import { getDb } from "#/db/client";
+import { updateBrief } from "#/company/company";
+import { withDb } from "#/lib/db";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
 
 const extractBriefInputSchema = companyBriefSchema.partial();
@@ -11,10 +12,7 @@ const extractBriefSkill: UnknownSkill = {
   async execute(input: SkillInput, ctx: SkillContext): Promise<{ brief: Partial<CompanyBrief> }> {
     const updates = extractBriefInputSchema.parse(input);
 
-    const row = await getDb(ctx.env)("companies.updateBrief", {
-      companyId: ctx.companyId,
-      updates,
-    });
+    const row = await withDb(ctx.env, (db) => updateBrief(db, ctx.companyId, updates));
     if (!row) {
       throw new Error(`company ${ctx.companyId} not found`);
     }

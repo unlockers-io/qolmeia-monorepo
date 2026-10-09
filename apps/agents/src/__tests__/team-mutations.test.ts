@@ -1,353 +1,192 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { hireMember, setMemberStatus, updateMember } from "#/team/mutations";
+import { db, entitle, seedCompany, seedTeam } from "#/__tests__/fixtures";
+import { hireMember, setMemberStatus, updateMember } from "#/team/members";
 
 const COMPANY_ID = "co_hire_test";
-const TEAM_ID = `team-${COMPANY_ID}`;
 const CORR_ID = `corr-${COMPANY_ID}`;
 
+const hire = (displayName?: string, templateId = "tpl-designer") =>
+  db((client) =>
+    hireMember(env, client, { actorId: null, companyId: COMPANY_ID, displayName, templateId }),
+  );
+
+const setStatus = (agentInstanceId: string, status: "active" | "paused") =>
+  db((client) =>
+    setMemberStatus(env, client, {
+      actorId: "user-1",
+      agentInstanceId,
+      companyId: COMPANY_ID,
+      status,
+    }),
+  );
+
+const update = (
+  agentInstanceId: string,
+  patch: {
+    displayName?: string;
+    editedBy?: "customer" | "operator";
+    operatorId?: string;
+    promptOverride?: string | null;
+  },
+) =>
+  db((client) =>
+    updateMember(env, client, {
+      agentInstanceId,
+      companyId: COMPANY_ID,
+      displayName: patch.displayName,
+      editedBy: patch.editedBy ?? "customer",
+      operatorId: patch.operatorId ?? null,
+      promptOverride: patch.promptOverride,
+    }),
+  );
+
+const activity = (refId: string, type: string) =>
+  db((client) =>
+    client.activityLog.findFirst({
+      select: { actorId: true, summary: true },
+      where: { refId, type },
+    }),
+  );
+
 beforeEach(async () => {
-  await env.DB.batch([
-    env.DB.prepare("DELETE FROM team_member WHERE team_id = ? AND agent_instance_id != ?").bind(
-      TEAM_ID,
-      CORR_ID,
-    ),
-    env.DB.prepare("DELETE FROM agent_instance WHERE company_id = ? AND role = 'worker'").bind(
-      COMPANY_ID,
-    ),
-    env.DB.prepare("DELETE FROM activity_log WHERE company_id = ?").bind(COMPANY_ID),
-  ]);
-  await env.DB.batch([
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO company
-         (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-       VALUES (?, 'H', 'h', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-    ).bind(COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO template
-         (id, version, status, display_name, description, system_prompt, model,
-          worker_kind, skill_ids, default_action_type, default_policies,
-          created_at, updated_at)
-       VALUES ('tpl-designer', 1, 'active', 'Designer', 'd', 'sys', 'gpt-x',
-               'designer', '[]', 'worker_deliverable', '{}', 0, 0)`,
-    ),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO agent_instance
-         (id, company_id, role, template_id, template_version, display_name,
-          model_override, status, prompt_override, created_at, updated_at)
-       VALUES (?, ?, 'correspondent', NULL, NULL, 'Correspondente', NULL, 'active', NULL, 0, 0)`,
-    ).bind(CORR_ID, COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO team (id, company_id, confirmed_at, created_at) VALUES (?, ?, ?, ?)`,
-    ).bind(TEAM_ID, COMPANY_ID, 0, 0),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO team_member (team_id, agent_instance_id, can_delegate_to) VALUES (?, ?, '[]')`,
-    ).bind(TEAM_ID, CORR_ID),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO company_template_entitlement
-         (company_id, template_id, enabled, created_at, updated_at)
-       VALUES (?, 'tpl-designer', TRUE, 0, 0)`,
-    ).bind(COMPANY_ID),
-  ]);
+  await seedCompany({ id: COMPANY_ID });
+  await entitle(COMPANY_ID);
+  await seedTeam(COMPANY_ID);
 });
 
 describe("hireMember", () => {
   it("creates a new agent_instance + team_member and appends to correspondent's delegation list", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
+    const member = await hire();
     expect(member.displayName).toBe("Designer");
     expect(member.role).toBe("worker");
     expect(member.templateId).toBe("tpl-designer");
 
-    const corrRow = await env.DB.prepare(
-      "SELECT can_delegate_to FROM team_member WHERE agent_instance_id = ?",
-    )
-      .bind(CORR_ID)
-      .first<{ can_delegate_to: string }>();
-    const targets = JSON.parse(corrRow?.can_delegate_to ?? "[]") as Array<string>;
-    expect(targets).toContain(member.id);
+    const correspondent = await db((client) =>
+      client.teamMember.findFirst({ where: { agentInstanceId: CORR_ID } }),
+    );
+    expect(correspondent?.canDelegateTo).toContain(member.id);
   });
 
   it("allows multi-hire of the same template with auto-numbered name", async () => {
-    const first = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    const second = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
+    const first = await hire();
+    const second = await hire();
     expect(first.displayName).toBe("Designer");
     expect(second.displayName).toBe("Designer #2");
     expect(second.id).not.toBe(first.id);
   });
 
+  it("keeps every concurrent hire on the correspondent's delegation list", async () => {
+    const members = await Promise.all([hire("Ana"), hire("Bia"), hire("Caio")]);
+    const correspondent = await db((client) =>
+      client.teamMember.findFirst({ where: { agentInstanceId: CORR_ID } }),
+    );
+    expect(correspondent?.canDelegateTo).toEqual(
+      expect.arrayContaining(members.map(({ id }) => id)),
+    );
+  });
+
   it("uses a provided displayName when present", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: "Marina",
-      templateId: "tpl-designer",
-    });
+    const member = await hire("Marina");
     expect(member.displayName).toBe("Marina");
   });
 
   it("writes MEMBER_HIRED activity row", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    const row = await env.DB.prepare(
-      "SELECT type FROM activity_log WHERE ref_id = ? AND type = 'MEMBER_HIRED'",
-    )
-      .bind(member.id)
-      .first<{ type: string }>();
-    expect(row?.type).toBe("MEMBER_HIRED");
+    const member = await hire();
+    await expect(activity(member.id, "MEMBER_HIRED")).resolves.not.toBeNull();
   });
 
   it("rejects unknown templates with a clear error", async () => {
-    await expect(
-      hireMember(env.DB, {
-        actorId: null,
-        companyId: COMPANY_ID,
-        displayName: undefined,
-        templateId: "tpl-nope",
-      }),
-    ).rejects.toThrow(/template.*tpl-nope/v);
+    await expect(hire(undefined, "tpl-nope")).rejects.toThrow(/template.*tpl-nope/v);
+  });
+
+  it("rejects whitespace-only displayName by falling back to the template name", async () => {
+    const member = await hire("   ");
+    expect(member.displayName).toBe("Designer");
   });
 });
 
 describe("setMemberStatus", () => {
   it("pauses a worker and writes activity", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    const paused = await setMemberStatus(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      status: "paused",
-    });
+    const member = await hire();
+    const paused = await setStatus(member.id, "paused");
     expect(paused.status).toBe("paused");
-    const row = await env.DB.prepare("SELECT status FROM agent_instance WHERE id = ?")
-      .bind(member.id)
-      .first<{ status: string }>();
+    const row = await db((client) => client.agentInstance.findUnique({ where: { id: member.id } }));
     expect(row?.status).toBe("paused");
-    const log = await env.DB.prepare(
-      "SELECT type FROM activity_log WHERE ref_id = ? AND type = 'MEMBER_PAUSED'",
-    )
-      .bind(member.id)
-      .first<{ type: string }>();
-    expect(log?.type).toBe("MEMBER_PAUSED");
+    await expect(activity(member.id, "MEMBER_PAUSED")).resolves.not.toBeNull();
   });
 
   it("resumes a paused worker", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    await setMemberStatus(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      status: "paused",
-    });
-    const resumed = await setMemberStatus(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      status: "active",
-    });
+    const member = await hire();
+    await setStatus(member.id, "paused");
+    const resumed = await setStatus(member.id, "active");
     expect(resumed.status).toBe("available");
-    const log = await env.DB.prepare(
-      "SELECT type, summary FROM activity_log WHERE ref_id = ? AND type = 'MEMBER_RESUMED'",
-    )
-      .bind(member.id)
-      .first<{ summary: string; type: string }>();
-    expect(log).toEqual({ summary: `${member.displayName} foi retomado.`, type: "MEMBER_RESUMED" });
+    await expect(activity(member.id, "MEMBER_RESUMED")).resolves.toEqual({
+      actorId: "user-1",
+      summary: `${member.displayName} foi retomado.`,
+    });
   });
 
   it("rejects pausing the correspondent", async () => {
-    await expect(
-      setMemberStatus(env.DB, {
-        agentInstanceId: CORR_ID,
-        companyId: COMPANY_ID,
-        status: "paused",
-      }),
-    ).rejects.toThrow(/correspondent/v);
+    await expect(setStatus(CORR_ID, "paused")).rejects.toThrow(/correspondent/v);
   });
 
   it("is idempotent (pausing twice returns paused without error)", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    await setMemberStatus(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      status: "paused",
-    });
-    const again = await setMemberStatus(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      status: "paused",
-    });
+    const member = await hire();
+    await setStatus(member.id, "paused");
+    const again = await setStatus(member.id, "paused");
     expect(again.status).toBe("paused");
   });
 });
 
 describe("updateMember", () => {
   it("renames a worker", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    const updated = await updateMember(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      displayName: "Marina",
-      editedBy: "customer",
-      operatorId: null,
-      promptOverride: undefined,
-    });
+    const member = await hire();
+    const updated = await update(member.id, { displayName: "Marina" });
     expect(updated.displayName).toBe("Marina");
-    const log = await env.DB.prepare(
-      "SELECT type FROM activity_log WHERE ref_id = ? AND type = 'MEMBER_RENAMED'",
-    )
-      .bind(member.id)
-      .first<{ type: string }>();
-    expect(log?.type).toBe("MEMBER_RENAMED");
+    await expect(activity(member.id, "MEMBER_RENAMED")).resolves.not.toBeNull();
   });
 
   it("sets the prompt override and logs MEMBER_PROMPT_EDITED", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    const updated = await updateMember(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      displayName: undefined,
+    const member = await hire();
+    const updated = await update(member.id, {
       editedBy: "operator",
       operatorId: "user-staff-1",
       promptOverride: "Seja minimalista, monocromático.",
     });
     expect(updated.hasPromptOverride).toBe(true);
-    const log = await env.DB.prepare(
-      "SELECT type, actor_id FROM activity_log WHERE ref_id = ? AND type = 'MEMBER_PROMPT_EDITED'",
-    )
-      .bind(member.id)
-      .first<{ actor_id: string | null; type: string }>();
-    expect(log).toEqual({ actor_id: "user-staff-1", type: "MEMBER_PROMPT_EDITED" });
+    await expect(activity(member.id, "MEMBER_PROMPT_EDITED")).resolves.toMatchObject({
+      actorId: "user-staff-1",
+    });
   });
 
   it("clears the prompt override when promptOverride is null + logs MEMBER_PROMPT_RESET", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    await updateMember(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      editedBy: "customer",
-      operatorId: null,
-      promptOverride: "anything",
-    });
-    const cleared = await updateMember(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      editedBy: "customer",
-      operatorId: null,
-      promptOverride: null,
-    });
+    const member = await hire();
+    await update(member.id, { promptOverride: "anything" });
+    const cleared = await update(member.id, { promptOverride: null });
     expect(cleared.hasPromptOverride).toBe(false);
-    const log = await env.DB.prepare(
-      "SELECT type FROM activity_log WHERE ref_id = ? AND type = 'MEMBER_PROMPT_RESET'",
-    )
-      .bind(member.id)
-      .first<{ type: string }>();
-    expect(log?.type).toBe("MEMBER_PROMPT_RESET");
+    await expect(activity(member.id, "MEMBER_PROMPT_RESET")).resolves.not.toBeNull();
   });
 
   it("accepts both fields in one call", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    const updated = await updateMember(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      displayName: "Carla",
-      editedBy: "customer",
-      operatorId: null,
-      promptOverride: "boa noite",
-    });
+    const member = await hire();
+    const updated = await update(member.id, { displayName: "Carla", promptOverride: "boa noite" });
     expect(updated.displayName).toBe("Carla");
     expect(updated.hasPromptOverride).toBe(true);
   });
 
   it("treats empty/whitespace promptOverride as a reset (does not store empty string)", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      templateId: "tpl-designer",
-    });
-    await updateMember(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      editedBy: "customer",
-      operatorId: null,
-      promptOverride: "real prompt",
-    });
-    const result = await updateMember(env.DB, {
-      agentInstanceId: member.id,
-      companyId: COMPANY_ID,
-      displayName: undefined,
-      editedBy: "customer",
-      operatorId: null,
-      promptOverride: "   ",
-    });
+    const member = await hire();
+    await update(member.id, { promptOverride: "real prompt" });
+    const result = await update(member.id, { promptOverride: "   " });
     expect(result.hasPromptOverride).toBe(false);
-    const row = await env.DB.prepare("SELECT prompt_override FROM agent_instance WHERE id = ?")
-      .bind(member.id)
-      .first<{ prompt_override: string | null }>();
-    expect(row?.prompt_override).toBeNull();
+    const row = await db((client) => client.agentInstance.findUnique({ where: { id: member.id } }));
+    expect(row?.promptOverride).toBeNull();
   });
 
-  it("rejects whitespace-only displayName at hire (mutation-layer defense)", async () => {
-    const member = await hireMember(env.DB, {
-      actorId: null,
-      companyId: COMPANY_ID,
-      displayName: "   ",
-      templateId: "tpl-designer",
-    });
-    expect(member.displayName.trim().length).toBeGreaterThan(0);
+  it("rejects a whitespace-only rename", async () => {
+    const member = await hire();
+    await expect(update(member.id, { displayName: "   " })).rejects.toThrow(/displayName/v);
   });
 });

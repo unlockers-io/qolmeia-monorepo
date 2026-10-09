@@ -1,54 +1,70 @@
-type TeamErrorCode =
-  | "correspondent_missing"
-  | "member_not_found"
-  | "member_not_pausable"
-  | "template_not_found"
-  | "template_retired";
+abstract class TeamError extends Error {
+  abstract readonly status: 400 | 404 | 409 | 500;
+}
 
-const isTeamErrorCode = (value: string): value is TeamErrorCode =>
-  value === "correspondent_missing" ||
-  value === "member_not_found" ||
-  value === "member_not_pausable" ||
-  value === "template_not_found" ||
-  value === "template_retired";
+class CompanyNotFoundError extends TeamError {
+  readonly status = 404;
 
-/**
- * `message` is the internal detail (ids, roles) and goes to logs; `publicMessage`
- * is what a route may hand back to a caller. They differ only where the detail
- * would leak another tenant's identifiers.
- */
-abstract class TeamDomainError extends Error {
-  abstract readonly code: TeamErrorCode;
-
-  get publicMessage(): string {
-    return this.message;
+  constructor() {
+    super("company not found");
   }
 }
 
-class RemoteTeamDomainError extends TeamDomainError {
-  readonly code: TeamErrorCode;
+class TemplateNotFoundError extends TeamError {
+  readonly status = 404;
 
-  constructor(code: string, message: string) {
-    super(message);
-    if (!isTeamErrorCode(code)) {
-      throw new Error(`Unknown team error code: ${code}`);
-    }
-    this.code = code;
-    this.name = "RemoteTeamDomainError";
+  constructor(templateId: string) {
+    super(`template ${templateId} not found`);
   }
 }
 
-/**
- * One table so the customer and operator surfaces cannot answer differently for
- * the same domain error, which they previously did (400 vs 409, and 404 vs 500).
- */
-const TEAM_ERROR_STATUS = {
-  correspondent_missing: 500,
-  member_not_found: 404,
-  member_not_pausable: 409,
-  template_not_found: 404,
-  template_retired: 409,
-} satisfies Record<TeamErrorCode, 404 | 409 | 500>;
+class TemplateRetiredError extends TeamError {
+  readonly status = 409;
 
-export { RemoteTeamDomainError, TEAM_ERROR_STATUS, TeamDomainError };
-export type { TeamErrorCode };
+  constructor(templateId: string) {
+    super(`template ${templateId} is retired`);
+  }
+}
+
+class MemberNotFoundError extends TeamError {
+  readonly status = 404;
+
+  constructor() {
+    super("not found");
+  }
+}
+
+class MemberNotPausableError extends TeamError {
+  readonly status = 409;
+
+  constructor(role: string) {
+    super(`cannot pause/resume a ${role}`);
+  }
+}
+
+class InvalidDisplayNameError extends TeamError {
+  readonly status = 400;
+
+  constructor() {
+    super("displayName cannot be empty");
+  }
+}
+
+class CorrespondentMissingError extends TeamError {
+  readonly status = 500;
+
+  constructor() {
+    super("correspondent missing from the team");
+  }
+}
+
+export {
+  CompanyNotFoundError,
+  CorrespondentMissingError,
+  InvalidDisplayNameError,
+  MemberNotFoundError,
+  MemberNotPausableError,
+  TeamError,
+  TemplateNotFoundError,
+  TemplateRetiredError,
+};

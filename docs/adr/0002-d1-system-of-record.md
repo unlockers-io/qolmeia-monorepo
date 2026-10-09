@@ -1,5 +1,7 @@
 # D1 is the system of record; Durable Object storage holds only conversation context
 
+> **⚠️ SUPERSEDED (2026-10).** Product data moved from D1 to Postgres, and the Worker now reaches it through Hyperdrive and owns it in-process. See [ADR 0010](./0010-worker-reaches-postgres-through-hyperdrive.md). The split it describes still holds: Durable Object storage is a rebuildable conversation cache, and Postgres is the record. The record below is retained as the original rationale.
+
 Product data (`company`, `ticket`, `action`, `agent_instance`, `team`, `team_member`, `memory_fact`, `asset`, `activity_log`) lives in D1 and is the single source of truth, written through the route handlers and skills. The per-tenant agent Durable Objects (Correspondent/Planner/Worker) keep only conversation state in their own SQLite (the recent-turns buffer + the AIChatAgent message list); on every turn the agent also writes the canonical record to D1 (`insertMessage`, `proposeAction`, …).
 
 **Decision:** treat DO storage as a rebuildable context cache, never as the record. This keeps product state queryable by the backoffice and the REST surface (which never open a DO), and a DO reset loses no product data. The cost is a deliberate double-write (DO buffer + D1) on each turn, accepted for the query/ownership separation. A reader seeing both stores written per turn should not "dedupe" them: they serve different purposes.
