@@ -84,6 +84,5 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
   }
 }
 
-export { buildRevisionMessages } from "#/jobs/worker-job-generate";
 export { WorkerJobWorkflow };
 export type { WorkerJobParams, WorkerJobResult };
