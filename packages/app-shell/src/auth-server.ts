@@ -1,6 +1,7 @@
 import { envAuthConfig } from "@repo/auth/env-config";
 import { createAuth } from "@repo/auth/server";
 import { prisma } from "@repo/db";
+import { isAPIError } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 
 type Auth = ReturnType<typeof createAuth>;
@@ -26,5 +27,27 @@ const getAuth = (): Auth => {
   return cachedAuth;
 };
 
-export { getAuth };
-export type { Auth };
+type AuthSession = NonNullable<Awaited<ReturnType<Auth["api"]["getSession"]>>>;
+
+type GetSession = (headers: Headers) => Promise<AuthSession | null>;
+
+const UNAUTHORIZED = 401;
+
+const getSessionFromAuth: GetSession = (headers) => getAuth().api.getSession({ headers });
+
+const readSession = async (
+  headers: Headers,
+  getSession: GetSession = getSessionFromAuth,
+): Promise<AuthSession | null> => {
+  try {
+    return await getSession(headers);
+  } catch (error) {
+    if (isAPIError(error) && error.statusCode === UNAUTHORIZED) {
+      return null;
+    }
+    throw error;
+  }
+};
+
+export { getAuth, readSession };
+export type { Auth, AuthSession, GetSession };
