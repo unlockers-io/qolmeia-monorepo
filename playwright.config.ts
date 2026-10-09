@@ -18,8 +18,6 @@ const getPortlessUrl = (name: string) => {
   }
 };
 
-const authUrl =
-  process.env.E2E_AUTH_URL ?? getPortlessUrl("qolmeia.api") ?? "http://127.0.0.1:4000";
 const backofficeUrl =
   process.env.E2E_BACKOFFICE_URL ?? getPortlessUrl("qolmeia.backoffice") ?? "http://127.0.0.1:3000";
 const webUrl = process.env.E2E_WEB_URL ?? getPortlessUrl("qolmeia.web") ?? "http://127.0.0.1:3001";
@@ -45,7 +43,7 @@ export default defineConfig({
     {
       name: "auth-email",
       testMatch: /.*\/auth-email\/.*/u,
-      use: { ...devices["Desktop Chrome"], baseURL: authUrl },
+      use: { ...devices["Desktop Chrome"] },
     },
     ...(process.env.CI
       ? []
@@ -91,23 +89,15 @@ export default defineConfig({
           url: `${process.env.RESEND_BASE_URL}/emails`,
         },
         {
-          command: "node tests/e2e/support/agents-stub.mjs",
-          stderr: "pipe",
-          stdout: "pipe",
-          timeout: 30_000,
-          url: "http://127.0.0.1:8787/healthz",
-        },
-        {
-          command: "node apps/api/dist/index.mjs",
+          command: "pnpm --filter worker-bees exec vite dev",
           env: {
-            HOST: "127.0.0.1",
-            PGAPPNAME: "qolmeia:ci:api",
-            PORT: "4000",
+            CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
+              process.env.DATABASE_URL ?? "",
           },
           stderr: "pipe",
           stdout: "pipe",
           timeout: 120_000,
-          url: `${authUrl}/healthz`,
+          url: "http://127.0.0.1:8787/healthz",
         },
         {
           command: "node_modules/.bin/next start apps/backoffice --port 3000 --hostname 127.0.0.1",
@@ -139,4 +129,4 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
 });
 
-export { authUrl, backofficeUrl, landingUrl, webUrl };
+export { backofficeUrl, landingUrl, webUrl };
