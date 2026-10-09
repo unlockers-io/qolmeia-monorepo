@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-import { authUrl } from "../../../playwright.config";
+import { backofficeUrl } from "../../../playwright.config";
 import { extractLink, waitForEmail } from "../helpers/resend";
 import { makeTestEmail, makeTestUsername } from "../helpers/test-email";
 
 test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
-test.use({ extraHTTPHeaders: { Origin: authUrl }, storageState: { cookies: [], origins: [] } });
+test.use({
+  extraHTTPHeaders: { Origin: backofficeUrl },
+  storageState: { cookies: [], origins: [] },
+});
 
 test.describe("Sign-up email verification", () => {
   test("verify email is sent, clicking the link signs in the clicking context", async ({
@@ -17,12 +20,12 @@ test.describe("Sign-up email verification", () => {
     const username = makeTestUsername(email);
     const password = "SecurePassword1!";
 
-    const signUp = await request.post(`${authUrl}/api/auth/sign-up/email`, {
+    const signUp = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
       data: { email, name: "Verify Me", password, username },
     });
     expect([200, 201]).toContain(signUp.status());
 
-    const preSignIn = await request.post(`${authUrl}/api/auth/sign-in/email`, {
+    const preSignIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email, password },
       failOnStatusCode: false,
     });
@@ -51,9 +54,9 @@ test.describe("Sign-up email verification", () => {
     if (location === undefined) {
       throw new Error("verification response has no Location header");
     }
-    expect(new URL(location, authUrl).pathname).toBe("/");
+    expect(new URL(location, backofficeUrl).pathname).toBe("/");
 
-    const postSignIn = await request.post(`${authUrl}/api/auth/sign-in/email`, {
+    const postSignIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email, password },
     });
     expect(postSignIn.status()).toBe(200);

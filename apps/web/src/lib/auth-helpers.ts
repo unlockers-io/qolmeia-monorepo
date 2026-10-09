@@ -2,9 +2,6 @@ import { createSessionHelpers } from "@repo/app-shell/session";
 
 import { log } from "@/lib/observability";
 
-const { getActiveOrgId, requireMembership, requireSession } = createSessionHelpers({
-  allow: ["CUSTOMER"],
-  log,
-});
+const { requireMembership } = createSessionHelpers({ log, surface: "customer" });
 
-export { getActiveOrgId, requireMembership as requireCustomer, requireSession };
+export { requireMembership as requireCustomer };

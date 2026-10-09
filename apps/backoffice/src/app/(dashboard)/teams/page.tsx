@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { apiGetServer } from "@/lib/api-server";
-import { requireStaff } from "@/lib/auth-helpers";
+import { requireOperator } from "@/lib/auth-helpers";
 
 export const metadata: Metadata = { title: "Times" };
 
@@ -34,7 +34,7 @@ const MEMBER_STATUS = {
 } satisfies Record<TeamMemberView["status"], { label: string; pulse: boolean; tone: StatusTone }>;
 
 const TeamsContent = async () => {
-  await requireStaff();
+  await requireOperator();
   const { companies } = await apiGetServer<{ companies: Array<CompanyRoster> }>("/companies");
 
   return (

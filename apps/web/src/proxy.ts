@@ -1,63 +1,9 @@
-import { getAuth } from "@repo/app-shell/auth-server";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createProxy } from "@repo/app-shell/proxy";
 
-import { log } from "@/lib/observability";
-
-const protectedRoutes = ["/", "/assets", "/activity", "/empresa", "/no-access"];
-
-const authRoutes = ["/login", "/auth/verify"];
-
-const matchesRoute = (pathname: string, route: string): boolean => {
-  if (route === "/") {
-    return pathname === "/";
-  }
-  return pathname === route || pathname.startsWith(`${route}/`);
-};
-
-const getSessionOrNull = async (request: NextRequest) => {
-  try {
-    return await getAuth().api.getSession({ headers: request.headers });
-  } catch (error) {
-    log.error({
-      error: error instanceof Error ? error.message : String(error),
-      message: "proxy: getSession failed; treating as unauthenticated",
-      pathname: request.nextUrl.pathname,
-    });
-    return null;
-  }
-};
-
-export const proxy = async (request: NextRequest) => {
-  const pathname = request.nextUrl.pathname;
-
-  const isProtectedRoute = protectedRoutes.some((route) => matchesRoute(pathname, route));
-  const isAuthRoute = authRoutes.some((route) => matchesRoute(pathname, route));
-
-  if (!isProtectedRoute && !isAuthRoute) {
-    return NextResponse.next();
-  }
-
-  if (pathname.startsWith("/auth/verify")) {
-    return NextResponse.next();
-  }
-
-  const session = await getSessionOrNull(request);
-
-  if (isProtectedRoute && !session) {
-    const url = new URL("/login", request.url);
-    url.searchParams.set("from", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  if (isAuthRoute && session) {
-    const url = new URL("/", request.url);
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
-};
+export const proxy = createProxy({
+  protectedRoutes: ["/", "/assets", "/activity", "/empresa", "/no-access"],
+});
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|public).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|public).*)"],
 };

@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./server": "./src/server.ts",
     "./client": "./src/client.ts",
+    "./client-ip": "./src/client-ip.ts",
     "./env-config": "./src/env-config.ts",
+    "./server": "./src/server.ts",
+    "./session-cookie": "./src/session-cookie.ts",
     "./signup": "./src/signup.ts"
   },
   "scripts": {
@@ -18,13 +20,14 @@
   },
   "dependencies": {
     "@better-auth/core": "^1.7.6",
-    "@repo/db": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/transactional": "workspace:*",
+    "@repo/worker-api": "workspace:*",
     "better-auth": "^1.7.6"
   },
   "devDependencies": {
     "@repo/config-vitest": "workspace:*",
+    "@repo/db": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",

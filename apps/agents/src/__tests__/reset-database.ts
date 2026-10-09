@@ -32,8 +32,6 @@ beforeEach(async () => {
     await truncate(db);
     await db.agentTemplate.createMany({ data: [...DEFAULT_TEMPLATES] });
   });
-  const keys = await env.SESSIONS.list();
-  await Promise.allSettled(keys.keys.map(({ name }) => env.SESSIONS.delete(name)));
 });
 
 afterAll(async () => {

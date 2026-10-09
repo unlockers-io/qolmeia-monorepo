@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { TemplateForm } from "@/components/template-form";
-import { requireStaff } from "@/lib/auth-helpers";
+import { requireOperator } from "@/lib/auth-helpers";
 
 export const metadata: Metadata = { title: "Novo modelo" };
 
@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Novo modelo" };
 export const instant = true;
 
 const NewTemplateContent = async () => {
-  await requireStaff();
+  await requireOperator();
   return <TemplateForm />;
 };
 

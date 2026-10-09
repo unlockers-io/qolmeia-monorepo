@@ -1,13 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { prisma } from "@repo/db";
 
-import { authUrl } from "../../../playwright.config";
+import { backofficeUrl } from "../../../playwright.config";
 import { waitForEmail } from "../helpers/resend";
 import { makeTestEmail, makeTestUsername } from "../helpers/test-email";
 
 test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({
+  extraHTTPHeaders: { Origin: backofficeUrl },
+  storageState: { cookies: [], origins: [] },
+});
 
 test.describe("Sign-up for an existing email (enumeration prevention)", () => {
   test("second signup returns synthetic success, notifies the real account holder, no duplicate row", async ({
@@ -16,14 +19,14 @@ test.describe("Sign-up for an existing email (enumeration prevention)", () => {
     const email = makeTestEmail(testInfo).toLowerCase();
     const username = makeTestUsername(email);
 
-    const first = await request.post(`${authUrl}/api/auth/sign-up/email`, {
+    const first = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
       data: { email, name: "Original Name", password: "FirstPassword1!", username },
     });
     expect([200, 201]).toContain(first.status());
 
     const since = Date.now();
 
-    const second = await request.post(`${authUrl}/api/auth/sign-up/email`, {
+    const second = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
       data: {
         email,
         name: "Different Name",

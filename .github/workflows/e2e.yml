@@ -23,14 +23,10 @@ jobs:
       PGAPPNAME: qolmeia:ci:e2e
       BETTER_AUTH_SECRET: test-secret-minimum-32-characters-long-for-e2e
       EXPOSE_TESTING_API: 1
-      CORS_ORIGINS: http://127.0.0.1:3000,http://127.0.0.1:3001
       # Auth is SAME-ORIGIN in the Next apps: next.config.ts rewrites
-      # /api/auth/* to AUTH_SERVICE_INTERNAL_URL. The destination is baked
-      # into the build output by `next build`, so it must be set here (build
-      # step), not just at `next start`. No NEXT_PUBLIC_AUTH_URL: setting it
-      # would bypass the rewrite and stop CI from exercising the same-origin
-      # path that dev and prod use.
-      AUTH_SERVICE_INTERNAL_URL: http://127.0.0.1:4000
+      # /api/auth/* and the Worker routes to AGENTS_INTERNAL_URL, which
+      # defaults to the Worker's vite dev server on 127.0.0.1:8787 and is
+      # baked into the build output by `next build`.
       WEB_APP_URL: http://127.0.0.1:3001
       RESEND_API_KEY: re_e2e_stub
       RESEND_BASE_URL: http://127.0.0.1:3999
@@ -77,11 +73,22 @@ jobs:
             next-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('pnpm-lock.yaml') }}-e2e-${{ github.event.pull_request.number || github.ref_name }}-
             next-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('pnpm-lock.yaml') }}-e2e-main-
       - run: pnpm db:push
-      # Build auth + the three Next apps. `agents` (Cloudflare Worker) isn't
-      # under test here; the auth flows we exercise terminate on the auth
-      # service + the Next proxies; the chat surface that talks to the
-      # Worker is dead weight for these specs.
-      - run: pnpm build --filter=api --filter=backoffice --filter=web --filter=landing
+      # The Worker hosts Better Auth and runs under `vite dev` (playwright.config.ts),
+      # against this job's Postgres through the Hyperdrive local connection string.
+      # .dev.vars carries its secrets and overrides the production vars.
+      - name: Configure the Worker
+        run: |
+          {
+            echo "ASSETS_SIGNING_KEY=e2e-assets-signing-key"
+            echo "BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET"
+            echo "OPENROUTER_API_KEY=e2e-unused"
+            echo "RESEND_API_KEY=$RESEND_API_KEY"
+            echo "RESEND_BASE_URL=$RESEND_BASE_URL"
+            echo "TRUSTED_ORIGINS=http://127.0.0.1:3000,http://127.0.0.1:3001"
+            echo "WEB_APP_URL=$WEB_APP_URL"
+            echo "WORKER_PUBLIC_URL=http://127.0.0.1:8787"
+          } > apps/agents/.dev.vars
+      - run: pnpm build --filter=backoffice --filter=web --filter=landing
       - name: Read Playwright version
         id: playwright
         run: echo "version=$(pnpm exec playwright --version | cut -d ' ' -f 2)" >> "$GITHUB_OUTPUT"

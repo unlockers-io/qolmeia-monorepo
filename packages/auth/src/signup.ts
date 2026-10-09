@@ -1,11 +1,15 @@
-import type { PrismaClient } from "@repo/db";
+import { OPERATOR_ROLES, type OrgRole } from "@repo/worker-api/contracts";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-
-const OPERATOR_ROLES = ["OWNER", "STAFF"] as const;
 
 const SIGNUP_CLOSED_MESSAGE = "Este painel já tem um operador. Peça um convite para entrar.";
 
-const countOperators = (prisma: Pick<PrismaClient, "orgMembership">): Promise<number> =>
+type OperatorCounter = {
+  orgMembership: {
+    count: (args: { where: { role: { in: Array<OrgRole> } } }) => PromiseLike<number>;
+  };
+};
+
+const countOperators = async (prisma: OperatorCounter): Promise<number> =>
   prisma.orgMembership.count({ where: { role: { in: [...OPERATOR_ROLES] } } });
 
 const isSignupOpen = (operatorCount: number): boolean => operatorCount === 0;
@@ -20,4 +24,5 @@ const createSignupGuard = (countOperatorsFn: () => Promise<number>) =>
     }
   });
 
-export { countOperators, createSignupGuard, isSignupOpen, OPERATOR_ROLES, SIGNUP_CLOSED_MESSAGE };
+export { countOperators, createSignupGuard, isSignupOpen, SIGNUP_CLOSED_MESSAGE };
+export type { OperatorCounter };

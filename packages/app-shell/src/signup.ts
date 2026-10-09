@@ -1,12 +1,11 @@
-import { countOperators, isSignupOpen } from "@repo/auth/signup";
-import { prisma } from "@repo/db";
-import { connection } from "next/server";
+import type { SignupState } from "@repo/worker-api/contracts";
 import { cache } from "react";
 
-const getSignupState = cache(async (): Promise<{ open: boolean }> => {
-  await connection();
-  return { open: isSignupOpen(await countOperators(prisma)) };
-});
+import { createAppServerApi } from "./server-api";
+
+const getSignupState = cache((): Promise<SignupState> =>
+  createAppServerApi().apiGetServer<SignupState>("/api/signup"),
+);
 
 export { getSignupState };
 export { SIGNUP_CLOSED_MESSAGE } from "@repo/auth/signup";

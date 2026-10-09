@@ -1,69 +1,17 @@
-import { getAuth } from "@repo/app-shell/auth-server";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createProxy } from "@repo/app-shell/proxy";
 
-import { log } from "@/lib/observability";
-
-const protectedRoutes = [
-  "/",
-  "/approvals",
-  "/activity",
-  "/cobertura",
-  "/teams",
-  "/templates",
-  "/tickets",
-];
-
-// /reset-password is deliberately absent: bouncing an authenticated visitor to the dashboard would
-// make a reset link unusable for anyone still holding a session.
-const authRoutes = ["/login", "/register", "/recover"];
-
-const matchesRoute = (pathname: string, route: string): boolean => {
-  if (route === "/") {
-    return pathname === "/";
-  }
-  return pathname === route || pathname.startsWith(`${route}/`);
-};
-
-const getSessionOrNull = async (request: NextRequest) => {
-  try {
-    return await getAuth().api.getSession({ headers: request.headers });
-  } catch (error) {
-    log.error({
-      error: error instanceof Error ? error.message : String(error),
-      message: "proxy: getSession failed; treating as unauthenticated",
-      pathname: request.nextUrl.pathname,
-    });
-    return null;
-  }
-};
-
-export const proxy = async (request: NextRequest) => {
-  const pathname = request.nextUrl.pathname;
-
-  const isProtectedRoute = protectedRoutes.some((route) => matchesRoute(pathname, route));
-  const isAuthRoute = authRoutes.some((route) => matchesRoute(pathname, route));
-
-  if (!isProtectedRoute && !isAuthRoute) {
-    return NextResponse.next();
-  }
-
-  const session = await getSessionOrNull(request);
-
-  if (isProtectedRoute && !session) {
-    const url = new URL("/login", request.url);
-    url.searchParams.set("from", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  if (isAuthRoute && session) {
-    const url = new URL("/", request.url);
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
-};
+export const proxy = createProxy({
+  protectedRoutes: [
+    "/",
+    "/approvals",
+    "/activity",
+    "/cobertura",
+    "/teams",
+    "/templates",
+    "/tickets",
+  ],
+});
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
 };

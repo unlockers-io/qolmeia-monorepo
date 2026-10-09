@@ -27,7 +27,7 @@ const EmpresaContent = async () => {
 
   return (
     <EmpresaClient
-      companyId={me.currentOrg.id}
+      companyId={me.org.id}
       initialBrandAssets={brandAssets.status === "fulfilled" ? brandAssets.value.items : undefined}
       initialCatalogue={catalogue.status === "fulfilled" ? catalogue.value.templates : undefined}
       initialCompany={company.status === "fulfilled" ? company.value : undefined}

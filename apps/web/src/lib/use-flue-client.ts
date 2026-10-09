@@ -1,27 +1,20 @@
 import { createFlueClient } from "@flue/sdk";
 import { useState } from "react";
 
-type ConnectionOptions = {
-  sessionToken?: string;
-  url: string;
-};
-
-const createConnection = ({ sessionToken, url }: ConnectionOptions) => ({
+const createConnection = (url: string) => ({
   client: createFlueClient({
     fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
-    token: sessionToken === "" ? undefined : sessionToken,
     url,
   }),
-  sessionToken,
   url,
 });
 
-const useFlueClient = ({ sessionToken, url }: ConnectionOptions) => {
-  const [connection, setConnection] = useState(() => createConnection({ sessionToken, url }));
+const useFlueClient = (url: string) => {
+  const [connection, setConnection] = useState(() => createConnection(url));
   // Client identity owns the live SSE session: it is resource state, not a
-  // discardable render cache. Replace it only when its endpoint or identity changes.
-  if (connection.sessionToken !== sessionToken || connection.url !== url) {
-    setConnection(createConnection({ sessionToken, url }));
+  // discardable render cache. Replace it only when its endpoint changes.
+  if (connection.url !== url) {
+    setConnection(createConnection(url));
   }
   return connection.client;
 };

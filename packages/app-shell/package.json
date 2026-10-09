@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./agents-url": "./src/agents-url.ts",
     "./auth-client": "./src/auth-client.ts",
-    "./auth-server": "./src/auth-server.ts",
+    "./next-config": "./src/next-config.ts",
+    "./proxy": "./src/proxy.ts",
+    "./server-api": "./src/server-api.ts",
     "./session": "./src/session.ts",
+    "./signed-in-redirect": "./src/signed-in-redirect.tsx",
     "./signup": "./src/signup.ts"
   },
   "scripts": {
@@ -17,7 +19,7 @@
   },
   "dependencies": {
     "@repo/auth": "workspace:*",
-    "@repo/db": "workspace:*",
+    "@repo/portless-env": "workspace:*",
     "@repo/worker-api": "workspace:*",
     "better-auth": "^1.7.6"
   },

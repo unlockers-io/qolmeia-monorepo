@@ -1,7 +1,7 @@
 import { prisma } from "@repo/db";
 import { signJWT } from "better-auth/crypto";
 
-import { authUrl } from "../../../playwright.config";
+import { backofficeUrl } from "../../../playwright.config";
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => {
@@ -21,7 +21,7 @@ const requireSecret = (): string => {
 const forVerifyEmail = async (email: string): Promise<{ token: string; url: string }> => {
   const token = await signJWT({ email: email.toLowerCase() }, requireSecret(), 3600);
   const callbackURL = encodeURIComponent("/");
-  const url = `${authUrl}/api/auth/verify-email?token=${token}&callbackURL=${callbackURL}`;
+  const url = `${backofficeUrl}/api/auth/verify-email?token=${token}&callbackURL=${callbackURL}`;
   return { token, url };
 };
 
@@ -45,7 +45,7 @@ const forMagicLink = async (
 
     if (row) {
       const token = row.identifier;
-      const url = `${authUrl}/api/auth/magic-link/verify?token=${token}&callbackURL=${encodeURIComponent(
+      const url = `${backofficeUrl}/api/auth/magic-link/verify?token=${token}&callbackURL=${encodeURIComponent(
         callbackURL,
       )}`;
       return { token, url };
@@ -88,7 +88,7 @@ const forResetPassword = async (
 
     if (row) {
       const token = row.identifier.replace(/^reset-password:/u, "");
-      const url = `${authUrl}/reset-password?token=${token}`;
+      const url = `${backofficeUrl}/reset-password?token=${token}`;
       return { token, url };
     }
 

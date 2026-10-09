@@ -4,12 +4,12 @@ import { applyPortlessUrls } from "@repo/portless-env";
 import { defineConfig } from "vite";
 import zodCompiler from "zod-compiler/vite";
 
-const DEV_VARS = ["AUTH_SERVICE_URL", "CLIENT_ORIGINS", "WORKER_PUBLIC_URL"];
+const DEV_VARS = ["TRUSTED_ORIGINS", "WEB_APP_URL", "WORKER_PUBLIC_URL"];
 
 export default defineConfig(({ command }) => {
   applyPortlessUrls({
-    AUTH_SERVICE_URL: ["qolmeia.api"],
-    CLIENT_ORIGINS: ["qolmeia.web", "qolmeia.backoffice"],
+    TRUSTED_ORIGINS: ["qolmeia.web", "qolmeia.backoffice"],
+    WEB_APP_URL: ["qolmeia.web"],
     WORKER_PUBLIC_URL: ["qolmeia.agents"],
   });
   const fluePlugins = flue();
@@ -36,6 +36,11 @@ export default defineConfig(({ command }) => {
         },
       }),
     ],
+    // The entry is virtual, so Vite cannot crawl it and finds dependencies one reload at a time,
+    // which crashes a cold start.
+    environments: {
+      worker_bees: { optimizeDeps: { entries: ["src/app.ts", "src/cloudflare.ts"] } },
+    },
     server: { allowedHosts: [".localhost"], host: "127.0.0.1", port: 8787 },
   };
 });

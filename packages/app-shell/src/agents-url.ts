@@ -1,3 +1,3 @@
-const AGENTS_SERVER_URL = process.env.AGENTS_INTERNAL_URL ?? "http://127.0.0.1:8787";
+const agentsServerUrl = (): string => process.env.AGENTS_INTERNAL_URL ?? "http://127.0.0.1:8787";
 
-export { AGENTS_SERVER_URL };
+export { agentsServerUrl };

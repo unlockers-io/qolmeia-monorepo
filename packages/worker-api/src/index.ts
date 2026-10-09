@@ -128,7 +128,6 @@ type ServerApiConfig = {
   basePath?: string;
   baseUrl: string;
   readCookieHeader: () => Promise<string>;
-  readOrgId: () => Promise<string>;
 };
 
 type ServerApi = {
@@ -137,8 +136,8 @@ type ServerApi = {
 
 const createServerApi = (config: ServerApiConfig): ServerApi => ({
   apiGetServer: async <T>(path: string): Promise<T> => {
-    const [cookie, orgId] = await Promise.all([config.readCookieHeader(), config.readOrgId()]);
-    const headers = new Headers({ Accept: "application/json", "X-Org-Id": orgId });
+    const cookie = await config.readCookieHeader();
+    const headers = new Headers({ Accept: "application/json" });
     if (cookie !== "") {
       headers.set("Cookie", cookie);
     }
