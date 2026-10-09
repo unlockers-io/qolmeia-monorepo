@@ -20,7 +20,8 @@ const CUSTOMER_NAME = "Cliente Demo";
 const CUSTOMER_PASSWORD = "Qolmeia-Dev-CustomerPass!";
 
 const auth = createAuth({
-  ...envAuthConfig(),
+  ...envAuthConfig(process.env),
+  fallbackBaseURL: "http://127.0.0.1:8787",
   prisma,
   resendApiKey: env.RESEND_API_KEY,
   secret: env.BETTER_AUTH_SECRET,

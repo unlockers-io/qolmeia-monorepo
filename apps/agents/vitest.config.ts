@@ -11,7 +11,10 @@ export default defineConfig({
     cloudflareTest({
       main: "./src/__tests__/worker-entry.ts",
       miniflare: {
-        bindings: { OPENROUTER_API_KEY: "test-openrouter-key" },
+        bindings: {
+          BETTER_AUTH_SECRET: "vitest-better-auth-secret-of-at-least-32-chars",
+          OPENROUTER_API_KEY: "test-openrouter-key",
+        },
         hyperdrives: { HYPERDRIVE: testDatabaseUrl },
       },
       wrangler: { configPath: "./wrangler.jsonc", environment: "test" },

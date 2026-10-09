@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 
-import { requireSession, type SessionEnv } from "#/lib/auth";
-import { withDb } from "#/lib/db";
+import { requireMember, type IdentityEnv } from "#/identity/gates";
+import { dbPerRequest } from "#/lib/db";
 import { openAsset } from "#/library/assets";
 
-const assetsRoutes = new Hono<SessionEnv>();
+const assetsRoutes = new Hono<IdentityEnv>();
 
 const buildAssetHeaders = (mime: string) => {
   const headers = new Headers({
@@ -21,10 +21,8 @@ const buildAssetHeaders = (mime: string) => {
   return headers;
 };
 
-assetsRoutes.get("/:id", requireSession, async (c) => {
-  const asset = await withDb(c.env, (db) =>
-    openAsset(c.env, db, c.req.param("id"), c.get("session")),
-  );
+assetsRoutes.get("/:id", dbPerRequest, requireMember, async (c) => {
+  const asset = await openAsset(c.env, c.var.db, c.req.param("id"), c.get("session"));
   if (!asset) {
     return c.text("Not found", 404);
   }

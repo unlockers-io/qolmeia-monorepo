@@ -1,29 +1,22 @@
 import { Hono } from "hono";
 import { z } from "zod";
 
-import { requireCustomerForWrites, requireSession, type ValidatedSession } from "#/lib/auth";
-import { dbPerRequest, type DbVariables } from "#/lib/db";
+import { requireCustomerOfPathTenant, type IdentityEnv } from "#/identity/gates";
+import { dbPerRequest } from "#/lib/db";
 import { confirmTeam } from "#/team/confirm";
 import { TeamError } from "#/team/errors";
 
-type Vars = DbVariables & { session: ValidatedSession };
+const teamsRoutes = new Hono<IdentityEnv>();
 
-const teamsRoutes = new Hono<{ Bindings: Env; Variables: Vars }>();
-
-teamsRoutes.use("*", requireSession);
-teamsRoutes.use("*", requireCustomerForWrites);
 teamsRoutes.use("*", dbPerRequest);
+teamsRoutes.use("*", requireCustomerOfPathTenant);
 
 const confirmBodySchema = z.object({
   templateIds: z.array(z.string().min(1)).min(1).max(20),
 });
 
 teamsRoutes.post("/:companyId/confirm", async (c) => {
-  const companyId = c.req.param("companyId");
   const session = c.get("session");
-  if (session.companyId !== companyId) {
-    return c.text("Forbidden", 403);
-  }
 
   let raw: unknown;
   try {
@@ -39,7 +32,7 @@ teamsRoutes.post("/:companyId/confirm", async (c) => {
   try {
     const team = await confirmTeam(c.env, c.var.db, {
       actorId: session.userId,
-      companyId,
+      companyId: session.companyId,
       templateIds: parsed.data.templateIds,
     });
     return c.json({ team });

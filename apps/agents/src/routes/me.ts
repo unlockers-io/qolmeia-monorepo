@@ -5,13 +5,10 @@ import { type Context, Hono } from "hono";
 
 import { listActivity } from "#/activity/log";
 import { getCompany, updateBrief } from "#/company/company";
-import {
-  fetchMe,
-  requireCustomerForWrites,
-  requireSession,
-  type ValidatedSession,
-} from "#/lib/auth";
-import { dbPerRequest, type DbVariables } from "#/lib/db";
+import { requireCustomer, type IdentityEnv } from "#/identity/gates";
+import { readMe } from "#/identity/identity";
+import { createWorkerAuth } from "#/lib/auth";
+import { dbPerRequest } from "#/lib/db";
 import { parsePositiveInt } from "#/lib/pagination";
 import { meAssetsRoutes } from "#/routes/me-assets";
 import { TeamError } from "#/team/errors";
@@ -26,9 +23,7 @@ import {
 import { getCatalogue, getMemberDetail, getTeamRoster } from "#/team/roster";
 import { listEntitledTemplates } from "#/template/template";
 
-type MeEnv = { Bindings: Env; Variables: DbVariables & { session: ValidatedSession } };
-
-const respondToTeamCommand = async (c: Context<MeEnv>, command: Promise<TeamMemberView>) => {
+const respondToTeamCommand = async (c: Context<IdentityEnv>, command: Promise<TeamMemberView>) => {
   try {
     return c.json({ member: await command });
   } catch (error) {
@@ -39,29 +34,22 @@ const respondToTeamCommand = async (c: Context<MeEnv>, command: Promise<TeamMemb
   }
 };
 
-const meRoutes = new Hono<MeEnv>();
+const meRoutes = new Hono<IdentityEnv>();
+
+meRoutes.use("*", dbPerRequest);
 
 meRoutes.get("/", async (c) => {
-  const result = await fetchMe(c.req.raw, c.env);
-  if (result.kind === "no-credentials") {
-    return c.text("Unauthorized", 401);
+  const result = await readMe(createWorkerAuth(c.env, c.var.db), c.var.db, c.req.raw.headers);
+  if (result.kind === "signed-out") {
+    return c.body(null, 401);
   }
-  if (result.kind === "unreachable") {
-    return c.text("Auth service unreachable", 502);
+  if (result.kind === "unavailable") {
+    return c.body(null, 503);
   }
-
-  return new Response(result.body, {
-    headers: {
-      "Content-Type": "application/json",
-      "X-Cache": result.cached ? "hit" : "miss",
-    },
-    status: result.status,
-  });
+  return c.json(result.me);
 });
 
-meRoutes.use("*", requireSession);
-meRoutes.use("*", requireCustomerForWrites);
-meRoutes.use("*", dbPerRequest);
+meRoutes.use("*", requireCustomer);
 
 meRoutes.get("/company", async (c) => {
   const { companyId } = c.get("session");

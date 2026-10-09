@@ -1,6 +1,6 @@
 import type { Asset, AssetKind, AssetVisibility, Prisma } from "@repo/db/worker";
 
-import type { ValidatedSession } from "#/lib/auth";
+import type { Identity } from "#/identity/identity";
 import type { Db } from "#/lib/db";
 import { toRecordOrNull, type JsonRecord } from "#/lib/records";
 
@@ -138,14 +138,14 @@ const listAssets = async (
 const readerScope = ({
   companyId,
   role,
-}: Pick<ValidatedSession, "companyId" | "role">): Prisma.AssetWhereInput =>
+}: Pick<Identity, "companyId" | "role">): Prisma.AssetWhereInput =>
   role === "CUSTOMER" ? { companyId, visibility: "customer" } : {};
 
 const openAsset = async (
   env: LibraryEnv,
   db: Db,
   assetId: string,
-  reader: Pick<ValidatedSession, "companyId" | "role">,
+  reader: Pick<Identity, "companyId" | "role">,
 ): Promise<{ body: ReadableStream; mime: string } | null> => {
   const row = await db.asset.findFirst({
     select: { mime: true, r2Key: true },

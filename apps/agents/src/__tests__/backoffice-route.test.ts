@@ -1,23 +1,16 @@
-import { exports } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
+import { fetchWithCookie, signInAs, type Persona } from "#/__tests__/sign-in";
 import { proposeAction } from "#/action/approval";
 import { recordActivity } from "#/activity/log";
 
 const COMPANY_ID = "co_bo_test";
 const OTHER_COMPANY_ID = "co_bo_other";
 const STAFF_ID = "staff-1";
-const originalFetch = globalThis.fetch;
 
-const meStaff = {
-  currentOrg: { id: COMPANY_ID, role: "STAFF" },
-  user: { id: STAFF_ID },
-};
-const meCustomer = {
-  currentOrg: { id: COMPANY_ID, role: "CUSTOMER" },
-  user: { id: "cust-1" },
-};
+const meStaff: Persona = { orgId: COMPANY_ID, role: "STAFF", userId: STAFF_ID };
+const meCustomer: Persona = { orgId: COMPANY_ID, role: "CUSTOMER", userId: "cust-1" };
 
 const seedTenant = async (companyId: string, name: string, suffix: string) => {
   const agentId = `agent-bo-${suffix}`;
@@ -58,53 +51,44 @@ const logExecuted = (companyId: string, refId: string, summary: string) =>
   );
 
 const createCompany = (body: { name: string; slug: string }) =>
-  exports.default.fetch("https://agents.test/api/backoffice/companies?cf_session=tok", {
+  fetchWithCookie(cookie, "https://agents.test/api/backoffice/companies", {
     body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },
     method: "POST",
   });
 
+let cookie = "";
+
 beforeEach(async () => {
+  cookie = "";
   await seedTenant(COMPANY_ID, "BO Test", "test");
   await seedTenant(OTHER_COMPANY_ID, "BO Other", "other");
 });
 
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
-
 describe("backoffice auth gate", () => {
   it("rejects unauthenticated with 401", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(new Response("Unauthorized", { status: 401 })));
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
-    );
+    cookie = "";
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/tickets");
     expect(res.status).toBe(401);
   });
 
   it("rejects CUSTOMER with 403", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
-    );
+    cookie = await signInAs(meCustomer);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/tickets");
     expect(res.status).toBe(403);
   });
 
   it("admits STAFF with 200", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
-    );
+    cookie = await signInAs(meStaff);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/tickets");
     expect(res.status).toBe(200);
   });
 });
 
 describe("backoffice listing endpoints", () => {
   it("lists tickets across all tenants (camelCase shape + company label)", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
-    );
+    cookie = await signInAs(meStaff);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/tickets");
     const body = await res.json<{
       items: Array<{
         agentInstanceId: string;
@@ -130,9 +114,10 @@ describe("backoffice listing endpoints", () => {
 
   it("lists pending actions sorted by age (oldest first)", async () => {
     await propose(COMPANY_ID, "tkt-bo-test", "x");
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions?status=pending&sort=age&cf_session=tok",
+    cookie = await signInAs(meStaff);
+    const res = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/actions?status=pending&sort=age",
     );
     const body = await res.json<{
       items: Array<{ actionType: string; ageSeconds: number }>;
@@ -144,10 +129,8 @@ describe("backoffice listing endpoints", () => {
 
   it("lists ALL actions (no status filter) in camelCase", async () => {
     await propose(COMPANY_ID, "tkt-bo-test", "y");
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions?cf_session=tok",
-    );
+    cookie = await signInAs(meStaff);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/actions");
     const body = await res.json<{
       items: Array<{
         actionType: string;
@@ -170,9 +153,10 @@ describe("backoffice listing endpoints", () => {
 
 describe("backoffice list routes span tenants and honor the ?companyId= filter", () => {
   it("GET /tickets?companyId= narrows to that company; unfiltered spans all", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const filtered = await exports.default.fetch(
-      `https://agents.test/api/backoffice/tickets?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
+    cookie = await signInAs(meStaff);
+    const filtered = await fetchWithCookie(
+      cookie,
+      `https://agents.test/api/backoffice/tickets?companyId=${OTHER_COMPANY_ID}`,
     );
     expect(filtered.status).toBe(200);
     const filteredBody = await filtered.json<{
@@ -181,9 +165,7 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
     expect(filteredBody.items.find((t) => t.id === "tkt-bo-other")).toBeTruthy();
     expect(filteredBody.items.every((t) => t.companyId === OTHER_COMPANY_ID)).toBe(true);
 
-    const all = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
-    );
+    const all = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/tickets");
     const allBody = await all.json<{ items: Array<{ id: string }> }>();
     expect(allBody.items.find((t) => t.id === "tkt-bo-test")).toBeTruthy();
     expect(allBody.items.find((t) => t.id === "tkt-bo-other")).toBeTruthy();
@@ -192,18 +174,17 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
   it("GET /actions?companyId= narrows to that company; unfiltered spans all", async () => {
     await propose(COMPANY_ID, "tkt-bo-test", "mine");
     await propose(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const filtered = await exports.default.fetch(
-      `https://agents.test/api/backoffice/actions?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
+    cookie = await signInAs(meStaff);
+    const filtered = await fetchWithCookie(
+      cookie,
+      `https://agents.test/api/backoffice/actions?companyId=${OTHER_COMPANY_ID}`,
     );
     expect(filtered.status).toBe(200);
     const filteredBody = await filtered.json<{ items: Array<{ companyId: string }> }>();
     expect(filteredBody.items.length).toBeGreaterThan(0);
     expect(filteredBody.items.every((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
 
-    const all = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions?cf_session=tok",
-    );
+    const all = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/actions");
     const allBody = await all.json<{ items: Array<{ companyId: string }> }>();
     expect(allBody.items.some((a) => a.companyId === COMPANY_ID)).toBe(true);
     expect(allBody.items.some((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
@@ -212,18 +193,17 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
   it("GET /activity?companyId= narrows to that company; unfiltered spans all", async () => {
     await logExecuted(COMPANY_ID, "tkt-bo-test", "mine");
     await logExecuted(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const filtered = await exports.default.fetch(
-      `https://agents.test/api/backoffice/activity?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
+    cookie = await signInAs(meStaff);
+    const filtered = await fetchWithCookie(
+      cookie,
+      `https://agents.test/api/backoffice/activity?companyId=${OTHER_COMPANY_ID}`,
     );
     expect(filtered.status).toBe(200);
     const filteredBody = await filtered.json<{ items: Array<{ companyId: string }> }>();
     expect(filteredBody.items.length).toBeGreaterThan(0);
     expect(filteredBody.items.every((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
 
-    const all = await exports.default.fetch(
-      "https://agents.test/api/backoffice/activity?cf_session=tok",
-    );
+    const all = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/activity");
     const allBody = await all.json<{ items: Array<{ companyId: string }> }>();
     expect(allBody.items.some((a) => a.companyId === COMPANY_ID)).toBe(true);
     expect(allBody.items.some((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
@@ -232,10 +212,11 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
 
 describe("backoffice list query-param hardening", () => {
   it("GET /tickets rejects an unknown status", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
 
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?status=unknown&cf_session=tok",
+    const res = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/tickets?status=unknown",
     );
 
     expect(res.status).toBe(400);
@@ -243,17 +224,19 @@ describe("backoffice list query-param hardening", () => {
   });
 
   it("GET /tickets ignores a non-numeric limit and clamps an oversized one", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
 
-    const nonNumeric = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?limit=abc&cf_session=tok",
+    const nonNumeric = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/tickets?limit=abc",
     );
     expect(nonNumeric.status).toBe(200);
     const nonNumericBody = await nonNumeric.json<{ items: Array<{ id: string }> }>();
     expect(nonNumericBody.items.find((t) => t.id === "tkt-bo-test")).toBeTruthy();
 
-    const oversized = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?limit=999999&cf_session=tok",
+    const oversized = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/tickets?limit=999999",
     );
     expect(oversized.status).toBe(200);
     const oversizedBody = await oversized.json<{ items: Array<{ id: string }> }>();
@@ -262,17 +245,19 @@ describe("backoffice list query-param hardening", () => {
 
   it("GET /activity ignores non-numeric limit, since, and before", async () => {
     await logExecuted(COMPANY_ID, "tkt-bo-test", "hardening");
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
 
-    const badLimit = await exports.default.fetch(
-      "https://agents.test/api/backoffice/activity?limit=abc&cf_session=tok",
+    const badLimit = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/activity?limit=abc",
     );
     expect(badLimit.status).toBe(200);
     const badLimitBody = await badLimit.json<{ items: Array<{ summary: string }> }>();
     expect(badLimitBody.items.some((a) => a.summary === "hardening")).toBe(true);
 
-    const badWindow = await exports.default.fetch(
-      "https://agents.test/api/backoffice/activity?since=abc&before=xyz&cf_session=tok",
+    const badWindow = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/activity?since=abc&before=xyz",
     );
     expect(badWindow.status).toBe(200);
     const badWindowBody = await badWindow.json<{ items: Array<{ summary: string }> }>();
@@ -282,9 +267,10 @@ describe("backoffice list query-param hardening", () => {
 
 describe("operator override decide", () => {
   it("returns 404 for an unknown action id", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions/does-not-exist/decide?cf_session=tok",
+    cookie = await signInAs(meStaff);
+    const res = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/actions/does-not-exist/decide",
       {
         body: JSON.stringify({ decision: "approved" }),
         headers: { "Content-Type": "application/json" },
@@ -295,9 +281,10 @@ describe("operator override decide", () => {
   });
 
   it("returns 400 for an invalid body", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions/whatever/decide?cf_session=tok",
+    cookie = await signInAs(meStaff);
+    const res = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/actions/whatever/decide",
       {
         body: JSON.stringify({ decision: "maybe" }),
         headers: { "Content-Type": "application/json" },
@@ -322,7 +309,7 @@ describe("POST /api/backoffice/companies", () => {
         where: { id: "tpl-seo-researcher" },
       }),
     );
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
 
     const res = await createCompany({ name: "Padaria Nova", slug: "padaria-nova" });
 
@@ -364,7 +351,7 @@ describe("POST /api/backoffice/companies", () => {
   });
 
   it("returns 409 when the slug is already in use", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
     const first = await createCompany({ name: "Primeira", slug: "repetida" });
     expect(first.status).toBe(201);
 
@@ -378,20 +365,24 @@ describe("POST /api/backoffice/companies", () => {
   });
 
   it("returns 400 for an invalid slug", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
 
     const res = await createCompany({ name: "Padaria", slug: "Padaria Nova!" });
 
     expect(res.status).toBe(400);
-    await expect(db((client) => client.organization.count())).resolves.toBe(0);
+    await expect(
+      db((client) => client.organization.count({ where: { name: "Padaria" } })),
+    ).resolves.toBe(0);
   });
 
   it("rejects a CUSTOMER session with 403", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
+    cookie = await signInAs(meCustomer);
 
     const res = await createCompany({ name: "Padaria", slug: "padaria" });
 
     expect(res.status).toBe(403);
-    await expect(db((client) => client.organization.count())).resolves.toBe(0);
+    await expect(
+      db((client) => client.organization.count({ where: { name: "Padaria" } })),
+    ).resolves.toBe(0);
   });
 });

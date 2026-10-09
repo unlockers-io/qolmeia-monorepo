@@ -5,9 +5,14 @@ OPENROUTER_API_KEY=sk-or-v1-your-key-here
 # Read only by the Node scripts (`pnpm db:seed`, `pnpm memory:reindex`). The
 # Worker itself reaches Postgres through the HYPERDRIVE binding in wrangler.jsonc.
 DATABASE_URL=postgresql://qolmeia:qolmeia123@127.0.0.1:5436/qolmeia
-# `pnpm db:seed` signs up the dev logins through Better Auth, which requires a
-# secret of at least 32 characters. Use the value from apps/api/.env.
+
+# Better Auth signs session cookies with it; at least 32 characters. Generate
+# with `openssl rand -base64 48`. `pnpm db:seed` signs up the dev logins with it.
 BETTER_AUTH_SECRET=
+
+# Resend API key for auth emails (magic link, verification, reset). Leave unset
+# in dev: the Worker logs each link instead, and it opens as-is.
+RESEND_API_KEY=
 
 # Exa web-search API key (https://exa.ai) for the webSearch skill. Optional —
 # leave unset and the skill returns a clear "indisponível" error.
