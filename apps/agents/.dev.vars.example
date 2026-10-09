@@ -2,10 +2,6 @@
 # Tests stub the model, so .dev.vars is only needed for manual chat testing.
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
 
-# HMAC secret for /assets/:id signed URLs. Generate any 32+ byte hex string:
-#   openssl rand -hex 32
-ASSETS_SIGNING_KEY=replace-me-with-a-random-32-byte-hex-string
-
 # Read only by the Node scripts (`pnpm db:seed`, `pnpm memory:reindex`). The
 # Worker itself reaches Postgres through the HYPERDRIVE binding in wrangler.jsonc.
 DATABASE_URL=postgresql://qolmeia:qolmeia123@127.0.0.1:5436/qolmeia

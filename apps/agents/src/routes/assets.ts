@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 
+import { requireSession, type SessionEnv } from "#/lib/auth";
 import { withDb } from "#/lib/db";
-import { fetchAsset, verifyAssetToken } from "#/lib/r2";
-import { getAssetAccess } from "#/library/assets";
+import { openAsset } from "#/library/assets";
 
-const assetsRoutes = new Hono<{ Bindings: Env }>();
+const assetsRoutes = new Hono<SessionEnv>();
 
 const buildAssetHeaders = (mime: string) => {
   const headers = new Headers({
@@ -21,31 +21,14 @@ const buildAssetHeaders = (mime: string) => {
   return headers;
 };
 
-assetsRoutes.get("/:id", async (c) => {
-  const id = c.req.param("id");
-  const token = c.req.query("token");
-  if (token === undefined || token === "") {
-    return c.text("Missing token", 401);
-  }
-
-  const valid = await verifyAssetToken(c.env.ASSETS_SIGNING_KEY, id, token);
-  if (!valid) {
-    return c.text("Invalid or expired token", 401);
-  }
-
-  const row = await withDb(c.env, (db) => getAssetAccess(db, id));
-  if (!row) {
+assetsRoutes.get("/:id", requireSession, async (c) => {
+  const asset = await withDb(c.env, (db) =>
+    openAsset(c.env, db, c.req.param("id"), c.get("session")),
+  );
+  if (!asset) {
     return c.text("Not found", 404);
   }
-
-  const object = await fetchAsset({ ASSETS: c.env.ASSETS }, row.r2Key);
-  if (!object) {
-    return c.text("Not found", 404);
-  }
-
-  return new Response(object.body, {
-    headers: buildAssetHeaders(row.mime),
-  });
+  return new Response(asset.body, { headers: buildAssetHeaders(asset.mime) });
 });
 
 export { assetsRoutes };

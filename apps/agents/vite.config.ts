@@ -25,6 +25,7 @@ export default defineConfig(({ command }) => {
           if (command === "serve") {
             Reflect.deleteProperty(config, "ai");
             Reflect.deleteProperty(config, "vectorize");
+            config.vars.MEMORY_BACKEND = "in-memory";
             for (const key of DEV_VARS) {
               const value = process.env[key];
               if (value) {

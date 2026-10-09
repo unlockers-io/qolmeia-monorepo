@@ -65,13 +65,13 @@ Monorepo: pnpm 11 workspaces + Turborepo, Node 24.
 
 The agents Worker owns all product data. Each store has a single purpose:
 
-| Store         | Binding                      | Holds                                                                                               |
-| ------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- |
-| **R2**        | `ASSETS`                     | Binary assets (generated images, uploads, brand files), served via HMAC-signed `/assets/:id` URLs.  |
-| **KV**        | `SESSIONS`                   | A 30s session-validation cache (keeps the auth service off the hot path).                           |
-| **Vectorize** | `VECTORIZE` (prod, optional) | Embeddings for long-term agent memory recall. Falls back to an in-process store when unprovisioned. |
-| **Postgres**  | `DATABASE_URL`               | Auth and product system of record, accessed through Prisma from `apps/api` and the Worker.          |
-| **Workflows** | `WORKER_JOB`                 | `WorkerJobWorkflow` runs: the durable approval/execution loop for delegated work.                   |
+| Store         | Binding        | Holds                                                                                               |
+| ------------- | -------------- | --------------------------------------------------------------------------------------------------- |
+| **R2**        | `ASSETS`       | Binary assets (generated images, uploads, brand files), served session-authorized at `/assets/:id`. |
+| **KV**        | `SESSIONS`     | A 30s session-validation cache (keeps the auth service off the hot path).                           |
+| **Vectorize** | `VECTORIZE`    | Embeddings for memory recall. Required unless `MEMORY_BACKEND=in-memory` (local dev and tests).     |
+| **Postgres**  | `DATABASE_URL` | Auth and product system of record, accessed through Prisma from `apps/api` and the Worker.          |
+| **Workflows** | `WORKER_JOB`   | `WorkerJobWorkflow` runs: the durable approval/execution loop for delegated work.                   |
 
 ## §5. Data model (Prisma/Postgres)
 
@@ -133,7 +133,7 @@ The highest-stakes path, kept on a Cloudflare Workflow for durability ([ADR 0003
 2. The Workflow generates the deliverable using the Worker template's skills, then **proposes an `action`** (the backoffice approval card) for high-impact side-effects only ([ADR 0006](adr/0006-approval-gates-only-high-impact-actions.md)).
 3. It **pauses at `step.waitForEvent("decision-<actionId>")`**: surviving DO eviction for as long as the operator takes.
 4. An operator on the backoffice opens `/approvals`, decides, and `POST /api/backoffice/actions/:id/decide` resumes the Workflow.
-5. On approval the side-effect runs (e.g. `generateBrandImage` → R2 → signed URL), the action is marked `executed`, the ticket `done`, and the Workflow **`dispatch()`es the result to the Correspondent**, which presents it in chat (markdown, so images render inline).
+5. On approval the side-effect runs (e.g. `generateBrandImage` → R2 → `/assets/:id` reference), the action is marked `executed`, the ticket `done`, and the Workflow **`dispatch()`es the result to the Correspondent**, which presents it in chat (markdown, so images render inline).
 
 A weekly **proactive sweep** (`scheduled()` cron) gates each active company on brief-completeness + a weekly window and `dispatch()`es a "suggest next work" prompt to its Correspondent.
 
@@ -152,7 +152,7 @@ The customer reaches the Correspondent over the **web chat only**: the Flue agen
 1. **Sign-up / magic-link**: Better Auth issues a `localhost`-scoped cookie.
 2. **Client opens**: `requireCustomer` → `/api/me` (relays to `apps/api` for membership).
 3. **`status === "onboarding"`**: customer chats the **Planner**; it calls `extractBrief` + `proposeTeam`, then surfaces "Confirmar Time".
-4. **Customer confirms**: `POST /api/teams/:companyId/confirm` materialises `team` + `team_member`, flips `company.status = active`, seeds Correspondent memory (`seedCompanyMemory`).
+4. **Customer confirms**: `POST /api/teams/:companyId/confirm` materialises `team` + `team_member`, flips `company.status = active`, seeds Correspondent memory (`remember`, inside the same transaction).
 5. **`status === "active"`**: customer chats the **Correspondent**, which `delegateToWorker`s.
    6–8. The **delegation + approval flow** of §8 runs; the deliverable lands back in chat.
 

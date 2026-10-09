@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { EMBEDDING_DIMENSIONS, embeddingSchema } from "#/lib/memory/embedding";
+import { EMBEDDING_DIMENSIONS, embeddingsSchema } from "#/memory/vectors";
 
 describe("memory embedding contract", () => {
   it("accepts the same embedding shape used by runtime and backfill", () => {
-    const vector = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.25);
-    expect(embeddingSchema.parse({ data: [vector] })).toEqual(vector);
+    const first = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.25);
+    const second = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.5);
+    expect(embeddingsSchema.parse({ data: [first, second] })).toEqual([first, second]);
   });
 
   it.each([
@@ -16,6 +17,6 @@ describe("memory embedding contract", () => {
     { data: [Array.from({ length: EMBEDDING_DIMENSIONS }, () => Number.NaN)] },
     { data: [Array.from({ length: EMBEDDING_DIMENSIONS }, () => "0.5")] },
   ])("rejects invalid vectors before writing or querying the index", (result) => {
-    expect(() => embeddingSchema.parse(result)).toThrow(z.ZodError);
+    expect(() => embeddingsSchema.parse(result)).toThrow(z.ZodError);
   });
 });

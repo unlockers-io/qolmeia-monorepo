@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 import type { ActionTypeModule } from "#/action/action-type";
 import { deliverableSchema, readDeliverable, releaseDeliverable } from "#/action/deliverable";
-import { buildSignedAssetUrl, SIGNED_IMAGE_TTL_MS } from "#/lib/r2";
+import { assetReference } from "#/library/assets";
 import { draftSocialPostInputSchema, draftSocialPostSkill } from "#/skills/draft-social-post";
 
 type PostDraft = z.infer<typeof draftSocialPostInputSchema>;
@@ -29,24 +29,17 @@ const renderPost = (draft: PostDraft, imageUrls: ReadonlyArray<string>): string 
     .filter((part) => part !== "")
     .join("\n\n");
 
-const signImages = (
-  env: Env,
+const imageReferences = (
   assets: ReadonlyArray<{ id: string; mime: string }>,
-): Promise<ReadonlyArray<string>> =>
-  Promise.all(
-    assets.flatMap(({ id, mime }) =>
-      mime.startsWith("image/")
-        ? [buildSignedAssetUrl(env, env.WORKER_PUBLIC_URL, id, SIGNED_IMAGE_TTL_MS)]
-        : [],
-    ),
-  );
+): ReadonlyArray<string> =>
+  assets.flatMap(({ id, mime }) => (mime.startsWith("image/") ? [assetReference(id)] : []));
 
 const publishPost: ActionTypeModule = {
   defaultPolicy: "require_approval",
   async execute(ctx, proposed) {
     const { assetIds, draft, summary } = publishPostSchema.parse(proposed);
     const assets = await releaseDeliverable(ctx, assetIds);
-    return draft === undefined ? summary : renderPost(draft, await signImages(ctx.env, assets));
+    return draft === undefined ? summary : renderPost(draft, imageReferences(assets));
   },
   propose(generation) {
     const deliverable = readDeliverable(generation);
