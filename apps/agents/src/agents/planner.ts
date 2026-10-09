@@ -9,7 +9,7 @@ import {
 import { plannerIdFor } from "@repo/worker-api/contracts";
 import { env } from "cloudflare:workers";
 
-import { CONVERSATION_MODEL } from "#/lib/flue-models";
+import { CONVERSATION_MODEL } from "#/lib/models";
 import { buildFlueTools } from "#/lib/skill-tool";
 import { loadSkillOverlays, type SkillContext, type SkillOverlayMap } from "#/skills/registry";
 
@@ -31,7 +31,7 @@ export function PlannerV2({ id }: AgentProps): string {
     setOverlays(await loadSkillOverlays(env, PLANNER_SKILLS));
   });
 
-  useModel(`openrouter/${CONVERSATION_MODEL}`, { thinkingLevel: "low" });
+  useModel(CONVERSATION_MODEL, { thinkingLevel: "low" });
 
   const ctx: SkillContext = {
     agentInstanceId: plannerIdFor(id),

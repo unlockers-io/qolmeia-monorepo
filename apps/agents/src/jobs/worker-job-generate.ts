@@ -3,8 +3,8 @@ import { generateText, isStepCount } from "ai";
 
 import type { Generation } from "#/action/action-type";
 import type { JobContext } from "#/jobs/worker-job-steps";
-import { getModel } from "#/lib/ai-gateway";
 import { withDb } from "#/lib/db";
+import { languageModel } from "#/lib/models";
 import { buildSkillTools } from "#/skills/registry";
 import { resolveSystemPrompt } from "#/team/resolve-system-prompt";
 import { loadInstanceWithTemplate, loadTicket } from "#/ticket/ticket";
@@ -66,7 +66,7 @@ const generateDeliverable = async (
       revision?.priorSummary ?? null,
       revision?.feedback ?? null,
     ),
-    model: getModel(env, template.model),
+    model: languageModel(env, template.model),
     stopWhen: isStepCount(5),
     tools,
   });

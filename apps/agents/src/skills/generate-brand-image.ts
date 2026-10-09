@@ -1,25 +1,15 @@
 import { z } from "zod";
 
 import { withDb } from "#/lib/db";
+import { generateImage, type ImagePromptPart } from "#/lib/models";
 import { buildSignedAssetUrl, SIGNED_IMAGE_TTL_MS } from "#/lib/r2";
 import { listBrandReferences, persistAsset } from "#/library/assets";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
-
-const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const generateBrandImageInputSchema = z.object({
   aspectRatio: z.enum(["1:1", "16:9", "4:3", "9:16"]).optional(),
   prompt: z.string().min(1).max(2000),
 });
-
-type ImageContent = { image_url?: { url?: string }; type?: string };
-type ChatCompletionResponse = {
-  choices?: Array<{
-    message?: {
-      images?: Array<ImageContent>;
-    };
-  }>;
-};
 
 const aspectHint = (aspect: string): string => {
   if (aspect === "16:9") {
@@ -97,47 +87,22 @@ const generateBrandImageSkill: UnknownSkill = {
     const fullPrompt = `${prompt}${aspectHint(aspectRatio)}`;
 
     const brandRefs = await loadBrandReferences(ctx);
-    const userContent =
+    const userContent: string | Array<ImagePromptPart> =
       brandRefs.length > 0
         ? [
             {
               text: `${fullPrompt}\n\nUse as imagens de referência da marca anexadas para manter a identidade visual (cores, estilo, logotipo).`,
               type: "text",
             },
-            ...brandRefs.map((url) => ({ image_url: { url }, type: "image_url" })),
+            ...brandRefs.map((url): ImagePromptPart => ({ image_url: { url }, type: "image_url" })),
           ]
         : fullPrompt;
 
-    let response: Response;
+    let imageUrl: string;
     try {
-      response = await fetch(OPENROUTER_CHAT_URL, {
-        body: JSON.stringify({
-          messages: [{ content: userContent, role: "user" }],
-          modalities: ["image", "text"],
-          model: ctx.env.IMAGE_GEN_MODEL,
-        }),
-        headers: {
-          Authorization: `Bearer ${ctx.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": ctx.env.WORKER_PUBLIC_URL,
-          "X-Title": "Qolmeia",
-        },
-        method: "POST",
-      });
+      imageUrl = await generateImage(ctx.env, userContent);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return { error: `Image gen network error: ${message}` };
-    }
-
-    if (!response.ok) {
-      const body = await response.text();
-      return { error: `Image gen HTTP ${response.status}: ${body.slice(0, 200)}` };
-    }
-
-    const json = await response.json<ChatCompletionResponse>();
-    const imageUrl = json.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (imageUrl === undefined || imageUrl === "") {
-      return { error: "Image gen response missing choices[0].message.images[0].image_url.url" };
+      return { error: error instanceof Error ? error.message : String(error) };
     }
 
     const decoded = parseDataUrl(imageUrl);
