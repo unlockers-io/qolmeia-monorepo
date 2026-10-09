@@ -3,7 +3,7 @@ import type { PrismaClient } from "./generated/prisma/client";
 const DEFAULT_TEMPLATES = [
   {
     defaultActionType: "worker_deliverable",
-    defaultPolicies: { publish_asset: "require_approval" },
+    defaultPolicies: {},
     description: "Cria imagens, posts e direções visuais alinhados à marca do cliente.",
     displayName: "Designer",
     id: "tpl-designer",

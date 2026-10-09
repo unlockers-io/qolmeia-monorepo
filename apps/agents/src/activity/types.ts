@@ -5,6 +5,13 @@ type ActionProposedEvent = {
   type: "ACTION_PROPOSED";
 };
 
+type ActionApprovedEvent = {
+  payload: { feedback: string | null };
+  refId: string;
+  refType: "action";
+  type: "ACTION_APPROVED";
+};
+
 type ActionExecutedEvent = {
   payload?: undefined;
   refId: string;
@@ -36,15 +43,8 @@ type ActionRevisedEvent = {
 type ActionNotifyEvent = {
   payload: { summary: string };
   refId: string;
-  refType: "ticket";
+  refType: "action";
   type: "ACTION_NOTIFY";
-};
-
-type TicketDoneEvent = {
-  payload?: undefined;
-  refId: string;
-  refType: "ticket";
-  type: "TICKET_DONE";
 };
 
 type TeamConfirmedEvent = {
@@ -110,12 +110,12 @@ type WorkerProactiveSuggestionEvent = {
 
 type ActivityEvent =
   | ActionProposedEvent
+  | ActionApprovedEvent
   | ActionExecutedEvent
   | ActionRejectedEvent
   | ActionChangesRequestedEvent
   | ActionRevisedEvent
   | ActionNotifyEvent
-  | TicketDoneEvent
   | TeamConfirmedEvent
   | MemberHiredEvent
   | MemberPausedEvent

@@ -1,16 +1,16 @@
 import { log } from "@repo/observability";
-import type { DecisionOutcome } from "@repo/worker-api/contracts";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
-import { decisionEventType } from "#/jobs/decision-event";
-import { generateDeliverable } from "#/jobs/worker-job-generate";
+import type { Generation } from "#/action/action-type";
+import type { Verdict } from "#/action/approval";
+import { decisionEventType, type DecisionEvent } from "#/jobs/decision";
+import { generateDeliverable, type Revision } from "#/jobs/worker-job-generate";
 import {
   applyDecision,
-  type DecisionEvent,
-  type GenerateResult,
+  executeAction,
   type JobContext,
   proposeDeliverable,
-  type ProposeResult,
+  type Proposal,
 } from "#/jobs/worker-job-steps";
 
 type WorkerJobParams = {
@@ -19,86 +19,67 @@ type WorkerJobParams = {
   ticketId: string;
 };
 
-type WorkerJobResult =
-  | { ok: true; summary: string }
-  | { decision: DecisionOutcome; revisions: number; summary: string };
+type WorkerJobResult = { actionId: string; outcome: "ended" | "executed"; revisions: number };
 
 class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
   async run(
     event: Readonly<WorkflowEvent<WorkerJobParams>>,
     step: WorkflowStep,
   ): Promise<WorkerJobResult> {
-    const { agentInstanceId, companyId, ticketId } = event.payload;
-    const ctx: JobContext = { agentInstanceId, companyId, env: this.env, ticketId };
+    const job: JobContext = { ...event.payload, env: this.env };
     const workflowStart = Date.now();
-
-    log.info({ agentInstanceId, companyId, message: "workflow.start", ticketId });
-
-    let revision = 0;
-    let priorSummary: string | null = null;
-    let latestFeedback: string | null = null;
-
-    for (;;) {
-      const round = revision;
-      const priorForRound = priorSummary;
-      const feedbackForRound = latestFeedback;
-
-      const current = await step.do(`generate-${round}`, (): Promise<GenerateResult> =>
-        generateDeliverable(ctx, round, priorForRound, feedbackForRound),
-      );
-
-      const proposed = await step.do(`propose-${round}`, (): Promise<ProposeResult> =>
-        proposeDeliverable(ctx, round, feedbackForRound, current),
-      );
-
-      if (proposed.actionId === null || proposed.actionId === "") {
-        log.info({
-          agentInstanceId,
-          companyId,
-          durationMs: Date.now() - workflowStart,
-          message: "workflow.done.nogate",
-          policy: proposed.policy,
-          ticketId,
-        });
-        return { ok: true, summary: current.summary };
-      }
-
-      const actionId = proposed.actionId;
+    const finish = (result: WorkerJobResult): WorkerJobResult => {
       log.info({
-        actionId,
-        agentInstanceId,
-        companyId,
-        message: "workflow.waiting",
-        revision: round,
-        ticketId,
+        ...result,
+        companyId: job.companyId,
+        durationMs: Date.now() - workflowStart,
+        message: "workflow.done",
+        ticketId: job.ticketId,
       });
+      return result;
+    };
 
-      const evt = await step.waitForEvent<DecisionEvent>(`wait-${actionId}`, {
-        timeout: "60 days",
-        type: decisionEventType(actionId),
-      });
+    log.info({ ...event.payload, message: "workflow.start" });
 
-      const decision = await step.do(`decide-${round}`, (): Promise<DecisionOutcome> =>
-        applyDecision(ctx, actionId, current, evt.payload),
+    let revision: Revision | null = null;
+    for (let round = 0; ; round += 1) {
+      const priorRevision = revision;
+      const generation = await step.do(`generate-${round}`, (): Promise<Generation> =>
+        generateDeliverable(job, round, priorRevision),
+      );
+      const proposal = await step.do(`propose-${round}`, (): Promise<Proposal> =>
+        proposeDeliverable(job, round, priorRevision?.feedback ?? null, generation),
       );
 
-      if (decision === "approved" || decision === "rejected") {
+      if (proposal.policy === "require_approval") {
         log.info({
-          agentInstanceId,
-          companyId,
-          decision,
-          durationMs: Date.now() - workflowStart,
-          message: "workflow.ok",
-          revisions: round,
-          ticketId,
+          actionId: proposal.actionId,
+          companyId: job.companyId,
+          message: "workflow.waiting",
+          revision: round,
+          ticketId: job.ticketId,
         });
-        return { decision, revisions: round, summary: current.summary };
+        const decision = await step.waitForEvent<DecisionEvent>(`wait-${round}`, {
+          timeout: "60 days",
+          type: decisionEventType(proposal.actionId),
+        });
+        const verdict = await step.do(`decide-${round}`, (): Promise<Verdict> =>
+          applyDecision(job, proposal, round, decision.payload),
+        );
+        if (verdict === "end") {
+          return finish({ actionId: proposal.actionId, outcome: "ended", revisions: round });
+        }
+        if (verdict === "revise") {
+          revision = {
+            feedback: decision.payload.feedback ?? null,
+            priorSummary: generation.summary,
+          };
+          continue;
+        }
       }
 
-      priorSummary = current.summary;
-      latestFeedback = evt.payload.feedback ?? null;
-      revision = round + 1;
-      log.info({ companyId, message: "workflow.revise", revision, ticketId });
+      await step.do(`execute-${round}`, (): Promise<void> => executeAction(job, proposal));
+      return finish({ actionId: proposal.actionId, outcome: "executed", revisions: round });
     }
   }
 }

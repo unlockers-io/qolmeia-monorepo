@@ -19,15 +19,15 @@ describe("recordActivity + listActivity", () => {
   it("writes a row that listActivity returns", async () => {
     await record({
       companyId: COMPANY_ID,
-      refId: "ticket-roundtrip-1",
-      refType: "ticket",
+      refId: "action-roundtrip-1",
+      refType: "action",
       summary: "Coisa aconteceu",
-      type: "TICKET_DONE",
+      type: "ACTION_EXECUTED",
     });
     const items = await list();
     expect(
-      items.find((item) => item.summary === "Coisa aconteceu" && item.type === "TICKET_DONE"),
-    ).toMatchObject({ companyName: "Activity Test", refId: "ticket-roundtrip-1" });
+      items.find((item) => item.summary === "Coisa aconteceu" && item.type === "ACTION_EXECUTED"),
+    ).toMatchObject({ companyName: "Activity Test", refId: "action-roundtrip-1" });
   });
 
   it("filters by since", async () => {
@@ -59,10 +59,10 @@ describe("recordActivity + listActivity", () => {
     await expect(
       record({
         companyId: "co_activity_missing",
-        refId: "ticket-broken",
-        refType: "ticket",
+        refId: "action-broken",
+        refType: "action",
         summary: "won't actually write",
-        type: "TICKET_DONE",
+        type: "ACTION_EXECUTED",
       }),
     ).rejects.toThrow(ACTIVITY_FOREIGN_KEY);
     await expect(list()).resolves.toEqual([]);

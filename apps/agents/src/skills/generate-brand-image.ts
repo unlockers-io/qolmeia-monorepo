@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { withDb } from "#/lib/db";
-import { buildSignedAssetUrl } from "#/lib/r2";
+import { buildSignedAssetUrl, SIGNED_IMAGE_TTL_MS } from "#/lib/r2";
 import { listBrandReferences, persistAsset } from "#/library/assets";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
 
@@ -87,7 +87,7 @@ const parseDataUrl = (url: string): { bytes: Uint8Array; mime: string } | null =
   return { bytes: decodeBase64(b64), mime };
 };
 
-type GenerateResult = { assetId: string; url: string } | { error: string };
+type GenerateResult = { assetId: string; deliverable: true; url: string } | { error: string };
 
 const generateBrandImageSkill: UnknownSkill = {
   description:
@@ -154,7 +154,7 @@ const generateBrandImageSkill: UnknownSkill = {
         metadata: { aspectRatio, prompt },
         mime,
         uploadMetadata: { aspectRatio, prompt },
-        visibility: "customer",
+        visibility: ctx.deliverableFolder,
       }),
     );
 
@@ -162,10 +162,10 @@ const generateBrandImageSkill: UnknownSkill = {
       { ASSETS_SIGNING_KEY: ctx.env.ASSETS_SIGNING_KEY },
       ctx.env.WORKER_PUBLIC_URL,
       assetId,
-      7 * 24 * 60 * 60 * 1000,
+      SIGNED_IMAGE_TTL_MS,
     );
 
-    return { assetId, url };
+    return { assetId, deliverable: true, url };
   },
   id: "generateBrandImage",
   inputSchema: generateBrandImageInputSchema,

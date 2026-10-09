@@ -26,6 +26,7 @@ afterEach(() => {
 const ctx: SkillContext = {
   agentInstanceId: CORR_ID,
   companyId: COMPANY_ID,
+  deliverableFolder: "customer",
   get env() {
     return env;
   },

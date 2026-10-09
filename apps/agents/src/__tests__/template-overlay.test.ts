@@ -9,6 +9,7 @@ import {
   loadSkillOverlays,
   registerSkill,
   resolveSkills,
+  type SkillContext,
   type UnknownSkill,
 } from "#/skills/registry";
 import { getTemplate, listSkillOverlays } from "#/template/template";
@@ -37,7 +38,8 @@ describe("getTemplate / listSkillOverlays", () => {
     const t = await db((client) => getTemplate(client, "tpl-designer"));
     expect(t?.workerKind).toBe("designer");
     expect(t?.skillIds).toContain("generateBrandImage");
-    expect(t?.defaultPolicies.publish_asset).toBe("require_approval");
+    expect(t?.defaultActionType).toBe("worker_deliverable");
+    expect(t?.defaultPolicies).toEqual({});
   });
 
   it("listSkillOverlays returns only the requested ids", async () => {
@@ -60,7 +62,12 @@ describe("buildSkillTools overlay join", () => {
     });
 
     const tools = await buildSkillTools(
-      { agentInstanceId: AGENT_INSTANCE_ID, companyId: COMPANY_ID, env },
+      {
+        agentInstanceId: AGENT_INSTANCE_ID,
+        companyId: COMPANY_ID,
+        deliverableFolder: "customer",
+        env,
+      },
       ["fake-overlay-skill"],
     );
     expect(tools["fake-overlay-skill"]?.description).toBe("Database overlay description");
@@ -77,7 +84,12 @@ describe("buildSkillTools overlay join", () => {
     };
     registerSkill(codeOnly);
     const tools = await buildSkillTools(
-      { agentInstanceId: AGENT_INSTANCE_ID, companyId: COMPANY_ID, env },
+      {
+        agentInstanceId: AGENT_INSTANCE_ID,
+        companyId: COMPANY_ID,
+        deliverableFolder: "customer",
+        env,
+      },
       ["code-only-skill"],
     );
     expect(tools["code-only-skill"]?.description).toBe("code-only desc");
@@ -85,9 +97,15 @@ describe("buildSkillTools overlay join", () => {
 
   it("throws when a template references an unknown skill id", async () => {
     await expect(
-      buildSkillTools({ agentInstanceId: AGENT_INSTANCE_ID, companyId: COMPANY_ID, env }, [
-        "this-skill-does-not-exist",
-      ]),
+      buildSkillTools(
+        {
+          agentInstanceId: AGENT_INSTANCE_ID,
+          companyId: COMPANY_ID,
+          deliverableFolder: "customer",
+          env,
+        },
+        ["this-skill-does-not-exist"],
+      ),
     ).rejects.toThrow(/unknown skill id/v);
   });
 
@@ -104,7 +122,12 @@ describe("buildSkillTools overlay join", () => {
     registerSkill(disabledSkill);
 
     const tools = await buildSkillTools(
-      { agentInstanceId: AGENT_INSTANCE_ID, companyId: COMPANY_ID, env },
+      {
+        agentInstanceId: AGENT_INSTANCE_ID,
+        companyId: COMPANY_ID,
+        deliverableFolder: "customer",
+        env,
+      },
       ["disabled-skill"],
     );
     expect(tools["disabled-skill"]).toBeUndefined();
@@ -112,7 +135,12 @@ describe("buildSkillTools overlay join", () => {
 });
 
 describe("buildFlueTools — agents share the overlay + kill-switch core", () => {
-  const ctx = { agentInstanceId: AGENT_INSTANCE_ID, companyId: COMPANY_ID, env };
+  const ctx: SkillContext = {
+    agentInstanceId: AGENT_INSTANCE_ID,
+    companyId: COMPANY_ID,
+    deliverableFolder: "customer",
+    env,
+  };
 
   const buildWithOverlays = async (skillIds: ReadonlyArray<string>) =>
     buildFlueTools(ctx, skillIds, await loadSkillOverlays(env, skillIds));

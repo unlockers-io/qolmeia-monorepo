@@ -1,10 +1,10 @@
+import type { AssetVisibility } from "@repo/db/worker";
 import { log } from "@repo/observability";
 import { tool, type ToolSet } from "ai";
 import type { ZodType } from "zod";
 
 import { withDb } from "#/lib/db";
 import { listAssetsSkill, readAssetSkill, saveAssetSkill } from "#/skills/assets";
-import { decideActionSkill } from "#/skills/decide-action";
 import { delegateToWorkerSkill } from "#/skills/delegate-to-worker";
 import { draftSocialPostSkill } from "#/skills/draft-social-post";
 import { extractBriefSkill } from "#/skills/extract-brief";
@@ -19,6 +19,7 @@ import { listSkillOverlays } from "#/template/template";
 type SkillContext = {
   agentInstanceId: string;
   companyId: string;
+  deliverableFolder: AssetVisibility;
   env: Env;
 };
 
@@ -38,7 +39,6 @@ const ALL_SKILLS: ReadonlyArray<UnknownSkill> = [
   delegateToWorkerSkill,
   generateBrandImageSkill,
   draftSocialPostSkill,
-  decideActionSkill,
   extractBriefSkill,
   proposeTeamSkill,
   listAssetsSkill,

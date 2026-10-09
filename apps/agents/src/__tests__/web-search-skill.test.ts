@@ -7,6 +7,7 @@ const originalFetch = globalThis.fetch;
 const ctx = (apiKey?: string) => ({
   agentInstanceId: "ai_test",
   companyId: "co_test",
+  deliverableFolder: "customer" as const,
   env: { EXA_API_KEY: apiKey } as unknown as Env,
 });
 
