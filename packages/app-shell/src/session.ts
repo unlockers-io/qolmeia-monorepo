@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { AGENTS_SERVER_URL } from "./agents-url";
-import { getAuth, type Auth } from "./auth-server";
+import { readSession, type AuthSession, type GetSession } from "./auth-server";
 
 type AppLogFields = {
   error?: unknown;
@@ -13,8 +13,6 @@ type AppLogFields = {
   status?: number;
 };
 type AppLogger = { error: (fields: AppLogFields) => void };
-
-type AuthSession = NonNullable<Awaited<ReturnType<Auth["api"]["getSession"]>>>;
 
 type ScopedMe<Role extends OrgRole> = MeResponse & { currentOrg: MeOrg; role: Role };
 
@@ -26,20 +24,16 @@ type SessionHelpers<Role extends OrgRole> = {
 
 const createSessionHelpers = <Role extends OrgRole>(config: {
   allow: ReadonlyArray<Role>;
+  getSession?: GetSession;
   log: AppLogger;
+  readHeaders?: () => Promise<Headers>;
 }): SessionHelpers<Role> => {
+  const readHeaders = config.readHeaders ?? headers;
+
   const isAllowed = (role: OrgRole): role is Role =>
     config.allow.some((candidate) => candidate === role);
 
-  const getSession = cache(async () => {
-    const headersList = await headers();
-    try {
-      return await getAuth().api.getSession({ headers: headersList });
-    } catch (error) {
-      config.log.error({ error, message: "app-shell: getSession failed" });
-      return null;
-    }
-  });
+  const getSession = cache(async () => readSession(await readHeaders(), config.getSession));
 
   const requireSession = async (): Promise<AuthSession> => {
     const session = await getSession();
@@ -56,7 +50,7 @@ const createSessionHelpers = <Role extends OrgRole>(config: {
    */
   const fetchMe = cache(async (): Promise<MeResponse> => {
     await requireSession();
-    const headersList = await headers();
+    const headersList = await readHeaders();
     const cookie = headersList.get("cookie") ?? "";
     const res = await fetch(`${AGENTS_SERVER_URL}/api/me`, {
       cache: "no-store",

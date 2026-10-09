@@ -1,4 +1,4 @@
-import { getAuth } from "@repo/app-shell/auth-server";
+import { readSession } from "@repo/app-shell/auth-server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -25,16 +25,16 @@ const matchesRoute = (pathname: string, route: string): boolean => {
   return pathname === route || pathname.startsWith(`${route}/`);
 };
 
-const getSessionOrNull = async (request: NextRequest) => {
+const getSessionOrUnavailable = async (request: NextRequest) => {
   try {
-    return await getAuth().api.getSession({ headers: request.headers });
+    return await readSession(request.headers);
   } catch (error) {
     log.error({
       error: error instanceof Error ? error.message : String(error),
-      message: "proxy: getSession failed; treating as unauthenticated",
+      message: "proxy: getSession failed; leaving the decision to the route",
       pathname: request.nextUrl.pathname,
     });
-    return null;
+    return "unavailable" as const;
   }
 };
 
@@ -48,7 +48,11 @@ export const proxy = async (request: NextRequest) => {
     return NextResponse.next();
   }
 
-  const session = await getSessionOrNull(request);
+  const session = await getSessionOrUnavailable(request);
+
+  if (session === "unavailable") {
+    return NextResponse.next();
+  }
 
   if (isProtectedRoute && !session) {
     const url = new URL("/login", request.url);
