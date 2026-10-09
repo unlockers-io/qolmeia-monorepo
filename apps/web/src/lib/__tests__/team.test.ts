@@ -11,8 +11,6 @@ type JsonBody =
   | { readonly [key: string]: JsonBody | undefined };
 
 const ORG_ID = "co_1";
-const ORG_HEADERS = { "x-org-id": ORG_ID };
-const JSON_HEADERS = { "content-type": "application/json", ...ORG_HEADERS };
 
 const okJson = (body: JsonBody): Response =>
   ({ json: () => Promise.resolve(body), ok: true, status: 200 }) as unknown as Response;
@@ -42,6 +40,20 @@ const respondWith = (responses: Record<string, Response>): void => {
   });
 };
 
+const expectCall = (
+  url: string,
+  expected: { body?: string; method: string; orgId?: string },
+): void => {
+  const call = fetchMock.mock.calls.findLast(([calledUrl]) => calledUrl === url);
+  expect(call).toBeDefined();
+  const init = call?.[1];
+  expect(init).toMatchObject({ credentials: "include", method: expected.method });
+  expect(init?.body).toBe(expected.body);
+  const headers = new Headers(init?.headers);
+  expect(headers.get("x-org-id")).toBe(expected.orgId ?? ORG_ID);
+  expect(headers.get("content-type")).toBe(expected.body === undefined ? null : "application/json");
+};
+
 beforeEach(async () => {
   vi.resetModules();
   fetchMock = vi.fn<FetchLike>();
@@ -62,10 +74,7 @@ describe("org discovery", () => {
     await team.fetchTeam();
 
     expect(fetchMock.mock.calls.filter(([url]) => url === "/api/me")).toHaveLength(1);
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/me/team", {
-      credentials: "include",
-      headers: ORG_HEADERS,
-    });
+    expectCall("/api/me/team", { method: "GET" });
   });
 
   it("falls back to the first CUSTOMER org when no org is current", async () => {
@@ -82,10 +91,7 @@ describe("org discovery", () => {
 
     await team.fetchTeam();
 
-    expect(fetchMock).toHaveBeenLastCalledWith("/api/me/team", {
-      credentials: "include",
-      headers: { "x-org-id": "co_customer" },
-    });
+    expectCall("/api/me/team", { method: "GET", orgId: "co_customer" });
   });
 
   it("surfaces a failed discovery instead of calling on with no org", async () => {
@@ -102,10 +108,7 @@ describe("fetchTeam", () => {
 
     const result = await team.fetchTeam();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/me/team", {
-      credentials: "include",
-      headers: ORG_HEADERS,
-    });
+    expectCall("/api/me/team", { method: "GET" });
     expect(result).toBe(members);
   });
 
@@ -122,10 +125,7 @@ describe("fetchCatalogue", () => {
 
     const result = await team.fetchCatalogue();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/me/catalogue", {
-      credentials: "include",
-      headers: ORG_HEADERS,
-    });
+    expectCall("/api/me/catalogue", { method: "GET" });
     expect(result).toBe(templates);
   });
 
@@ -142,10 +142,8 @@ describe("hireMember", () => {
 
     const result = await team.hireMember({ displayName: "Ana", templateId: "tpl-1" });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/me/team/hire", {
+    expectCall("/api/me/team/hire", {
       body: JSON.stringify({ displayName: "Ana", templateId: "tpl-1" }),
-      credentials: "include",
-      headers: JSON_HEADERS,
       method: "POST",
     });
     expect(result).toBe(member);
@@ -167,10 +165,8 @@ describe("patchMember", () => {
 
     const result = await team.patchMember("m3", { displayName: "Novo nome" });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/me/team/members/m3", {
+    expectCall("/api/me/team/members/m3", {
       body: JSON.stringify({ displayName: "Novo nome" }),
-      credentials: "include",
-      headers: JSON_HEADERS,
       method: "PATCH",
     });
     expect(result).toBe(member);
@@ -192,11 +188,7 @@ describe("setPaused", () => {
 
     const result = await team.setPaused("m4", true);
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/me/team/members/m4/pause", {
-      credentials: "include",
-      headers: ORG_HEADERS,
-      method: "POST",
-    });
+    expectCall("/api/me/team/members/m4/pause", { method: "POST" });
     expect(result).toBe(member);
   });
 
@@ -208,11 +200,7 @@ describe("setPaused", () => {
 
     await team.setPaused("m4", false);
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/me/team/members/m4/resume", {
-      credentials: "include",
-      headers: ORG_HEADERS,
-      method: "POST",
-    });
+    expectCall("/api/me/team/members/m4/resume", { method: "POST" });
   });
 
   it("throws on failure", async () => {

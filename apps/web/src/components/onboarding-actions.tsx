@@ -2,10 +2,12 @@
 
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
-import { ApiError, describeRequestError } from "@repo/worker-api";
+import { describeRequestError } from "@repo/worker-api";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+
+import { apiSend } from "@/lib/api-client";
 
 type Template = {
   description: string;
@@ -16,11 +18,10 @@ type Template = {
 
 type OnboardingActionsProps = {
   companyId: string;
-  sessionToken: string;
   templates: ReadonlyArray<Template>;
 };
 
-const OnboardingActions = ({ companyId, sessionToken, templates }: OnboardingActionsProps) => {
+const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => {
   const [selected, setSelected] = useState<ReadonlySet<string>>(
     () => new Set(templates.map((t) => t.id)),
   );
@@ -43,25 +44,11 @@ const OnboardingActions = ({ companyId, sessionToken, templates }: OnboardingAct
     }
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/teams/${companyId}/confirm`, {
-        body: JSON.stringify({ templateIds: [...selected] }),
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-      if (response.ok) {
-        toast.success("Time confirmado! Redirecionando…");
-        globalThis.location.assign("/");
-      } else {
-        const failure = new ApiError(response.status, await response.text());
-        toast.error(
-          describeRequestError(failure, "Não foi possível confirmar o Time. Tente de novo."),
-        );
-      }
-    } catch {
-      toast.error("Erro ao confirmar o Time. Tente novamente.");
+      await apiSend("POST", `/api/teams/${companyId}/confirm`, { templateIds: [...selected] });
+      toast.success("Time confirmado! Redirecionando…");
+      globalThis.location.assign("/");
+    } catch (error) {
+      toast.error(describeRequestError(error, "Não foi possível confirmar o Time. Tente de novo."));
     }
     setSubmitting(false);
   };

@@ -75,7 +75,6 @@ const ChatContent = async () => {
         </div>
         <OnboardingActions
           companyId={companyId}
-          sessionToken={token}
           templates={templatesRes.kind === "ok" ? templatesRes.data.templates : []}
         />
       </div>

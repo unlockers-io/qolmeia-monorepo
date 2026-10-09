@@ -1,4 +1,4 @@
-import type { CoverageResponse } from "@repo/worker-api/contracts";
+import type { CoverageResponse, MeResponse } from "@repo/worker-api/contracts";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   AppRouterContext,
@@ -18,7 +18,23 @@ const router: AppRouterInstance = {
   refresh,
   replace: vi.fn<() => void>(),
 };
-const fetchMock = vi.fn(() => Promise.resolve(Response.json({})));
+const me: MeResponse = {
+  currentOrg: null,
+  orgs: [{ id: "co_staff", name: "Qolmeia", role: "STAFF", slug: "qolmeia" }],
+  role: null,
+  user: {
+    displayName: null,
+    email: "operator@qolmeia.dev",
+    emailVerified: true,
+    id: "u_1",
+    image: null,
+    name: "Operator",
+    username: null,
+  },
+};
+const fetchMock = vi.fn((url: string, _init?: RequestInit) =>
+  Promise.resolve(Response.json(url === "/api/me" ? me : {})),
+);
 
 const options: CoverageResponse["options"] = {
   companies: [],
@@ -69,5 +85,7 @@ describe("coverage response compatibility", () => {
       );
       expect(refresh).toHaveBeenCalledOnce();
     });
+    const save = fetchMock.mock.calls.find(([url]) => url.endsWith("/assignments/me"));
+    expect(new Headers(save?.[1]?.headers).get("X-Org-Id")).toBe("co_staff");
   });
 });

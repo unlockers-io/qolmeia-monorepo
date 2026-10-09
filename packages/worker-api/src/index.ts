@@ -1,3 +1,5 @@
+import type { MeOrg, MeResponse, OrgRole } from "./contracts";
+
 type FetchInit = Omit<RequestInit, "body" | "method">;
 type JsonRequestValue =
   | boolean
@@ -70,7 +72,29 @@ const handleResponse = async <T>(res: Response): Promise<T> => {
 
 type SendMethod = "DELETE" | "PATCH" | "POST" | "PUT";
 
+const ME_PATH = "/api/me";
+const ORG_ID_HEADER = "X-Org-Id";
+const ORG_ID_QUERY_PARAM = "org_id";
+
+const resolveActiveOrg = (me: MeResponse, allow: ReadonlyArray<OrgRole>): MeOrg | null => {
+  const allowed = new Set(allow);
+  return me.currentOrg ?? me.orgs.find((org) => allowed.has(org.role)) ?? null;
+};
+
+const withOrgQuery = (path: string, orgId: string | null): string =>
+  orgId === null
+    ? path
+    : `${path}${path.includes("?") ? "&" : "?"}${ORG_ID_QUERY_PARAM}=${encodeURIComponent(orgId)}`;
+
+type OrgDiscovery = { promise: Promise<string | null> | null };
+
+type BrowserApiConfig = {
+  allow: ReadonlyArray<OrgRole>;
+  basePath?: string;
+};
+
 type BrowserApi = {
+  activeOrgId: () => Promise<string | null>;
   apiGet: <T>(path: string, init?: FetchInit) => Promise<T>;
   apiSend: <T>(
     method: SendMethod,
@@ -81,45 +105,56 @@ type BrowserApi = {
   apiSendForm: <T>(path: string, formData: FormData, init?: FetchInit) => Promise<T>;
 };
 
-const createBrowserApi = (basePath = ""): BrowserApi => {
-  const url = (path: string): string => `${basePath}${path}`;
+const createBrowserApi = ({ allow, basePath = "" }: BrowserApiConfig): BrowserApi => {
+  const discovery: OrgDiscovery = { promise: null };
+
+  const discoverOrgId = async (): Promise<string | null> => {
+    const res = await fetch(ME_PATH, { credentials: "include", headers: buildHeaders() });
+    const me = await handleResponse<MeResponse>(res);
+    return resolveActiveOrg(me, allow)?.id ?? null;
+  };
+
+  const activeOrgId = async (): Promise<string | null> => {
+    discovery.promise ??= discoverOrgId();
+    try {
+      return await discovery.promise;
+    } catch (error) {
+      discovery.promise = null;
+      throw error;
+    }
+  };
+
+  const request = async <T>(path: string, init: RequestInit & { headers: Headers }): Promise<T> => {
+    const orgId = await activeOrgId();
+    if (orgId !== null) {
+      init.headers.set(ORG_ID_HEADER, orgId);
+    }
+    const res = await fetch(`${basePath}${path}`, { ...init, credentials: "include" });
+    return handleResponse<T>(res);
+  };
+
   return {
-    apiGet: async <T>(path: string, init?: FetchInit): Promise<T> => {
-      const res = await fetch(url(path), {
-        ...init,
-        credentials: "include",
-        headers: buildHeaders(init),
-        method: "GET",
-      });
-      return handleResponse<T>(res);
-    },
-    apiSend: async <T>(
+    activeOrgId,
+    apiGet: <T>(path: string, init?: FetchInit): Promise<T> =>
+      request<T>(path, { ...init, headers: buildHeaders(init), method: "GET" }),
+    apiSend: <T>(
       method: SendMethod,
       path: string,
       body?: JsonRequestValue,
       init?: FetchInit,
     ): Promise<T> => {
       const serialized = body === undefined ? undefined : JSON.stringify(body);
-      const res = await fetch(url(path), {
+      return request<T>(path, {
         ...init,
         body: serialized,
-        credentials: "include",
         headers: buildHeaders(init, serialized === undefined ? undefined : "application/json"),
         method,
       });
-      return handleResponse<T>(res);
     },
-    apiSendForm: async <T>(path: string, formData: FormData, init?: FetchInit): Promise<T> => {
+    apiSendForm: <T>(path: string, formData: FormData, init?: FetchInit): Promise<T> => {
       const headers = buildHeaders(init);
       headers.delete("Content-Type");
-      const res = await fetch(url(path), {
-        ...init,
-        body: formData,
-        credentials: "include",
-        headers,
-        method: "POST",
-      });
-      return handleResponse<T>(res);
+      return request<T>(path, { ...init, body: formData, headers, method: "POST" });
     },
   };
 };
@@ -138,7 +173,7 @@ type ServerApi = {
 const createServerApi = (config: ServerApiConfig): ServerApi => ({
   apiGetServer: async <T>(path: string): Promise<T> => {
     const [cookie, orgId] = await Promise.all([config.readCookieHeader(), config.readOrgId()]);
-    const headers = new Headers({ Accept: "application/json", "X-Org-Id": orgId });
+    const headers = new Headers({ Accept: "application/json", [ORG_ID_HEADER]: orgId });
     if (cookie !== "") {
       headers.set("Cookie", cookie);
     }
@@ -150,5 +185,13 @@ const createServerApi = (config: ServerApiConfig): ServerApi => ({
   },
 });
 
-export { ApiError, createBrowserApi, createServerApi, describeRequestError, handleResponse };
-export type { BrowserApi, FetchInit, ServerApi, ServerApiConfig };
+export {
+  ApiError,
+  createBrowserApi,
+  createServerApi,
+  describeRequestError,
+  handleResponse,
+  resolveActiveOrg,
+  withOrgQuery,
+};
+export type { BrowserApi, BrowserApiConfig, FetchInit, ServerApi, ServerApiConfig };

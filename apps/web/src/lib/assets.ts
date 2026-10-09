@@ -1,7 +1,7 @@
-import { jsonInit, request } from "@/lib/request";
+import { apiSend } from "@/lib/api-client";
 
 const deleteAssets = async (ids: ReadonlyArray<string>): Promise<void> => {
-  await request("/api/me/assets/delete", jsonInit("POST", { ids }));
+  await apiSend("POST", "/api/me/assets/delete", { ids });
 };
 
 export { deleteAssets };

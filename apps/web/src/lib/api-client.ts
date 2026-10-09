@@ -1,5 +1,5 @@
 import { createBrowserApi } from "@repo/worker-api";
 
-const { apiSendForm } = createBrowserApi();
+const { activeOrgId, apiGet, apiSend, apiSendForm } = createBrowserApi({ allow: ["CUSTOMER"] });
 
-export { apiSendForm };
+export { activeOrgId, apiGet, apiSend, apiSendForm };
