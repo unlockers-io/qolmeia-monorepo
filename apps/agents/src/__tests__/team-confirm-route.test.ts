@@ -1,5 +1,7 @@
-import { env, exports } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { db, entitle, seedCompany } from "#/__tests__/fixtures";
 
 const COMPANY_ID = "co_confirm_test";
 const ORIGINAL_FETCH = globalThis.fetch;
@@ -14,20 +16,8 @@ const meOtherOrg = {
 };
 
 beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'Confirm Test', 'confirm-test', 'America/Sao_Paulo', 'pt-BR', 'onboarding', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company_template_entitlement
-       (company_id, template_id, enabled, created_at, updated_at)
-     VALUES (?, 'tpl-designer', TRUE, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
+  await seedCompany({ id: COMPANY_ID, status: "onboarding" });
+  await entitle(COMPANY_ID, ["tpl-designer"]);
 });
 
 afterEach(() => {
@@ -85,9 +75,9 @@ describe("POST /api/teams/:companyId/confirm", () => {
     const body = await res.json<{ team: { correspondentId: string; teamId: string } }>();
     expect(body.team.correspondentId).toBe(`corr-${COMPANY_ID}`);
 
-    const company = await env.DB.prepare("SELECT status FROM company WHERE id = ?")
-      .bind(COMPANY_ID)
-      .first<{ status: string }>();
+    const company = await db((client) =>
+      client.company.findUnique({ select: { status: true }, where: { id: COMPANY_ID } }),
+    );
     expect(company?.status).toBe("active");
   });
 });

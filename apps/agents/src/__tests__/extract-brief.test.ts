@@ -1,7 +1,7 @@
-import { parseBrief } from "@repo/worker-api/brief";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { db, seedCompany } from "#/__tests__/fixtures";
 import { extractBriefSkill } from "#/skills/extract-brief";
 import type { SkillContext } from "#/skills/registry";
 
@@ -15,14 +15,15 @@ const ctx: SkillContext = {
   },
 };
 
+const storedBrief = async () => {
+  const row = await db((client) =>
+    client.company.findUnique({ select: { brief: true }, where: { id: COMPANY_ID } }),
+  );
+  return row?.brief;
+};
+
 beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'Extract Test', 'extract-test', 'America/Sao_Paulo', 'pt-BR', 'onboarding', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
+  await seedCompany({ id: COMPANY_ID, status: "onboarding" });
 });
 
 describe("extractBrief", () => {
@@ -31,11 +32,7 @@ describe("extractBrief", () => {
       brief: { industry?: string };
     };
     expect(result.brief.industry).toBe("cafeteria");
-
-    const row = await env.DB.prepare("SELECT brief FROM company WHERE id = ?")
-      .bind(COMPANY_ID)
-      .first<{ brief: string | null }>();
-    expect(parseBrief(row?.brief).industry).toBe("cafeteria");
+    await expect(storedBrief()).resolves.toMatchObject({ industry: "cafeteria" });
   });
 
   it("merges sequential calls without overwriting earlier fields", async () => {
@@ -43,12 +40,10 @@ describe("extractBrief", () => {
     await extractBriefSkill.execute({ audience: "jovens profissionais" }, ctx);
     await extractBriefSkill.execute({ primaryGoal: "dobrar vendas" }, ctx);
 
-    const row = await env.DB.prepare("SELECT brief FROM company WHERE id = ?")
-      .bind(COMPANY_ID)
-      .first<{ brief: string | null }>();
-    const brief = parseBrief(row?.brief);
-    expect(brief.industry).toBe("cafeteria");
-    expect(brief.audience).toBe("jovens profissionais");
-    expect(brief.primaryGoal).toBe("dobrar vendas");
+    await expect(storedBrief()).resolves.toMatchObject({
+      audience: "jovens profissionais",
+      industry: "cafeteria",
+      primaryGoal: "dobrar vendas",
+    });
   });
 });

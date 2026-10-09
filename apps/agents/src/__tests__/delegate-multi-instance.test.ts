@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
 import { delegateToWorkerSkill } from "#/skills/delegate-to-worker";
 import type { SkillContext } from "#/skills/registry";
 
@@ -10,41 +11,16 @@ const DESIGNER_1 = "wkr_multi_1";
 const DESIGNER_2 = "wkr_multi_2";
 
 beforeEach(async () => {
-  await env.DB.batch([
-    env.DB.prepare(`DELETE FROM ticket WHERE company_id = ?`).bind(COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO company (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-       VALUES (?, 'M', 'm', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-    ).bind(COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO template (id, version, status, display_name, description, system_prompt, model, worker_kind, skill_ids, default_action_type, default_policies, created_at, updated_at)
-       VALUES ('tpl-designer', 1, 'active', 'Designer', 'd', 'sys', 'gpt-x', 'designer', '[]', 'worker_deliverable', '{}', 0, 0)`,
-    ),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, prompt_override, created_at, updated_at)
-       VALUES (?, ?, 'correspondent', NULL, NULL, 'C', NULL, 'active', NULL, 0, 0)`,
-    ).bind(CORR_ID, COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, prompt_override, created_at, updated_at)
-       VALUES (?, ?, 'worker', 'tpl-designer', 1, 'Designer 1', NULL, 'active', NULL, 0, 0)`,
-    ).bind(DESIGNER_1, COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, prompt_override, created_at, updated_at)
-       VALUES (?, ?, 'worker', 'tpl-designer', 1, 'Designer 2', NULL, 'active', NULL, 0, 0)`,
-    ).bind(DESIGNER_2, COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO team (id, company_id, confirmed_at, created_at) VALUES (?, ?, 0, 0)`,
-    ).bind(`team-${COMPANY_ID}`, COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO team_member (team_id, agent_instance_id, can_delegate_to) VALUES (?, ?, ?)`,
-    ).bind(`team-${COMPANY_ID}`, CORR_ID, JSON.stringify([DESIGNER_1, DESIGNER_2])),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO team_member (team_id, agent_instance_id, can_delegate_to) VALUES (?, ?, '[]')`,
-    ).bind(`team-${COMPANY_ID}`, DESIGNER_1),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO team_member (team_id, agent_instance_id, can_delegate_to) VALUES (?, ?, '[]')`,
-    ).bind(`team-${COMPANY_ID}`, DESIGNER_2),
+  vi.spyOn(env.WORKER_JOB, "create").mockResolvedValue({ id: "stub" } as WorkflowInstance);
+  await seedCompany({ id: COMPANY_ID });
+  await seedTeam(COMPANY_ID, [
+    { displayName: "Designer 1", id: DESIGNER_1 },
+    { displayName: "Designer 2", id: DESIGNER_2 },
   ]);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 const ctx: SkillContext = {
@@ -55,54 +31,58 @@ const ctx: SkillContext = {
   },
 };
 
+const delegate = async () =>
+  (await delegateToWorkerSkill.execute({ brief: "fazer logo", workerKind: "designer" }, ctx)) as {
+    error?: string;
+    status?: string;
+  };
+
+const assignees = async () => {
+  const tickets = await db((client) =>
+    client.ticket.findMany({
+      select: { agentInstanceId: true },
+      where: { brief: "fazer logo", companyId: COMPANY_ID },
+    }),
+  );
+  return tickets.map(({ agentInstanceId }) => agentInstanceId);
+};
+
+const pause = (ids: ReadonlyArray<string>) =>
+  db((client) =>
+    client.agentInstance.updateMany({
+      data: { status: "paused" },
+      where: { id: { in: [...ids] } },
+    }),
+  );
+
 describe("delegateToWorker multi-instance dispatch", () => {
   it("prefers an available worker over one that's busy", async () => {
-    await env.DB.prepare(
-      `INSERT INTO ticket (id, company_id, agent_instance_id, parent_ticket_id, title, brief, status, origin, workflow_id, result, created_at, updated_at)
-       VALUES ('tkt_busy', ?, ?, NULL, 't', 'b', 'in_progress', 'delegation', NULL, NULL, 0, 0)`,
-    )
-      .bind(COMPANY_ID, DESIGNER_1)
-      .run();
+    await seedTicket({ agentInstanceId: DESIGNER_1, companyId: COMPANY_ID, id: "tkt_busy" });
 
-    const result = (await delegateToWorkerSkill.execute(
-      { brief: "fazer logo", workerKind: "designer" },
-      ctx,
-    )) as { error?: string; status?: string };
+    const result = await delegate();
     expect("status" in result && result.status).toBe("queued");
-    const tickets = await env.DB.prepare(
-      "SELECT agent_instance_id FROM ticket WHERE company_id = ? AND brief = 'fazer logo'",
-    )
-      .bind(COMPANY_ID)
-      .all<{ agent_instance_id: string }>();
-    expect(tickets.results.some((r) => r.agent_instance_id === DESIGNER_2)).toBe(true);
-    expect(tickets.results.some((r) => r.agent_instance_id === DESIGNER_1)).toBe(false);
+    const assigned = await assignees();
+    expect(assigned).toContain(DESIGNER_2);
+    expect(assigned).not.toContain(DESIGNER_1);
+    expect(env.WORKER_JOB.create).toHaveBeenCalledWith({
+      id: expect.any(String),
+      params: { agentInstanceId: DESIGNER_2, companyId: COMPANY_ID, ticketId: expect.any(String) },
+    });
   });
 
   it("skips paused workers entirely", async () => {
-    await env.DB.prepare("UPDATE agent_instance SET status = 'paused' WHERE id = ?")
-      .bind(DESIGNER_2)
-      .run();
-    const result = (await delegateToWorkerSkill.execute(
-      { brief: "fazer logo", workerKind: "designer" },
-      ctx,
-    )) as { error?: string; status?: string };
+    await pause([DESIGNER_2]);
+    const result = await delegate();
     expect("status" in result && result.status).toBe("queued");
-    const tickets = await env.DB.prepare(
-      "SELECT agent_instance_id FROM ticket WHERE company_id = ? AND brief = 'fazer logo'",
-    )
-      .bind(COMPANY_ID)
-      .all<{ agent_instance_id: string }>();
-    expect(tickets.results.every((r) => r.agent_instance_id !== DESIGNER_2)).toBe(true);
+    const assigned = await assignees();
+    expect(assigned).toEqual([DESIGNER_1]);
   });
 
   it("returns an error when all workers of the kind are paused", async () => {
-    await env.DB.prepare(
-      "UPDATE agent_instance SET status = 'paused' WHERE template_id = 'tpl-designer'",
-    ).run();
-    const result = (await delegateToWorkerSkill.execute(
-      { brief: "fazer logo", workerKind: "designer" },
-      ctx,
-    )) as { error?: string; status?: string };
+    await pause([DESIGNER_1, DESIGNER_2]);
+    const result = await delegate();
     expect("error" in result).toBe(true);
+    await expect(assignees()).resolves.toEqual([]);
+    expect(env.WORKER_JOB.create).not.toHaveBeenCalled();
   });
 });

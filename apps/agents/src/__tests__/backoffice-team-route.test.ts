@@ -1,7 +1,11 @@
-import { env, exports } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { db, seedCompany, seedTeam } from "#/__tests__/fixtures";
+
 const COMPANY_ID = "co_bot_test";
+const CORR_ID = `corr-${COMPANY_ID}`;
+const WORKER_ID = "ai_bot_d";
 const originalFetch = globalThis.fetch;
 
 const meStaff = {
@@ -14,24 +18,14 @@ const meCustomer = {
 };
 
 beforeEach(async () => {
-  await env.DB.batch([
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO company (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-       VALUES (?, 'BT', 'bt', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-    ).bind(COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO template (id, version, status, display_name, description, system_prompt, model, worker_kind, skill_ids, default_action_type, default_policies, created_at, updated_at)
-       VALUES ('tpl-designer', 1, 'active', 'Designer', 'd', 'TPL_PROMPT', 'gpt-x', 'designer', '[]', 'worker_deliverable', '{}', 0, 0)`,
-    ),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, prompt_override, created_at, updated_at)
-       VALUES ('ai_bot_d', ?, 'worker', 'tpl-designer', 1, 'Designer', NULL, 'active', NULL, 0, 0)`,
-    ).bind(COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, prompt_override, created_at, updated_at)
-       VALUES ('corr_bot', ?, 'correspondent', NULL, NULL, 'Correspondente', NULL, 'active', NULL, 0, 0)`,
-    ).bind(COMPANY_ID),
-  ]);
+  await seedCompany({ id: COMPANY_ID, name: "BT" });
+  await seedTeam(COMPANY_ID, [{ id: WORKER_ID }]);
+  await db((client) =>
+    client.agentTemplate.update({
+      data: { systemPrompt: "TPL_PROMPT" },
+      where: { id: "tpl-designer" },
+    }),
+  );
 });
 
 afterEach(() => {
@@ -46,7 +40,7 @@ describe("/api/backoffice/teams/:companyId/members", () => {
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ members: Array<{ id: string }> }>();
-    expect(body.members.some((m) => m.id === "ai_bot_d")).toBe(true);
+    expect(body.members.some((m) => m.id === WORKER_ID)).toBe(true);
   });
 
   it("403 for CUSTOMER", async () => {
@@ -60,7 +54,7 @@ describe("/api/backoffice/teams/:companyId/members", () => {
   it("GET member detail returns templateSystemPrompt and promptOverride", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}?cf_session=tok`,
     );
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -73,7 +67,7 @@ describe("/api/backoffice/teams/:companyId/members", () => {
   it("PATCH member updates promptOverride and writes operator-tagged activity", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}?cf_session=tok`,
       {
         body: JSON.stringify({ promptOverride: "novo prompt" }),
         headers: { "content-type": "application/json" },
@@ -93,11 +87,14 @@ describe("/api/backoffice/teams/:companyId/members", () => {
     expect(typeof body.member.createdAt).toBe("number");
     expect(body.member.promptOverride).toBe("novo prompt");
     expect(body.member.templateSystemPrompt).toBe("TPL_PROMPT");
-    const log = await env.DB.prepare(
-      "SELECT actor_id, payload FROM activity_log WHERE ref_id = 'ai_bot_d' AND type = 'MEMBER_PROMPT_EDITED'",
-    ).first<{ actor_id: string; payload: string }>();
-    expect(log?.actor_id).toBe("staff-1");
-    expect(JSON.parse(log?.payload ?? "{}").editedBy).toBe("operator");
+    const log = await db((client) =>
+      client.activityLog.findFirst({
+        select: { actorId: true, payload: true },
+        where: { refId: WORKER_ID, type: "MEMBER_PROMPT_EDITED" },
+      }),
+    );
+    expect(log?.actorId).toBe("staff-1");
+    expect(log?.payload).toMatchObject({ editedBy: "operator" });
   });
 });
 
@@ -115,7 +112,7 @@ describe("backoffice team routes: cross-tenant", () => {
   it("404 (not 403) when STAFF reads a member that doesn't exist in that company", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/co_other_company/members/ai_bot_d?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/co_other_company/members/${WORKER_ID}?cf_session=tok`,
     );
     expect(res.status).toBe(404);
   });
@@ -123,7 +120,7 @@ describe("backoffice team routes: cross-tenant", () => {
   it("404 (not 403) when STAFF PATCHes a member that doesn't exist in that company", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/co_other_company/members/ai_bot_d?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/co_other_company/members/${WORKER_ID}?cf_session=tok`,
       {
         body: JSON.stringify({ displayName: "evil" }),
         headers: { "content-type": "application/json" },
@@ -147,7 +144,7 @@ describe("/api/backoffice/companies", () => {
     const co = body.companies.find((c) => c.id === COMPANY_ID);
     expect(co).toBeDefined();
     expect(typeof co?.briefPercent).toBe("number");
-    expect(co?.members.some((m) => m.id === "ai_bot_d")).toBe(true);
+    expect(co?.members.some((m) => m.id === WORKER_ID)).toBe(true);
   });
 
   it("403 for CUSTOMER", async () => {
@@ -163,7 +160,7 @@ describe("backoffice member detail extras + pause/resume", () => {
   it("member detail exposes companyName and createdAt", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}?cf_session=tok`,
     );
     const body = await res.json<{ member: { companyName: string; createdAt: number } }>();
     expect(body.member.companyName).toBe("BT");
@@ -172,7 +169,7 @@ describe("backoffice member detail extras + pause/resume", () => {
 
   it("PATCH status pauses then resumes a worker", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const url = `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d?cf_session=tok`;
+    const url = `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}?cf_session=tok`;
     const headers = { "content-type": "application/json" };
 
     const pause = await exports.default.fetch(url, {
@@ -183,9 +180,9 @@ describe("backoffice member detail extras + pause/resume", () => {
     expect(pause.status).toBe(200);
     const pauseBody = await pause.json<{ member: { status: string } }>();
     expect(pauseBody.member.status).toBe("paused");
-    const row = await env.DB.prepare(
-      "SELECT status FROM agent_instance WHERE id = 'ai_bot_d'",
-    ).first<{ status: string }>();
+    const row = await db((client) =>
+      client.agentInstance.findUnique({ select: { status: true }, where: { id: WORKER_ID } }),
+    );
     expect(row?.status).toBe("paused");
 
     const resume = await exports.default.fetch(url, {
@@ -201,7 +198,7 @@ describe("backoffice member detail extras + pause/resume", () => {
   it("returns 409 when pausing the correspondent", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/corr_bot?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${CORR_ID}?cf_session=tok`,
       {
         body: JSON.stringify({ status: "paused" }),
         headers: { "content-type": "application/json" },

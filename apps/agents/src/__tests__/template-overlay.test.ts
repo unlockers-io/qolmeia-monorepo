@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { getTemplate, listSkillOverlays } from "#/db/template";
+import { db } from "#/__tests__/fixtures";
 import { buildFlueTools } from "#/lib/skill-tool";
 import {
   buildSkillTools,
@@ -11,6 +11,7 @@ import {
   resolveSkills,
   type UnknownSkill,
 } from "#/skills/registry";
+import { getTemplate, listSkillOverlays } from "#/template/template";
 
 const COMPANY_ID = "co_tpl_test";
 const AGENT_INSTANCE_ID = "agent_tpl_test";
@@ -25,43 +26,38 @@ const fakeOverlaySkill: UnknownSkill = {
 };
 registerSkill(fakeOverlaySkill);
 
-beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'Tpl Test', 'tpl-test', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
-});
+const seedSkill = (skill: { description: string; enabled: boolean; id: string }) =>
+  db((client) => client.skill.create({ data: { ...skill, displayName: skill.id } }));
+
+const setSkillEnabled = (id: string, enabled: boolean) =>
+  db((client) => client.skill.update({ data: { enabled }, where: { id } }));
 
 describe("getTemplate / listSkillOverlays", () => {
   it("reads the seeded Designer template", async () => {
-    const t = await getTemplate(env.DB, "tpl-designer");
+    const t = await db((client) => getTemplate(client, "tpl-designer"));
     expect(t?.workerKind).toBe("designer");
     expect(t?.skillIds).toContain("generateBrandImage");
     expect(t?.defaultPolicies.publish_asset).toBe("require_approval");
   });
 
   it("listSkillOverlays returns only the requested ids", async () => {
-    const overlays = await listSkillOverlays(env.DB, ["generateBrandImage", "delegateToWorker"]);
-    expect(overlays.map((o) => o.id).toSorted()).toEqual([
-      "delegateToWorker",
-      "generateBrandImage",
+    const overlays = await db((client) =>
+      listSkillOverlays(client, ["generateBrandImage", "delegateToWorker"]),
+    );
+    expect(overlays.toSorted((a, b) => a.id.localeCompare(b.id))).toEqual([
+      { description: expect.any(String), enabled: true, id: "delegateToWorker" },
+      { description: expect.any(String), enabled: true, id: "generateBrandImage" },
     ]);
-    expect(overlays.every((o) => o.enabled)).toBe(true);
   });
 });
 
 describe("buildSkillTools overlay join", () => {
   it("uses the database overlay description over the code default when present", async () => {
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO skill
-         (id, display_name, description, param_hints, default_config, enabled, updated_at)
-       VALUES (?, ?, ?, NULL, NULL, TRUE, 0)`,
-    )
-      .bind("fake-overlay-skill", "Fake", "Database overlay description")
-      .run();
+    await seedSkill({
+      description: "Database overlay description",
+      enabled: true,
+      id: "fake-overlay-skill",
+    });
 
     const tools = await buildSkillTools(
       { agentInstanceId: AGENT_INSTANCE_ID, companyId: COMPANY_ID, env },
@@ -96,11 +92,7 @@ describe("buildSkillTools overlay join", () => {
   });
 
   it("skips a skill when its overlay is disabled", async () => {
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO skill
-         (id, display_name, description, param_hints, default_config, enabled, updated_at)
-       VALUES ('disabled-skill', 'Disabled', 'd', NULL, NULL, FALSE, 0)`,
-    ).run();
+    await seedSkill({ description: "d", enabled: false, id: "disabled-skill" });
     const disabledSkill: UnknownSkill = {
       description: "x",
       execute(): Promise<{ ok: true }> {
@@ -126,11 +118,7 @@ describe("buildFlueTools — agents share the overlay + kill-switch core", () =>
     buildFlueTools(ctx, skillIds, await loadSkillOverlays(env, skillIds));
 
   it("omits a skill whose database overlay is disabled (the kill-switch reaches the Flue agents)", async () => {
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO skill
-         (id, display_name, description, param_hints, default_config, enabled, updated_at)
-       VALUES ('flue-disabled', 'Flue Disabled', 'd', NULL, NULL, FALSE, 0)`,
-    ).run();
+    await seedSkill({ description: "d", enabled: false, id: "flue-disabled" });
     registerSkill({
       description: "x",
       execute: () => Promise.resolve({ ok: true }),
@@ -143,11 +131,11 @@ describe("buildFlueTools — agents share the overlay + kill-switch core", () =>
   });
 
   it("uses the database overlay description for the agent's tool", async () => {
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO skill
-         (id, display_name, description, param_hints, default_config, enabled, updated_at)
-       VALUES ('flue-described', 'Flue Described', 'Database desc for the agent', NULL, NULL, TRUE, 0)`,
-    ).run();
+    await seedSkill({
+      description: "Database desc for the agent",
+      enabled: true,
+      id: "flue-described",
+    });
     registerSkill({
       description: "code desc",
       execute: () => Promise.resolve({ ok: true }),
@@ -162,12 +150,7 @@ describe("buildFlueTools — agents share the overlay + kill-switch core", () =>
   });
 
   it("blocks a skill disabled after the agent snapshot was rendered", async () => {
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO skill
-         (id, display_name, description, param_hints, default_config, enabled, updated_at)
-       VALUES ('flue-live-toggle', 'Flue Live Toggle', 'd', NULL, NULL, TRUE, 0)`,
-    ).run();
-    await env.DB.prepare("UPDATE skill SET enabled = TRUE WHERE id = 'flue-live-toggle'").run();
+    await seedSkill({ description: "d", enabled: true, id: "flue-live-toggle" });
     const execute = vi.fn(() => Promise.resolve({ ok: true }));
     registerSkill({
       description: "x",
@@ -182,7 +165,7 @@ describe("buildFlueTools — agents share the overlay + kill-switch core", () =>
     if (resolved === undefined) {
       throw new Error("flue-live-toggle was not resolved");
     }
-    await env.DB.prepare("UPDATE skill SET enabled = FALSE WHERE id = 'flue-live-toggle'").run();
+    await setSkillEnabled("flue-live-toggle", false);
 
     await expect(resolved.execute({})).rejects.toThrow(/disabled/v);
     expect(execute).not.toHaveBeenCalled();

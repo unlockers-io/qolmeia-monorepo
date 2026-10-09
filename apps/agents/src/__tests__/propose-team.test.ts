@@ -1,8 +1,10 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { db, seedCompany } from "#/__tests__/fixtures";
 import { proposeTeamSkill } from "#/skills/propose-team";
 import type { SkillContext } from "#/skills/registry";
+import { entitleToActiveTemplates } from "#/template/template";
 
 const COMPANY_ID = "co_propose_test";
 
@@ -15,24 +17,12 @@ const ctx: SkillContext = {
 };
 
 beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'Propose Test', 'propose-test', 'America/Sao_Paulo', 'pt-BR', 'onboarding', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company_template_entitlement
-       (company_id, template_id, enabled, created_at, updated_at)
-     SELECT ?, id, TRUE, 0, 0 FROM template WHERE status = 'active'`,
-  )
-    .bind(COMPANY_ID)
-    .run();
+  await seedCompany({ id: COMPANY_ID, status: "onboarding" });
+  await db((client) => entitleToActiveTemplates(client, COMPANY_ID));
 });
 
 describe("proposeTeam", () => {
-  it("returns the live catalog as candidates (Designer is seeded by P3 migration)", async () => {
+  it("returns the entitled catalog as candidates", async () => {
     const result = (await proposeTeamSkill.execute({}, ctx)) as {
       brief: Record<string, unknown>;
       candidates: ReadonlyArray<{ id: string; workerKind: string }>;
@@ -42,9 +32,12 @@ describe("proposeTeam", () => {
   });
 
   it("includes the brief so the Planner can present it back to the user", async () => {
-    await env.DB.prepare("UPDATE company SET brief = ? WHERE id = ?")
-      .bind(JSON.stringify({ industry: "alimentação" }), COMPANY_ID)
-      .run();
+    await db((client) =>
+      client.company.update({
+        data: { brief: { industry: "alimentação" } },
+        where: { id: COMPANY_ID },
+      }),
+    );
     const result = (await proposeTeamSkill.execute({}, ctx)) as {
       brief: { industry?: string };
     };

@@ -1,9 +1,10 @@
-import { env, exports } from "cloudflare:workers";
+import type { OperatorCoverage } from "@repo/worker-api/contracts";
+import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { proposeAction } from "#/db/action";
-import { listCoverage, setCoverage } from "#/db/assignment";
-import { getDb } from "#/db/client";
+import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
+import { proposeAction } from "#/action/approval";
+import { getCoverage, getCoverageOptions, setCoverage } from "#/operator/assignment";
 
 const COMPANY_A = "co_cov_a";
 const COMPANY_B = "co_cov_b";
@@ -15,57 +16,44 @@ const meStaff = {
   user: { id: OPERATOR },
 };
 
-const seedCompany = (id: string, name: string) =>
-  env.DB.prepare(
-    `INSERT OR IGNORE INTO company (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, ?, ?, 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  ).bind(id, name, name.toLowerCase().replace(/\s+/v, "-"));
+const seedPendingAction = async (input: {
+  companyId: string;
+  displayName: string;
+  templateId: string;
+}) => {
+  const workerId = `ai-${input.companyId}`;
+  const ticketId = `tkt-${input.companyId}`;
+  await seedCompany({ id: input.companyId, name: input.displayName });
+  await seedTeam(input.companyId, [
+    { displayName: input.displayName, id: workerId, templateId: input.templateId },
+  ]);
+  await seedTicket({ agentInstanceId: workerId, companyId: input.companyId, id: ticketId });
+  await db((client) =>
+    proposeAction(client, {
+      actionType: "publish_post",
+      companyId: input.companyId,
+      feedback: null,
+      proposed: { summary: input.displayName },
+      round: 0,
+      summary: input.displayName,
+      ticketId,
+    }),
+  );
+};
+
+const cover = (coverage: OperatorCoverage) =>
+  db((client) => setCoverage(client, OPERATOR, coverage));
 
 beforeEach(async () => {
-  await env.DB.batch([
-    seedCompany(COMPANY_A, "Cov A"),
-    seedCompany(COMPANY_B, "Cov B"),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO template (id, version, status, display_name, description, system_prompt, model, worker_kind, skill_ids, default_action_type, default_policies, created_at, updated_at)
-       VALUES ('tpl-cov-designer', 1, 'active', 'Designer', 'd', 'P', 'm', 'designer', '[]', 'worker_deliverable', '{}', 0, 0)`,
-    ),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO template (id, version, status, display_name, description, system_prompt, model, worker_kind, skill_ids, default_action_type, default_policies, created_at, updated_at)
-       VALUES ('tpl-cov-redator', 1, 'active', 'Redator', 'r', 'P', 'm', 'redator', '[]', 'worker_deliverable', '{}', 0, 0)`,
-    ),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, created_at, updated_at)
-       VALUES ('ai-cov-a', ?, 'worker', 'tpl-cov-designer', 1, 'D', NULL, 'active', 0, 0)`,
-    ).bind(COMPANY_A),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, created_at, updated_at)
-       VALUES ('ai-cov-b', ?, 'worker', 'tpl-cov-redator', 1, 'R', NULL, 'active', 0, 0)`,
-    ).bind(COMPANY_B),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO ticket (id, company_id, agent_instance_id, parent_ticket_id, title, brief, status, origin, workflow_id, result, created_at, updated_at)
-       VALUES ('tkt-cov-a', ?, 'ai-cov-a', NULL, 't', 'b', 'awaiting_approval', 'delegation', NULL, NULL, 0, 0)`,
-    ).bind(COMPANY_A),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO ticket (id, company_id, agent_instance_id, parent_ticket_id, title, brief, status, origin, workflow_id, result, created_at, updated_at)
-       VALUES ('tkt-cov-b', ?, 'ai-cov-b', NULL, 't', 'b', 'awaiting_approval', 'delegation', NULL, NULL, 0, 0)`,
-    ).bind(COMPANY_B),
-  ]);
-  await env.DB.prepare("DELETE FROM operator_assignment WHERE operator_user_id = ?")
-    .bind(OPERATOR)
-    .run();
-  await proposeAction(env.DB, {
-    actionType: "publish_post",
+  await seedPendingAction({
     companyId: COMPANY_A,
-    policy: "require_approval",
-    proposed: { summary: "A" },
-    ticketId: "tkt-cov-a",
+    displayName: "Cov A",
+    templateId: "tpl-designer",
   });
-  await proposeAction(env.DB, {
-    actionType: "publish_post",
+  await seedPendingAction({
     companyId: COMPANY_B,
-    policy: "require_approval",
-    proposed: { summary: "B" },
-    ticketId: "tkt-cov-b",
+    displayName: "Cov B",
+    templateId: "tpl-redator",
   });
 });
 
@@ -82,18 +70,18 @@ const pendingCompanyIds = async (query = ""): Promise<Array<string>> => {
 };
 
 describe("operator coverage DB", () => {
-  it("round-trips coverage and preserves string discipline IDs in the internal API", async () => {
-    await setCoverage(env.DB, OPERATOR, { companies: [COMPANY_A], disciplines: ["designer"] });
-    let coverage = await listCoverage(env.DB, OPERATOR);
+  it("round-trips coverage and lists discipline options by worker kind", async () => {
+    await cover({ companies: [COMPANY_A], disciplines: ["designer"] });
+    let coverage = await db((client) => getCoverage(client, OPERATOR));
     expect(coverage.companies).toEqual([COMPANY_A]);
     expect(coverage.disciplines).toEqual(["designer"]);
 
-    await setCoverage(env.DB, OPERATOR, { companies: [], disciplines: ["redator"] });
-    coverage = await listCoverage(env.DB, OPERATOR);
+    await cover({ companies: [], disciplines: ["redator"] });
+    coverage = await db((client) => getCoverage(client, OPERATOR));
     expect(coverage.companies).toEqual([]);
     expect(coverage.disciplines).toEqual(["redator"]);
 
-    const options = await getDb(env)("assignments.options", {});
+    const options = await db((client) => getCoverageOptions(client));
     expect(options.disciplines).toContain("designer");
     expect(options.disciplines).toContain("redator");
     expect(options.disciplineNames).toMatchObject({ designer: "Designer", redator: "Redator" });
@@ -145,7 +133,7 @@ describe("approval queue narrows to coverage", () => {
   });
 
   it("company coverage filters the queue to that company", async () => {
-    await setCoverage(env.DB, OPERATOR, { companies: [COMPANY_A], disciplines: [] });
+    await cover({ companies: [COMPANY_A], disciplines: [] });
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const ids = await pendingCompanyIds();
     expect(ids).toContain(COMPANY_A);
@@ -153,7 +141,7 @@ describe("approval queue narrows to coverage", () => {
   });
 
   it("discipline coverage filters by the producing agent's worker_kind", async () => {
-    await setCoverage(env.DB, OPERATOR, { companies: [], disciplines: ["redator"] });
+    await cover({ companies: [], disciplines: ["redator"] });
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const ids = await pendingCompanyIds();
     expect(ids).toContain(COMPANY_B);
@@ -161,7 +149,7 @@ describe("approval queue narrows to coverage", () => {
   });
 
   it("explicit ?companyId= drills past coverage", async () => {
-    await setCoverage(env.DB, OPERATOR, { companies: [COMPANY_A], disciplines: [] });
+    await cover({ companies: [COMPANY_A], disciplines: [] });
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const ids = await pendingCompanyIds(`&companyId=${COMPANY_B}`);
     expect(ids).toContain(COMPANY_B);
