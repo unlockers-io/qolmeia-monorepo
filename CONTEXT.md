@@ -7,7 +7,7 @@ An AI marketing agency: each customer company gets a Team of AI agents that does
 ### Actors
 
 **Company**:
-A customer tenant. Its id (`companyId`) is the unit of isolation **for the customer surface**: the `/agents/<name>/<companyId>` and `/api/me/*` paths authorize `companyId` against the session and never trust it from the URL (ADR 0001). It is also the Durable Object instance id every agent is keyed by. Operators are cross-tenant and reach any Company by role, not by membership (ADR 0005).
+A customer tenant. Its id (`companyId`) is the unit of isolation **for the customer surface**: the `/agents/<name>/<companyId>`, `/api/me/*` and `/api/teams/*` paths take `companyId` from the session and never trust it from the URL (ADR 0001). It is also the Durable Object instance id every agent is keyed by. Operators are cross-tenant and reach any Company by role, not by membership (ADR 0005).
 _Avoid_: org, tenant, client
 
 **Account**:
@@ -15,11 +15,11 @@ A login that belongs to a Company (the `CUSTOMER` role). A Company has one or mo
 _Avoid_: user, seat
 
 **Customer**:
-The role of an Account: an end-user of a Company who chats with its agents. Used for the human; **Account** is the login record.
+The role of an Account: an end-user of a Company who chats with its agents. Used for the human; **Account** is the login record. A Customer belongs to exactly one Company, and every request on the customer surface acts in it (ADR 0011).
 _Avoid_: user, end user
 
 **Operator**:
-Qolmeia platform staff who vet AI prompts and results: the human quality layer, and the product's differentiator. The `OWNER`/`STAFF` members of the single internal **Qolmeia org**; they belong to no customer Company and are authorized by role, acting on any Company through backoffice REST (never an agent connection). An Operator may have optional assigned Companies and disciplines (ADR 0005).
+Qolmeia platform staff who vet AI prompts and results: the human quality layer, and the product's differentiator. The `OWNER`/`STAFF` members of the single internal **Qolmeia org**; they belong to no customer Company and are authorized by role, acting on any Company through backoffice REST (never an agent connection). The Company acted on comes from the URL; the session only proves the role (ADR 0011). An Operator may have optional assigned Companies and disciplines (ADR 0005).
 _Avoid_: admin, moderator, customer
 
 **Assignment**:

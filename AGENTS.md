@@ -6,9 +6,8 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ```bash
 # Development
-pnpm dev                                 # turbo runs all four apps in parallel
-pnpm dev --filter=api                   # api service (Hono, https://qolmeia.api.localhost via portless)
-pnpm dev --filter=worker-bees            # Cloudflare Worker (vite dev, 127.0.0.1:8787)
+pnpm dev                                 # turbo runs every app in parallel
+pnpm dev --filter=worker-bees            # Cloudflare Worker + Better Auth (vite dev, https://qolmeia.agents.localhost)
 pnpm dev --filter=web                 # customer app (Next.js, https://qolmeia.web.localhost)
 pnpm dev --filter=backoffice             # operator panel (Next.js, https://qolmeia.backoffice.localhost)
 
@@ -22,7 +21,7 @@ pnpm format:check                 # oxfmt (check only, used in CI)
 # Testing
 pnpm test                         # vitest unit tests across all packages
 
-# Database (Prisma/Postgres, shared by api and agents)
+# Database (Prisma/Postgres, reached by the Worker through Hyperdrive)
 pnpm db:generate                  # generate Prisma client
 pnpm db:push                      # push schema to Postgres
 pnpm --filter=@repo/db db:seed    # seed the default template and skill catalog
@@ -34,47 +33,46 @@ Monorepo managed by pnpm workspaces + Turborepo. Node 24, pnpm 10. Mid-migration
 
 ### Apps
 
-| Folder            | Package name  | Framework         | Dev URL                                           | Audience                                                                                                                                |
-| ----------------- | ------------- | ----------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api`        | `api`         | Hono on Node 24   | `https://qolmeia.api.localhost` (portless)        | Auth service: Better Auth (`/api/auth/*`) and `/api/me` (the Worker relays session checks to it).                                       |
-| `apps/agents`     | `worker-bees` | Cloudflare Worker | `http://127.0.0.1:8787` (vite dev)                | Owns product data. Customer chat (Flue HTTP+SSE), REST for operators (`/api/backoffice/*`) and customers (`/api/me/*`, `/api/teams/*`). |
-| `apps/web`        | `web`         | Next.js 16        | `https://qolmeia.web.localhost` (portless)        | End-customer chat surface (CUSTOMER role).                                                                                              |
-| `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` (portless) | Operator panel (OWNER/STAFF roles).                                                                                                     |
-| `apps/landing`    | `landing`     | Next.js 16        | `https://qolmeia.landing.localhost` (portless)    | Public marketing site. No auth, no Worker calls.                                                                                        |
+| Folder            | Package name  | Framework         | Dev URL                                           | Audience                                                                                                                                                                                 |
+| ----------------- | ------------- | ----------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/agents`     | `worker-bees` | Cloudflare Worker | `https://qolmeia.agents.localhost` (vite dev)     | Hosts Better Auth (`/api/auth/*`) and owns product data. Customer chat (Flue HTTP+SSE), REST for operators (`/api/backoffice/*`) and customers (`/api/me`, `/api/me/*`, `/api/teams/*`). |
+| `apps/web`        | `web`         | Next.js 16        | `https://qolmeia.web.localhost` (portless)        | End-customer chat surface (CUSTOMER role).                                                                                                                                               |
+| `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` (portless) | Operator panel (OWNER/STAFF roles).                                                                                                                                                      |
+| `apps/landing`    | `landing`     | Next.js 16        | `https://qolmeia.landing.localhost` (portless)    | Public marketing site. No auth, no Worker calls.                                                                                                                                         |
 
-The browser never talks to `:8787` directly in dev: each Next app rewrites the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client; `/assets/:id` on both) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code and the rewrites reach the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). Prod works the same way: every session cookie is host-only on its app.
+The browser never talks to the Worker directly: each Next app rewrites `/api/auth/*` and the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me`, `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client; `/assets/:id` on both) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code and the rewrites reach the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). Prod works the same way: every session cookie is host-only on its app.
 
 ### Key runtime moves (P1–P7)
 
 - **Per-tenant agents are Durable Objects**: `CorrespondentV2` and `PlannerV2` in `src/agents/` are `'use agent'`
   modules whose exported function names generate `FlueCorrespondentV2Agent` / `FluePlannerV2Agent` (one DO
   instance per company id). Renaming a function changes its storage identity unless pinned with `agentName`.
-  Both are mounted explicitly in `app.ts` via `createAgentRouter`, behind `requireCustomerAgent` middleware.
+  Both are mounted explicitly in `app.ts` via `createAgentRouter`, behind the `requireCustomerOfPathTenant` gate.
 - **Approvals run on Workflows**: every Worker job spawns a `WorkerJobWorkflow`; gated actions pause on `waitForEvent("decision-<actionId>")` until an operator decides via `/api/backoffice/actions/:id/decide`.
-- **Postgres is the system of record for auth and product data.** `apps/api` reads the auth tables through Prisma. The Worker reaches Postgres through the `HYPERDRIVE` binding and Prisma's `cloudflare` client, with a short-lived client inside each request, Workflow step, or skill call (`lib/db.ts`). Product data lives in domain modules (`team/`, `ticket/`, `action/`, `company/`, `library/`, `memory/`, `activity/`, `template/`, `operator/`). Each use case is one interactive transaction, with its activity entry written inside it (ADR 0010). Schema in `packages/db/prisma/schema.prisma`.
-- **R2 holds binary assets** (`ASSETS` binding). The Library module (`library/assets.ts`) owns them: the `asset` row is the authority, and persisted content references an asset as `/assets/:id`, which the Worker serves after a session check (a Customer reads their Company's customer folder; an Operator reads any Company).
+- **Better Auth and identity live in the Worker** (ADR 0011). `lib/auth.ts` mounts Better Auth at `/api/auth/*`; `identity/` resolves every request to signed-in `{userId, companyId, role}`, signed out, unavailable, or no membership on the surface, and its gates guard every route. A request acts through the caller's membership on the surface it calls (`activeMembership` in `@repo/worker-api/contracts`); no client names an org.
+- **Postgres is the system of record for auth and product data.** The Worker reaches Postgres through the `HYPERDRIVE` binding and Prisma's `cloudflare` client, with a short-lived client inside each request, Workflow step, or skill call (`lib/db.ts`). Product data lives in domain modules (`team/`, `ticket/`, `action/`, `company/`, `library/`, `memory/`, `activity/`, `template/`, `operator/`). Each use case is one interactive transaction, with its activity entry written inside it (ADR 0010). Schema in `packages/db/prisma/schema.prisma`.
+- **R2 holds binary assets** (`ASSETS` binding). The Library module (`library/assets.ts`) owns them: the `asset` row is the authority, and persisted content references an asset as `/assets/:id`, which the Worker serves behind the `requireMember` gate (a Customer reads their Company's customer folder; an Operator reads any Company).
 - **Memory owns two stores** (`memory/memory.ts`): `remember` writes the `memory_fact` row and its Vectorize vector, `recall` queries Vectorize and reads the rows back. `MEMORY_BACKEND=in-memory` swaps Vectorize for a per-isolate index in `vite dev` and tests; anywhere else a missing `AI` or `VECTORIZE` binding throws.
-- **KV holds a session-validation cache** (`SESSIONS` binding) to keep the auth service off the hot path.
 
 ### Packages
 
-| Package                   | Purpose                                                                                                                                  |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `@repo/auth`              | `createAuth` factory wrapping Better Auth (magic-link + email/password). Consumed by `api`, `backoffice`, `web`.                         |
-| `@repo/db`                | Prisma schema plus Node and Cloudflare Worker client entry points.                                                                       |
-| `@repo/transactional`     | React Email templates + Resend sender.                                                                                                   |
-| `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the two Next apps.                                                            |
-| `@repo/config-vitest`     | Shared Vitest config.                                                                                                                    |
-| `@repo/typescript-config` | Shared tsconfig bases.                                                                                                                   |
-| `@repo/app-shell`         | Next-side auth/session glue shared by `web` and `backoffice`: `./auth-client`, `./auth-server`, `./session`, `./signup`, `./agents-url`. |
-| `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`).                                       |
-| `@repo/observability`     | Structured logging. Exports `./client`, `./fields`, `./next`, `./next/instrumentation`, `./hono`.                                        |
-| `@repo/portless-env`      | `applyPortlessUrls`: fills dev URL env vars from `portless get`.                                                                         |
+| Package                   | Purpose                                                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `@repo/auth`              | `createAuth` factory wrapping Better Auth (magic-link + email/password), hosted by the Worker; session-cookie and client-IP helpers. |
+| `@repo/db`                | Prisma schema plus Node and Cloudflare Worker client entry points.                                                                   |
+| `@repo/transactional`     | React Email templates + Resend sender.                                                                                               |
+| `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the two Next apps.                                                        |
+| `@repo/config-vitest`     | Shared Vitest config.                                                                                                                |
+| `@repo/typescript-config` | Shared tsconfig bases.                                                                                                               |
+| `@repo/app-shell`         | Next glue shared by `web` and `backoffice`: `./next-config`, `./proxy`, `./session`, `./server-api`, `./auth-client`, `./signup`.    |
+| `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`).                                   |
+| `@repo/observability`     | Structured logging. Exports `./client`, `./fields`, `./next`, `./next/instrumentation`, `./hono`.                                    |
+| `@repo/portless-env`      | `applyPortlessUrls`: fills dev URL env vars from `portless get`.                                                                     |
 
 ### The canonical E2E flow
 
-1. **Sign-up / magic-link**: Better Auth on `apps/api` issues a cookie scoped to `localhost`.
-2. **Client opens**: `requireCustomer` → `GET /api/me` on `apps/agents`, which relays to `GET /api/me` on `apps/api` (`AUTH_SERVICE_URL`) for membership.
+1. **Sign-up / magic-link**: Better Auth on the Worker, reached through the app's `/api/auth/*` rewrite, issues a host-only cookie on that app.
+2. **Client opens**: `requireCustomer` → `GET /api/me` on `apps/agents`, answered in-process by the identity module.
 3. **status === "onboarding"**: chat against `/agents/planner/<companyId>`. Planner calls `extractBrief` and `proposeTeam`, then surfaces a "Confirmar Time" button.
 4. **Customer confirms**: `POST /api/teams/:companyId/confirm` materialises `team` + `team_member`, flips `company.status = 'active'`, and seeds Correspondent memory.
 5. **status === "active"**: chat against `/agents/correspondent/<companyId>`. Correspondent uses `delegateToWorker` to spawn child tickets, each of which instantiates a `WorkerJobWorkflow` (the deliverable is generated with `generateText`, not a Flue agent).
@@ -98,10 +96,9 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 
 Each app has its own `.env.example`:
 
-- **apps/api**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CORS_ORIGINS` (must be explicit; Better Auth refuses `*` for cross-origin cookies), optional `RESEND_API_KEY`, `AUTH_FROM_EMAIL`.
-- **apps/agents**: `.dev.vars` (not `.env`). Holds `OPENROUTER_API_KEY`, plus `DATABASE_URL` and `BETTER_AUTH_SECRET` for the Node scripts in `scripts/` (seed, memory reindex). `wrangler.jsonc` defines the rest in its `vars` block (`AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_NAME`, `AUTH_SERVICE_URL`, `WORKER_PUBLIC_URL`, `CLIENT_ORIGINS`, `MEMORY_BACKEND`) and the `HYPERDRIVE` binding, whose `localConnectionString` points `vite dev` at the docker Postgres.
-- **apps/web**: `BETTER_AUTH_SECRET` (matches `apps/api`), `DATABASE_URL` (Next `proxy.ts` validates sessions via Prisma). Auth and the agents Worker are same-origin: `next.config.ts` rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` (default `http://127.0.0.1:4000`) and `/api/me/*` + `/api/teams/*` + `/agents/*` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). `next build` bakes both URLs into the rewrites, so prod sets them on the Vercel project.
-- **apps/backoffice**: same as client (its Worker rewrite covers `/api/backoffice/*`).
+- **apps/agents**: `.dev.vars` (not `.env`). Holds `BETTER_AUTH_SECRET` and `OPENROUTER_API_KEY`, optional `RESEND_API_KEY`, plus `DATABASE_URL` for the Node scripts in `scripts/` (seed, memory reindex). `wrangler.jsonc` defines the rest in its `vars` block (`AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_NAME`, `WORKER_PUBLIC_URL`, `TRUSTED_ORIGINS`, `WEB_APP_URL`, `MEMORY_BACKEND`) and the `HYPERDRIVE` binding, whose `localConnectionString` points `vite dev` at the docker Postgres. Prod also sets the `TRUSTED_PROXY_SECRET` secret.
+- **apps/web**: no database URL and no auth secret. `next.config.ts` (`createNextConfig` from `@repo/app-shell`) rewrites `/api/auth/*`, `/api/me`, `/api/me/*`, `/api/teams/*`, `/agents/*` and `/assets/:id` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). `next build` bakes it into the rewrites, so prod sets it on the Vercel project, together with `TRUSTED_PROXY_SECRET`.
+- **apps/backoffice**: same as client (its Worker rewrites cover `/api/auth/*`, `/api/backoffice/*` and `/assets/:id`).
 
 `.env` files are git-ignored; `.env.example` is committed.
 
@@ -121,7 +118,7 @@ DATABASE_URL=postgresql://qolmeia:qolmeia123@localhost:5436/qolmeia \
 #    Reads DATABASE_URL and BETTER_AUTH_SECRET from apps/agents/.dev.vars.
 pnpm --filter=worker-bees db:seed
 
-# 4. Run all five apps (or one per terminal with --filter)
+# 4. Run every app (or one per terminal with --filter)
 pnpm dev
 ```
 
@@ -132,9 +129,9 @@ pnpm dev
 | Backoffice: `https://qolmeia.backoffice.localhost` | OWNER    | `operator@qolmeia.dev` | `Qolmeia-Dev-OperatorPass!` |
 | Client: `https://qolmeia.web.localhost`            | CUSTOMER | `customer@qolmeia.dev` | `Qolmeia-Dev-CustomerPass!` |
 
-The dev org is pinned to `cmpg10ke30000147uj4gpeadb` (slug `qolmeia-dev`). Both logins accept the passwords above; the client login defaults to e-mail and password and also offers a magic link. The seed only sets a password when it creates the user, so an account first created through a magic link has none. Without `RESEND_API_KEY`, `apps/api` logs every magic-link and password-reset URL; open it as-is and it signs you in on the app that requested it.
+The dev org is pinned to `cmpg10ke30000147uj4gpeadb` (slug `qolmeia-dev`). Both logins accept the passwords above; the client login defaults to e-mail and password and also offers a magic link. The seed only sets a password when it creates the user, so an account first created through a magic link has none. Without `RESEND_API_KEY`, the Worker logs every magic-link and password-reset URL; open it as-is and it signs you in on the app that requested it.
 
-App configs resolve those URLs through `@repo/portless-env` rather than hardcoding them. `applyPortlessUrls({ ENV_VAR: ["<subdomain>"] })` runs at the top of each `next.config.ts` / `tsdown.config.ts` and shells out to `portless get` for every name, filling the env var only when it is unset or still holds the canonical `*.localhost` default. It is a no-op unless `PORTLESS_URL` is set, so CI and production keep their real values. Import it by bare specifier (`@repo/portless-env`): a relative path resolves from the process cwd and breaks `next start apps/web` from the repo root.
+App configs resolve those URLs through `@repo/portless-env` rather than hardcoding them. `applyPortlessUrls({ ENV_VAR: ["<subdomain>"] })` runs in `createNextConfig` and `apps/agents/vite.config.ts` and shells out to `portless get` for every name, filling the env var only when it is unset or still holds the canonical `*.localhost` default. It is a no-op unless `PORTLESS_URL` is set, so CI and production keep their real values. Import it by bare specifier (`@repo/portless-env`): a relative path resolves from the process cwd and breaks `next start apps/web` from the repo root.
 
 ## Conventions
 
@@ -142,7 +139,7 @@ App configs resolve those URLs through `@repo/portless-env` rather than hardcodi
 - pt-BR is the user-facing locale across agents, backoffice, and client.
 - Activity-log `type` strings are stable and free-form; the backoffice categorises by prefix (`ACTION_*`, `TICKET_*`, `WORKER_*`, `TEAM_*`, `MEMBER_*`).
 - Operator REST lives at `apps/agents/api/backoffice/*` (OWNER/STAFF only). Customer REST at `apps/agents/api/me/*` and `apps/agents/api/teams/*`.
-- Agent paths at `/agents/<name>/<companyId>` are gated to CUSTOMER role. Operators don't open WebSockets to a DO; they call REST.
+- Agent paths at `/agents/<name>/<companyId>`, `/api/me/*` and `/api/teams/*` are gated to the CUSTOMER role; a company id in the path must be the session's. Operators don't open a connection to a DO; they call REST.
 - Turbo caches: be conscious that `apps/agents` reads `wrangler.jsonc` vars at build time.
 
 ## Design-system linting

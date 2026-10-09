@@ -1,7 +1,6 @@
 /**
- * Agent and team row ids are derived, not stored: apps/api writes them and the
- * Worker addresses Durable Objects by the same strings. Both sides must derive
- * them identically, so the derivations live here rather than in either app.
+ * Agent and team row ids are derived, not stored: the Worker writes them, addresses Durable
+ * Objects by the same strings, and the apps link to them, so the derivations live here.
  */
 
 const correspondentIdFor = (companyId: string): string => `corr-${companyId}`;
