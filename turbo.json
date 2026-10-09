@@ -10,19 +10,10 @@
       "outputs": ["dist/**", ".wrangler/deploy/**", ".next/**", "!.next/cache/**"],
       "env": [
         "AGENTS_INTERNAL_URL",
-        "AUTH_ALLOWED_HOSTS",
-        "AUTH_FROM_EMAIL",
-        "AUTH_SERVICE_INTERNAL_URL",
         "BACKOFFICE_URL",
-        "BETTER_AUTH_SECRET",
-        "CORS_ORIGINS",
-        "DATABASE_URL",
         "EXPOSE_TESTING_API",
-        "NEXT_PUBLIC_API_URL",
         "NEXT_PUBLIC_LANDING_URL",
         "NEXT_PUBLIC_WEB_APP_URL",
-        "RESEND_API_KEY",
-        "TRUSTED_ORIGINS",
         "WEB_APP_URL"
       ]
     },

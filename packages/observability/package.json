@@ -11,8 +11,7 @@
     "./next/instrumentation": "./src/next-instrumentation.ts",
     "./hono": "./src/hono.ts",
     "./worker": "./src/worker.ts",
-    "./workers": "./src/workers.ts",
-    "./auth": "./src/auth.ts"
+    "./workers": "./src/workers.ts"
   },
   "scripts": {
     "lint": "oxlint src",
@@ -29,7 +28,6 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
-    "better-auth": "^1.7.6",
     "hono": "^4.13.9",
     "next": "^16.3.6",
     "react": "^19.3.0",
@@ -37,15 +35,11 @@
     "vitest": "^4.1.11"
   },
   "peerDependencies": {
-    "better-auth": "^1.7.3",
     "hono": "^4.12.0",
     "next": "^16.0.0",
     "react": "^19.0.0"
   },
   "peerDependenciesMeta": {
-    "better-auth": {
-      "optional": true
-    },
     "hono": {
       "optional": true
     },
