@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { withDb } from "#/lib/db";
 import { listAssets, persistAsset, readAssetText, type AssetSummary } from "#/library/assets";
-import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { defineSkill } from "#/skills/skill";
 
 const ASSET_KINDS = [
   "audio",
@@ -22,11 +22,11 @@ const listAssetsInputSchema = z.object({
   kind: z.enum(ASSET_KINDS).optional().describe("Filtrar por tipo. Omita para listar tudo."),
 });
 
-const listAssetsSkill: UnknownSkill = {
+const listAssetsSkill = defineSkill({
   description:
     "Lista os arquivos da biblioteca da empresa (imagens, documentos, áudios, uploads). Use para descobrir o que já foi criado antes. Você enxerga as duas pastas (cliente e agente).",
-  async execute(input: SkillInput, ctx: SkillContext): Promise<{ assets: Array<AssetSummary> }> {
-    const { folder, kind } = listAssetsInputSchema.parse(input);
+  displayName: "Listar arquivos",
+  async execute({ folder, kind }, ctx): Promise<{ assets: Array<AssetSummary> }> {
     const assets = await withDb(ctx.env, (db) =>
       listAssets(db, ctx.companyId, { kind, visibility: folder }),
     );
@@ -34,20 +34,17 @@ const listAssetsSkill: UnknownSkill = {
   },
   id: "listAssets",
   inputSchema: listAssetsInputSchema,
-};
+});
 
 const readAssetInputSchema = z.object({
   assetId: z.string().min(1).describe("O id do asset (veja listAssets)."),
 });
 
-const readAssetSkill: UnknownSkill = {
+const readAssetSkill = defineSkill({
   description:
     "Lê o conteúdo de um documento de texto da biblioteca (markdown, texto, JSON, CSV). Imagens e binários não podem ser lidos; referencie o asset pelo id.",
-  async execute(
-    input: SkillInput,
-    ctx: SkillContext,
-  ): Promise<{ content: string; name: string } | { error: string }> {
-    const { assetId } = readAssetInputSchema.parse(input);
+  displayName: "Ler arquivo",
+  async execute({ assetId }, ctx): Promise<{ content: string; name: string } | { error: string }> {
     const asset = await withDb(ctx.env, (db) => readAssetText(ctx.env, db, ctx.companyId, assetId));
     if (!asset) {
       return { error: "Asset não encontrado ou não é um documento de texto legível." };
@@ -56,7 +53,7 @@ const readAssetSkill: UnknownSkill = {
   },
   id: "readAsset",
   inputSchema: readAssetInputSchema,
-};
+});
 
 const saveAssetInputSchema = z.object({
   content: z.string().min(1).describe("O conteúdo do arquivo (texto/markdown/SVG)."),
@@ -73,14 +70,14 @@ const saveAssetInputSchema = z.object({
   name: z.string().min(1).max(160).describe("Um nome claro para o arquivo."),
 });
 
-const saveAssetSkill: UnknownSkill = {
+const saveAssetSkill = defineSkill({
   description:
     "Salva um documento de texto na biblioteca da empresa. Use 'customer' para uma entrega final que o cliente deve ver, ou 'agent' para material de trabalho interno.",
+  displayName: "Salvar arquivo",
   async execute(
-    input: SkillInput,
-    ctx: SkillContext,
+    { content, folder, mime, name },
+    ctx,
   ): Promise<{ assetId: string; deliverable: boolean }> {
-    const { content, folder, mime, name } = saveAssetInputSchema.parse(input);
     const deliverable = (folder ?? "customer") === "customer";
     const { assetId } = await withDb(ctx.env, (db) =>
       persistAsset(ctx.env, db, {
@@ -97,6 +94,6 @@ const saveAssetSkill: UnknownSkill = {
   },
   id: "saveAsset",
   inputSchema: saveAssetInputSchema,
-};
+});
 
 export { listAssetsSkill, readAssetSkill, saveAssetSkill };

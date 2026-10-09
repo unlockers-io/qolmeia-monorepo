@@ -18,11 +18,12 @@ Flash Lite Image targets cheaper, simpler generation.
 
 Flue explicitly registers Sonnet 5.5 with image input, its context window and
 pricing because the bundled Pi catalog predates the release. Existing OpenRouter
-models remain available. Both conversational agents use low reasoning effort.
-A live local customer chat completed successfully with Sonnet 5.5.
+models remain available. The Correspondent and Planner both use
+`CONVERSATION_MODEL` with low reasoning effort. A live local customer chat
+completed successfully with Sonnet 5.5.
 
-GPT-6 specialists use OpenRouter's Responses endpoint through the existing
-Cloudflare AI Gateway, with low reasoning effort and `store: false`. Each step
+GPT-6 specialists use OpenRouter's Responses endpoint through Cloudflare AI
+Gateway, with low reasoning effort and `store: false`. Each step
 replays tool results and encrypted reasoning. Other configured models keep the
 existing Chat Completions transport. No temperature or sampling overrides are
 sent. Both GPT-6 defaults completed a live two-step function-call/result/final-text
@@ -32,7 +33,23 @@ quality or production account quotas.
 The catalog seed upgrades only the four built-in templates when their model
 still matches the shipped 5.4 default. It preserves custom models, prompts,
 policies, names and skills. Both database entry points use the same seed routine.
-Overrides in deployed environment variables remain explicit operator choices.
+
+## Model wiring
+
+`apps/agents/src/lib/models.ts` is the only place model ids, provider quirks and
+gateway credentials appear. It supplies the Flue provider, the Workflow's
+`generateText` model, and the image-generation request, and routes all three
+through Cloudflare AI Gateway (`AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_NAME`) with
+`OPENROUTER_API_KEY` as the bearer token. There are no model env vars.
+
+- **Conversation model** (Correspondent and Planner): change `CONVERSATION`, with
+  the id and the context window, output limit and pricing from the
+  OpenRouter catalog.
+- **Image model**: change `IMAGE_MODEL`. It must accept
+  `modalities: ["image", "text"]` on `/chat/completions`.
+- **Specialist models**: set `model` on the template in the backoffice. Ids
+  matching `RESPONSES_API_MODEL` (`openai/gpt-6*`) use the Responses endpoint;
+  every other id uses Chat Completions.
 
 ## Deployment prerequisites
 

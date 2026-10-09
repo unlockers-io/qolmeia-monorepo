@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { buildFlueTools, buildInputSchema } from "#/lib/skill-tool";
-import type { SkillContext } from "#/skills/registry";
 import { listSkillCatalog } from "#/skills/registry";
+import type { SkillContext } from "#/skills/skill";
 
 const ctx: SkillContext = {
   agentInstanceId: "agent_schema_test",
@@ -19,7 +19,7 @@ const ctx: SkillContext = {
 describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
   it("converts every registered skill's input schema without throwing", () => {
     const ids = listSkillCatalog().map((entry) => entry.id);
-    const tools = buildFlueTools(ctx, ids, null);
+    const tools = buildFlueTools(ctx, ids, []);
     expect(tools.map((tool) => tool.name).toSorted()).toEqual(ids.toSorted());
     for (const tool of tools) {
       expect(tool.input).toBeDefined();
@@ -27,7 +27,7 @@ describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
   });
 
   it("keeps required fields and length limits enforceable", () => {
-    const [delegate] = buildFlueTools(ctx, ["delegateToWorker"], null);
+    const [delegate] = buildFlueTools(ctx, ["delegateToWorker"], []);
     const input = delegate?.input;
     if (!input) {
       throw new Error("delegateToWorker input schema missing");
@@ -40,7 +40,7 @@ describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
   });
 
   it("keeps enums and optional fields enforceable", () => {
-    const [listAssets] = buildFlueTools(ctx, ["listAssets"], null);
+    const [listAssets] = buildFlueTools(ctx, ["listAssets"], []);
     const input = listAssets?.input;
     if (!input) {
       throw new Error("listAssets input schema missing");

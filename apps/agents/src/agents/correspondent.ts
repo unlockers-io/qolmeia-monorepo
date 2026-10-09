@@ -9,9 +9,11 @@ import {
 import { correspondentIdFor } from "@repo/worker-api/contracts";
 import { env } from "cloudflare:workers";
 
-import { CONVERSATION_MODEL } from "#/lib/flue-models";
+import { withDb } from "#/lib/db";
+import { CONVERSATION_MODEL } from "#/lib/models";
 import { buildFlueTools } from "#/lib/skill-tool";
-import { loadSkillOverlays, type SkillContext, type SkillOverlayMap } from "#/skills/registry";
+import { loadDisabledSkillIds } from "#/skills/registry";
+import type { SkillContext } from "#/skills/skill";
 
 const CORRESPONDENT_SKILLS = [
   "rememberFact",
@@ -34,12 +36,15 @@ Ao mostrar imagens geradas, inclua a URL no formato markdown ![descrição curta
 Use recallMemory no início de pedidos relevantes para lembrar o que já sabe sobre o cliente, e rememberFact para guardar fatos novos importantes.`;
 
 export function CorrespondentV2({ id }: AgentProps): string {
-  const [overlays, setOverlays] = usePersistentState<SkillOverlayMap | null>("skillOverlays", null);
+  const [disabledSkillIds, setDisabledSkillIds] = usePersistentState<ReadonlyArray<string>>(
+    "disabledSkillIds",
+    [],
+  );
   useAgentStart(async () => {
-    setOverlays(await loadSkillOverlays(env, CORRESPONDENT_SKILLS));
+    setDisabledSkillIds(await withDb(env, loadDisabledSkillIds));
   });
 
-  useModel(`openrouter/${env.CORRESPONDENT_MODEL || CONVERSATION_MODEL}`, { thinkingLevel: "low" });
+  useModel(CONVERSATION_MODEL, { thinkingLevel: "low" });
 
   const ctx: SkillContext = {
     agentInstanceId: correspondentIdFor(id),
@@ -47,7 +52,7 @@ export function CorrespondentV2({ id }: AgentProps): string {
     deliverableFolder: "customer",
     env,
   };
-  for (const skillTool of buildFlueTools(ctx, CORRESPONDENT_SKILLS, overlays)) {
+  for (const skillTool of buildFlueTools(ctx, CORRESPONDENT_SKILLS, disabledSkillIds)) {
     useTool(skillTool);
   }
 
