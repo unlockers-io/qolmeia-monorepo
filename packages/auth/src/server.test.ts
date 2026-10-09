@@ -8,15 +8,14 @@ type Plugin = NonNullable<AuthConfig["extraPlugins"]>[number];
 
 const baseConfig = {
   allowedHosts: ["**.localhost", "localhost:*", "127.0.0.1:*"],
+  fallbackBaseURL: "http://127.0.0.1:8787",
   prisma,
   secret: "test-secret-minimum-32-characters-long",
   trustedOrigins: [
     "http://localhost:3000",
     "http://localhost:3001",
-    "http://localhost:4000",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
-    "http://127.0.0.1:4000",
   ],
 } satisfies AuthConfig;
 
@@ -80,7 +79,7 @@ describe("Auth Server Configuration", () => {
     expect(baseURL.allowedHosts).toEqual(
       expect.arrayContaining(["**.localhost", "localhost:*", "127.0.0.1:*"]),
     );
-    expect(baseURL.fallback).toBe("http://localhost:4000");
+    expect(baseURL.fallback).toBe("http://127.0.0.1:8787");
   });
 
   it("should pass caller-provided allowedHosts through to baseURL", () => {
@@ -107,10 +106,12 @@ describe("Auth Server Configuration", () => {
     expect(noResendAuth.options.emailAndPassword?.requireEmailVerification).toBe(false);
   });
 
-  it("should have bearer token plugin enabled", () => {
-    const plugins = auth.options.plugins;
-    const hasBearerToken = plugins.some((plugin) => plugin.id === "bearer");
-    expect(hasBearerToken).toBe(true);
+  it("authenticates by cookie alone, with no bearer plugin", () => {
+    expect(auth.options.plugins.some((plugin) => plugin.id === "bearer")).toBe(false);
+  });
+
+  it("rate-limits on the client address the auth host resolved", () => {
+    expect(auth.options.advanced?.ipAddress?.ipAddressHeaders).toEqual(["x-qolmeia-client-ip"]);
   });
 
   it("should have username plugin enabled", () => {
@@ -154,12 +155,12 @@ describe("Auth Server Configuration", () => {
       trustedOrigins: [
         ...baseConfig.trustedOrigins,
         "https://app.qolmeia.com",
-        "https://api.qolmeia.com",
+        "https://admin.qolmeia.com",
       ],
     });
     const trusted = envAuth.options.trustedOrigins;
     expect(trusted).toContain("https://app.qolmeia.com");
-    expect(trusted).toContain("https://api.qolmeia.com");
+    expect(trusted).toContain("https://admin.qolmeia.com");
     expect(trusted).toContain("http://localhost:3000");
     expect(trusted).toContain("http://127.0.0.1:3000");
   });
@@ -227,7 +228,7 @@ describe("Auth Server Configuration", () => {
   });
 
   describe("linkOnRequestOrigin", () => {
-    const apiLink = "https://api.qolmeia.com/api/auth/magic-link/verify?token=t&callbackURL=%2F";
+    const apiLink = "https://agents.qolmeia.com/api/auth/magic-link/verify?token=t&callbackURL=%2F";
     const trusted = ["https://app.qolmeia.com", "https://admin.qolmeia.com"];
 
     it("moves the link onto the trusted app origin that asked for it", () => {
