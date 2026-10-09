@@ -57,7 +57,7 @@ cp apps/backoffice/.env.example apps/backoffice/.env
 cp apps/agents/.dev.vars.example apps/agents/.dev.vars
 ```
 
-`BETTER_AUTH_SECRET` must match across `apps/api`, `apps/web`, and `apps/backoffice`. `apps/agents/.dev.vars` holds Worker-only secrets such as `OPENROUTER_API_KEY` and `ASSETS_SIGNING_KEY`, plus `DATABASE_URL` and `BETTER_AUTH_SECRET` for the seed script. The Worker itself reaches the docker Postgres through the `HYPERDRIVE` binding's `localConnectionString`.
+`BETTER_AUTH_SECRET` must match across `apps/api`, `apps/web`, and `apps/backoffice`. `apps/agents/.dev.vars` holds Worker-only secrets such as `OPENROUTER_API_KEY`, plus `DATABASE_URL` and `BETTER_AUTH_SECRET` for the seed script. The Worker itself reaches the docker Postgres through the `HYPERDRIVE` binding's `localConnectionString`.
 
 ## Useful Commands
 

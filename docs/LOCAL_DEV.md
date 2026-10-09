@@ -39,7 +39,7 @@ Important local variables:
 | `apps/api/.env`         | `DATABASE_URL`, `BETTER_AUTH_SECRET`, optional `RESEND_API_KEY`, `AUTH_FROM_EMAIL`                |
 | `apps/web/.env`         | `DATABASE_URL`, `BETTER_AUTH_SECRET`, optional `AUTH_SERVICE_INTERNAL_URL`, `AGENTS_INTERNAL_URL` |
 | `apps/backoffice/.env`  | `DATABASE_URL`, `BETTER_AUTH_SECRET`, optional `AUTH_SERVICE_INTERNAL_URL`, `AGENTS_INTERNAL_URL` |
-| `apps/agents/.dev.vars` | `DATABASE_URL`, `OPENROUTER_API_KEY`, `ASSETS_SIGNING_KEY`                                        |
+| `apps/agents/.dev.vars` | `DATABASE_URL`, `OPENROUTER_API_KEY`                                                              |
 
 The Next apps rewrite `/api/auth/*`, `/api/me/*`, `/api/teams/*`, `/api/backoffice/*`, and `/agents/*` to the local API/Worker so cookies stay first-party in development.
 
@@ -121,4 +121,3 @@ pnpm --filter=worker-bees test -- --run apps/agents/src/__tests__/skill-tool-sch
 | Auth routes fail from Next                | Check `AUTH_SERVICE_INTERNAL_URL`, defaulting to `http://127.0.0.1:4000`               |
 | Worker has no local data                  | Check `HYPERDRIVE` in `wrangler.jsonc`, then rerun `pnpm --filter=worker-bees db:seed` |
 | Real agent calls fail                     | Set `OPENROUTER_API_KEY` in `apps/agents/.dev.vars`                                    |
-| Asset generation or signed URLs fail      | Set `ASSETS_SIGNING_KEY` in `apps/agents/.dev.vars`                                    |
