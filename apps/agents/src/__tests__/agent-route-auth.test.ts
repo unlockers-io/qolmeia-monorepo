@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
 import { requireCustomerAgent } from "#/lib/agent-route-auth";
 import type { SessionEnv } from "#/lib/auth";
 
@@ -15,13 +16,14 @@ guardedApp.use("/agents/planner/*", requireCustomerAgent);
 guardedApp.all("/agents/:agent/:companyId", (c) => c.text("admitted"));
 guardedApp.get("/agents/correspondent/:companyId/session-probe", (c) => c.json(c.get("session")));
 
-const requestAgent = (agent: "correspondent" | "planner", companyId: string, token?: string) => {
-  const query = token === undefined ? "" : `?cf_session=${token}`;
-  return guardedApp.fetch(
-    new Request(`https://agents.test/agents/${agent}/${companyId}${query}`),
+const requestAgent = (agent: "correspondent" | "planner", companyId: string, token?: string) =>
+  guardedApp.fetch(
+    new Request(
+      `https://agents.test/agents/${agent}/${companyId}`,
+      token === undefined ? undefined : sessionInit(token),
+    ),
     env,
   );
-};
 
 const membership = (role: "CUSTOMER" | "OWNER" | "STAFF", companyId = COMPANY_ID) => ({
   currentOrg: { id: companyId, role },
@@ -76,7 +78,8 @@ describe("agent route auth", () => {
 
     const response = await guardedApp.fetch(
       new Request(
-        `https://agents.test/agents/correspondent/${COMPANY_ID}/session-probe?cf_session=probe-token`,
+        `https://agents.test/agents/correspondent/${COMPANY_ID}/session-probe`,
+        sessionInit("probe-token"),
       ),
       env,
     );

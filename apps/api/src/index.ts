@@ -48,7 +48,7 @@ const corsOrigins = env.CORS_ORIGINS.split(",")
 app.use(
   "*",
   cors({
-    allowHeaders: ["Content-Type", "X-Request-Id", "X-Org-Id", "Cookie", "Authorization"],
+    allowHeaders: ["Content-Type", "X-Request-Id", "X-Org-Id", "Cookie"],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: corsOrigins.length > 0 && corsOrigins[0] !== "*",
     exposeHeaders: ["Set-Cookie", "X-Request-Id"],

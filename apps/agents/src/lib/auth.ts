@@ -43,33 +43,23 @@ type MeFetch =
   | { kind: "unreachable" };
 
 const fetchMe = async (request: Request, env: Env): Promise<MeFetch> => {
-  const tokenParam = new URL(request.url).searchParams.get("cf_session");
-  const authHeader = request.headers.get("Authorization");
-  const bearerToken = authHeader?.startsWith("Bearer ") === true ? authHeader.slice(7) : null;
   const cookieHeader = request.headers.get("Cookie");
-
-  const token = bearerToken ?? tokenParam;
+  if (cookieHeader === null || cookieHeader === "") {
+    return { kind: "no-credentials" };
+  }
   const orgId = readOrgId(request);
 
   type HeadersContract = {
     Accept: string;
-    Authorization?: string;
-    Cookie?: string;
+    Cookie: string;
     "X-Forwarded-For"?: string;
     "X-Org-Id"?: string;
   };
 
-  const headers: HeadersContract = { Accept: "application/json" };
+  const headers: HeadersContract = { Accept: "application/json", Cookie: cookieHeader };
   const clientIp = request.headers.get("CF-Connecting-IP");
   if (clientIp !== null && clientIp !== "") {
     headers["X-Forwarded-For"] = clientIp;
-  }
-  if (token !== null && token !== "") {
-    headers.Authorization = `Bearer ${token}`;
-  } else if (cookieHeader !== null && cookieHeader !== "") {
-    headers.Cookie = cookieHeader;
-  } else {
-    return { kind: "no-credentials" };
   }
   if (orgId !== null) {
     headers[ORG_ID_HEADER] = orgId;
@@ -79,7 +69,6 @@ const fetchMe = async (request: Request, env: Env): Promise<MeFetch> => {
     cookie: cookieHeader,
     namespace: ME_CACHE_NAMESPACE,
     orgId,
-    token,
   });
   const cached = await readCachedString(env, cacheKey);
   if (cached !== null && cached !== "") {

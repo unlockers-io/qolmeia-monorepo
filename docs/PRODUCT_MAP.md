@@ -193,10 +193,11 @@ SHA-256 deduplication).
 
 ### 3.5 Auth and tenancy
 
-Better Auth provides magic link, email + password, verification, reset, change-email, username, and
-bearer-token support on Postgres. Roles are OWNER, STAFF, and CUSTOMER. The organization id is reused
-verbatim as the product company id, so membership directly gates the Worker surfaces. The agents
-Worker validates sessions by relaying to `/api/me` with a 60-second KV cache.
+Better Auth provides magic link, email + password, verification, reset, change-email, and username
+support on Postgres. Roles are OWNER, STAFF, and CUSTOMER. The organization id is reused verbatim as
+the product company id, so membership directly gates the Worker surfaces. The session lives only in
+the httpOnly cookie: the agents Worker validates it by relaying the cookie to `/api/me` with a
+60-second KV cache, and accepts no token in a header or query string.
 
 ---
 

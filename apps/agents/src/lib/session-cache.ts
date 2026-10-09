@@ -14,34 +14,23 @@ const sha256Hex = async (input: string): Promise<string> => {
 };
 
 type CacheKeyInput = {
-  cookie: string | null;
+  cookie: string;
   namespace: string;
   orgId: string | null;
-  token: string | null;
 };
 
 const scopedDigest = (credential: string, orgId: string): Promise<string> =>
   sha256Hex(`${orgId.length}:${orgId}${credential}`);
 
-const buildCacheKey = async (input: CacheKeyInput): Promise<string | null> => {
-  if (input.token !== null && input.token !== "") {
-    return `${input.namespace}:tok:${await scopedDigest(input.token, input.orgId ?? "")}`;
-  }
-  if (input.cookie !== null && input.cookie !== "") {
-    return `${input.namespace}:cookie:${await scopedDigest(input.cookie, input.orgId ?? "")}`;
-  }
-  return null;
-};
+const buildCacheKey = async (input: CacheKeyInput): Promise<string> =>
+  `${input.namespace}:cookie:${await scopedDigest(input.cookie, input.orgId ?? "")}`;
 
 const describeCacheKey = (key: string): string => {
   const [namespace = "unknown", kind = "unknown"] = key.split(":");
   return `${namespace}:${kind}`;
 };
 
-const readCachedString = async (env: Env, key: string | null): Promise<string | null> => {
-  if (key === null || key === "") {
-    return null;
-  }
+const readCachedString = async (env: Env, key: string): Promise<string | null> => {
   try {
     return await env.SESSIONS.get(key);
   } catch (error) {
@@ -56,13 +45,10 @@ const readCachedString = async (env: Env, key: string | null): Promise<string | 
 
 const writeCachedString = async (
   env: Env,
-  key: string | null,
+  key: string,
   value: string,
   ttlSeconds: number,
 ): Promise<void> => {
-  if (key === null || key === "") {
-    return;
-  }
   try {
     await env.SESSIONS.put(key, value, {
       expirationTtl: Math.max(ttlSeconds, KV_TTL_FLOOR_SECONDS),

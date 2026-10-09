@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
 import { logActivity } from "#/activity/log";
 import { proposeAction } from "#/db/action";
 
@@ -77,7 +78,8 @@ describe("backoffice auth gate", () => {
   it("rejects unauthenticated with 401", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(new Response("Unauthorized", { status: 401 })));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
+      "https://agents.test/api/backoffice/tickets",
+      sessionInit("tok"),
     );
     expect(res.status).toBe(401);
   });
@@ -85,7 +87,8 @@ describe("backoffice auth gate", () => {
   it("rejects CUSTOMER with 403", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
+      "https://agents.test/api/backoffice/tickets",
+      sessionInit("tok"),
     );
     expect(res.status).toBe(403);
   });
@@ -93,7 +96,8 @@ describe("backoffice auth gate", () => {
   it("admits STAFF with 200", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
+      "https://agents.test/api/backoffice/tickets",
+      sessionInit("tok"),
     );
     expect(res.status).toBe(200);
   });
@@ -103,7 +107,8 @@ describe("backoffice listing endpoints", () => {
   it("lists tickets across all tenants (camelCase shape + company label)", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
+      "https://agents.test/api/backoffice/tickets",
+      sessionInit("tok"),
     );
     const body = await res.json<{
       items: Array<{
@@ -138,7 +143,8 @@ describe("backoffice listing endpoints", () => {
     });
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions?status=pending&sort=age&cf_session=tok",
+      "https://agents.test/api/backoffice/actions?status=pending&sort=age",
+      sessionInit("tok"),
     );
     const body = await res.json<{
       items: Array<{ actionType: string; ageSeconds: number }>;
@@ -158,7 +164,8 @@ describe("backoffice listing endpoints", () => {
     });
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions?cf_session=tok",
+      "https://agents.test/api/backoffice/actions",
+      sessionInit("tok"),
     );
     const body = await res.json<{
       items: Array<{
@@ -184,7 +191,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
   it("GET /tickets?companyId= narrows to that company; unfiltered spans all", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const filtered = await exports.default.fetch(
-      `https://agents.test/api/backoffice/tickets?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
+      `https://agents.test/api/backoffice/tickets?companyId=${OTHER_COMPANY_ID}`,
+      sessionInit("tok"),
     );
     expect(filtered.status).toBe(200);
     const filteredBody = await filtered.json<{
@@ -194,7 +202,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
     expect(filteredBody.items.every((t) => t.companyId === OTHER_COMPANY_ID)).toBe(true);
 
     const all = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?cf_session=tok",
+      "https://agents.test/api/backoffice/tickets",
+      sessionInit("tok"),
     );
     const allBody = await all.json<{ items: Array<{ id: string }> }>();
     expect(allBody.items.find((t) => t.id === "tkt-bo-test")).toBeTruthy();
@@ -218,7 +227,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
     });
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const filtered = await exports.default.fetch(
-      `https://agents.test/api/backoffice/actions?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
+      `https://agents.test/api/backoffice/actions?companyId=${OTHER_COMPANY_ID}`,
+      sessionInit("tok"),
     );
     expect(filtered.status).toBe(200);
     const filteredBody = await filtered.json<{ items: Array<{ companyId: string }> }>();
@@ -226,7 +236,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
     expect(filteredBody.items.every((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
 
     const all = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions?cf_session=tok",
+      "https://agents.test/api/backoffice/actions",
+      sessionInit("tok"),
     );
     const allBody = await all.json<{ items: Array<{ companyId: string }> }>();
     expect(allBody.items.some((a) => a.companyId === COMPANY_ID)).toBe(true);
@@ -250,7 +261,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
     });
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const filtered = await exports.default.fetch(
-      `https://agents.test/api/backoffice/activity?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
+      `https://agents.test/api/backoffice/activity?companyId=${OTHER_COMPANY_ID}`,
+      sessionInit("tok"),
     );
     expect(filtered.status).toBe(200);
     const filteredBody = await filtered.json<{ items: Array<{ companyId: string }> }>();
@@ -258,7 +270,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
     expect(filteredBody.items.every((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
 
     const all = await exports.default.fetch(
-      "https://agents.test/api/backoffice/activity?cf_session=tok",
+      "https://agents.test/api/backoffice/activity",
+      sessionInit("tok"),
     );
     const allBody = await all.json<{ items: Array<{ companyId: string }> }>();
     expect(allBody.items.some((a) => a.companyId === COMPANY_ID)).toBe(true);
@@ -271,7 +284,8 @@ describe("backoffice list query-param hardening", () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
 
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?status=unknown&cf_session=tok",
+      "https://agents.test/api/backoffice/tickets?status=unknown",
+      sessionInit("tok"),
     );
 
     expect(res.status).toBe(400);
@@ -282,14 +296,16 @@ describe("backoffice list query-param hardening", () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
 
     const nonNumeric = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?limit=abc&cf_session=tok",
+      "https://agents.test/api/backoffice/tickets?limit=abc",
+      sessionInit("tok"),
     );
     expect(nonNumeric.status).toBe(200);
     const nonNumericBody = await nonNumeric.json<{ items: Array<{ id: string }> }>();
     expect(nonNumericBody.items.find((t) => t.id === "tkt-bo-test")).toBeTruthy();
 
     const oversized = await exports.default.fetch(
-      "https://agents.test/api/backoffice/tickets?limit=999999&cf_session=tok",
+      "https://agents.test/api/backoffice/tickets?limit=999999",
+      sessionInit("tok"),
     );
     expect(oversized.status).toBe(200);
     const oversizedBody = await oversized.json<{ items: Array<{ id: string }> }>();
@@ -307,14 +323,16 @@ describe("backoffice list query-param hardening", () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
 
     const badLimit = await exports.default.fetch(
-      "https://agents.test/api/backoffice/activity?limit=abc&cf_session=tok",
+      "https://agents.test/api/backoffice/activity?limit=abc",
+      sessionInit("tok"),
     );
     expect(badLimit.status).toBe(200);
     const badLimitBody = await badLimit.json<{ items: Array<{ summary: string }> }>();
     expect(badLimitBody.items.some((a) => a.summary === "hardening")).toBe(true);
 
     const badWindow = await exports.default.fetch(
-      "https://agents.test/api/backoffice/activity?since=abc&before=xyz&cf_session=tok",
+      "https://agents.test/api/backoffice/activity?since=abc&before=xyz",
+      sessionInit("tok"),
     );
     expect(badWindow.status).toBe(200);
     const badWindowBody = await badWindow.json<{ items: Array<{ summary: string }> }>();
@@ -326,12 +344,12 @@ describe("operator override decide", () => {
   it("returns 404 for an unknown action id", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions/does-not-exist/decide?cf_session=tok",
-      {
+      "https://agents.test/api/backoffice/actions/does-not-exist/decide",
+      sessionInit("tok", {
         body: JSON.stringify({ decision: "approved" }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
-      },
+      }),
     );
     expect(res.status).toBe(404);
   });
@@ -339,12 +357,12 @@ describe("operator override decide", () => {
   it("returns 400 for an invalid body", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/actions/whatever/decide?cf_session=tok",
-      {
+      "https://agents.test/api/backoffice/actions/whatever/decide",
+      sessionInit("tok", {
         body: JSON.stringify({ decision: "maybe" }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
-      },
+      }),
     );
     expect(res.status).toBe(400);
   });

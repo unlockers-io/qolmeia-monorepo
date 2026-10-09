@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
 import { proposeAction } from "#/db/action";
 import { listCoverage, setCoverage } from "#/db/assignment";
 import { getDb } from "#/db/client";
@@ -75,7 +76,8 @@ afterEach(() => {
 
 const pendingCompanyIds = async (query = ""): Promise<Array<string>> => {
   const res = await exports.default.fetch(
-    `https://agents.test/api/backoffice/actions?status=pending&cf_session=covtok${query}`,
+    `https://agents.test/api/backoffice/actions?status=pending${query}`,
+    sessionInit("covtok"),
   );
   const body = await res.json<{ items: Array<{ companyId: string }> }>();
   return body.items.map((a) => a.companyId);
@@ -104,7 +106,8 @@ describe("GET/PUT /api/backoffice/assignments/me", () => {
   it("returns empty coverage + option lists, then reflects a PUT", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const before = await exports.default.fetch(
-      "https://agents.test/api/backoffice/assignments/me?cf_session=covtok",
+      "https://agents.test/api/backoffice/assignments/me",
+      sessionInit("covtok"),
     );
     const beforeBody = await before.json<{
       assigned: { companies: Array<string>; disciplines: Array<string> };
@@ -120,16 +123,17 @@ describe("GET/PUT /api/backoffice/assignments/me", () => {
     expect(beforeBody.options.disciplineNames).toMatchObject({ designer: "Designer" });
 
     const put = await exports.default.fetch(
-      "https://agents.test/api/backoffice/assignments/me?cf_session=covtok",
-      {
+      "https://agents.test/api/backoffice/assignments/me",
+      sessionInit("covtok", {
         body: JSON.stringify({ companies: [COMPANY_A], disciplines: [] }),
         headers: { "content-type": "application/json" },
         method: "PUT",
-      },
+      }),
     );
     expect(put.status).toBe(200);
     const after = await exports.default.fetch(
-      "https://agents.test/api/backoffice/assignments/me?cf_session=covtok",
+      "https://agents.test/api/backoffice/assignments/me",
+      sessionInit("covtok"),
     );
     const afterBody = await after.json<{ assigned: { companies: Array<string> } }>();
     expect(afterBody.assigned.companies).toEqual([COMPANY_A]);

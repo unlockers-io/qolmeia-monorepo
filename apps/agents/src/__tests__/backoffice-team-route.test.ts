@@ -1,6 +1,8 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
+
 const COMPANY_ID = "co_bot_test";
 const originalFetch = globalThis.fetch;
 
@@ -42,7 +44,8 @@ describe("/api/backoffice/teams/:companyId/members", () => {
   it("lists members for STAFF", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members`,
+      sessionInit("tok"),
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ members: Array<{ id: string }> }>();
@@ -52,7 +55,8 @@ describe("/api/backoffice/teams/:companyId/members", () => {
   it("403 for CUSTOMER", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members`,
+      sessionInit("tok"),
     );
     expect(res.status).toBe(403);
   });
@@ -60,7 +64,8 @@ describe("/api/backoffice/teams/:companyId/members", () => {
   it("GET member detail returns templateSystemPrompt and promptOverride", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d`,
+      sessionInit("tok"),
     );
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -73,12 +78,12 @@ describe("/api/backoffice/teams/:companyId/members", () => {
   it("PATCH member updates promptOverride and writes operator-tagged activity", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d?cf_session=tok`,
-      {
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d`,
+      sessionInit("tok", {
         body: JSON.stringify({ promptOverride: "novo prompt" }),
         headers: { "content-type": "application/json" },
         method: "PATCH",
-      },
+      }),
     );
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -105,7 +110,8 @@ describe("backoffice team routes: cross-tenant", () => {
   it("STAFF queries another company's members list (empty when it has none)", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/co_other_company/members?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/co_other_company/members`,
+      sessionInit("tok"),
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ members: Array<{ id: string }> }>();
@@ -115,7 +121,8 @@ describe("backoffice team routes: cross-tenant", () => {
   it("404 (not 403) when STAFF reads a member that doesn't exist in that company", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/co_other_company/members/ai_bot_d?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/co_other_company/members/ai_bot_d`,
+      sessionInit("tok"),
     );
     expect(res.status).toBe(404);
   });
@@ -123,12 +130,12 @@ describe("backoffice team routes: cross-tenant", () => {
   it("404 (not 403) when STAFF PATCHes a member that doesn't exist in that company", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/co_other_company/members/ai_bot_d?cf_session=tok`,
-      {
+      `https://agents.test/api/backoffice/teams/co_other_company/members/ai_bot_d`,
+      sessionInit("tok", {
         body: JSON.stringify({ displayName: "evil" }),
         headers: { "content-type": "application/json" },
         method: "PATCH",
-      },
+      }),
     );
     expect(res.status).toBe(404);
   });
@@ -138,7 +145,8 @@ describe("/api/backoffice/companies", () => {
   it("returns every company with its roster + brief completeness for STAFF", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/companies?cf_session=tok",
+      "https://agents.test/api/backoffice/companies",
+      sessionInit("tok"),
     );
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -153,7 +161,8 @@ describe("/api/backoffice/companies", () => {
   it("403 for CUSTOMER", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
     const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/companies?cf_session=tok",
+      "https://agents.test/api/backoffice/companies",
+      sessionInit("tok"),
     );
     expect(res.status).toBe(403);
   });
@@ -163,7 +172,8 @@ describe("backoffice member detail extras + pause/resume", () => {
   it("member detail exposes companyName and createdAt", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d?cf_session=tok`,
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d`,
+      sessionInit("tok"),
     );
     const body = await res.json<{ member: { companyName: string; createdAt: number } }>();
     expect(body.member.companyName).toBe("BT");
@@ -172,14 +182,13 @@ describe("backoffice member detail extras + pause/resume", () => {
 
   it("PATCH status pauses then resumes a worker", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const url = `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d?cf_session=tok`;
+    const url = `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/ai_bot_d`;
     const headers = { "content-type": "application/json" };
 
-    const pause = await exports.default.fetch(url, {
-      body: JSON.stringify({ status: "paused" }),
-      headers,
-      method: "PATCH",
-    });
+    const pause = await exports.default.fetch(
+      url,
+      sessionInit("tok", { body: JSON.stringify({ status: "paused" }), headers, method: "PATCH" }),
+    );
     expect(pause.status).toBe(200);
     const pauseBody = await pause.json<{ member: { status: string } }>();
     expect(pauseBody.member.status).toBe("paused");
@@ -188,11 +197,10 @@ describe("backoffice member detail extras + pause/resume", () => {
     ).first<{ status: string }>();
     expect(row?.status).toBe("paused");
 
-    const resume = await exports.default.fetch(url, {
-      body: JSON.stringify({ status: "active" }),
-      headers,
-      method: "PATCH",
-    });
+    const resume = await exports.default.fetch(
+      url,
+      sessionInit("tok", { body: JSON.stringify({ status: "active" }), headers, method: "PATCH" }),
+    );
     expect(resume.status).toBe(200);
     const resumeBody = await resume.json<{ member: { status: string } }>();
     expect(resumeBody.member.status).toBe("available");
@@ -201,12 +209,12 @@ describe("backoffice member detail extras + pause/resume", () => {
   it("returns 409 when pausing the correspondent", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/corr_bot?cf_session=tok`,
-      {
+      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/corr_bot`,
+      sessionInit("tok", {
         body: JSON.stringify({ status: "paused" }),
         headers: { "content-type": "application/json" },
         method: "PATCH",
-      },
+      }),
     );
     expect(res.status).toBe(409);
     await expect(res.json()).resolves.toEqual({ error: "cannot pause/resume a correspondent" });

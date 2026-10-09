@@ -1,6 +1,8 @@
 import { exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { sessionInit } from "#/__tests__/session-cookie";
+
 const ORIGINAL_FETCH = globalThis.fetch;
 
 const fullMe = {
@@ -11,23 +13,37 @@ const fullMe = {
 };
 
 const relayForOrg = (orgId: string) =>
-  exports.default.fetch("https://agents.test/api/me?cf_session=ORG_TOK", {
-    headers: { "X-Org-Id": orgId },
-  });
+  exports.default.fetch(
+    "https://agents.test/api/me",
+    sessionInit("ORG_TOK", {
+      headers: { "X-Org-Id": orgId },
+    }),
+  );
 
 afterEach(() => {
   globalThis.fetch = ORIGINAL_FETCH;
 });
 
 describe("GET /api/me (P7.0 relay)", () => {
-  it("401 when no token or cookie is present", async () => {
+  it("401 when no session cookie is present", async () => {
     const res = await exports.default.fetch("https://agents.test/api/me");
     expect(res.status).toBe(401);
   });
 
+  it.each(["/api/me", "/api/me/company"])(
+    "401 on %s for a cf_session query token, without asking the auth service",
+    async (path) => {
+      const fetchSpy = vi.fn(() => Promise.resolve(Response.json(fullMe)));
+      globalThis.fetch = fetchSpy;
+      const res = await exports.default.fetch(`https://agents.test${path}?cf_session=tok`);
+      expect(res.status).toBe(401);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
   it("relays the auth service's MeResponse body unchanged", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(fullMe)));
-    const res = await exports.default.fetch("https://agents.test/api/me?cf_session=tok");
+    const res = await exports.default.fetch("https://agents.test/api/me", sessionInit("tok"));
     expect(res.status).toBe(200);
     const body = await res.json<typeof fullMe>();
     expect(body.user.email).toBe("u@x.com");
@@ -36,34 +52,40 @@ describe("GET /api/me (P7.0 relay)", () => {
 
   it("forwards the auth service's non-OK status (401 → 401)", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(new Response("Unauthorized", { status: 401 })));
-    const res = await exports.default.fetch("https://agents.test/api/me?cf_session=expired");
+    const res = await exports.default.fetch("https://agents.test/api/me", sessionInit("expired"));
     expect(res.status).toBe(401);
   });
 
   it("returns 502 when the auth service is unreachable", async () => {
     globalThis.fetch = vi.fn(() => Promise.reject(new Error("ECONNREFUSED")));
-    const res = await exports.default.fetch("https://agents.test/api/me?cf_session=tok");
+    const res = await exports.default.fetch("https://agents.test/api/me", sessionInit("tok"));
     expect(res.status).toBe(502);
   });
 
-  it("forwards the Authorization Bearer header from the cf_session param", async () => {
+  it("forwards the session cookie to the auth service", async () => {
     const fetchSpy = vi.fn(() => Promise.resolve(Response.json(fullMe)));
     globalThis.fetch = fetchSpy;
-    await exports.default.fetch("https://agents.test/api/me?cf_session=THE_TOKEN");
+    await exports.default.fetch("https://agents.test/api/me", sessionInit("THE_TOKEN"));
     const [, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
     const headers = init.headers as Record<string, string>;
-    expect(headers.Authorization).toBe("Bearer THE_TOKEN");
+    expect(headers.Cookie).toBe("qolmeia.session_token=THE_TOKEN");
   });
 
   it("serves the second call from KV cache (X-Cache: hit, no second fetch)", async () => {
     const fetchSpy = vi.fn(() => Promise.resolve(Response.json(fullMe)));
     globalThis.fetch = fetchSpy;
 
-    const first = await exports.default.fetch("https://agents.test/api/me?cf_session=CACHE_TOK");
+    const first = await exports.default.fetch(
+      "https://agents.test/api/me",
+      sessionInit("CACHE_TOK"),
+    );
     expect(first.status).toBe(200);
     expect(first.headers.get("X-Cache")).toBe("miss");
 
-    const second = await exports.default.fetch("https://agents.test/api/me?cf_session=CACHE_TOK");
+    const second = await exports.default.fetch(
+      "https://agents.test/api/me",
+      sessionInit("CACHE_TOK"),
+    );
     expect(second.status).toBe(200);
     expect(second.headers.get("X-Cache")).toBe("hit");
     const body = await second.json<typeof fullMe>();
@@ -107,9 +129,15 @@ describe("GET /api/me (P7.0 relay)", () => {
     const fetchSpy = vi.fn(() => Promise.resolve(new Response("Unauthorized", { status: 401 })));
     globalThis.fetch = fetchSpy;
 
-    const first = await exports.default.fetch("https://agents.test/api/me?cf_session=NO_CACHE");
+    const first = await exports.default.fetch(
+      "https://agents.test/api/me",
+      sessionInit("NO_CACHE"),
+    );
     expect(first.status).toBe(401);
-    const second = await exports.default.fetch("https://agents.test/api/me?cf_session=NO_CACHE");
+    const second = await exports.default.fetch(
+      "https://agents.test/api/me",
+      sessionInit("NO_CACHE"),
+    );
     expect(second.status).toBe(401);
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
