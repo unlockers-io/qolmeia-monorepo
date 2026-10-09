@@ -1,12 +1,13 @@
-import { AGENTS_SERVER_URL } from "@repo/app-shell/agents-url";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { ApiError } from "@repo/worker-api";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { Chat } from "@/components/chat";
 import { OnboardingActions } from "@/components/onboarding-actions";
 import { TeamSidebar } from "@/components/team-sidebar";
-import { requireCustomer, requireSession } from "@/lib/auth-helpers";
+import { apiGetServer } from "@/lib/api-server";
+import { requireCustomer } from "@/lib/auth-helpers";
 
 export const metadata: Metadata = {
   title: "Chat",
@@ -28,56 +29,32 @@ type TemplatesResponse = {
   }>;
 };
 
-type FetchOutcome<T> = { data: T; kind: "ok" } | { kind: "missing" };
-
-const fetchJson = async <T,>(
-  url: string,
-  token: string,
-  orgId: string,
-): Promise<FetchOutcome<T>> => {
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${token}`, "X-Org-Id": orgId },
-  });
-  if (res.status === 404) {
-    return { kind: "missing" };
+const getUnlessMissing = async <T,>(path: string): Promise<T | null> => {
+  try {
+    return await apiGetServer<T>(path);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
   }
-  if (!res.ok) {
-    throw new Error(`${url} responded ${res.status}`);
-  }
-  // SAFETY: Callers bind T to the contract of the first-party route they request.
-  // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and callers own the route contract
-  return { data: (await res.json()) as T, kind: "ok" };
 };
 
 const ChatContent = async () => {
-  const [session, me] = await Promise.all([requireSession(), requireCustomer()]);
-  const companyId = me.currentOrg.id;
+  const me = await requireCustomer();
+  const companyId = me.org.id;
 
-  const token = session.session.token;
-  const companyRes = await fetchJson<CompanyResponse>(
-    `${AGENTS_SERVER_URL}/api/me/company`,
-    token,
-    companyId,
-  );
-  const status = companyRes.kind === "ok" ? companyRes.data.company.status : "onboarding";
+  const companyRes = await getUnlessMissing<CompanyResponse>("/api/me/company");
+  const status = companyRes?.company.status ?? "onboarding";
 
   if (status === "onboarding") {
-    const templatesRes = await fetchJson<TemplatesResponse>(
-      `${AGENTS_SERVER_URL}/api/me/templates`,
-      token,
-      companyId,
-    );
+    const templatesRes = await getUnlessMissing<TemplatesResponse>("/api/me/templates");
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-background" data-chat>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <Chat agent="planner" companyId={companyId} sessionToken={token} />
+          <Chat agent="planner" companyId={companyId} />
         </div>
-        <OnboardingActions
-          companyId={companyId}
-          sessionToken={token}
-          templates={templatesRes.kind === "ok" ? templatesRes.data.templates : []}
-        />
+        <OnboardingActions companyId={companyId} templates={templatesRes?.templates ?? []} />
       </div>
     );
   }
@@ -85,7 +62,7 @@ const ChatContent = async () => {
   return (
     <div className="flex min-h-0 flex-1 bg-background" data-chat>
       <div className="flex min-w-0 flex-1 flex-col">
-        <Chat agent="correspondent" companyId={companyId} sessionToken={token} />
+        <Chat agent="correspondent" companyId={companyId} />
       </div>
       <div className="hidden lg:flex">
         <TeamSidebar companyId={companyId} />

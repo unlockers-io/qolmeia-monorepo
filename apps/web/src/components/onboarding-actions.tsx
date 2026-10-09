@@ -16,11 +16,10 @@ type Template = {
 
 type OnboardingActionsProps = {
   companyId: string;
-  sessionToken: string;
   templates: ReadonlyArray<Template>;
 };
 
-const OnboardingActions = ({ companyId, sessionToken, templates }: OnboardingActionsProps) => {
+const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => {
   const [selected, setSelected] = useState<ReadonlySet<string>>(
     () => new Set(templates.map((t) => t.id)),
   );
@@ -45,10 +44,7 @@ const OnboardingActions = ({ companyId, sessionToken, templates }: OnboardingAct
     try {
       const response = await fetch(`/api/teams/${companyId}/confirm`, {
         body: JSON.stringify({ templateIds: [...selected] }),
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         method: "POST",
       });
       if (response.ok) {

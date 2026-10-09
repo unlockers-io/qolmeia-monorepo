@@ -1,105 +1,65 @@
-import { handleResponse } from "@repo/worker-api";
-import type { MeOrg, MeResponse, OrgRole } from "@repo/worker-api/contracts";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { ApiError } from "@repo/worker-api";
+import {
+  activeMembership,
+  type MeOrg,
+  type MeResponse,
+  type MeUser,
+  type Surface,
+} from "@repo/worker-api/contracts";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { cache } from "react";
 
-import { AGENTS_SERVER_URL } from "./agents-url";
-import { getAuth, type Auth } from "./auth-server";
+import { createAppServerApi } from "./server-api";
 
 type AppLogFields = {
   error?: unknown;
   message: string;
-  status?: number;
 };
 type AppLogger = { error: (fields: AppLogFields) => void };
 
-type AuthSession = NonNullable<Awaited<ReturnType<Auth["api"]["getSession"]>>>;
+type Membership = { org: MeOrg; user: MeUser };
 
-type ScopedMe<Role extends OrgRole> = MeResponse & { currentOrg: MeOrg; role: Role };
-
-type SessionHelpers<Role extends OrgRole> = {
-  getActiveOrgId: () => Promise<string>;
-  requireMembership: () => Promise<ScopedMe<Role>>;
-  requireSession: () => Promise<AuthSession>;
+type SessionConfig = {
+  log: AppLogger;
+  readMe?: () => Promise<MeResponse>;
+  surface: Surface;
 };
 
-const createSessionHelpers = <Role extends OrgRole>(config: {
-  allow: ReadonlyArray<Role>;
-  log: AppLogger;
-}): SessionHelpers<Role> => {
-  const isAllowed = (role: OrgRole): role is Role =>
-    config.allow.some((candidate) => candidate === role);
+const UNAUTHORIZED = 401;
 
-  const getSession = cache(async () => {
-    const headersList = await headers();
-    try {
-      return await getAuth().api.getSession({ headers: headersList });
-    } catch (error) {
-      config.log.error({ error, message: "app-shell: getSession failed" });
-      return null;
-    }
-  });
-
-  const requireSession = async (): Promise<AuthSession> => {
-    const session = await getSession();
-    if (!session) {
-      redirect("/login");
-    }
-    return session;
-  };
-
-  /**
-   * Deliberately sent without X-Org-Id: this is the discovery read, and a caller
-   * forced to already know its org could never learn a second one. Cached so the
-   * org-scoped reads reuse this answer instead of refetching it.
-   */
+/**
+ * The Worker answers /api/me; a 401 means signed out. Anything else that fails is an outage,
+ * thrown so the route's error boundary renders instead of signing the visitor out.
+ */
+const createSessionHelpers = ({
+  log,
+  readMe = () => createAppServerApi().apiGetServer<MeResponse>("/api/me"),
+  surface,
+}: SessionConfig) => {
   const fetchMe = cache(async (): Promise<MeResponse> => {
-    await requireSession();
-    const headersList = await headers();
-    const cookie = headersList.get("cookie") ?? "";
-    const res = await fetch(`${AGENTS_SERVER_URL}/api/me`, {
-      cache: "no-store",
-      headers: { Accept: "application/json", Cookie: cookie },
-    });
-
-    if (res.status === 401) {
-      redirect("/login");
+    try {
+      return await readMe();
+    } catch (error) {
+      unstable_rethrow(error);
+      if (error instanceof ApiError && error.status === UNAUTHORIZED) {
+        redirect("/login");
+      }
+      log.error({ error, message: "app-shell: /api/me failed" });
+      throw error;
     }
-    if (res.status === 403) {
-      redirect("/no-access");
-    }
-    if (!res.ok) {
-      config.log.error({ message: "app-shell: /api/me transient failure", status: res.status });
-      throw new Error(`/api/me responded ${res.status}`);
-    }
-
-    return handleResponse<MeResponse>(res);
   });
 
-  /**
-   * A multi-org account comes back with currentOrg null, so the app picks its own
-   * default: the oldest membership that can use this app. /api/me orders orgs by
-   * membership age, which is the tenant the guard used to pick on its own.
-   */
-  const requireMembership = async (): Promise<ScopedMe<Role>> => {
+  const requireMembership = async (): Promise<Membership> => {
     const me = await fetchMe();
-    const org = me.currentOrg ?? me.orgs.find((candidate) => isAllowed(candidate.role)) ?? null;
-    if (org === null || !isAllowed(org.role)) {
+    const org = activeMembership(me.orgs, surface);
+    if (org === null) {
       redirect("/no-access");
     }
-    return { ...me, currentOrg: org, role: org.role };
+    return { org, user: me.user };
   };
 
-  return {
-    getActiveOrgId: async () => {
-      const membership = await requireMembership();
-      return membership.currentOrg.id;
-    },
-    requireMembership,
-    requireSession,
-  };
+  return { requireMembership };
 };
 
 export { createSessionHelpers };
-export type { AppLogger, ScopedMe, SessionHelpers };
+export type { AppLogger, Membership };
