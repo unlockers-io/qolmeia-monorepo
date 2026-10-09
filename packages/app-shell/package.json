@@ -24,7 +24,7 @@
   "devDependencies": {
     "@repo/config-vitest": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "next": "^16.3.6",
+    "next": "^16.3.8",
     "react": "^19.3.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
