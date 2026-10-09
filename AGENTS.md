@@ -98,7 +98,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 
 Each app has its own `.env.example`:
 
-- **apps/api**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CORS_ORIGINS` (must be explicit; Better Auth refuses `*` for cross-origin cookies), optional `RESEND_API_KEY`, `AUTH_FROM_EMAIL`.
+- **apps/api**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CORS_ORIGINS` (must be explicit; Better Auth refuses `*` for cross-origin cookies), optional `RESEND_API_KEY`, `AUTH_FROM_EMAIL`, `TRUSTED_PROXY_SECRET` (shared with the Next apps; see `docs/deploy.md` §7).
 - **apps/agents**: `.dev.vars` (not `.env`). Holds `DATABASE_URL`, `OPENROUTER_API_KEY`, and `ASSETS_SIGNING_KEY`. `wrangler.jsonc` defines the rest in its `vars` block (`CORRESPONDENT_MODEL`, `IMAGE_GEN_MODEL`, `AUTH_SERVICE_URL`, `WORKER_PUBLIC_URL`, `CLIENT_ORIGINS`).
 - **apps/web**: `BETTER_AUTH_SECRET` (matches `apps/api`), `DATABASE_URL` (Next `proxy.ts` validates sessions via Prisma). Auth and the agents Worker are same-origin: `next.config.ts` rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` (default `http://127.0.0.1:4000`) and `/api/me/*` + `/api/teams/*` + `/agents/*` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). `next build` bakes both URLs into the rewrites, so prod sets them on the Vercel project.
 - **apps/backoffice**: same as client (its Worker rewrite covers `/api/backoffice/*`).

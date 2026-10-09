@@ -1,23 +1,34 @@
+import { readForwardedClientIp } from "@repo/internal-auth";
 import type { Context, Next } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
+import { getSignedCookie } from "hono/cookie";
 import { secureHeaders } from "hono/secure-headers";
+
+import { auth } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 const firstNonEmpty = (...candidates: Array<string | undefined>): string | undefined =>
   candidates.find((value) => value !== undefined && value !== "");
 
-const getClientIp = (c: Context): string => {
-  const env: unknown = c.env;
-  const remoteAddr =
-    typeof env === "object" &&
-    env !== null &&
-    "remoteAddr" in env &&
-    typeof env.remoteAddr === "string"
-      ? env.remoteAddr
-      : undefined;
-  return (
-    firstNonEmpty(c.req.header("x-forwarded-for"), c.req.header("x-real-ip"), remoteAddr) ??
-    "unknown"
-  );
+const verifiedSessionToken = async (c: Context): Promise<string | undefined> => {
+  const { authCookies, secret } = await auth.$context;
+  const token = await getSignedCookie(c, secret, authCookies.sessionToken.name);
+  return typeof token === "string" ? firstNonEmpty(token) : undefined;
+};
+
+const edgeClientIp = (c: Context): string | undefined =>
+  c.req.header("x-real-ip")?.split(",").at(-1)?.trim();
+
+const rateLimitKey = async (c: Context): Promise<string> => {
+  const sessionToken = await verifiedSessionToken(c);
+  if (sessionToken !== undefined) {
+    return `session:${sessionToken}`;
+  }
+  const clientIp =
+    readForwardedClientIp(c.req.raw.headers, env.TRUSTED_PROXY_SECRET) ??
+    firstNonEmpty(edgeClientIp(c)) ??
+    "unknown";
+  return `ip:${clientIp}`;
 };
 
 export const securityHeaders = secureHeaders({
@@ -58,7 +69,7 @@ export const standardRateLimit = rateLimiter({
       429,
     );
   },
-  keyGenerator: (c: Context) => getClientIp(c),
+  keyGenerator: rateLimitKey,
   limit: 100,
   standardHeaders: "draft-6",
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -76,7 +87,7 @@ export const apiRateLimit = rateLimiter({
       429,
     );
   },
-  keyGenerator: (c: Context) => `ip:${getClientIp(c)}`,
+  keyGenerator: rateLimitKey,
   limit: 30,
   standardHeaders: "draft-6",
   windowMs: 1 * 60 * 1000, // 1 minute

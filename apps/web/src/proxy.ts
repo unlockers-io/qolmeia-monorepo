@@ -1,3 +1,4 @@
+import { forwardAuthRequest } from "@repo/app-shell/auth-proxy";
 import { getAuth } from "@repo/app-shell/auth-server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -31,6 +32,10 @@ const getSessionOrNull = async (request: NextRequest) => {
 export const proxy = async (request: NextRequest) => {
   const pathname = request.nextUrl.pathname;
 
+  if (pathname.startsWith("/api/auth/")) {
+    return forwardAuthRequest(request);
+  }
+
   const isProtectedRoute = protectedRoutes.some((route) => matchesRoute(pathname, route));
   const isAuthRoute = authRoutes.some((route) => matchesRoute(pathname, route));
 
@@ -59,5 +64,5 @@ export const proxy = async (request: NextRequest) => {
 };
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|icon.svg|public).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|public).*)"],
 };

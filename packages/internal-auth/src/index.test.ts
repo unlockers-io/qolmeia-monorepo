@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { constantTimeEqual, readBearerToken, verifyInternalSecret } from "./index";
+import {
+  constantTimeEqual,
+  forwardClientIp,
+  readBearerToken,
+  readForwardedClientIp,
+  verifyInternalSecret,
+} from "./index";
 
 describe("constantTimeEqual", () => {
   it("returns true for identical strings", () => {
@@ -82,5 +88,40 @@ describe("verifyInternalSecret", () => {
     expect(verifyInternalSecret({ expected: "s3cret", header: "Bearer " })).toEqual({
       kind: "forbidden",
     });
+  });
+});
+
+describe("forwarded client IP", () => {
+  const secret = "trusted-proxy-secret-at-least-32-chars";
+
+  it("round-trips the client IP a trusted proxy forwards", () => {
+    const headers = forwardClientIp(new Headers(), { clientIp: "203.0.113.7", secret });
+    expect(readForwardedClientIp(headers, secret)).toBe("203.0.113.7");
+  });
+
+  it("overwrites a client IP and secret the browser sent itself", () => {
+    const forged = new Headers({
+      "x-qolmeia-client-ip": "198.51.100.1",
+      "x-qolmeia-proxy-secret": "guess",
+    });
+    const headers = forwardClientIp(forged, { clientIp: "203.0.113.7", secret });
+    expect(readForwardedClientIp(headers, secret)).toBe("203.0.113.7");
+  });
+
+  it("trusts no forwarded IP without the matching secret", () => {
+    const headers = new Headers({
+      "x-qolmeia-client-ip": "198.51.100.1",
+      "x-qolmeia-proxy-secret": "guess",
+    });
+    expect(readForwardedClientIp(headers, secret)).toBeNull();
+    expect(
+      readForwardedClientIp(new Headers({ "x-qolmeia-client-ip": "198.51.100.1" }), secret),
+    ).toBeNull();
+  });
+
+  it("trusts no forwarded IP when the secret is unset on this side", () => {
+    const headers = forwardClientIp(new Headers(), { clientIp: "203.0.113.7", secret: "" });
+    expect(readForwardedClientIp(headers, undefined)).toBeNull();
+    expect(readForwardedClientIp(headers, "")).toBeNull();
   });
 });

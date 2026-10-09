@@ -16,6 +16,7 @@ export const envSchema = z.object({
   PORT: z.string().default("4000"),
   RESEND_API_KEY: z.string().optional(),
   TRUSTED_ORIGINS: z.string().optional(),
+  TRUSTED_PROXY_SECRET: z.string().min(32).optional(),
   WEB_APP_URL: z.string().optional(),
 });
 

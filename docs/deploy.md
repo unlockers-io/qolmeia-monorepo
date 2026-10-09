@@ -145,6 +145,7 @@ Environment:
 | `TRUSTED_ORIGINS`        | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
 | `AGENTS_INTERNAL_URL`    | `https://agents.qolmeia.com` (org-create relay target)  |
 | `INTERNAL_SHARED_SECRET` | MUST match the Worker secret                            |
+| `TRUSTED_PROXY_SECRET`   | `openssl rand -hex 32`; MUST match both Next apps       |
 | `RESEND_API_KEY`         | from Resend                                             |
 | `AUTH_FROM_EMAIL`        | `noreply@email.qolmeia.com` (Resend verifies `email.`)  |
 | `WEB_APP_URL`            | `https://app.qolmeia.com` (drives `useSecureCookies`)   |
@@ -183,6 +184,7 @@ in `proxy.ts` and proxy auth and the Worker through their own origin:
 | `WEB_APP_URL`               | `https://app.qolmeia.com`                                              |
 | `AUTH_ALLOWED_HOSTS`        | `qolmeia.com,*.qolmeia.com`                                            |
 | `TRUSTED_ORIGINS`           | `https://app.qolmeia.com,https://admin.qolmeia.com`                    |
+| `TRUSTED_PROXY_SECRET`      | same secret as `apps/api`                                              |
 
 Two are load-bearing and easy to miss:
 
@@ -223,6 +225,16 @@ For the initial setup:
 `INTERNAL_SHARED_SECRET` and `BETTER_AUTH_SECRET` must be **identical** across
 the sides that share them. Rotating `INTERNAL_SHARED_SECRET` breaks org-create
 until both the Worker and `apps/api` are redeployed.
+
+**Rate-limit identity.** `apps/api` budgets each signed-in session on its own,
+keyed by the session cookie once its signature verifies. Requests without a
+session are budgeted per client IP. Browser auth calls reach `apps/api` through
+the Next rewrites, so Railway sees Vercel's IP; each Next app's `proxy.ts`
+forwards the client IP Vercel writes into `x-forwarded-for` as
+`x-qolmeia-client-ip`, together with `TRUSTED_PROXY_SECRET`, and `apps/api`
+trusts that header only when the secret matches. Otherwise it falls back to
+Railway's `X-Real-IP`. Set `TRUSTED_PROXY_SECRET` only where the platform
+overwrites `x-forwarded-for` (Vercel does), never on a self-hosted Next app.
 
 ## 8. Smoke test after deploy
 
