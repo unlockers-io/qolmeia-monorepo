@@ -171,17 +171,19 @@ reject   -> ticket rejected, customer notified via chat
 | `proposeTeam`                              | Team recommendations grounded in the brief                                |
 | `listAssets` / `readAsset` / `saveAsset`   | Agents read and write the company library                                 |
 | `webSearch` (Exa) / `fetchUrl` (Firecrawl) | Fresh research with sources                                               |
-| `decideAction`                             | Approve/reject from chat. Fully built, currently assigned to no agent     |
 
 ### 3.3 Approval lifecycle (`WorkerJobWorkflow`)
 
-Every delegation spawns a Cloudflare Workflow: generate the deliverable (LLM + skills, up to 5 steps), then check the template's policy for the action type.
+Every delegation spawns a Cloudflare Workflow: generate the deliverable (LLM + skills, up to 5 steps) into the agent folder, propose an action of the template's action type, then resolve its policy (the action type's default unless the template overrides it).
 
-- `require-approval` (the default and the only policy shipped templates use): propose the action, set the ticket to `awaiting_approval`, and pause on `waitForEvent("decision-<id>")` for up to 60 days.
+- `auto-execute` (deliverables such as the Designer's, Redator's, and SEO Researcher's): execute immediately.
+- `require-approval` (outward actions such as `publish_post`): set the ticket to `awaiting_approval` and pause on `waitForEvent("decision-<id>")` for up to 60 days.
 - `approved`: execute, mark the ticket done, push the result into the customer chat.
 - `changes_requested`: loop back with feedback, at most 3 revision rounds.
-- `rejected`: end the ticket.
-- `auto-execute` / `notify-only`: skip the gate entirely. Implemented and reachable from the template editor, unused by shipped templates.
+- `rejected`: end the ticket; nothing reaches the customer folder.
+- `notify-only`: execute immediately and log an operator spot-check entry. Unused by shipped templates.
+
+Executing runs the action type's executor, which moves the deliverable's files to the customer folder before the Correspondent presents it.
 
 ### 3.4 Data model (Postgres + Prisma)
 
@@ -213,12 +215,11 @@ Worker validates sessions by relaying to `/api/me` with a 60-second KV cache.
 
 ### Built but unsurfaced (cheapest wins first)
 
-1. **Approvals from chat**: `decideAction` is complete and registered; it just is not assigned to any agent. Turning it on is a product decision plus one line in the Correspondent's skill list.
-2. **Trusted fast lane**: `auto-execute` and `notify-only` policies work end to end; the template editor already exposes the knob. Offer faster turnaround on low-risk work.
-3. **New verticals as pure data**: Cobrança and Comercial (per [`docs/agent-tools.md`](agent-tools.md)) need new skills and templates only, no engine change.
-4. **Team re-planning**: the Planner stays alive per company with a working chat route; it needs a UI entry point ("quero replanejar meu time").
-5. **Image controls**: `generateBrandImage` supports 1:1, 16:9, 4:3, and 9:16 plus reference selection; none of it is exposed in the chat UI.
-6. **Scheduled work as tickets**: the schema supports `origin='scheduled'`; today the weekly proactive sweep only sends a chat nudge.
+1. **Spot-check lane**: `notify-only` works end to end and the template editor exposes it; it only needs an operator feed beyond the activity log.
+2. **New verticals as pure data**: Cobrança and Comercial (per [`docs/agent-tools.md`](agent-tools.md)) need new skills and templates only, no engine change.
+3. **Team re-planning**: the Planner stays alive per company with a working chat route; it needs a UI entry point ("quero replanejar meu time").
+4. **Image controls**: `generateBrandImage` supports 1:1, 16:9, 4:3, and 9:16 plus reference selection; none of it is exposed in the chat UI.
+5. **Scheduled work as tickets**: the schema supports `origin='scheduled'`; today the weekly proactive sweep only sends a chat nudge.
 
 ### Documented roadmap (no code yet)
 
