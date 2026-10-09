@@ -87,55 +87,6 @@ const DEFAULT_TEMPLATES = [
   },
 ] as const;
 
-const DEFAULT_SKILLS = [
-  {
-    description:
-      "Salva um fato importante que você deve lembrar em conversas futuras (preferências do cliente, decisões de marca, fatos do negócio).",
-    displayName: "Lembrar Fato",
-    id: "rememberFact",
-  },
-  {
-    description: "Busca na memória deste agente fatos relevantes para uma consulta específica.",
-    displayName: "Recordar Memória",
-    id: "recallMemory",
-  },
-  {
-    defaultConfig: { aspectRatio: "1:1" },
-    description:
-      "Gera uma imagem alinhada à marca usando IA. Use quando o usuário pedir uma imagem, post visual, ou peça de design.",
-    displayName: "Gerar Imagem de Marca",
-    id: "generateBrandImage",
-    paramHints: {
-      aspectRatio: "Proporção: 1:1 (quadrado), 16:9 (horizontal), 9:16 (vertical), 4:3.",
-      prompt: "Descrição vívida e específica do que deve aparecer na imagem, em pt-BR.",
-    },
-  },
-  {
-    description:
-      "Delega uma tarefa a um especialista do Time (designer, marketing, etc.). Use quando o pedido exige uma especialidade que você não executa diretamente.",
-    displayName: "Delegar para Especialista",
-    id: "delegateToWorker",
-    paramHints: {
-      brief: "Resumo claro da tarefa, em pt-BR.",
-      workerKind: "Tipo do especialista (ex: designer, marketing-strategist).",
-    },
-  },
-  {
-    defaultConfig: { platform: "instagram", tone: "acolhedor" },
-    description:
-      "Rascunha um post para redes sociais (Instagram, Facebook, LinkedIn). Use quando o cliente pedir um post, publicação, ou conteúdo de feed/stories.",
-    displayName: "Rascunhar Post Social",
-    id: "draftSocialPost",
-    paramHints: {
-      body: "Texto principal do post, em pt-BR, já formatado para a plataforma.",
-      callToAction: "CTA final (ex: Visite-nos hoje, Compre agora).",
-      hashtags: "Hashtags relevantes, sem o # (a renderização adiciona).",
-      platform: "Plataforma alvo (instagram, facebook, linkedin, twitter).",
-      tone: "Tom da copy (ex: acolhedor, urgente, informativo).",
-    },
-  },
-] as const;
-
 // Only replace known shipped defaults; preserve operator-selected models.
 const LEGACY_TEMPLATE_MODELS = {
   "tpl-designer": ["openai/gpt-5.4-nano"],
@@ -144,10 +95,7 @@ const LEGACY_TEMPLATE_MODELS = {
   "tpl-seo-researcher": ["openai/gpt-5.4-mini"],
 } as const;
 
-type SeedDb = Pick<
-  PrismaClient,
-  "agentTemplate" | "skill" | "company" | "companyTemplateEntitlement"
->;
+type SeedDb = Pick<PrismaClient, "agentTemplate" | "company" | "companyTemplateEntitlement">;
 
 const seedProductDefaults = async (db: SeedDb): Promise<void> => {
   await Promise.all(
@@ -163,15 +111,6 @@ const seedProductDefaults = async (db: SeedDb): Promise<void> => {
       });
     }),
   );
-  await Promise.all(
-    DEFAULT_SKILLS.map((skill) =>
-      db.skill.upsert({
-        create: { ...skill, enabled: true },
-        update: {},
-        where: { id: skill.id },
-      }),
-    ),
-  );
   const [companies, templates] = await Promise.all([
     db.company.findMany({ select: { id: true } }),
     db.agentTemplate.findMany({ select: { id: true }, where: { status: "active" } }),
@@ -184,4 +123,4 @@ const seedProductDefaults = async (db: SeedDb): Promise<void> => {
   });
 };
 
-export { DEFAULT_SKILLS, DEFAULT_TEMPLATES, seedProductDefaults };
+export { DEFAULT_TEMPLATES, seedProductDefaults };

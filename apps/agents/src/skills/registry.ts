@@ -1,9 +1,8 @@
-import type { AssetVisibility } from "@repo/db/worker";
 import { log } from "@repo/observability";
+import type { SkillCatalogEntry } from "@repo/worker-api/contracts";
 import { tool, type ToolSet } from "ai";
-import type { ZodType } from "zod";
 
-import { withDb } from "#/lib/db";
+import type { Db } from "#/lib/db";
 import { listAssetsSkill, readAssetSkill, saveAssetSkill } from "#/skills/assets";
 import { delegateToWorkerSkill } from "#/skills/delegate-to-worker";
 import { draftSocialPostSkill } from "#/skills/draft-social-post";
@@ -13,27 +12,10 @@ import { generateBrandImageSkill } from "#/skills/generate-brand-image";
 import { proposeTeamSkill } from "#/skills/propose-team";
 import { recallMemorySkill } from "#/skills/recall-memory";
 import { rememberFactSkill } from "#/skills/remember-fact";
+import type { Skill, SkillContext, SkillInput, SkillResult } from "#/skills/skill";
 import { webSearchSkill } from "#/skills/web-search";
-import { listSkillOverlays } from "#/template/template";
 
-type SkillContext = {
-  agentInstanceId: string;
-  companyId: string;
-  deliverableFolder: AssetVisibility;
-  env: Env;
-};
-
-type SkillInput = Parameters<ZodType["parse"]>[0];
-type SkillResult = boolean | null | number | object | string;
-
-type UnknownSkill = {
-  description: string;
-  execute: (input: SkillInput, ctx: SkillContext) => Promise<SkillResult>;
-  id: string;
-  inputSchema: ZodType;
-};
-
-const ALL_SKILLS: ReadonlyArray<UnknownSkill> = [
+const ALL_SKILLS: ReadonlyArray<Skill> = [
   rememberFactSkill,
   recallMemorySkill,
   delegateToWorkerSkill,
@@ -48,7 +30,33 @@ const ALL_SKILLS: ReadonlyArray<UnknownSkill> = [
   fetchUrlSkill,
 ];
 
-const codeRegistry = new Map<string, UnknownSkill>(ALL_SKILLS.map((s) => [s.id, s]));
+const skillsById = new Map(ALL_SKILLS.map((skill) => [skill.id, skill]));
+
+const isKnownSkill = (id: string): boolean => skillsById.has(id);
+
+const listSkillCatalog = (): ReadonlyArray<SkillCatalogEntry> =>
+  ALL_SKILLS.map(({ description, displayName, id }) => ({ description, displayName, id })).toSorted(
+    (a, b) => a.displayName.localeCompare(b.displayName, "pt-BR"),
+  );
+
+const loadDisabledSkillIds = async (db: Db): Promise<Array<string>> => {
+  const rows = await db.skill.findMany({ select: { id: true }, where: { enabled: false } });
+  return rows.map(({ id }) => id);
+};
+
+const enabledSkills = (
+  skillIds: ReadonlyArray<string>,
+  disabledSkillIds: ReadonlyArray<string>,
+): ReadonlyArray<Skill> => {
+  const disabled = new Set(disabledSkillIds);
+  return skillIds.flatMap((id) => {
+    const skill = skillsById.get(id);
+    if (!skill) {
+      throw new Error(`References unknown skill id: ${id}`);
+    }
+    return disabled.has(id) ? [] : [skill];
+  });
+};
 
 const previewResult = <Result extends SkillResult>(result: Result): Result | string => {
   if (typeof result === "string") {
@@ -60,17 +68,9 @@ const previewResult = <Result extends SkillResult>(result: Result): Result | str
   return result;
 };
 
-type ResolvedSkill = {
-  description: string;
-  execute: (input: SkillInput) => Promise<SkillResult>;
-  id: string;
-  inputSchema: ZodType;
-};
-
 const runSkill = async (
   ctx: SkillContext,
-  id: string,
-  code: UnknownSkill,
+  skill: Skill,
   input: SkillInput,
 ): Promise<SkillResult> => {
   const start = Date.now();
@@ -78,16 +78,11 @@ const runSkill = async (
     agentInstanceId: ctx.agentInstanceId,
     companyId: ctx.companyId,
     input: JSON.stringify(input),
-    skillId: id,
+    skillId: skill.id,
   };
   log.info({ ...baseFields, message: "agent.tool.start" });
   try {
-    const liveOverlays = await withDb(ctx.env, (db) => listSkillOverlays(db, [id]));
-    const liveOverlay = liveOverlays.at(0);
-    if (liveOverlay !== undefined && !liveOverlay.enabled) {
-      throw new Error(`Skill "${id}" is disabled`);
-    }
-    const result = await code.execute(input, ctx);
+    const result = await skill.execute(input, ctx);
     log.info({
       ...baseFields,
       durationMs: Date.now() - start,
@@ -107,106 +102,27 @@ const runSkill = async (
   }
 };
 
-type SkillOverlaySnapshot = { description: string; enabled: boolean };
-type SkillOverlayMap = Record<string, SkillOverlaySnapshot>;
-
-const loadSkillOverlays = async (
-  env: Env,
-  skillIds: ReadonlyArray<string>,
-): Promise<SkillOverlayMap> => {
-  if (skillIds.length === 0) {
-    return {};
-  }
-  const overlays = await withDb(env, (db) => listSkillOverlays(db, skillIds));
-  const map: SkillOverlayMap = {};
-  for (const overlay of overlays) {
-    map[overlay.id] = { description: overlay.description, enabled: overlay.enabled };
-  }
-  return map;
-};
-
-const resolveSkills = (
+const buildSkillTools = (
   ctx: SkillContext,
   skillIds: ReadonlyArray<string>,
-  overlays: SkillOverlayMap | null,
-): ReadonlyArray<ResolvedSkill> => {
-  const resolved: Array<ResolvedSkill> = [];
-  for (const id of skillIds) {
-    const code = codeRegistry.get(id);
-    if (!code) {
-      throw new Error(`References unknown skill id: ${id}`);
-    }
-    const overlay = overlays?.[id];
-    if (overlay && !overlay.enabled) {
-      continue;
-    }
-    resolved.push({
-      description: overlay?.description ?? code.description,
-      execute: (input) => runSkill(ctx, id, code, input),
-      id,
-      inputSchema: code.inputSchema,
-    });
-  }
-  return resolved;
-};
-
-const buildSkillTools = async (
-  ctx: SkillContext,
-  skillIds: ReadonlyArray<string>,
-): Promise<ToolSet> => {
-  const overlays = await loadSkillOverlays(ctx.env, skillIds);
-  const tools: ToolSet = {};
-  for (const skill of resolveSkills(ctx, skillIds, overlays)) {
-    tools[skill.id] = tool({
-      description: skill.description,
-      execute: skill.execute,
-      inputSchema: skill.inputSchema,
-    });
-  }
-  return tools;
-};
-
-const registerSkill = (skill: UnknownSkill): void => {
-  codeRegistry.set(skill.id, skill);
-};
-
-const isKnownSkill = (id: string): boolean => codeRegistry.has(id);
-
-type SkillCatalogEntry = {
-  description: string;
-  displayName: string;
-  id: string;
-};
-
-const skillDisplayName = (id: string): string =>
-  id
-    .replaceAll(/(?<lower>[a-z0-9])(?<upper>[A-Z])/gv, "$<lower> $<upper>")
-    .split(/\s+/v)
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toLocaleUpperCase("pt-BR") + w.slice(1))
-    .join(" ");
-
-const listSkillCatalog = (): ReadonlyArray<SkillCatalogEntry> =>
-  ALL_SKILLS.map((s) => ({
-    description: s.description,
-    displayName: skillDisplayName(s.id),
-    id: s.id,
-  })).toSorted((a, b) => a.displayName.localeCompare(b.displayName, "pt-BR"));
+  disabledSkillIds: ReadonlyArray<string>,
+): ToolSet =>
+  Object.fromEntries(
+    enabledSkills(skillIds, disabledSkillIds).map((skill) => [
+      skill.id,
+      tool({
+        description: skill.description,
+        execute: (input) => runSkill(ctx, skill, input),
+        inputSchema: skill.inputSchema,
+      }),
+    ]),
+  );
 
 export {
   buildSkillTools,
+  enabledSkills,
   isKnownSkill,
   listSkillCatalog,
-  loadSkillOverlays,
-  registerSkill,
-  resolveSkills,
-};
-export type {
-  ResolvedSkill,
-  SkillCatalogEntry,
-  SkillContext,
-  SkillInput,
-  SkillOverlayMap,
-  SkillResult,
-  UnknownSkill,
+  loadDisabledSkillIds,
+  runSkill,
 };

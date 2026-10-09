@@ -4,11 +4,18 @@ import { withDb } from "#/lib/db";
 import { generateImage, type ImagePromptPart } from "#/lib/models";
 import { buildSignedAssetUrl, SIGNED_IMAGE_TTL_MS } from "#/lib/r2";
 import { listBrandReferences, persistAsset } from "#/library/assets";
-import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { defineSkill, type SkillContext } from "#/skills/skill";
 
 const generateBrandImageInputSchema = z.object({
-  aspectRatio: z.enum(["1:1", "16:9", "4:3", "9:16"]).optional(),
-  prompt: z.string().min(1).max(2000),
+  aspectRatio: z
+    .enum(["1:1", "16:9", "4:3", "9:16"])
+    .optional()
+    .describe("Proporção: 1:1 (quadrado), 16:9 (horizontal), 9:16 (vertical), 4:3. Default: 1:1."),
+  prompt: z
+    .string()
+    .min(1)
+    .max(2000)
+    .describe("Descrição vívida e específica do que deve aparecer na imagem, em pt-BR."),
 });
 
 const aspectHint = (aspect: string): string => {
@@ -79,11 +86,11 @@ const parseDataUrl = (url: string): { bytes: Uint8Array; mime: string } | null =
 
 type GenerateResult = { assetId: string; deliverable: true; url: string } | { error: string };
 
-const generateBrandImageSkill: UnknownSkill = {
+const generateBrandImageSkill = defineSkill({
   description:
     "Gera uma imagem alinhada à marca. Use quando o cliente pedir uma imagem, post visual, ou peça de design.",
-  async execute(input: SkillInput, ctx: SkillContext): Promise<GenerateResult> {
-    const { aspectRatio = "1:1", prompt } = generateBrandImageInputSchema.parse(input);
+  displayName: "Gerar imagem de marca",
+  async execute({ aspectRatio = "1:1", prompt }, ctx): Promise<GenerateResult> {
     const fullPrompt = `${prompt}${aspectHint(aspectRatio)}`;
 
     const brandRefs = await loadBrandReferences(ctx);
@@ -134,6 +141,6 @@ const generateBrandImageSkill: UnknownSkill = {
   },
   id: "generateBrandImage",
   inputSchema: generateBrandImageInputSchema,
-};
+});
 
 export { generateBrandImageSkill };

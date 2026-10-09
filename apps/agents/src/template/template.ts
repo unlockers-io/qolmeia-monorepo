@@ -1,15 +1,9 @@
-import type { AgentTemplate, Skill } from "@repo/db/worker";
+import type { AgentTemplate } from "@repo/db/worker";
 import type { Template, TemplateInput, TemplateStatus } from "@repo/worker-api/contracts";
 import { z } from "zod";
 
 import { actionTypeSchema } from "#/action/action-types";
 import type { Db } from "#/lib/db";
-
-type SkillOverlay = {
-  description: string;
-  enabled: boolean;
-  id: string;
-};
 
 const stringRecordSchema = z.record(z.string(), z.string());
 const stringArraySchema = z.array(z.string());
@@ -28,12 +22,6 @@ const toTemplate = (row: AgentTemplate): Template => ({
   updatedAt: row.updatedAt.getTime(),
   version: row.version,
   workerKind: row.workerKind,
-});
-
-const toSkillOverlay = (row: Pick<Skill, "description" | "enabled" | "id">): SkillOverlay => ({
-  description: row.description,
-  enabled: row.enabled,
-  id: row.id,
 });
 
 const getTemplate = async (db: Db, id: string): Promise<Template | null> => {
@@ -101,28 +89,12 @@ const entitleToActiveTemplates = async (db: Db, companyId: string): Promise<void
   });
 };
 
-const listSkillOverlays = async (
-  db: Db,
-  skillIds: ReadonlyArray<string>,
-): Promise<ReadonlyArray<SkillOverlay>> => {
-  if (skillIds.length === 0) {
-    return [];
-  }
-  const rows = await db.skill.findMany({
-    select: { description: true, enabled: true, id: true },
-    where: { id: { in: [...skillIds] } },
-  });
-  return rows.map(toSkillOverlay);
-};
-
 export {
   createTemplate,
   entitleToActiveTemplates,
   getTemplate,
   listAllTemplates,
   listEntitledTemplates,
-  listSkillOverlays,
   setTemplateStatus,
   updateTemplate,
 };
-export type { SkillOverlay };

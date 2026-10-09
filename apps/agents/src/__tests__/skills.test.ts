@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany } from "#/__tests__/fixtures";
 import { recallMemorySkill } from "#/skills/recall-memory";
-import type { SkillContext } from "#/skills/registry";
 import { rememberFactSkill } from "#/skills/remember-fact";
+import type { SkillContext } from "#/skills/skill";
 
 const COMPANY_ID = "co_skills_test";
 const AGENT_INSTANCE_ID = "agent_skills_test";
@@ -34,10 +34,10 @@ beforeEach(async () => {
 
 describe("rememberFact", () => {
   it("writes a memory_fact row and returns an id + timestamp", async () => {
-    const result = (await rememberFactSkill.execute(
+    const result = await rememberFactSkill.execute(
       { content: "minha cor preferida é azul", kind: "preference" },
       ctx,
-    )) as { id: string; savedAt: number };
+    );
 
     expect(result.id).toBeTruthy();
     expect(result.savedAt).toBeGreaterThan(0);

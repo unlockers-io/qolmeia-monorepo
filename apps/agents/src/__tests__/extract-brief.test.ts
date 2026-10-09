@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany } from "#/__tests__/fixtures";
 import { extractBriefSkill } from "#/skills/extract-brief";
-import type { SkillContext } from "#/skills/registry";
+import type { SkillContext } from "#/skills/skill";
 
 const COMPANY_ID = "co_extract_test";
 
@@ -29,9 +29,7 @@ beforeEach(async () => {
 
 describe("extractBrief", () => {
   it("writes the first partial brief to company.brief", async () => {
-    const result = (await extractBriefSkill.execute({ industry: "cafeteria" }, ctx)) as {
-      brief: { industry?: string };
-    };
+    const result = await extractBriefSkill.execute({ industry: "cafeteria" }, ctx);
     expect(result.brief.industry).toBe("cafeteria");
     await expect(storedBrief()).resolves.toMatchObject({ industry: "cafeteria" });
   });
