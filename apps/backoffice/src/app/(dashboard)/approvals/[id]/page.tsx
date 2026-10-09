@@ -9,8 +9,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createElement, Suspense } from "react";
 
-import { getActionRenderer } from "@/components/action-renderers";
-import { ProposalCard } from "@/components/action-renderers/proposal-card";
+import { ACTION_RENDERERS } from "@/components/action-renderers";
 import { BackLink } from "@/components/back-link";
 import { StatusPill } from "@/components/status-pill";
 import { ApiError } from "@/lib/api-client";
@@ -70,7 +69,6 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
 
   const { action, ageSeconds, canRequestChanges, ticket } = detail;
   const policyCopy = POLICY_COPY[action.policy];
-  const TypedRenderer = getActionRenderer(action.actionType);
   const rounds = ticket === null ? [] : await loadTicketActions(ticket.id);
   const roundIndex = rounds.findIndex((round) => round.id === action.id);
   const previousRound = roundIndex > 0 ? rounds[roundIndex - 1] : undefined;
@@ -99,11 +97,10 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
       <div className="grid items-start gap-4 lg:grid-cols-approval">
         <div className="flex flex-col gap-4">
           <PreviousRound round={previousRound} roundIndex={roundIndex} />
-          {TypedRenderer ? (
-            createElement(TypedRenderer, { agent: action.agent, proposed: action.proposed })
-          ) : (
-            <ProposalCard proposed={action.proposed} />
-          )}
+          {createElement(ACTION_RENDERERS[action.actionType], {
+            agent: action.agent,
+            proposed: action.proposed,
+          })}
         </div>
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-6">
