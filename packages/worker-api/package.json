@@ -6,8 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./brief": "./src/brief.ts",
-    "./contracts": "./src/contracts/index.ts",
-    "./internal": "./src/internal.ts"
+    "./contracts": "./src/contracts/index.ts"
   },
   "scripts": {
     "lint": "oxlint src",

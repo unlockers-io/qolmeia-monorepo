@@ -49,9 +49,10 @@ type TicketDoneEvent = {
 
 type TeamConfirmedEvent = {
   payload: {
+    correspondentId: string;
     teamId: string;
     templateIds: ReadonlyArray<string>;
-    workerInstanceIds?: ReadonlyArray<string>;
+    workerIds: ReadonlyArray<string>;
   };
   refId: string;
   refType: "team";
@@ -87,7 +88,7 @@ type MemberRenamedEvent = {
 };
 
 type MemberPromptEditedEvent = {
-  payload: { editedBy: "customer" | "operator"; length: number | null };
+  payload: { editedBy: "customer" | "operator"; length: number };
   refId: string;
   refType: "agent_instance";
   type: "MEMBER_PROMPT_EDITED";

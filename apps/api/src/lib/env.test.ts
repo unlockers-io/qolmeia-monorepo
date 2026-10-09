@@ -8,7 +8,6 @@ const { envSchema } = await import("./env");
 const base = {
   BETTER_AUTH_SECRET: "test-secret-minimum-32-characters-long",
   DATABASE_URL: "postgresql://u:p@localhost:5432/db",
-  INTERNAL_SHARED_SECRET: "test-internal-shared-secret-minimum-32-chars",
 };
 
 describe("envSchema", () => {
@@ -30,16 +29,5 @@ describe("envSchema", () => {
   it("rejects when DATABASE_URL is missing", () => {
     const { DATABASE_URL: _url, ...withoutDb } = base;
     expect(() => envSchema.parse(withoutDb)).toThrow("DATABASE_URL");
-  });
-
-  it("rejects when INTERNAL_SHARED_SECRET is missing", () => {
-    const { INTERNAL_SHARED_SECRET: _secret, ...withoutSecret } = base;
-    expect(() => envSchema.parse(withoutSecret)).toThrow("INTERNAL_SHARED_SECRET");
-  });
-
-  it("rejects when INTERNAL_SHARED_SECRET is shorter than 32 chars", () => {
-    expect(() => envSchema.parse({ ...base, INTERNAL_SHARED_SECRET: "topsecret" })).toThrow(
-      "INTERNAL_SHARED_SECRET",
-    );
   });
 });

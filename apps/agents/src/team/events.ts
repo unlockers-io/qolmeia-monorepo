@@ -8,7 +8,7 @@ type TeamEvent =
     }
   | {
       companyId: string;
-      reason: "hired" | "paused" | "resumed" | "renamed" | "prompt_changed";
+      reason: "confirmed" | "hired" | "paused" | "prompt_changed" | "renamed" | "resumed";
       type: "team:roster";
     };
 

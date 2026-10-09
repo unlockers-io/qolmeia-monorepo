@@ -6,27 +6,23 @@
   "scripts": {
     "build": "tsdown",
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
-    "db:seed": "tsx src/scripts/seed-dev.ts",
     "dev": "portless run --name qolmeia.api --app-port 4000 tsdown --watch --on-success \"node --env-file-if-exists=.env dist/index.mjs\"",
     "lint": "oxlint src",
     "typecheck": "tsc --noEmit",
     "start": "node --env-file-if-exists=.env dist/index.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "memory:reindex": "tsx src/scripts/reindex-memory.ts"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
     "@hono/zod-openapi": "^1.6.3",
     "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
-    "@repo/internal-auth": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/worker-api": "workspace:*",
     "@scalar/hono-api-reference": "^0.12.5",
     "@scalar/openapi-to-markdown": "^0.6.0",
-    "dotenv": "^17.4.2",
     "hono": "^4.13.9",
     "hono-rate-limiter": "^0.5.4",
     "zod": "^4.6.5"
@@ -38,7 +34,6 @@
     "@rollup/plugin-alias": "^6.0.0",
     "@types/node": "^26.6.2",
     "tsdown": "^0.23.0",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11",
     "zod-compiler": "^2.0.7"

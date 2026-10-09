@@ -1,11 +1,9 @@
-import { Prisma } from "@repo/db";
 import type { Context, Hono, MiddlewareHandler, Next } from "hono";
 import { describe, expect, it, vi } from "vitest";
 
 import { requireMemberForDiscovery, type AuthSession } from "@/middleware/require-staff";
 
 import { buildMeRoutes } from "./me";
-import { buildOrgsRoutes } from "./orgs";
 
 import { buildApiRoutes } from "./index";
 
@@ -26,18 +24,7 @@ const buildRejectGuard = (): MiddlewareHandler => (c: Context, _next: Next) =>
 
 const buildMockPrisma = () => {
   const prisma = {
-    $transaction: vi.fn(
-      <Result>(callback: (tx: typeof prisma) => Promise<Result>): Promise<Result> =>
-        callback(prisma),
-    ),
-    organization: {
-      create: vi.fn().mockResolvedValue({ id: "new_org", name: "New", slug: "new-org" }),
-      findUnique: vi.fn().mockResolvedValue(null),
-    },
     orgMembership: {
-      count: vi.fn().mockResolvedValue(0),
-      create: vi.fn().mockResolvedValue({}),
-      findFirst: vi.fn().mockResolvedValue(null),
       findMany: vi.fn().mockResolvedValue([
         {
           createdAt: new Date("2026-01-01"),
@@ -66,21 +53,11 @@ const buildMockPrisma = () => {
 const buildV1WithMocks = (
   guard: MiddlewareHandler,
   prisma: ReturnType<typeof buildMockPrisma>,
-): Hono => {
-  const provision = vi.fn().mockResolvedValue({ ok: true as const });
-
-  return buildApiRoutes({
+): Hono =>
+  buildApiRoutes({
     memberGuard: guard,
-    routes: {
-      me: buildMeRoutes({ prisma: prisma as never }),
-      orgs: buildOrgsRoutes({
-        auth: { api: { getSession: () => Promise.resolve(sessionA) } },
-        prisma: prisma as never,
-        provision,
-      }),
-    },
+    routes: { me: buildMeRoutes({ prisma: prisma as never }) },
   });
-};
 
 describe("/api post-P7.2 surface", () => {
   it("returns 401 from /me when guard rejects", async () => {
@@ -143,40 +120,5 @@ describe("/api post-P7.2 surface", () => {
     expect(body.currentOrg).toBeNull();
     expect(body.role).toBeNull();
     expect(body.orgs.map((org) => org.id)).toEqual(["org_a", "org_b"]);
-  });
-
-  it("POSTs /orgs to create an org + OWNER membership + product relay", async () => {
-    const prisma = buildMockPrisma();
-    const app = buildV1WithMocks(buildAllowGuard(), prisma);
-    const res = await app.fetch(
-      new Request("http://localhost/orgs", {
-        body: JSON.stringify({ name: "New", slug: "new-org" }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      }),
-    );
-    expect(res.status).toBe(201);
-    expect(prisma.organization.create).toHaveBeenCalled();
-    expect(prisma.orgMembership.create).toHaveBeenCalled();
-  });
-
-  it("rejects /orgs with a duplicate slug as 409", async () => {
-    const prisma = buildMockPrisma();
-    prisma.$transaction.mockRejectedValueOnce(
-      new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
-        clientVersion: "test",
-        code: "P2002",
-        meta: { target: ["slug"] },
-      }),
-    );
-    const app = buildV1WithMocks(buildAllowGuard(), prisma);
-    const res = await app.fetch(
-      new Request("http://localhost/orgs", {
-        body: JSON.stringify({ name: "New", slug: "new-org" }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      }),
-    );
-    expect(res.status).toBe(409);
   });
 });

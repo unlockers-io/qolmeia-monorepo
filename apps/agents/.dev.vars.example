@@ -6,11 +6,12 @@ OPENROUTER_API_KEY=sk-or-v1-your-key-here
 #   openssl rand -hex 32
 ASSETS_SIGNING_KEY=replace-me-with-a-random-32-byte-hex-string
 
-# Shared secret with apps/api for the /api/internal routes.
-# Must match apps/api INTERNAL_SHARED_SECRET byte for byte, and apps/api
-# requires at least 32 characters. Rotating breaks org create until both
-# sides are redeployed.
-INTERNAL_SHARED_SECRET=replace-me-with-the-same-value-as-apps-api
+# Read only by the Node scripts (`pnpm db:seed`, `pnpm memory:reindex`). The
+# Worker itself reaches Postgres through the HYPERDRIVE binding in wrangler.jsonc.
+DATABASE_URL=postgresql://qolmeia:qolmeia123@127.0.0.1:5436/qolmeia
+# `pnpm db:seed` signs up the dev logins through Better Auth, which requires a
+# secret of at least 32 characters. Use the value from apps/api/.env.
+BETTER_AUTH_SECRET=
 
 # Exa web-search API key (https://exa.ai) for the webSearch skill. Optional —
 # leave unset and the skill returns a clear "indisponível" error.

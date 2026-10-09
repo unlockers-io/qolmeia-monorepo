@@ -2,8 +2,7 @@ import { log } from "@repo/observability";
 import { tool, type ToolSet } from "ai";
 import type { ZodType } from "zod";
 
-import { getDb } from "#/db/client";
-import { listSkillOverlays } from "#/db/template";
+import { withDb } from "#/lib/db";
 import { listAssetsSkill, readAssetSkill, saveAssetSkill } from "#/skills/assets";
 import { decideActionSkill } from "#/skills/decide-action";
 import { delegateToWorkerSkill } from "#/skills/delegate-to-worker";
@@ -15,6 +14,7 @@ import { proposeTeamSkill } from "#/skills/propose-team";
 import { recallMemorySkill } from "#/skills/recall-memory";
 import { rememberFactSkill } from "#/skills/remember-fact";
 import { webSearchSkill } from "#/skills/web-search";
+import { listSkillOverlays } from "#/template/template";
 
 type SkillContext = {
   agentInstanceId: string;
@@ -82,7 +82,7 @@ const runSkill = async (
   };
   log.info({ ...baseFields, message: "agent.tool.start" });
   try {
-    const liveOverlays = await listSkillOverlays(getDb(ctx.env), [id]);
+    const liveOverlays = await withDb(ctx.env, (db) => listSkillOverlays(db, [id]));
     const liveOverlay = liveOverlays.at(0);
     if (liveOverlay !== undefined && !liveOverlay.enabled) {
       throw new Error(`Skill "${id}" is disabled`);
@@ -117,7 +117,7 @@ const loadSkillOverlays = async (
   if (skillIds.length === 0) {
     return {};
   }
-  const overlays = await listSkillOverlays(getDb(env), skillIds);
+  const overlays = await withDb(env, (db) => listSkillOverlays(db, skillIds));
   const map: SkillOverlayMap = {};
   for (const overlay of overlays) {
     map[overlay.id] = { description: overlay.description, enabled: overlay.enabled };

@@ -23,7 +23,6 @@ import {
 } from "./middleware/security";
 import { buildApiRoutes } from "./routes/api";
 import { authRoutes } from "./routes/auth";
-import { agentsInternalRoutes } from "./routes/internal/agents";
 
 initApiLogger({ service: "auth" });
 
@@ -56,10 +55,8 @@ app.use(
   }),
 );
 
-app.route("/api/internal/agents", agentsInternalRoutes);
 app.use("/api/*", standardRateLimit);
 app.use("/api/me", apiRateLimit);
-app.use("/api/orgs", apiRateLimit);
 app.route("/api", authRoutes);
 app.route("/api", buildApiRoutes());
 

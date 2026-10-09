@@ -1,14 +1,4 @@
-import type { AssetKind, AssetVisibility, CompanyStatus } from "@repo/db/enums";
-
-import type { CompanyBrief } from "../brief";
-
-import type { Template } from "./backoffice";
-
-/**
- * Wire shapes for the agents runtime. These moved out of apps/agents when the
- * Worker lost direct database access: apps/api now produces them and the Worker
- * consumes them, so both sides must typecheck against one declaration.
- */
+import type { CompanyStatus } from "@repo/db/enums";
 
 type AgentDisplayStatus = "available" | "awaiting_approval" | "paused" | "working";
 
@@ -62,18 +52,6 @@ type HireableTemplate = {
   workerKind: string;
 };
 
-type Company = {
-  brief: Partial<CompanyBrief>;
-  createdAt: number;
-  id: string;
-  locale: string;
-  name: string;
-  slug: string;
-  status: CompanyStatus;
-  timezone: string;
-  updatedAt: number;
-};
-
 type CompanyOverview = {
   briefPercent: number;
   id: string;
@@ -83,50 +61,12 @@ type CompanyOverview = {
 
 type CompanyRoster = CompanyOverview & { members: ReadonlyArray<TeamMemberView> };
 
-type SkillConfigValue = boolean | number | string;
-
-type SkillOverlay = {
-  defaultConfig: Record<string, SkillConfigValue> | null;
-  description: string;
-  displayName: string;
-  enabled: boolean;
-  id: string;
-  paramHints: Record<string, string> | null;
-  updatedAt: number;
-};
-
-type AssetSummary = {
-  bytes: number;
-  createdAt: number;
-  id: string;
-  kind: AssetKind;
-  mime: string;
-  name: string;
-  visibility: AssetVisibility;
-};
-
-type MaterializeResult = {
-  correspondentId: string;
-  teamId: string;
-  workerIds: ReadonlyArray<string>;
-};
-
-type InstanceWithTemplate = {
-  agentInstance: { id: string; promptOverride: string | null; templateId: string };
-  template: Template;
-};
-
 export type {
   AgentDisplayStatus,
-  AssetSummary,
-  Company,
   CompanyOverview,
   CompanyRoster,
   HireableTemplate,
-  InstanceWithTemplate,
-  MaterializeResult,
   OpenTicketSlim,
-  SkillOverlay,
   TeamMemberBase,
   TeamMemberDetailExtras,
   TeamMemberDetailView,
@@ -134,4 +74,4 @@ export type {
   TeamMemberView,
   TeamMemberWorker,
 };
-export type { AssetKind, AssetVisibility, CompanyStatus } from "@repo/db/enums";
+export type { CompanyStatus } from "@repo/db/enums";
