@@ -75,7 +75,7 @@ The agents Worker owns all product data. Each store has a single purpose:
 
 ## §5. Data model (Prisma/Postgres)
 
-Schema in [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.prisma). The idempotent seed in [`packages/db/src/product-seed.ts`](../packages/db/src/product-seed.ts) owns the skill-overlay catalog and default worker templates. Core tables:
+Schema in [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.prisma). The idempotent seed in [`packages/db/src/product-seed.ts`](../packages/db/src/product-seed.ts) owns the default worker templates. Core tables:
 
 | Table                  | Purpose                                                                                                                                                                           |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -113,11 +113,11 @@ Template-defined specialists are not conversational Flue agents. `delegateToWork
 
 **Auth gate.** `src/app.ts` applies `requireCustomerAgent` before both agent routers: authenticated **CUSTOMER** only, and the `:id` path segment must equal the session's companyId (tenant isolation, [ADR 0001](adr/0001-tenant-isolation-on-agent-path.md)).
 
-**Provider.** Models route through **OpenRouter** (a first-class provider in Flue's pi-ai layer); the key resolves from `OPENROUTER_API_KEY` in the Worker env. Model strings are `openrouter/<model>`.
+**Provider.** Models route through **OpenRouter** behind **Cloudflare AI Gateway**. [`src/lib/models.ts`](../apps/agents/src/lib/models.ts) registers Flue's pi-ai OpenRouter provider with the gateway URL and `OPENROUTER_API_KEY`, and also supplies the Workflow's AI SDK model and the image-generation request. Flue model strings are `openrouter/<model>`.
 
 ## §7. Skills catalog
 
-Skills are code modules, `{ id, description, inputSchema (zod), execute(input, ctx) }`, registered in [`apps/agents/src/skills/registry.ts`](../apps/agents/src/skills/registry.ts) and exposed to agents as Flue tools (zod → JSON Schema → Valibot in `lib/skill-tool.ts`; Flue validates tool input with Valibot only). 12 today:
+Skills are code modules built with `defineSkill({ id, displayName, description, inputSchema (zod), execute(input, ctx) })`, listed in [`apps/agents/src/skills/registry.ts`](../apps/agents/src/skills/registry.ts), and exposed as Flue tools (zod → JSON Schema → Valibot in `lib/skill-tool.ts`; Flue validates tool input with Valibot only) and as AI SDK tools for Workflow runs. The `skill` table only stores the operator kill-switch (`enabled`). 12 today:
 
 `rememberFact` · `recallMemory` · `delegateToWorker` · `generateBrandImage` · `draftSocialPost` · `extractBrief` · `proposeTeam` · `listAssets` · `readAsset` · `saveAsset` · `webSearch` · `fetchUrl`
 

@@ -6,12 +6,16 @@ each mapped to the agent(s) that use it. Companion to
 
 ## Two ways an agent reaches the outside world
 
-1. **Skill**: a code module (`{ id, description, inputSchema, execute }`) in
-   `apps/agents/src/skills/`, registered in `skills/registry.ts` `ALL_SKILLS`.
+1. **Skill**: a code module in `apps/agents/src/skills/` built with
+   `defineSkill({ id, displayName, description, inputSchema, execute })` and
+   listed in `ALL_SKILLS` (`skills/registry.ts`). The module is the whole
+   contract: the registry derives the Flue tool (Correspondent, Planner), the AI
+   SDK tool (specialist Workflow runs), and the backoffice catalog entry from it.
    An agent only gets a skill if its skill set lists the id: the **Correspondent**
-   has a hardcoded set (`CORRESPONDENT_SKILLS` in `agents/correspondent.ts`);
-   **Specialist Workflow runs** get `template.skillIds` (Prisma/Postgres, seeded in `@repo/db`). Adding a tool
-   = a new skill file + registry entry + the template/correspondent skill list.
+   and **Planner** have hardcoded sets (`CORRESPONDENT_SKILLS`, `PLANNER_SKILLS`);
+   **specialist Workflow runs** get `template.skillIds`. The `skill` table holds
+   only an operator kill-switch: a row with `enabled = false` hides the skill from
+   every agent from its next turn or generation step; a missing row means enabled.
 2. **Channel**: how the customer reaches the Correspondent. Today the only
    channel is the **web chat** (the Correspondent's Flue agent route, HTTP+SSE).
    There are no external messaging connectors; Flue's `channels/` convention is
@@ -29,7 +33,7 @@ policies when the product is ready to trust a fast lane.
 | ---------------------------------------- | ----------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------ |
 | `webSearch`                              | web search                                | **Exa** (`EXA_API_KEY`)                          | Correspondent, Redator, SEO Researcher, + all workers (0010) |
 | `fetchUrl`                               | read a page as markdown                   | **Firecrawl** (`FIRECRAWL_API_KEY` or self-host) | Correspondent + all workers (0010)                           |
-| `generateBrandImage`                     | image generation                          | OpenRouter image model                           | Designer                                                     |
+| `generateBrandImage`                     | image generation                          | OpenRouter image model, through AI Gateway       | Designer                                                     |
 | `draftSocialPost`                        | structured post draft (platform/body/CTA) | — (LLM)                                          | Marketing Strategist                                         |
 | `listAssets` / `readAsset` / `saveAsset` | the asset library (R2)                    | R2                                               | Correspondent + all workers (0008)                           |
 | `rememberFact` / `recallMemory`          | semantic memory                           | Workers AI + Vectorize                           | Correspondent + all seeded specialists                       |
@@ -146,12 +150,23 @@ spike (2026-06-19):
 
 ## How to wire a new one (checklist)
 
-**Skill:** create `src/skills/<name>.ts` (`{ id, description, inputSchema,
-execute }`) → add to `ALL_SKILLS` in `registry.ts` → add the id to the relevant
-template `skillIds` in `packages/db/src/product-seed.ts` and/or `CORRESPONDENT_SKILLS` → declare any
-secret in `env.d.ts` + `wrangler secret put` + `docs/deploy.md` → a skill that
-writes to the library uses `ctx.deliverableFolder`, so a Worker job's files stay
-in the agent folder until its Action executes.
+**Skill:**
+
+1. Create `apps/agents/src/skills/<name>.ts` exporting
+   `defineSkill({ id, displayName, description, inputSchema, execute })`.
+   `inputSchema` is a top-level `z.object`; `.describe()` every field, and avoid
+   unions and nullables (the Flue bridge rejects them). `execute(input, ctx)`
+   receives the parsed input.
+2. Add the skill to `ALL_SKILLS` in `apps/agents/src/skills/registry.ts`.
+3. List its id where an agent should use it: a specialist template's `skillIds`
+   (backoffice template form; `DEFAULT_TEMPLATES` in
+   `packages/db/src/product-seed.ts` for a shipped template), or
+   `CORRESPONDENT_SKILLS` / `PLANNER_SKILLS`. The backoffice rejects unknown ids.
+
+Declare any secret in `env.d.ts` + `wrangler secret put` + `docs/deploy.md`. A
+skill that writes to the library uses `ctx.deliverableFolder`, so a Worker job's
+files stay in the agent folder until its Action executes. A skill that calls a
+model goes through `apps/agents/src/lib/models.ts`.
 
 **Action type:** add the key to `ACTION_TYPES` in
 `packages/worker-api/src/contracts/actions.ts` → add a module under
