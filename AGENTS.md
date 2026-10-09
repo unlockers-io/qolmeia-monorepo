@@ -24,12 +24,13 @@ pnpm test                         # vitest unit tests across all packages
 # Database (Prisma/Postgres, reached by the Worker through Hyperdrive)
 pnpm db:generate                  # generate Prisma client
 pnpm db:push                      # push schema to Postgres
-pnpm --filter=@repo/db db:seed    # seed the default template and skill catalog
+pnpm --filter=@repo/db db:seed    # seed the default templates (what prod runs)
+pnpm --filter=worker-bees db:seed # dev seed: logins, dev org, templates, team
 ```
 
 ## Architecture
 
-Monorepo managed by pnpm workspaces + Turborepo. Node 24, pnpm 10. Mid-migration from a Node/Postgres/Redis monolith to a Cloudflare-native runtime; current state below.
+Monorepo managed by pnpm workspaces + Turborepo. Node 24, pnpm 11 (`packageManager` pins the exact version). One Cloudflare Worker is the backend; three Next apps on Vercel are its only browser-facing origins; Postgres on Railway is the system of record ([`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
 
 ### Apps
 
@@ -42,13 +43,13 @@ Monorepo managed by pnpm workspaces + Turborepo. Node 24, pnpm 10. Mid-migration
 
 The browser never talks to the Worker directly: each Next app rewrites `/api/auth/*` and the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me`, `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client; `/assets/:id` on both) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code and the rewrites reach the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). Prod works the same way: every session cookie is host-only on its app.
 
-### Key runtime moves (P1–P7)
+### Runtime
 
 - **Per-tenant agents are Durable Objects**: `CorrespondentV2` and `PlannerV2` in `src/agents/` are `'use agent'`
   modules whose exported function names generate `FlueCorrespondentV2Agent` / `FluePlannerV2Agent` (one DO
   instance per company id). Renaming a function changes its storage identity unless pinned with `agentName`.
   Both are mounted explicitly in `app.ts` via `createAgentRouter`, behind the `requireCustomerOfPathTenant` gate.
-- **Approvals run on Workflows**: every Worker job spawns a `WorkerJobWorkflow`; gated actions pause on `waitForEvent("decision-<actionId>")` until an operator decides via `/api/backoffice/actions/:id/decide`.
+- **Approvals run on Workflows**: every delegated Ticket runs a `WorkerJobWorkflow`: generate → propose an Action → (for `require_approval`) wait on `waitForEvent("decision-<actionId>")` until an Operator decides via `/api/backoffice/actions/:id/decide` → execute. Each Action type is one module under `action/` (proposed payload, executor, default policy); the Workflow body never branches on type (ADR 0006).
 - **Better Auth and identity live in the Worker** (ADR 0011). `lib/auth.ts` mounts Better Auth at `/api/auth/*`; `identity/` resolves every request to signed-in `{userId, companyId, role}`, signed out, unavailable, or no membership on the surface, and its gates guard every route. A request acts through the caller's membership on the surface it calls (`activeMembership` in `@repo/worker-api/contracts`); no client names an org.
 - **Postgres is the system of record for auth and product data.** The Worker reaches Postgres through the `HYPERDRIVE` binding and Prisma's `cloudflare` client, with a short-lived client inside each request, Workflow step, or skill call (`lib/db.ts`). Product data lives in domain modules (`team/`, `ticket/`, `action/`, `company/`, `library/`, `memory/`, `activity/`, `template/`, `operator/`). Each use case is one interactive transaction, with its activity entry written inside it (ADR 0010). Schema in `packages/db/prisma/schema.prisma`.
 - **R2 holds binary assets** (`ASSETS` binding). The Library module (`library/assets.ts`) owns them: the `asset` row is the authority, and persisted content references an asset as `/assets/:id`, which the Worker serves behind the `requireMember` gate (a Customer reads their Company's customer folder; an Operator reads any Company).
@@ -62,6 +63,7 @@ The browser never talks to the Worker directly: each Next app rewrites `/api/aut
 | `@repo/db`                | Prisma schema plus Node and Cloudflare Worker client entry points.                                                                   |
 | `@repo/transactional`     | React Email templates + Resend sender.                                                                                               |
 | `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the two Next apps.                                                        |
+| `@repo/social-image`      | Open Graph image text rendering (fontkit + Geist) for the Next apps.                                                                 |
 | `@repo/config-vitest`     | Shared Vitest config.                                                                                                                |
 | `@repo/typescript-config` | Shared tsconfig bases.                                                                                                               |
 | `@repo/app-shell`         | Next glue shared by `web` and `backoffice`: `./next-config`, `./proxy`, `./session`, `./server-api`, `./auth-client`, `./signup`.    |
@@ -76,9 +78,9 @@ The browser never talks to the Worker directly: each Next app rewrites `/api/aut
 3. **status === "onboarding"**: chat against `/agents/planner/<companyId>`. Planner calls `extractBrief` and `proposeTeam`, then surfaces a "Confirmar Time" button.
 4. **Customer confirms**: `POST /api/teams/:companyId/confirm` materialises `team` + `team_member`, flips `company.status = 'active'`, and seeds Correspondent memory.
 5. **status === "active"**: chat against `/agents/correspondent/<companyId>`. Correspondent uses `delegateToWorker` to spawn child tickets, each of which instantiates a `WorkerJobWorkflow` (the deliverable is generated with `generateText`, not a Flue agent).
-6. **Workflow proposes a `require-approval` action**: injects a 🟡 message via Correspondent, then `waitForEvent("decision-<actionId>")`.
-7. **Operator on `apps/backoffice`**: `requireStaff` → `/approvals` lists pending oldest-first → `/approvals/:id` shows the decide form → POST `/api/backoffice/actions/:id/decide` resumes the Workflow.
-8. **Workflow executes**: the action type's executor runs (e.g. moves the deliverable's files from the agent folder to the customer folder) → marks the action `executed` and ticket `done` → dispatches a `worker.deliverable_ready` **signal** to Correspondent, which renders the result in chat (markdown, so images appear inline). Internal dispatches must be signals: Flue marks them `display: "diagnostic"` so the prompt itself stays out of the customer's transcript, and the client filters on that field.
+6. **Workflow generates and proposes**: the specialist's skills write into the agent folder; the template's Action type builds the proposed payload, and its Policy decides. `auto_execute` and `notify_only` go straight to step 8; `require_approval` sets the Ticket to `awaiting_approval` and waits on `waitForEvent("decision-<actionId>")`.
+7. **Operator on `apps/backoffice`**: `requireOperator` → `/approvals` lists pending oldest-first → `/approvals/:id` shows the decide form → POST `/api/backoffice/actions/:id/decide` resumes the Workflow. Request-changes loops back to step 6 with the feedback, at most `MAX_REVISIONS` times; reject ends the Ticket.
+8. **Workflow executes**: the Action type's executor runs (e.g. promotes the deliverable's assets from the agent folder to the customer folder) → marks the Action `executed` and the Ticket `done` → dispatches a `worker.deliverable_ready` **signal** to Correspondent, which renders the result in chat (markdown, so images appear inline). Internal dispatches must be signals: Flue marks them `display: "diagnostic"` so the prompt itself stays out of the customer's transcript, and the client filters on that field.
 
 ## Tooling
 
@@ -86,11 +88,12 @@ The browser never talks to the Worker directly: each Next app rewrites `/api/aut
 - **Formatter**: oxfmt (NOT Prettier). Config in `.oxfmtrc.json`. Sorts imports.
 - **Pre-commit**: Husky + lint-staged runs `oxlint` + `oxfmt`.
 - **Testing**: Vitest. `apps/agents` uses `@cloudflare/vitest-pool-workers` against Miniflare; its tests reach Postgres through the local Hyperdrive binding, in a database named after the checkout path, so worktrees run the suite in parallel.
-- **Bundler (api)**: tsdown. **Bundler (agents)**: Vite, via `@flue/vite` + `@cloudflare/vite-plugin`. The
+- **Dead code**: `pnpm fallow:dead` (fallow) runs in CI's lint job; fix every unused export it reports.
+- **Bundler (agents)**: Vite, via `@flue/vite` + `@cloudflare/vite-plugin`. The
   Worker entry is the virtual module `virtual:flue/worker`; `flueWorkerConfig()` merges the per-agent
   Durable Object bindings into the Cloudflare plugin's config, and `vite build` writes the merged
   `dist/worker_bees/wrangler.json` (with a `.wrangler/deploy/config.json` redirect that `wrangler deploy`
-  follows). `wrangler.jsonc` has no `main`. Deploy is `vite build && wrangler deploy`.
+  follows). `wrangler.jsonc` has no `main`. Deploy is `vite build && wrangler deploy` ([`docs/deploy.md`](docs/deploy.md)).
 
 ## Environment
 
@@ -107,14 +110,14 @@ Each app has its own `.env.example`:
 Bring the stack up (assumes envs are copied from each `.env.example`):
 
 ```bash
-# 1. Postgres on :5436 (Redis on :6382 is unused but still in compose)
+# 1. Postgres on :5436
 docker compose up -d
 
 # 2. Push the shared Prisma schema
 DATABASE_URL=postgresql://qolmeia:qolmeia123@localhost:5436/qolmeia \
   pnpm --filter=@repo/db db:push
 
-# 3. Seed Postgres: creates auth users, product company, catalog, and team (idempotent).
+# 3. Seed Postgres: creates the two logins, the dev org, templates, and team (idempotent).
 #    Reads DATABASE_URL and BETTER_AUTH_SECRET from apps/agents/.dev.vars.
 pnpm --filter=worker-bees db:seed
 
@@ -138,7 +141,7 @@ App configs resolve those URLs through `@repo/portless-env` rather than hardcodi
 - Path aliases: `@/*` → `src/*` in every app + package.
 - pt-BR is the user-facing locale across agents, backoffice, and client.
 - Activity-log `type` strings are stable and free-form; the backoffice categorises by prefix (`ACTION_*`, `TICKET_*`, `WORKER_*`, `TEAM_*`, `MEMBER_*`).
-- Operator REST lives at `apps/agents/api/backoffice/*` (OWNER/STAFF only). Customer REST at `apps/agents/api/me/*` and `apps/agents/api/teams/*`.
+- Operator REST is `/api/backoffice/*` (`routes/backoffice.ts`, OWNER/STAFF only). Customer REST is `/api/me/*` and `/api/teams/*` (`routes/me.ts`, `routes/me-assets.ts`, `routes/teams.ts`).
 - Agent paths at `/agents/<name>/<companyId>`, `/api/me/*` and `/api/teams/*` are gated to the CUSTOMER role; a company id in the path must be the session's. Operators don't open a connection to a DO; they call REST.
 - Turbo caches: be conscious that `apps/agents` reads `wrangler.jsonc` vars at build time.
 

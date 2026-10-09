@@ -1,9 +1,10 @@
 # Deploying Qolmeia to production
 
 The single source of truth for taking Qolmeia live. Merging to `main` deploys the
-three Next apps (Vercel); the Worker is deployed by hand (§4e). The dev `.localhost` / portless proxy is **dev-only**; prod
-uses real subdomains, and each Next app proxies auth and the Worker through its
-own origin, so every session cookie is host-only on its app.
+three Next apps (Vercel); the Worker is deployed by hand (§4e). Railway hosts
+only Postgres. The dev `.localhost` / portless proxy is **dev-only**; prod uses
+real subdomains, and each Next app proxies auth and the Worker through its own
+origin, so every session cookie is host-only on its app.
 
 ## 1. The stack at a glance
 
@@ -123,28 +124,46 @@ wrangler secret put FIRECRAWL_API_KEY       # optional (fetchUrl skill)
 
 ### 4d. Initialize Postgres
 
-For an existing deployment, follow [the model upgrade and memory cutover](./model-upgrade.md)
-before deploying this Worker. Backfill the new Qwen3 index first; upgrade template
-models only after the new Worker is live. The old memory index is retained.
-
-Push the shared Prisma schema and seed the default templates before deploying the
-Worker:
+On a new database, push the Prisma schema and seed the default templates before
+the first Worker deploy:
 
 ```bash
 DATABASE_URL=postgresql://... pnpm --filter=@repo/db db:push
 DATABASE_URL=postgresql://... pnpm --filter=@repo/db db:seed
 ```
 
+The seed upserts templates with `update: {}`, so it never overwrites an
+Operator's edits; a change to an existing template needs a guarded SQL update.
+
+On an existing database, read each PR's deploy steps for the order: a push that
+adds columns goes before the Worker that reads them, and a push that drops
+columns (`--accept-data-loss`) goes after the Worker that stopped reading them.
+[`model-upgrade.md`](./model-upgrade.md) records the Qwen3 memory-index cutover.
+
 ### 4e. Deploy
 
+From a clean checkout of `main` at the commit you are shipping:
+
 ```bash
-pnpm run deploy   # vite build && wrangler deploy
+pnpm exec vite build --configLoader runner
+pnpm exec wrangler deploy --message "main <sha>: <summary>"
 ```
 
-Use `pnpm run deploy`: bare `pnpm deploy` is pnpm's own package-copy command.
-Merges do not deploy the Worker, so run this after merging changes to
-`apps/agents` or the packages it bundles, and compare
-`wrangler deployments list` with `git log -- apps/agents` when in doubt.
+`--configLoader runner` works around machines where Vite cannot bundle its
+config; `pnpm run deploy` (`vite build && wrangler deploy`) is equivalent
+elsewhere. Bare `pnpm deploy` is pnpm's own package-copy command. Merges do not
+deploy the Worker, so run this after merging changes to `apps/agents` or the
+packages it bundles. Name every deploy after its commit so
+`wrangler deployments list` maps to git.
+
+The upload is about 3.1 MiB gzip, over the Workers Free limit, and Better
+Auth's scrypt password hashing needs Workers Paid CPU: the account must be on
+**Workers Paid**.
+
+A deploy that changes a Workflow step's name or result shape cannot resume
+running `qolmeia-worker-job` instances. Before such a deploy, list them with
+`wrangler workflows instances list qolmeia-worker-job`, let running ones finish,
+decide or terminate waiting ones, and close the matching tickets and actions.
 
 The Durable Object + Workflow class migrations (`v1`–`v3` in `wrangler.jsonc`)
 apply automatically on first deploy. If you didn't put the custom-domain route
@@ -153,10 +172,10 @@ in the config, map `agents.qolmeia.com` to the Worker in the dashboard
 
 ## 5. Railway: Postgres
 
-Railway hosts only Postgres. Deploys never touch the schema: push schema changes
-before deploying the Worker code that needs them (§4d). The Worker reaches the
-database through Hyperdrive with `sslmode=require` (ADR 0010); nothing else
-connects to it in production.
+Railway hosts only Postgres; there is no Railway app service. Deploys never
+touch the schema: push schema changes in the order §4d describes. The Worker
+reaches the database through Hyperdrive with `sslmode=require` (ADR 0010);
+nothing else connects to it in production.
 
 ## 6. Vercel: `apps/web`, `apps/backoffice`, `apps/landing`
 
@@ -202,10 +221,9 @@ tab, or an A record to `216.150.1.1` / `216.150.16.1`.
 ## 7. Order of operations
 
 For an existing installation, merging deploys the Next apps; deploy the Worker
-by hand. When a change moves a route between them, deploy the Worker first. Keep existing response fields compatible
-throughout the rollout. Coverage
-options retain string IDs in `disciplines`; the optional `disciplineNames` map
-adds display labels without breaking older Workers or backoffice clients.
+by hand. When the Next apps start calling a Worker route, or stop sending
+something the old Worker needs, deploy the Worker first: a merge redeploys both
+Vercel apps within minutes.
 
 For the initial setup:
 
@@ -219,17 +237,18 @@ For the initial setup:
 
 ## 8. Smoke test after deploy
 
-1. Sign in on `app.qolmeia.com` → session cookie set on `app.qolmeia.com`.
+1. Sign in on `app.qolmeia.com` (password and an emailed magic link) → session
+   cookie set on `app.qolmeia.com`. Sign in on `admin.qolmeia.com` → `/approvals`.
 2. Client onboarding chat (Planner) → confirm a team.
-3. Customer chat → Correspondent delegates → a Worker job runs.
-4. A gated action lands on `admin.qolmeia.com` `/approvals` → decide it.
-5. The approved deliverable appears in the customer chat and `/assets`.
+3. Ask the Correspondent for an image: the Designer's deliverable auto-executes
+   and appears in the chat and `/assets`.
+4. Ask for an Instagram post: the Marketing Strategist's `publish_post` action
+   lands on `/approvals` → approve it → the draft appears in the chat.
+5. The `qolmeia` AI Gateway logs show the conversation, generation, and image
+   calls.
 
-## 9. Still open before "done"
+## 9. Still open
 
 - The Worker has no CD: deploy it by hand after merging (§4e).
-- An **operator directory** (listing OWNER/STAFF users) doesn't exist yet, so
-  the backoffice ships **self-service** coverage; an admin-assigns-others
-  surface needs that directory first (ADR 0005 / 0008).
-- A staged dependency update (`--latest`) was deferred; do it on its own, not
-  bundled with a deploy.
+- Hyperdrive connects as the Postgres superuser and cannot verify Railway's
+  certificate (ADR 0010).
