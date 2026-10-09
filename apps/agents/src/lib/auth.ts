@@ -55,15 +55,10 @@ const fetchMe = async (request: Request, env: Env): Promise<MeFetch> => {
     Accept: string;
     Authorization?: string;
     Cookie?: string;
-    "X-Forwarded-For"?: string;
     "X-Org-Id"?: string;
   };
 
   const headers: HeadersContract = { Accept: "application/json" };
-  const clientIp = request.headers.get("CF-Connecting-IP");
-  if (clientIp !== null && clientIp !== "") {
-    headers["X-Forwarded-For"] = clientIp;
-  }
   if (token !== null && token !== "") {
     headers.Authorization = `Bearer ${token}`;
   } else if (cookieHeader !== null && cookieHeader !== "") {

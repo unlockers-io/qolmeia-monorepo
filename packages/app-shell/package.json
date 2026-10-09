@@ -6,6 +6,7 @@
   "exports": {
     "./agents-url": "./src/agents-url.ts",
     "./auth-client": "./src/auth-client.ts",
+    "./auth-proxy": "./src/auth-proxy.ts",
     "./auth-server": "./src/auth-server.ts",
     "./session": "./src/session.ts",
     "./signup": "./src/signup.ts"
@@ -18,6 +19,7 @@
   "dependencies": {
     "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
+    "@repo/internal-auth": "workspace:*",
     "@repo/worker-api": "workspace:*",
     "better-auth": "^1.7.6"
   },
