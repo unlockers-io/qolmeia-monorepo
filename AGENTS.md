@@ -138,6 +138,7 @@ App configs resolve those URLs through `@repo/portless-env` rather than hardcodi
 ## Conventions
 
 - Path aliases: `@/*` → `src/*` in every app + package.
+- Server-rendered controls stay disabled until hydration: forms render `ClientReadyForm` from `@repo/ui/compositions/client-ready-form`, standalone controls fold `!ready` from `useClientReady` into `disabled`. Forms submit through `form.handleSubmit()`, and each form family has an e2e spec that holds `**/_next/static/**/*.js` (`tests/e2e/helpers/hold-scripts.ts`). No test-side hydration waits.
 - pt-BR is the user-facing locale across agents, backoffice, and client.
 - Activity-log `type` strings are stable and free-form; the backoffice categorises by prefix (`ACTION_*`, `TICKET_*`, `WORKER_*`, `TEAM_*`, `MEMBER_*`).
 - Operator REST lives at `apps/agents/api/backoffice/*` (OWNER/STAFF only). Customer REST at `apps/agents/api/me/*` and `apps/agents/api/teams/*`.

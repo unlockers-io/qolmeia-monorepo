@@ -11,6 +11,7 @@ import {
 } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { useRef, useState } from "react";
@@ -68,6 +69,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
   const queryKey = brandQueryKey(companyId);
   const fileRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<BrandCategory>("logo");
+  const ready = useClientReady();
 
   const { data: assets = [], isPending } = useQuery({
     initialData,
@@ -163,6 +165,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
             Categoria
             <select
               className="h-11 rounded-lg border border-input bg-background px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 sm:h-9 sm:text-sm"
+              disabled={!ready}
               onChange={(e) => {
                 const { value } = e.currentTarget;
                 if (isBrandCategory(value)) {
@@ -182,12 +185,13 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
             accept={ALLOWED_MIME.join(",")}
             aria-label="Enviar arquivo de marca"
             className="sr-only"
+            disabled={!ready}
             onChange={handleFileSelected}
             ref={fileRef}
             type="file"
           />
           <Button
-            disabled={uploadMutation.isPending}
+            disabled={!ready || uploadMutation.isPending}
             onClick={() => fileRef.current?.click()}
             type="button"
             variant="outline"
@@ -232,7 +236,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
                 <button
                   aria-label="Remover referência"
                   className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-md bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
-                  disabled={deleteMutation.isPending}
+                  disabled={!ready || deleteMutation.isPending}
                   onClick={() => {
                     deleteMutation.mutate(asset.id);
                   }}

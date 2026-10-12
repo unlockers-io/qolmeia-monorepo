@@ -97,4 +97,15 @@ describe("LoginForm", () => {
     });
     expect(screen.getByRole("heading", { name: "Verifique seu e-mail" })).toBeInTheDocument();
   });
+
+  it("validates the e-mail with the form schema before sending a magic link", async () => {
+    const { sendMagicLink } = renderLoginForm();
+
+    fireEvent.click(screen.getByRole("button", { name: "Entrar com link mágico" }));
+    fireEvent.change(screen.getByLabelText(/E-mail/v), { target: { value: "not-an-email" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar link mágico" }));
+
+    expect(await screen.findByText("E-mail inválido")).toBeInTheDocument();
+    expect(sendMagicLink).not.toHaveBeenCalled();
+  });
 });

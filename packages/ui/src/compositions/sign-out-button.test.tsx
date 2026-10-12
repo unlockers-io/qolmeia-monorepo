@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -37,6 +38,12 @@ describe("SignOutButton", () => {
   it("renders the default label", () => {
     render(<SignOutButton dependencies={dependencies} />);
     expect(screen.getByRole("button", { name: "Sair" })).toBeTruthy();
+  });
+
+  it("renders disabled in the server markup", () => {
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<SignOutButton dependencies={dependencies} />);
+    expect(container.querySelector("button")?.disabled).toBe(true);
   });
 
   it("renders a custom label", () => {

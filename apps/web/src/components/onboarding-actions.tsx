@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/components/button";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { cn } from "@repo/ui/lib/utils";
 import { ApiError, describeRequestError } from "@repo/worker-api";
 import { Sparkles } from "lucide-react";
@@ -25,6 +26,7 @@ const OnboardingActions = ({ companyId, sessionToken, templates }: OnboardingAct
     () => new Set(templates.map((t) => t.id)),
   );
   const [submitting, setSubmitting] = useState(false);
+  const ready = useClientReady();
 
   const toggle = (id: string) => {
     const next = new Set(selected);
@@ -98,6 +100,7 @@ const OnboardingActions = ({ companyId, sessionToken, templates }: OnboardingAct
                     aria-label={t.displayName}
                     checked={checked}
                     className="mt-0.5 size-4 accent-primary"
+                    disabled={!ready}
                     id={inputId}
                     onChange={() => {
                       toggle(t.id);
@@ -121,7 +124,7 @@ const OnboardingActions = ({ companyId, sessionToken, templates }: OnboardingAct
           </span>
           <Button
             className=""
-            disabled={submitting || selected.size === 0}
+            disabled={!ready || submitting || selected.size === 0}
             onClick={() => {
               void handleConfirm();
             }}

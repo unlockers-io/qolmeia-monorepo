@@ -1,5 +1,6 @@
 "use client";
 
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { useEffect, useRef } from "react";
 
 import { log } from "@/lib/observability-client";
@@ -13,6 +14,7 @@ type GlobalErrorProps = {
 
 const GlobalError = ({ error, reset }: GlobalErrorProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const ready = useClientReady();
 
   useEffect(() => {
     log.error({ digest: error.digest, error: error.message, message: "Global error boundary" });
@@ -30,7 +32,7 @@ const GlobalError = ({ error, reset }: GlobalErrorProps) => {
             O aplicativo parou de funcionar inesperadamente. Tente novamente e, se o problema
             continuar, recarregue a página ou volte em alguns minutos.
           </p>
-          <button className={styles.button} onClick={reset} type="button">
+          <button className={styles.button} disabled={!ready} onClick={reset} type="button">
             Tentar novamente
           </button>
           {error.digest !== undefined && (

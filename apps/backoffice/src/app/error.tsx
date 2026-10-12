@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/components/button";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { useEffect, useRef } from "react";
 
 import { log } from "@/lib/observability-client";
@@ -12,6 +13,7 @@ type DashboardErrorProps = {
 
 const DashboardError = ({ error, reset }: DashboardErrorProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const ready = useClientReady();
 
   useEffect(() => {
     log.error({ digest: error.digest, error: error.message, message: "Route error boundary" });
@@ -32,6 +34,7 @@ const DashboardError = ({ error, reset }: DashboardErrorProps) => {
         </p>
       </div>
       <Button
+        disabled={!ready}
         onClick={() => {
           reset();
         }}
