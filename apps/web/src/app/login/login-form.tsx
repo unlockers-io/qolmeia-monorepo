@@ -4,11 +4,11 @@ import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
+import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
-import { useIsHydrated } from "@repo/ui/hooks/use-is-hydrated";
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { loginSchema, magicLinkSchema } from "@/lib/form-schemas";
@@ -28,13 +28,12 @@ type LoginFormDependencies = {
 
 type SubmitLabelState = {
   isMagicLink: boolean;
-  isSendingMagicLink: boolean;
   isSubmitting: boolean;
 };
 
-const getSubmitLabel = ({ isMagicLink, isSendingMagicLink, isSubmitting }: SubmitLabelState) => {
+const getSubmitLabel = ({ isMagicLink, isSubmitting }: SubmitLabelState) => {
   if (isMagicLink) {
-    return isSendingMagicLink ? "Enviando…" : "Enviar link mágico";
+    return isSubmitting ? "Enviando…" : "Enviar link mágico";
   }
   return isSubmitting ? "Entrando…" : "Entrar";
 };
@@ -56,67 +55,60 @@ const DEFAULT_DEPENDENCIES: Omit<LoginFormDependencies, "router"> = {
 const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }) => {
   const { router, sendMagicLink, showError, signInEmail } = dependencies;
   const { push, refresh } = router;
-  const [isSendingMagicLink, startSendingMagicLink] = useTransition();
   const [loginMethod, setLoginMethod] = useState<"magicLink" | "password">("password");
   const [sent, setSent] = useState(false);
-  const isHydrated = useIsHydrated();
   const isMagicLink = loginMethod === "magicLink";
+
+  const signIn = async (credentials: { email: string; password: string }) => {
+    try {
+      const { error } = await signInEmail(credentials);
+      if (error) {
+        showError(
+          authErrorMessage(error, "Não foi possível entrar. Verifique seu e-mail e sua senha."),
+        );
+        return;
+      }
+    } catch {
+      showError("Não foi possível conectar ao servidor. Tente novamente.");
+      return;
+    }
+    push("/");
+    refresh();
+  };
+
+  const requestMagicLink = async (email: string) => {
+    const callbackURL = `${window.location.origin}/auth/verify`;
+    try {
+      const { error } = await sendMagicLink({ callbackURL, email });
+      if (error) {
+        showError(authErrorMessage(error, "Não foi possível enviar o link. Tente novamente."));
+        return;
+      }
+      setSent(true);
+    } catch {
+      showError("Não foi possível conectar ao servidor. Tente novamente.");
+    }
+  };
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
     onSubmit: async ({ value }) => {
-      try {
-        const { error } = await signInEmail({
-          email: value.email,
-          password: value.password,
-        });
-        if (error) {
-          showError(
-            authErrorMessage(error, "Não foi possível entrar. Verifique seu e-mail e sua senha."),
-          );
-          return;
-        }
-      } catch {
-        showError("Não foi possível conectar ao servidor. Tente novamente.");
+      if (isMagicLink) {
+        await requestMagicLink(value.email);
         return;
       }
-      push("/");
-      refresh();
+      await signIn(value);
     },
-    validators: { onSubmit: loginSchema },
+    validators: { onSubmit: isMagicLink ? magicLinkSchema : loginSchema },
   });
-
-  const handleMagicLink = () => {
-    const result = magicLinkSchema.safeParse({ email: form.state.values.email });
-    if (!result.success) {
-      showError(result.error.issues[0]?.message ?? "E-mail inválido");
-      return;
-    }
-
-    const callbackURL = `${window.location.origin}/auth/verify`;
-    startSendingMagicLink(async () => {
-      try {
-        const { error } = await sendMagicLink({ callbackURL, email: result.data.email });
-        if (error) {
-          showError(authErrorMessage(error, "Não foi possível enviar o link. Tente novamente."));
-          return;
-        }
-        setSent(true);
-      } catch {
-        showError("Não foi possível conectar ao servidor. Tente novamente.");
-      }
-    });
-  };
 
   const handleLoginMethodChange = () => {
     setLoginMethod(isMagicLink ? "password" : "magicLink");
   };
 
-  const submitSelectedMethod = () => {
-    if (isMagicLink) {
-      handleMagicLink();
-      return;
-    }
+  const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
     void form.handleSubmit();
   };
 
@@ -149,35 +141,54 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
           ? "Digite seu e-mail para receber um link mágico de acesso."
           : "Digite seu e-mail e sua senha para entrar."}
       </p>
-      <form
-        className="mt-8"
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          submitSelectedMethod();
-        }}
-      >
-        <fieldset disabled={!isHydrated}>
-          <FieldGroup>
-            <form.Field name="email">
+      <ClientReadyForm className="mt-8" noValidate onSubmit={handleSubmit}>
+        <FieldGroup>
+          <form.Field name="email">
+            {(field) => {
+              const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+              return (
+                <Field data-invalid={isInvalid || undefined}>
+                  <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
+                  <Input
+                    aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                    aria-invalid={isInvalid}
+                    autoComplete="email"
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => {
+                      field.handleChange(event.target.value);
+                    }}
+                    placeholder="voce@empresa.com"
+                    type="email"
+                    value={field.state.value}
+                  />
+                  {isInvalid && (
+                    <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
+                  )}
+                </Field>
+              );
+            }}
+          </form.Field>
+
+          {!isMagicLink && (
+            <form.Field name="password">
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
+                    <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
                     <Input
                       aria-describedby={isInvalid ? `${field.name}-error` : undefined}
                       aria-invalid={isInvalid}
-                      autoComplete="email"
+                      autoComplete="current-password"
                       id={field.name}
                       name={field.name}
                       onBlur={field.handleBlur}
                       onChange={(event) => {
                         field.handleChange(event.target.value);
                       }}
-                      placeholder="voce@empresa.com"
-                      type="email"
+                      type="password"
                       value={field.state.value}
                     />
                     {isInvalid && (
@@ -187,65 +198,33 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
                 );
               }}
             </form.Field>
-
-            {!isMagicLink && (
-              <form.Field name="password">
-                {(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
-                  return (
-                    <Field data-invalid={isInvalid || undefined}>
-                      <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
-                      <Input
-                        aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                        aria-invalid={isInvalid}
-                        autoComplete="current-password"
-                        id={field.name}
-                        name={field.name}
-                        onBlur={field.handleBlur}
-                        onChange={(event) => {
-                          field.handleChange(event.target.value);
-                        }}
-                        type="password"
-                        value={field.state.value}
-                      />
-                      {isInvalid && (
-                        <FormFieldError
-                          errors={field.state.meta.errors}
-                          id={`${field.name}-error`}
-                        />
-                      )}
-                    </Field>
-                  );
-                }}
-              </form.Field>
-            )}
-          </FieldGroup>
-          <form.Subscribe
-            selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-          >
-            {({ canSubmit, isSubmitting }) => (
-              <div className="mt-6 flex flex-col gap-3">
-                <Button
-                  className="w-full"
-                  disabled={(!isMagicLink && !canSubmit) || isSubmitting || isSendingMagicLink}
-                  size="lg"
-                  type="submit"
-                >
-                  {getSubmitLabel({ isMagicLink, isSendingMagicLink, isSubmitting })}
-                </Button>
-                <button
-                  className="self-center text-sm font-medium text-primary underline-offset-4 hover:underline disabled:pointer-events-none disabled:opacity-50"
-                  disabled={isSubmitting || isSendingMagicLink}
-                  onClick={handleLoginMethodChange}
-                  type="button"
-                >
-                  {isMagicLink ? "Entrar com senha" : "Entrar com link mágico"}
-                </button>
-              </div>
-            )}
-          </form.Subscribe>
-        </fieldset>
-      </form>
+          )}
+        </FieldGroup>
+        <form.Subscribe
+          selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
+        >
+          {({ canSubmit, isSubmitting }) => (
+            <div className="mt-6 flex flex-col gap-3">
+              <Button
+                className="w-full"
+                disabled={(!isMagicLink && !canSubmit) || isSubmitting}
+                size="lg"
+                type="submit"
+              >
+                {getSubmitLabel({ isMagicLink, isSubmitting })}
+              </Button>
+              <button
+                className="self-center text-sm font-medium text-primary underline-offset-4 hover:underline disabled:pointer-events-none disabled:opacity-50"
+                disabled={isSubmitting}
+                onClick={handleLoginMethodChange}
+                type="button"
+              >
+                {isMagicLink ? "Entrar com senha" : "Entrar com link mágico"}
+              </button>
+            </div>
+          )}
+        </form.Subscribe>
+      </ClientReadyForm>
     </div>
   );
 };

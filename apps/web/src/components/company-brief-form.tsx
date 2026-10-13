@@ -6,6 +6,7 @@ import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Textarea } from "@repo/ui/components/textarea";
+import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { MissingBriefBadge } from "@repo/ui/compositions/missing-brief-badge";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -117,7 +118,7 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
         )}
       </CardHeader>
       <CardContent>
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        <ClientReadyForm className="flex flex-col gap-5" onSubmit={handleSubmit}>
           <div className="grid gap-5 sm:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="brief-industry">
@@ -221,7 +222,7 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
               {mutation.isPending ? "Salvando…" : "Salvar"}
             </Button>
           </div>
-        </form>
+        </ClientReadyForm>
       </CardContent>
     </Card>
   );

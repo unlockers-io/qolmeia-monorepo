@@ -13,6 +13,7 @@ import {
 import { AssetImage } from "@repo/ui/compositions/asset-image";
 import { DialogCloseButton } from "@repo/ui/compositions/dialog-close-button";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { cn } from "@repo/ui/lib/utils";
 import { Eye, FileText, FolderOpen, Loader2, Music, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -152,6 +153,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
   const [state, dispatch] = useReducer(galleryReducer, INITIAL_STATE);
   const { active, confirmIds, deleting, removedIds, selected } = state;
   const [previewing, setPreviewing] = useState<WebChatAsset | null>(null);
+  const ready = useClientReady();
 
   const displayed = assets.filter((asset) => !removedIds.has(asset.id));
 
@@ -210,6 +212,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
                     ? "bg-primary text-primary-foreground"
                     : "border border-border bg-card text-muted-foreground hover:text-foreground",
                 )}
+                disabled={!ready}
                 key={chip.key}
                 onClick={() => {
                   dispatch({ key: chip.key, type: "setFilter" });
@@ -229,6 +232,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
             aria-label="Selecionar todos os arquivos"
             checked={allSelected}
             className="size-4 accent-primary"
+            disabled={!ready}
             onChange={() => {
               dispatch({
                 ids: filtered.map((a) => a.id),
@@ -243,6 +247,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
         {selected.size > 0 ? (
           <Button
             className="ml-auto"
+            disabled={!ready}
             onClick={() => {
               dispatch({ ids: [...selected], type: "requestDelete" });
             }}
@@ -268,6 +273,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
                   <button
                     aria-label={`Pré-visualizar ${asset.name}`}
                     className="block w-full cursor-pointer text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    disabled={!ready}
                     onClick={() => {
                       setPreviewing(asset);
                     }}
@@ -290,6 +296,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
                 aria-label={`Selecionar ${asset.name}`}
                 checked={isSelected}
                 className="absolute top-2 left-2 size-4 cursor-pointer accent-primary"
+                disabled={!ready}
                 onChange={() => {
                   dispatch({ id: asset.id, type: "toggleSelect" });
                 }}
@@ -298,6 +305,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
               <button
                 aria-label={`Excluir ${asset.name}`}
                 className="absolute top-1.5 right-1.5 flex size-7 items-center justify-center rounded-md bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:bg-background hover:text-destructive"
+                disabled={!ready}
                 onClick={() => {
                   dispatch({ ids: [asset.id], type: "requestDelete" });
                 }}

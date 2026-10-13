@@ -5,6 +5,7 @@ import { Card, CardContent } from "@repo/ui/components/card";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import type { TeamMemberDetailView } from "@repo/worker-api/contracts";
@@ -45,6 +46,8 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
   const [busy, setBusy] = useState(false);
   const [isTogglingPause, startPauseToggle] = useTransition();
   const [optimisticMember, applyOptimisticStatus] = useOptimistic(member, applyStatus);
+  const ready = useClientReady();
+  const disabled = !ready || busy;
 
   const name = nameDraft ?? member.displayName;
 
@@ -143,7 +146,11 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
           </p>
         </div>
         {member.role === "worker" ? (
-          <Button disabled={busy || isTogglingPause} onClick={handleTogglePause} variant="outline">
+          <Button
+            disabled={disabled || isTogglingPause}
+            onClick={handleTogglePause}
+            variant="outline"
+          >
             {optimisticMember.status === "paused" ? "Retomar" : "Pausar"}
           </Button>
         ) : null}
@@ -178,7 +185,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
             <FieldLabel htmlFor="member-name">Nome de exibição</FieldLabel>
             <div className="flex gap-2">
               <Input
-                disabled={busy}
+                disabled={disabled}
                 id="member-name"
                 onChange={(e) => {
                   setNameDraft(e.target.value);
@@ -186,7 +193,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
                 value={name}
               />
               <Button
-                disabled={busy || name === member.displayName}
+                disabled={disabled || name === member.displayName}
                 onClick={() => {
                   void handleSaveName();
                 }}

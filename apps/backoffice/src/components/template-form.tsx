@@ -5,7 +5,9 @@ import { Card, CardContent } from "@repo/ui/components/card";
 import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
+import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import type { Template } from "@repo/worker-api/contracts";
 import { useId } from "react";
 
@@ -23,6 +25,7 @@ const fieldError = (message: string | undefined): [string] | undefined =>
 
 const TemplateForm = ({ initial }: TemplateFormProps) => {
   const policiesFieldId = useId();
+  const ready = useClientReady();
   const {
     busy,
     errors,
@@ -49,7 +52,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
         </h1>
         {initial === undefined ? null : (
           <Button
-            disabled={statusPending}
+            disabled={!ready || statusPending}
             onClick={handleToggleStatus}
             type="button"
             variant="outline"
@@ -59,7 +62,12 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
         )}
       </header>
 
-      <form className="flex flex-col gap-5" noValidate onSubmit={handleSubmit} ref={formRef}>
+      <ClientReadyForm
+        className="flex flex-col gap-5"
+        noValidate
+        onSubmit={handleSubmit}
+        ref={formRef}
+      >
         <Card>
           <CardContent className="flex flex-col gap-5">
             <div className="grid gap-5 sm:grid-cols-2">
@@ -231,7 +239,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
             {submitLabel}
           </Button>
         </div>
-      </form>
+      </ClientReadyForm>
     </div>
   );
 };

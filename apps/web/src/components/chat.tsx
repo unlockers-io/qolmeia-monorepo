@@ -14,7 +14,7 @@ import { AssetImage } from "@repo/ui/compositions/asset-image";
 import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
-import { useIsHydrated } from "@repo/ui/hooks/use-is-hydrated";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { agentAvatarClass } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import type { FileUIPart } from "ai";
@@ -358,9 +358,9 @@ const ChatClient = ({ agent = "correspondent", companyId, sessionToken }: ChatPr
 };
 
 const Chat = (props: ChatProps) => {
-  const isHydrated = useIsHydrated();
+  const ready = useClientReady();
 
-  if (!isHydrated) {
+  if (!ready) {
     return <ChatSkeleton />;
   }
 

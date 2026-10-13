@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/components/button";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -13,6 +14,7 @@ type RouteErrorProps = {
 
 const RouteError = ({ error, retry }: RouteErrorProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const ready = useClientReady();
 
   useEffect(() => {
     log.error({ digest: error.digest, error: error.message, message: "Route error boundary" });
@@ -37,7 +39,7 @@ const RouteError = ({ error, retry }: RouteErrorProps) => {
           <p className="font-mono text-xs text-muted-foreground">Referência: {error.digest}</p>
         )}
       </div>
-      <Button onClick={retry} variant="outline">
+      <Button disabled={!ready} onClick={retry} variant="outline">
         <RefreshCw aria-hidden="true" data-icon="inline-start" />
         Tentar novamente
       </Button>

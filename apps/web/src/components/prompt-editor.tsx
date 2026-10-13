@@ -3,6 +3,7 @@
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
 import { Textarea } from "@repo/ui/components/textarea";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { useState } from "react";
 
 type PromptEditorProps = {
@@ -23,6 +24,8 @@ const formatDate = (ms: number): string =>
 
 const PromptEditor = ({ busy, initialValue, onReset, onSave, updatedAt }: PromptEditorProps) => {
   const [value, setValue] = useState(initialValue ?? "");
+  const ready = useClientReady();
+  const disabled = !ready || busy === true;
   const overridden = initialValue !== null;
   const dirty = value !== (initialValue ?? "");
 
@@ -31,7 +34,7 @@ const PromptEditor = ({ busy, initialValue, onReset, onSave, updatedAt }: Prompt
       <Field>
         <FieldLabel htmlFor="prompt-editor">Instruções para este agente</FieldLabel>
         <Textarea
-          disabled={busy}
+          disabled={disabled}
           id="prompt-editor"
           onChange={(e) => {
             setValue(e.target.value);
@@ -48,7 +51,7 @@ const PromptEditor = ({ busy, initialValue, onReset, onSave, updatedAt }: Prompt
       </Field>
       <div className="flex justify-end gap-2">
         <Button
-          disabled={busy === true || !overridden}
+          disabled={disabled || !overridden}
           onClick={() => {
             void (async () => {
               await onReset();
@@ -60,7 +63,7 @@ const PromptEditor = ({ busy, initialValue, onReset, onSave, updatedAt }: Prompt
           Restaurar padrão
         </Button>
         <Button
-          disabled={busy === true || !dirty}
+          disabled={disabled || !dirty}
           onClick={() => {
             void onSave(value);
           }}

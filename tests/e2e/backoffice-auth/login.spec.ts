@@ -1,5 +1,6 @@
 import { backofficeUrl } from "../../../playwright.config";
 import { expect, test } from "../fixtures/auth.fixture";
+import { holdScripts } from "../helpers/hold-scripts";
 
 const TEST_USER = {
   email: "e2e-test@qolmeia.localhost",
@@ -15,6 +16,17 @@ test.describe("Backoffice login", () => {
 
     await page.waitForURL(new RegExp(`${backofficeUrl.replaceAll(".", String.raw`\.`)}/$`, "v"));
     expect(page.url()).not.toContain("/login");
+  });
+
+  test("keeps the form disabled until it hydrates", async ({ backofficeLoginPage, page }) => {
+    const releaseScripts = await holdScripts(page);
+    await page.goto("/login", { waitUntil: "commit" });
+    await backofficeLoginPage.expectDisabled();
+
+    releaseScripts();
+    await backofficeLoginPage.login(TEST_USER.email, TEST_USER.password);
+
+    await page.waitForURL(new RegExp(`${backofficeUrl.replaceAll(".", String.raw`\.`)}/$`, "v"));
   });
 
   test("shows error toast for wrong password", async ({ backofficeLoginPage, page }) => {

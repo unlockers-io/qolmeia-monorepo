@@ -3,6 +3,7 @@
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldDescription } from "@repo/ui/components/field";
 import { Textarea } from "@repo/ui/components/textarea";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { useState } from "react";
 
 type PromptEditorProps = {
@@ -31,6 +32,8 @@ const PromptEditor = ({
   updatedAt,
 }: PromptEditorProps) => {
   const [value, setValue] = useState(initialValue ?? "");
+  const ready = useClientReady();
+  const disabled = !ready || busy === true;
   const overridden = initialValue !== null;
   const dirty = value !== (initialValue ?? "");
 
@@ -56,7 +59,7 @@ const PromptEditor = ({
         <div className="font-mono">
           <Textarea
             className="resize-y"
-            disabled={busy}
+            disabled={disabled}
             id="prompt-editor"
             onChange={(e) => {
               setValue(e.target.value);
@@ -75,7 +78,7 @@ const PromptEditor = ({
 
       <div className="flex gap-2">
         <Button
-          disabled={busy === true || !dirty}
+          disabled={disabled || !dirty}
           onClick={() => {
             void onSave(value);
           }}
@@ -83,7 +86,7 @@ const PromptEditor = ({
           Salvar prompt
         </Button>
         <Button
-          disabled={busy === true || !overridden}
+          disabled={disabled || !overridden}
           onClick={() => {
             void (async () => {
               await onReset();

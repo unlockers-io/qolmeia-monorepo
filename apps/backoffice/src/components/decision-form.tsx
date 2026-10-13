@@ -2,6 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import { Textarea } from "@repo/ui/components/textarea";
+import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { cn } from "@repo/ui/lib/utils";
 import type { ActionsResponse, DecisionOutcome } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
@@ -112,7 +113,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
   };
 
   return (
-    <form
+    <ClientReadyForm
       className="flex flex-col gap-3.5"
       onSubmit={(e) => {
         void handleSubmit(e);
@@ -223,7 +224,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
       <p className="text-center text-xs text-muted-foreground">
         A decisão retoma o fluxo de trabalho do agente.
       </p>
-    </form>
+    </ClientReadyForm>
   );
 };
 

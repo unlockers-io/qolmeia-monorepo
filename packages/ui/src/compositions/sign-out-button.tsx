@@ -8,6 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "../components/button";
+import { useClientReady } from "../hooks/use-client-ready";
 import { runWithCleanup } from "../lib/run-with-cleanup";
 
 const authClient = createBetterAuthClient({
@@ -42,6 +43,7 @@ const SignOutButtonView = ({
   const { router, showError, signOut } = dependencies;
   const { push, refresh } = router;
   const [pending, setPending] = useState(false);
+  const ready = useClientReady();
 
   const handleSignOut = async () => {
     if (pending) {
@@ -67,7 +69,7 @@ const SignOutButtonView = ({
   return (
     <Button
       className={className}
-      disabled={pending}
+      disabled={!ready || pending}
       onClick={() => {
         void handleSignOut();
       }}
