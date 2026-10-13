@@ -1,9 +1,8 @@
 import { z } from "zod";
 
-export const magicLinkSchema = z.object({
+export const loginSchema = z.object({
   email: z.email("E-mail inválido"),
-});
-
-export const loginSchema = magicLinkSchema.extend({
   password: z.string().min(1, "Informe sua senha"),
 });
+
+export const magicLinkSchema = loginSchema.extend({ password: z.string() });

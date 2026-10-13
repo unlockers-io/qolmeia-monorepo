@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/components/button";
+import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { cn } from "@repo/ui/lib/utils";
 import type { CoverageResponse } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
@@ -61,7 +62,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
   };
 
   return (
-    <form
+    <ClientReadyForm
       className="flex flex-col gap-6"
       onSubmit={(e) => {
         void handleSubmit(e);
@@ -157,7 +158,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
           {submitting ? "Salvando…" : "Salvar cobertura"}
         </Button>
       </div>
-    </form>
+    </ClientReadyForm>
   );
 };
 

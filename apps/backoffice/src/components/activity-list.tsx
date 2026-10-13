@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui/components/button";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import type { ActivityEntry, ActivityResponse } from "@repo/worker-api/contracts";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ const ActivityList = ({ category, initial, pageSize = 50 }: ActivityListProps) =
   const [fetched, setFetched] = useState<ReadonlyArray<ActivityEntry>>([]);
   const [fetchExhausted, setFetchExhausted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const ready = useClientReady();
 
   const seen = new Set(initial.map((item) => item.id));
   const rows = [...initial, ...fetched.filter((item) => !seen.has(item.id))];
@@ -59,7 +61,7 @@ const ActivityList = ({ category, initial, pageSize = 50 }: ActivityListProps) =
       {!exhausted && (
         <div className="flex justify-center px-5 pt-4 pb-2">
           <Button
-            disabled={loading}
+            disabled={!ready || loading}
             onClick={() => {
               void handleLoadMore();
             }}

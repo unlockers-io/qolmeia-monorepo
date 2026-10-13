@@ -10,6 +10,7 @@ import {
 } from "@repo/ui/components/card";
 import { PageContainer } from "@repo/ui/compositions/page-container";
 import { PageHeader } from "@repo/ui/compositions/page-header";
+import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { describeRequestError } from "@repo/worker-api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -52,6 +53,7 @@ const EmpresaClient = ({
   const [hireTemplate, setHireTemplate] = useState<HireableTemplate | null>(null);
   const [detail, setDetail] = useState<TeamMemberDetailView | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const ready = useClientReady();
 
   const queryClient = useQueryClient();
   const rosterQueryKey = teamQueryKey(companyId);
@@ -155,6 +157,7 @@ const EmpresaClient = ({
                     <>
                       {detail?.id === m.id ? (
                         <Button
+                          disabled={!ready}
                           onClick={() => {
                             handleCloseDetail(m.id);
                           }}
@@ -165,6 +168,7 @@ const EmpresaClient = ({
                         </Button>
                       ) : (
                         <Button
+                          disabled={!ready}
                           onClick={() => {
                             void handleOpenDetail(m.id);
                           }}
@@ -175,7 +179,7 @@ const EmpresaClient = ({
                         </Button>
                       )}
                       <Button
-                        disabled={busyId === m.id}
+                        disabled={!ready || busyId === m.id}
                         onClick={() => {
                           void handleTogglePause(m.id, m.status !== "paused");
                         }}
@@ -221,6 +225,7 @@ const EmpresaClient = ({
                 </span>
                 <Button
                   aria-label={`Contratar ${t.displayName}`}
+                  disabled={!ready}
                   onClick={() => {
                     setHireTemplate(t);
                   }}
