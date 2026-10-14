@@ -29,7 +29,7 @@ User-facing locale is **pt-BR** across every agent and UI.
                Postgres on Railway (via Hyperdrive) · R2 · Vectorize · AI Gateway
 ```
 
-Four deployables in one Turborepo: the Worker (Cloudflare, deployed by hand) and three Next apps (Vercel, deployed on merge to `main`; `apps/landing` is a static marketing site that talks to nothing). The **Worker is the whole backend**: it hosts Better Auth ([ADR 0011](adr/0011-worker-hosts-better-auth.md)) and owns all product data ([ADR 0010](adr/0010-worker-reaches-postgres-through-hyperdrive.md)). The browser never calls the Worker's host; each Next app rewrites the Worker routes it needs onto its own origin, so every session cookie is host-only on its app, in dev (`.localhost` is a public suffix) and in prod alike. Railway hosts only Postgres.
+Four deployables in one Turborepo: the Worker (Cloudflare, deployed on merge to `main` by Workers Builds) and three Next apps (Vercel, deployed on merge to `main`; `apps/landing` is a static marketing site that talks to nothing). The **Worker is the whole backend**: it hosts Better Auth ([ADR 0011](adr/0011-worker-hosts-better-auth.md)) and owns all product data ([ADR 0010](adr/0010-worker-reaches-postgres-through-hyperdrive.md)). The browser never calls the Worker's host; each Next app rewrites the Worker routes it needs onto its own origin, so every session cookie is host-only on its app, in dev (`.localhost` is a public suffix) and in prod alike. Railway hosts only Postgres.
 
 ## §3. Repo layout
 

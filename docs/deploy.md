@@ -1,7 +1,7 @@
 # Deploying Qolmeia to production
 
 The single source of truth for taking Qolmeia live. Merging to `main` deploys the
-three Next apps (Vercel); the Worker is deployed by hand (§4e). Railway hosts
+three Next apps (Vercel) and the Worker (Workers Builds, §4e). Railway hosts
 only Postgres. The dev `.localhost` / portless proxy is **dev-only**; prod uses
 real subdomains, and each Next app proxies auth and the Worker through its own
 origin, so every session cookie is host-only on its app.
@@ -156,19 +156,33 @@ columns (`--accept-data-loss`) goes after the Worker that stopped reading them.
 
 ### 4e. Deploy
 
-From a clean checkout of `main` at the commit you are shipping:
+Workers Builds deploys the Worker on every merge to `main` that touches it.
+Connect it once on the `worker-bees` Worker, under **Settings → Build**:
+
+| Setting                 | Value                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| Git repository / branch | `unlockers-io/qolmeia-monorepo` / `main`                                                   |
+| Root directory          | `apps/agents`                                                                              |
+| Build command           | `pnpm run build`                                                                           |
+| Deploy command          | `pnpm exec wrangler deploy`                                                                |
+| Non-production branches | off                                                                                        |
+| Build watch paths       | `apps/agents/*`, `packages/*`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`     |
+| Build variables         | `PNPM_VERSION=11.13.1` (the build image defaults to pnpm 10, which this workspace rejects) |
+
+Each build deploys the commit it built, and `wrangler deployments list` shows
+that commit. Runtime secrets (§4c) stay on the Worker; the build needs none.
+
+To deploy without a merge, for example a PR head that must be live before its
+merge (§7), run from `apps/agents`:
 
 ```bash
 pnpm exec vite build --configLoader runner
-pnpm exec wrangler deploy --message "main <sha>: <summary>"
+pnpm exec wrangler deploy --message "pr-<n> <sha>: <summary>"
 ```
 
 `--configLoader runner` works around machines where Vite cannot bundle its
 config; `pnpm run deploy` (`vite build && wrangler deploy`) is equivalent
-elsewhere. Bare `pnpm deploy` is pnpm's own package-copy command. Merges do not
-deploy the Worker, so run this after merging changes to `apps/agents` or the
-packages it bundles. Name every deploy after its commit so
-`wrangler deployments list` maps to git.
+elsewhere. Bare `pnpm deploy` is pnpm's own package-copy command.
 
 The upload is about 3.1 MiB gzip, over the Workers Free limit, and Better
 Auth's scrypt password hashing needs Workers Paid CPU: the account must be on
@@ -234,10 +248,11 @@ tab, or an A record to `216.150.1.1` / `216.150.16.1`.
 
 ## 7. Order of operations
 
-For an existing installation, merging deploys the Next apps; deploy the Worker
-by hand. When the Next apps start calling a Worker route, or stop sending
-something the old Worker needs, deploy the Worker first: a merge redeploys both
-Vercel apps within minutes.
+For an existing installation, merging deploys the Next apps and the Worker.
+When the Next apps start calling a Worker route, or stop sending something the
+old Worker needs, deploy the Worker from the PR head first (§4e), then merge:
+the merge redeploys both Vercel apps within minutes and Workers Builds redeploys
+the same Worker code.
 
 For the initial setup:
 
@@ -263,6 +278,5 @@ For the initial setup:
 
 ## 9. Still open
 
-- The Worker has no CD: deploy it by hand after merging (§4e).
-- Hyperdrive connects as the Postgres superuser and cannot verify Railway's
-  certificate (ADR 0010).
+- Hyperdrive cannot verify Railway's certificate and keeps `sslmode=require`
+  (ADR 0010).
