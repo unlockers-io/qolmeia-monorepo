@@ -1,9 +1,10 @@
 import type { CompanyBrief } from "@repo/worker-api/brief";
 import { z } from "zod";
 
-import { getDb } from "#/db/client";
-import { listEntitledActiveTemplates } from "#/db/template";
+import { getCompany } from "#/company/company";
+import { withDb } from "#/lib/db";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { listEntitledTemplates } from "#/template/template";
 
 const proposeTeamInputSchema = z.object({});
 
@@ -23,11 +24,9 @@ const proposeTeamSkill: UnknownSkill = {
   description:
     "Lê o catálogo de especialistas disponíveis e propõe um Time para a empresa com base no brief atual. Use depois de coletar informação suficiente no debrief.",
   async execute(_input: SkillInput, ctx: SkillContext): Promise<ProposeResult> {
-    const db = getDb(ctx.env);
-    const [templates, company] = await Promise.all([
-      listEntitledActiveTemplates(db, ctx.companyId),
-      db("companies.getCustomer", { companyId: ctx.companyId }),
-    ]);
+    const [templates, company] = await withDb(ctx.env, (db) =>
+      Promise.all([listEntitledTemplates(db, ctx.companyId), getCompany(db, ctx.companyId)]),
+    );
     const brief = company?.brief ?? {};
     const industry = typeof brief.industry === "string" ? brief.industry : "";
 

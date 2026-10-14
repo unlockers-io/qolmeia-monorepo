@@ -1,3 +1,4 @@
+import { Prisma } from "@repo/db/worker";
 import type {
   ActionDetailResponse,
   ActionsResponse,
@@ -15,37 +16,40 @@ import type {
 import { Hono } from "hono";
 import { z } from "zod";
 
+import {
+  canRequestChanges,
+  getAction,
+  listActions,
+  listPendingActions,
+  listTicketActions,
+} from "#/action/action";
 import { ACTIVITY_CATEGORIES, listActivity } from "#/activity/log";
-import { getAction, listActions, listActionsForTicket, listPendingActions } from "#/db/action";
-import { getDisciplineOptions, listCoverage, setCoverage } from "#/db/assignment";
-import { getDb } from "#/db/client";
-import { listCompaniesOverview } from "#/db/schema";
+import { listCompaniesOverview } from "#/company/company";
+import { createOrganization } from "#/company/organization";
+import { decisionEventType } from "#/jobs/decision-event";
+import { requireStaffSession, type ValidatedSession } from "#/lib/auth";
+import { dbPerRequest, type DbVariables } from "#/lib/db";
+import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
+import { getCoverage, getCoverageOptions, setCoverage } from "#/operator/assignment";
+import { isKnownSkill, listSkillCatalog } from "#/skills/registry";
+import { TeamError } from "#/team/errors";
+import { backofficeTeamMemberPatchSchema, setMemberStatus, updateMember } from "#/team/members";
+import { getMemberDetail, getTeamRoster, listTeamRosters } from "#/team/roster";
 import {
   createTemplate,
   getTemplate,
   listAllTemplates,
   setTemplateStatus,
   updateTemplate,
-} from "#/db/template";
-import { listTickets, loadTicket } from "#/db/ticket";
-import { decisionEventType } from "#/jobs/decision-event";
-import { requireStaffSession, type ValidatedSession } from "#/lib/auth";
-import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
-import { canRequestChanges } from "#/lib/revisions";
-import { isKnownSkill, listSkillCatalog } from "#/skills/registry";
-import {
-  backofficeTeamMemberPatchSchema,
-  setTeamMemberStatus,
-  updateTeamMember,
-} from "#/team/commands";
-import { TEAM_ERROR_STATUS, TeamDomainError } from "#/team/errors";
-import { getMemberDetail, getTeamRoster, listTeamRosters } from "#/team/queries";
+} from "#/template/template";
+import { listTickets, loadTicket } from "#/ticket/ticket";
 
-type Vars = { session: ValidatedSession };
+type Vars = DbVariables & { session: ValidatedSession };
 
 const backofficeRoutes = new Hono<{ Bindings: Env; Variables: Vars }>();
 
 backofficeRoutes.use("*", requireStaffSession);
+backofficeRoutes.use("*", dbPerRequest);
 
 const TICKET_STATUSES: ReadonlyArray<TicketStatus> = [
   "awaiting_approval",
@@ -67,7 +71,7 @@ backofficeRoutes.get("/tickets", async (c) => {
     return c.json({ error: "invalid status" }, 400);
   }
   const limit = parsePositiveInt(c.req.query("limit"), 50, 200);
-  const items = await listTickets(getDb(c.env), { companyId, limit, status });
+  const items = await listTickets(c.var.db, { companyId, limit, status });
   const body: TicketsResponse = { items };
   return c.json(body);
 });
@@ -77,18 +81,14 @@ backofficeRoutes.get("/actions", async (c) => {
   const sort = c.req.query("sort");
   const companyId = c.req.query("companyId");
 
-  const db = getDb(c.env);
+  const { db } = c.var;
   if (status === "pending") {
-    const items =
+    const items = await listPendingActions(
+      db,
       companyId !== undefined && companyId !== ""
-        ? await listPendingActions(db, { companyId })
-        : await (async () => {
-            const coverage = await listCoverage(db, c.get("session").userId);
-            return listPendingActions(db, {
-              companyIds: coverage.companies,
-              disciplines: coverage.disciplines,
-            });
-          })();
+        ? { companyId }
+        : await getCoverage(db, c.get("session").userId),
+    );
     const now = Date.now();
     const enriched = items.map((a) => ({
       actionType: a.actionType,
@@ -112,7 +112,7 @@ backofficeRoutes.get("/actions", async (c) => {
     return c.json(pendingBody);
   }
 
-  const items = await listActions(db, { companyId });
+  const items = await listActions(db, companyId);
   const body: ActionsResponse = { items };
   return c.json(body);
 });
@@ -135,7 +135,7 @@ backofficeRoutes.post("/actions/:id/decide", async (c) => {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
 
-  const db = getDb(c.env);
+  const { db } = c.var;
   const action = await getAction(db, id);
   if (!action) {
     return c.text("Not found", 404);
@@ -175,26 +175,26 @@ backofficeRoutes.get("/activity", async (c) => {
   const limit = parsePositiveInt(c.req.query("limit"), 100, 500);
   const rawCategory = c.req.query("category");
   const category = ACTIVITY_CATEGORIES.find((value) => value === rawCategory);
-  const items = await listActivity(getDb(c.env), { before, category, companyId, limit, since });
+  const items = await listActivity(c.var.db, { before, category, companyId, limit, since });
   const body: ActivityResponse = { items };
   return c.json(body);
 });
 
 backofficeRoutes.get("/tickets/:id", async (c) => {
   const id = c.req.param("id");
-  const db = getDb(c.env);
+  const { db } = c.var;
   const ticket = await loadTicket(db, id);
   if (!ticket) {
     return c.text("Not found", 404);
   }
-  const actions = await listActionsForTicket(db, id);
+  const actions = await listTicketActions(db, id);
   const body: TicketDetailResponse = { actions, ticket };
   return c.json(body);
 });
 
 backofficeRoutes.get("/actions/:id", async (c) => {
   const id = c.req.param("id");
-  const db = getDb(c.env);
+  const { db } = c.var;
   const action = await getAction(db, id);
   if (!action) {
     return c.text("Not found", 404);
@@ -214,7 +214,7 @@ backofficeRoutes.get("/actions/:id", async (c) => {
 });
 
 backofficeRoutes.get("/companies", async (c) => {
-  const db = getDb(c.env);
+  const { db } = c.var;
   const companies = await listCompaniesOverview(db);
   const rosters = await listTeamRosters(
     db,
@@ -230,20 +230,43 @@ backofficeRoutes.get("/companies", async (c) => {
   return c.json({ companies: withRosters });
 });
 
+const SLUG_PATTERN = /^[a-z0-9\-]+$/v;
+
+const companyBodySchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  slug: z
+    .string()
+    .min(1)
+    .max(80)
+    .regex(SLUG_PATTERN, "slug must be lowercase alphanumeric or dashes"),
+});
+
+backofficeRoutes.post("/companies", async (c) => {
+  const parsed = companyBodySchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
+  }
+  try {
+    const company = await createOrganization(c.var.db, {
+      ...parsed.data,
+      ownerUserId: c.get("session").userId,
+    });
+    return c.json({ company }, 201);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return c.json({ error: "slug already in use" }, 409);
+    }
+    throw error;
+  }
+});
+
 backofficeRoutes.get("/assignments/me", async (c) => {
-  const db = getDb(c.env);
-  const [coverage, disciplineOptions, companies] = await Promise.all([
-    listCoverage(db, c.get("session").userId),
-    getDisciplineOptions(db),
-    listCompaniesOverview(db),
+  const { db } = c.var;
+  const [assigned, options] = await Promise.all([
+    getCoverage(db, c.get("session").userId),
+    getCoverageOptions(db),
   ]);
-  const body: CoverageResponse = {
-    assigned: coverage,
-    options: {
-      companies: companies.map((co) => ({ id: co.id, name: co.name })),
-      ...disciplineOptions,
-    },
-  };
+  const body: CoverageResponse = { assigned, options };
   return c.json(body);
 });
 
@@ -257,18 +280,18 @@ backofficeRoutes.put("/assignments/me", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid body" }, 400);
   }
-  await setCoverage(getDb(c.env), c.get("session").userId, parsed.data);
+  await setCoverage(c.var.db, c.get("session").userId, parsed.data);
   return c.json({ assigned: parsed.data });
 });
 
 backofficeRoutes.get("/teams/:companyId/members", async (c) => {
   const companyId = c.req.param("companyId");
-  const members = await getTeamRoster(getDb(c.env), companyId);
+  const members = await getTeamRoster(c.var.db, companyId);
   return c.json({ members });
 });
 
 backofficeRoutes.get("/teams/:companyId/members/:id", async (c) => {
-  const member = await getMemberDetail(getDb(c.env), c.req.param("companyId"), c.req.param("id"));
+  const member = await getMemberDetail(c.var.db, c.req.param("companyId"), c.req.param("id"));
   if (!member) {
     return c.json({ error: "not found" }, 404);
   }
@@ -282,10 +305,10 @@ backofficeRoutes.patch("/teams/:companyId/members/:id", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid body" }, 400);
   }
-  const db = getDb(c.env);
+  const { db } = c.var;
   try {
     await (parsed.data.status === undefined
-      ? updateTeamMember(c.env, db, {
+      ? updateMember(c.env, db, {
           agentInstanceId: id,
           companyId,
           displayName: parsed.data.displayName,
@@ -293,7 +316,7 @@ backofficeRoutes.patch("/teams/:companyId/members/:id", async (c) => {
           operatorId: c.get("session").userId,
           promptOverride: parsed.data.promptOverride,
         })
-      : setTeamMemberStatus(c.env, db, {
+      : setMemberStatus(c.env, db, {
           actorId: c.get("session").userId,
           agentInstanceId: id,
           companyId,
@@ -305,8 +328,8 @@ backofficeRoutes.patch("/teams/:companyId/members/:id", async (c) => {
     }
     return c.json({ member });
   } catch (error) {
-    if (error instanceof TeamDomainError) {
-      return c.json({ error: error.publicMessage }, TEAM_ERROR_STATUS[error.code]);
+    if (error instanceof TeamError) {
+      return c.json({ error: error.message }, error.status);
     }
     throw error;
   }
@@ -337,13 +360,13 @@ backofficeRoutes.get("/skills", (c) => {
 });
 
 backofficeRoutes.get("/templates", async (c) => {
-  const items = await listAllTemplates(getDb(c.env));
+  const items = await listAllTemplates(c.var.db);
   const body: TemplatesResponse = { items };
   return c.json(body);
 });
 
 backofficeRoutes.get("/templates/:id", async (c) => {
-  const template = await getTemplate(getDb(c.env), c.req.param("id"));
+  const template = await getTemplate(c.var.db, c.req.param("id"));
   if (!template) {
     return c.json({ error: "not found" }, 404);
   }
@@ -357,7 +380,7 @@ backofficeRoutes.post("/templates", async (c) => {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
   const input: TemplateInput = parsed.data;
-  const template = await createTemplate(getDb(c.env), input);
+  const template = await createTemplate(c.var.db, input);
   const body: TemplateResponse = { template };
   return c.json(body, 201);
 });
@@ -368,7 +391,7 @@ backofficeRoutes.patch("/templates/:id", async (c) => {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
   const input: TemplateInput = parsed.data;
-  const template = await updateTemplate(getDb(c.env), c.req.param("id"), input);
+  const template = await updateTemplate(c.var.db, c.req.param("id"), input);
   if (!template) {
     return c.json({ error: "not found" }, 404);
   }
@@ -381,7 +404,7 @@ backofficeRoutes.patch("/templates/:id/status", async (c) => {
   if (!parsed.success) {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
-  const template = await setTemplateStatus(getDb(c.env), c.req.param("id"), parsed.data.status);
+  const template = await setTemplateStatus(c.var.db, c.req.param("id"), parsed.data.status);
   if (!template) {
     return c.json({ error: "not found" }, 404);
   }

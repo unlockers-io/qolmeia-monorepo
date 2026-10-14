@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-import { getDb } from "#/db/client";
-import { listCompanyAssets, persistAsset, readAssetText } from "#/lib/asset-store";
-import type { AssetSummary } from "#/lib/asset-store";
+import { withDb } from "#/lib/db";
+import { listAssets, persistAsset, readAssetText, type AssetSummary } from "#/library/assets";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
 
 const ASSET_KINDS = [
@@ -28,11 +27,10 @@ const listAssetsSkill: UnknownSkill = {
     "Lista os arquivos da biblioteca da empresa (imagens, documentos, áudios, uploads). Use para descobrir o que já foi criado antes. Você enxerga as duas pastas (cliente e agente).",
   async execute(input: SkillInput, ctx: SkillContext): Promise<{ assets: Array<AssetSummary> }> {
     const { folder, kind } = listAssetsInputSchema.parse(input);
-    const assets = await listCompanyAssets(getDb(ctx.env), ctx.companyId, {
-      kind,
-      visibility: folder,
-    });
-    return { assets };
+    const assets = await withDb(ctx.env, (db) =>
+      listAssets(db, ctx.companyId, { kind, visibility: folder }),
+    );
+    return { assets: assets.map(({ metadata: _metadata, ...summary }) => summary) };
   },
   id: "listAssets",
   inputSchema: listAssetsInputSchema,
@@ -50,7 +48,7 @@ const readAssetSkill: UnknownSkill = {
     ctx: SkillContext,
   ): Promise<{ content: string; name: string } | { error: string }> {
     const { assetId } = readAssetInputSchema.parse(input);
-    const asset = await readAssetText(ctx.env, ctx.companyId, assetId);
+    const asset = await withDb(ctx.env, (db) => readAssetText(ctx.env, db, ctx.companyId, assetId));
     if (!asset) {
       return { error: "Asset não encontrado ou não é um documento de texto legível." };
     }
@@ -80,15 +78,17 @@ const saveAssetSkill: UnknownSkill = {
     "Salva um documento de texto na biblioteca da empresa. Use 'customer' para uma entrega final que o cliente deve ver, ou 'agent' para material de trabalho interno.",
   execute: (input: SkillInput, ctx: SkillContext): Promise<{ assetId: string }> => {
     const { content, folder, mime, name } = saveAssetInputSchema.parse(input);
-    return persistAsset(ctx.env, {
-      bytes: new TextEncoder().encode(content),
-      companyId: ctx.companyId,
-      kind: "knowledge_doc",
-      metadata: { name },
-      mime: mime ?? "text/markdown",
-      uploadMetadata: { generatedBy: "agent" },
-      visibility: folder ?? "customer",
-    });
+    return withDb(ctx.env, (db) =>
+      persistAsset(ctx.env, db, {
+        bytes: new TextEncoder().encode(content),
+        companyId: ctx.companyId,
+        kind: "knowledge_doc",
+        metadata: { name },
+        mime: mime ?? "text/markdown",
+        uploadMetadata: { generatedBy: "agent" },
+        visibility: folder ?? "customer",
+      }),
+    );
   },
   id: "saveAsset",
   inputSchema: saveAssetInputSchema,

@@ -1,15 +1,15 @@
 import { dispatch } from "@flue/runtime";
 import { log } from "@repo/observability";
 import type { DecisionOutcome } from "@repo/worker-api/contracts";
-import type { JsonValue } from "@repo/worker-api/internal";
 
+import { completeTicket, proposeAction, recordDecision } from "#/action/approval";
+import { resolvePolicy } from "#/action/policy";
 import { CorrespondentV2 } from "#/agents/correspondent";
-import { getDb } from "#/db/client";
-import { resolvePolicy } from "#/db/policy";
-import { getCompany } from "#/db/schema";
-import { loadInstanceWithTemplate, loadTicket } from "#/db/ticket";
-import { toRecord } from "#/lib/records";
+import { getCompany } from "#/company/company";
+import { withDb } from "#/lib/db";
+import { toRecord, type JsonValue } from "#/lib/records";
 import { emitTeamEvent } from "#/team/events";
+import { loadInstanceWithTemplate, loadTicket } from "#/ticket/ticket";
 
 type JobContext = {
   agentInstanceId: string;
@@ -75,7 +75,7 @@ const reportDecision = async (
   ctx: JobContext,
   decision: Exclude<DecisionOutcome, "approved">,
 ): Promise<void> => {
-  const ticket = await loadTicket(getDb(ctx.env), ctx.ticketId);
+  const ticket = await withDb(ctx.env, (db) => loadTicket(db, ctx.ticketId));
   const update = CUSTOMER_UPDATES[decision];
   await signalCorrespondent(
     ctx,
@@ -91,11 +91,9 @@ const proposeDeliverable = async (
   current: GenerateResult,
 ): Promise<ProposeResult> => {
   const { agentInstanceId, companyId, env, ticketId } = ctx;
-  const db = getDb(env);
-  const [{ template }, company] = await Promise.all([
-    loadInstanceWithTemplate(db, agentInstanceId),
-    getCompany(db, companyId),
-  ]);
+  const [{ template }, company] = await withDb(env, (db) =>
+    Promise.all([loadInstanceWithTemplate(db, agentInstanceId), getCompany(db, companyId)]),
+  );
   if (!company) {
     throw new Error("company vanished mid-workflow");
   }
@@ -103,12 +101,9 @@ const proposeDeliverable = async (
   const policy = resolvePolicy(actionType, template);
 
   if (policy === "auto_execute" || policy === "notify_only") {
-    await db("workflows.complete", {
-      companyId,
-      policy,
-      summary: current.summary,
-      ticketId,
-    });
+    await withDb(env, (db) =>
+      completeTicket(db, { companyId, policy, summary: current.summary, ticketId }),
+    );
     await emitTeamEvent(env, { companyId, reason: "ticket_changed", type: "team:status" });
     await presentToCustomer(ctx, current.summary);
     return { actionId: null, policy };
@@ -122,16 +117,17 @@ const proposeDeliverable = async (
     actionType === "publish_post" && draft !== undefined
       ? { draft, summary: current.summary, ticketId }
       : { summary: current.summary, ticketId };
-  const { id: actionId } = await db("workflows.propose", {
-    actionType,
-    companyId,
-    feedback,
-    policy,
-    proposed: proposedPayload,
-    round,
-    summary: current.summary,
-    ticketId,
-  });
+  const { id: actionId } = await withDb(env, (db) =>
+    proposeAction(db, {
+      actionType,
+      companyId,
+      feedback,
+      proposed: proposedPayload,
+      round,
+      summary: current.summary,
+      ticketId,
+    }),
+  );
   await emitTeamEvent(env, { companyId, reason: "ticket_changed", type: "team:status" });
 
   log.info({
@@ -152,7 +148,6 @@ const applyDecision = async (
   event: DecisionEvent,
 ): Promise<DecisionOutcome> => {
   const { agentInstanceId, companyId, env, ticketId } = ctx;
-  const db = getDb(env);
   const { decidedByUserId, decision, feedback } = event;
   log.info({
     actionId,
@@ -164,15 +159,17 @@ const applyDecision = async (
     message: "workflow.decision.received",
     ticketId,
   });
-  await db("workflows.applyDecision", {
-    actionId,
-    companyId,
-    decidedByUserId,
-    decision,
-    feedback,
-    summary: current.summary,
-    ticketId,
-  });
+  await withDb(env, (db) =>
+    recordDecision(db, {
+      actionId,
+      companyId,
+      decidedByUserId,
+      decision,
+      feedback,
+      summary: current.summary,
+      ticketId,
+    }),
+  );
   await emitTeamEvent(env, { companyId, reason: "ticket_changed", type: "team:status" });
   await (decision === "approved"
     ? presentToCustomer(ctx, current.summary)

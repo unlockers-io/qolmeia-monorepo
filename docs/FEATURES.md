@@ -306,13 +306,11 @@ Those items are roadmap candidates in [`agent-tools.md`](agent-tools.md), not cu
 
 ## 7. Main API capability map
 
-| Audience          | Prefix                                         | Capabilities                                                                                            |
-| ----------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Public/auth       | `/api/auth/*`                                  | Magic links, email/password, verification, recovery, session management.                                |
-| Authenticated API | `/api/orgs`                                    | Organization creation and product-company provisioning.                                                 |
-| Customer          | `/api/me/*`                                    | Membership relay, company brief, templates/catalogue, team management/events, assets/uploads, activity. |
-| Customer          | `/api/teams/*`                                 | Onboarding team confirmation.                                                                           |
-| Customer          | `/agents/planner/*`, `/agents/correspondent/*` | Durable Flue 2 chat submission and observation.                                                         |
-| Operator          | `/api/backoffice/*`                            | Tickets, approvals, decisions, activity, coverage, companies/teams, skills, and templates.              |
-| Internal          | `/api/internal/*`                              | Shared-secret company and agent provisioning.                                                           |
-| Signed asset      | `/assets/:id`                                  | Time-limited R2 asset delivery.                                                                         |
+| Audience     | Prefix                                         | Capabilities                                                                                             |
+| ------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Public/auth  | `/api/auth/*`                                  | Magic links, email/password, verification, recovery, session management.                                 |
+| Customer     | `/api/me/*`                                    | Membership relay, company brief, templates/catalogue, team management/events, assets/uploads, activity.  |
+| Customer     | `/api/teams/*`                                 | Onboarding team confirmation.                                                                            |
+| Customer     | `/agents/planner/*`, `/agents/correspondent/*` | Durable Flue 2 chat submission and observation.                                                          |
+| Operator     | `/api/backoffice/*`                            | Tickets, approvals, decisions, activity, coverage, company creation, companies/teams, skills, templates. |
+| Signed asset | `/assets/:id`                                  | Time-limited R2 asset delivery.                                                                          |

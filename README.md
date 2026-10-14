@@ -43,7 +43,7 @@ docker compose up -d
 DATABASE_URL=postgresql://qolmeia:qolmeia123@localhost:5436/qolmeia \
   pnpm --filter=@repo/db db:push
 
-pnpm --filter=api exec tsx src/scripts/seed-dev.ts
+pnpm --filter=worker-bees db:seed
 
 pnpm dev
 ```
@@ -57,7 +57,7 @@ cp apps/backoffice/.env.example apps/backoffice/.env
 cp apps/agents/.dev.vars.example apps/agents/.dev.vars
 ```
 
-`BETTER_AUTH_SECRET` must match across `apps/api`, `apps/web`, and `apps/backoffice`. `apps/agents/.dev.vars` holds `DATABASE_URL` and Worker-only secrets such as `OPENROUTER_API_KEY` and `ASSETS_SIGNING_KEY`.
+`BETTER_AUTH_SECRET` must match across `apps/api`, `apps/web`, and `apps/backoffice`. `apps/agents/.dev.vars` holds Worker-only secrets such as `OPENROUTER_API_KEY` and `ASSETS_SIGNING_KEY`, plus `DATABASE_URL` and `BETTER_AUTH_SECRET` for the seed script. The Worker itself reaches the docker Postgres through the `HYPERDRIVE` binding's `localConnectionString`.
 
 ## Useful Commands
 
@@ -77,7 +77,7 @@ pnpm build
 
 ## Local Accounts
 
-`pnpm --filter=api exec tsx src/scripts/seed-dev.ts` creates:
+`pnpm --filter=worker-bees db:seed` creates:
 
 | Surface    | Role     | Email                  | Password                    |
 | ---------- | -------- | ---------------------- | --------------------------- |

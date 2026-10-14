@@ -2,12 +2,12 @@ import { log } from "@repo/observability";
 import { generateText, isStepCount } from "ai";
 import { z } from "zod";
 
-import { getDb } from "#/db/client";
-import { loadInstanceWithTemplate, loadTicket } from "#/db/ticket";
 import type { GenerateResult, JobContext } from "#/jobs/worker-job-steps";
 import { getModel } from "#/lib/ai-gateway";
+import { withDb } from "#/lib/db";
 import { buildSkillTools } from "#/skills/registry";
 import { resolveSystemPrompt } from "#/team/resolve-system-prompt";
+import { loadInstanceWithTemplate, loadTicket } from "#/ticket/ticket";
 
 type ChatMessage = { content: string; role: "assistant" | "user" };
 
@@ -71,12 +71,10 @@ const generateDeliverable = async (
   feedback: string | null,
 ): Promise<GenerateResult> => {
   const { agentInstanceId, companyId, env, ticketId } = ctx;
-  const db = getDb(env);
   const stepStart = Date.now();
-  const [ticket, { agentInstance, template }] = await Promise.all([
-    loadTicket(db, ticketId),
-    loadInstanceWithTemplate(db, agentInstanceId),
-  ]);
+  const [ticket, { agentInstance, template }] = await withDb(env, (db) =>
+    Promise.all([loadTicket(db, ticketId), loadInstanceWithTemplate(db, agentInstanceId)]),
+  );
   if (ticket === null) {
     throw new Error(`ticket ${ticketId} not properly seeded`);
   }

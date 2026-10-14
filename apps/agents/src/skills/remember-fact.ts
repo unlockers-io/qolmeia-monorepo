@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-import { getDb } from "#/db/client";
-import { insertMemoryFact } from "#/db/schema";
-import { getMemoryAdapter } from "#/lib/memory";
+import { withDb } from "#/lib/db";
+import { indexMemoryFacts, recordMemoryFacts } from "#/memory/facts";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
 
 const rememberFactInputSchema = z.object({
@@ -18,26 +17,22 @@ const rememberFactSkill: UnknownSkill = {
     "Salva um fato importante que você deve lembrar em conversas futuras (preferências, decisões, fatos do negócio).",
   async execute(input: SkillInput, ctx: SkillContext): Promise<{ id: string; savedAt: number }> {
     const { content, kind } = rememberFactInputSchema.parse(input);
-    const id = crypto.randomUUID();
-    const factKind = kind ?? "fact";
-    const now = Date.now();
-    await insertMemoryFact(getDb(ctx.env), {
-      agentInstanceId: ctx.agentInstanceId,
-      companyId: ctx.companyId,
-      content,
-      id,
-      kind: factKind,
-    });
-    const memory = getMemoryAdapter(ctx.env);
-    await memory.upsert({
-      agentInstanceId: ctx.agentInstanceId,
-      companyId: ctx.companyId,
-      content,
-      createdAt: now,
-      id,
-      kind: factKind,
-    });
-    return { id, savedAt: now };
+    const records = await withDb(ctx.env, (db) =>
+      recordMemoryFacts(db, [
+        {
+          agentInstanceId: ctx.agentInstanceId,
+          companyId: ctx.companyId,
+          content,
+          kind: kind ?? "fact",
+        },
+      ]),
+    );
+    await indexMemoryFacts(ctx.env, records);
+    const [record] = records;
+    if (record === undefined) {
+      throw new Error("rememberFact: no fact recorded");
+    }
+    return { id: record.id, savedAt: record.createdAt };
   },
   id: "rememberFact",
   inputSchema: rememberFactInputSchema,

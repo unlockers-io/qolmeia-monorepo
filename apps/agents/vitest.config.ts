@@ -1,7 +1,10 @@
+import { builtinModules } from "node:module";
 import path from "node:path";
 
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
+
+import { testDatabaseUrl } from "./src/__tests__/test-database";
 
 export default defineConfig({
   plugins: [
@@ -10,11 +13,9 @@ export default defineConfig({
       miniflare: {
         bindings: {
           ASSETS_SIGNING_KEY: "vitest-assets-signing-key",
-          INTERNAL_SHARED_SECRET: "vitest-internal-shared-secret-value",
           OPENROUTER_API_KEY: "test-openrouter-key",
-          TEST_FIXTURE_SECRET: "vitest-fixture-service-secret-value",
-          TEST_FIXTURE_URL: "http://127.0.0.1:4011",
         },
+        hyperdrives: { HYPERDRIVE: testDatabaseUrl },
       },
       wrangler: { configPath: "./wrangler.jsonc", environment: "test" },
     }),
@@ -23,9 +24,18 @@ export default defineConfig({
     alias: { "@": path.join(import.meta.dirname, "src") },
   },
   test: {
+    deps: {
+      optimizer: {
+        ssr: {
+          enabled: true,
+          include: ["pg"],
+          rolldownOptions: { external: [...builtinModules] },
+        },
+      },
+    },
     fileParallelism: false,
-    globalSetup: ["../api/src/testing/setup-agents-worker.ts"],
-    setupFiles: ["./src/__tests__/apply-migrations.ts"],
+    globalSetup: ["./src/__tests__/global-setup.ts"],
+    setupFiles: ["./src/__tests__/reset-database.ts"],
     testTimeout: 20_000,
   },
 });

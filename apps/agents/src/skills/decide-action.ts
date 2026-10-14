@@ -1,11 +1,10 @@
 import { z } from "zod";
 
-import { getAction } from "#/db/action";
-import { getDb } from "#/db/client";
-import { loadTicket } from "#/db/ticket";
+import { canRequestChanges, getAction, MAX_REVISIONS } from "#/action/action";
 import { decisionEventType } from "#/jobs/decision-event";
-import { canRequestChanges, MAX_REVISIONS } from "#/lib/revisions";
+import { withDb } from "#/lib/db";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { loadTicket } from "#/ticket/ticket";
 
 const decideActionInputSchema = z.object({
   actionId: z.string().min(1),
@@ -25,39 +24,40 @@ const decideActionSkill: UnknownSkill = {
   async execute(input: SkillInput, ctx: SkillContext): Promise<DecideResult> {
     const { actionId, decision, feedback } = decideActionInputSchema.parse(input);
 
-    const db = getDb(ctx.env);
-    const action = await getAction(db, actionId);
-    if (!action) {
-      return { error: "Ação não encontrada." };
-    }
-    if (action.companyId !== ctx.companyId) {
-      return { error: "Ação pertence a outra empresa." };
-    }
-    if (action.status !== "pending") {
-      return { error: `Ação já está em estado '${action.status}', não é mais pendente.` };
-    }
-    if (decision === "changes_requested" && !(await canRequestChanges(db, action.ticketId))) {
-      return {
-        error: `Limite de ${MAX_REVISIONS} revisões atingido: peça ao cliente para aprovar ou rejeitar esta versão.`,
-      };
-    }
+    return withDb(ctx.env, async (db): Promise<DecideResult> => {
+      const action = await getAction(db, actionId);
+      if (!action) {
+        return { error: "Ação não encontrada." };
+      }
+      if (action.companyId !== ctx.companyId) {
+        return { error: "Ação pertence a outra empresa." };
+      }
+      if (action.status !== "pending") {
+        return { error: `Ação já está em estado '${action.status}', não é mais pendente.` };
+      }
+      if (decision === "changes_requested" && !(await canRequestChanges(db, action.ticketId))) {
+        return {
+          error: `Limite de ${MAX_REVISIONS} revisões atingido: peça ao cliente para aprovar ou rejeitar esta versão.`,
+        };
+      }
 
-    const ticket = await loadTicket(db, action.ticketId);
-    if (ticket === null || ticket.workflowId === null || ticket.workflowId === "") {
-      return { error: "Workflow não encontrado para essa ação." };
-    }
+      const ticket = await loadTicket(db, action.ticketId);
+      if (ticket === null || ticket.workflowId === null || ticket.workflowId === "") {
+        return { error: "Workflow não encontrado para essa ação." };
+      }
 
-    const instance = await ctx.env.WORKER_JOB.get(ticket.workflowId);
-    await instance.sendEvent({
-      payload: {
-        decidedByUserId: ctx.agentInstanceId,
-        decision,
-        feedback,
-      },
-      type: decisionEventType(actionId),
+      const instance = await ctx.env.WORKER_JOB.get(ticket.workflowId);
+      await instance.sendEvent({
+        payload: {
+          decidedByUserId: ctx.agentInstanceId,
+          decision,
+          feedback,
+        },
+        type: decisionEventType(actionId),
+      });
+
+      return { decision, ok: true };
     });
-
-    return { decision, ok: true };
   },
   id: "decideAction",
   inputSchema: decideActionInputSchema,

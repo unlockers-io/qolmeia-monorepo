@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { getDb } from "#/db/client";
-import { persistAsset } from "#/lib/asset-store";
+import { withDb } from "#/lib/db";
 import { buildSignedAssetUrl } from "#/lib/r2";
+import { listBrandReferences, persistAsset } from "#/library/assets";
 import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
 
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -54,10 +54,9 @@ const encodeBase64 = (bytes: Uint8Array): string => {
 const MAX_BRAND_REFS = 3;
 
 const loadBrandReferences = async (ctx: SkillContext): Promise<Array<string>> => {
-  const results = await getDb(ctx.env)("assets.listReferences", {
-    companyId: ctx.companyId,
-    limit: MAX_BRAND_REFS,
-  });
+  const results = await withDb(ctx.env, (db) =>
+    listBrandReferences(db, ctx.companyId, MAX_BRAND_REFS),
+  );
 
   const settled = await Promise.allSettled(
     results.map(async (row) => {
@@ -146,16 +145,18 @@ const generateBrandImageSkill: UnknownSkill = {
       return { error: `Image gen returned non-data URL we can't ingest: ${imageUrl.slice(0, 60)}` };
     }
     const { bytes, mime } = decoded;
-    const { assetId } = await persistAsset(ctx.env, {
-      bytes,
-      companyId: ctx.companyId,
-      fallbackExt: "png",
-      kind: "generated_image",
-      metadata: { aspectRatio, prompt },
-      mime,
-      uploadMetadata: { aspectRatio, prompt },
-      visibility: "customer",
-    });
+    const { assetId } = await withDb(ctx.env, (db) =>
+      persistAsset(ctx.env, db, {
+        bytes,
+        companyId: ctx.companyId,
+        fallbackExt: "png",
+        kind: "generated_image",
+        metadata: { aspectRatio, prompt },
+        mime,
+        uploadMetadata: { aspectRatio, prompt },
+        visibility: "customer",
+      }),
+    );
 
     const url = await buildSignedAssetUrl(
       { ASSETS_SIGNING_KEY: ctx.env.ASSETS_SIGNING_KEY },

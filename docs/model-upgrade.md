@@ -60,7 +60,7 @@ No production resources are changed by this PR or by the test suite.
    The token needs Workers AI access and Vectorize edit access. From the repo root:
 
    ```bash
-   pnpm --filter=api memory:reindex
+   pnpm --filter=worker-bees memory:reindex
    ```
 
    The script reads `memory_fact`, validates the new index's name/dimensions/metric,

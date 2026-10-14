@@ -1,5 +1,7 @@
-import { env, exports } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { seedCompany } from "#/__tests__/fixtures";
 
 const COMPANY_ID = "co_mecompany_test";
 const originalFetch = globalThis.fetch;
@@ -19,12 +21,7 @@ type CompanyBody = {
 };
 
 beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR REPLACE INTO company (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'MC', 'mc', 'America/Sao_Paulo', 'pt-BR', 'onboarding', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
+  await seedCompany({ id: COMPANY_ID, status: "onboarding" });
 });
 
 afterEach(() => {

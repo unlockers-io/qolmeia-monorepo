@@ -1,29 +1,16 @@
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { PROACTIVE_INTERVAL_MS, proactiveGate, recordProactiveSuggestion } from "#/lib/proactive";
+import { db, seedCompany } from "#/__tests__/fixtures";
+import {
+  lastProactiveSuggestionAt,
+  PROACTIVE_INTERVAL_MS,
+  proactiveGate,
+  recordProactiveSuggestion,
+} from "#/lib/proactive";
 import { runProactiveSweep } from "#/scheduled";
 
 const COMPANY_ID = "co_proactive_test";
-
-const seedCompany = async (id: string, status: string, brief: string | null) => {
-  await env.DB.prepare(
-    `INSERT OR REPLACE INTO company (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, ?, ?, 'America/Sao_Paulo', 'pt-BR', ?, ?, 0, 0)`,
-  )
-    .bind(id, id, id, status, brief)
-    .run();
-};
-
-beforeEach(async () => {
-  await env.DB.prepare("DELETE FROM activity_log WHERE company_id LIKE 'co_proactive%'").run();
-  await env.DB.prepare("DELETE FROM company WHERE id LIKE 'co_proactive%'").run();
-});
-
-afterEach(async () => {
-  await env.DB.prepare("DELETE FROM activity_log WHERE company_id LIKE 'co_proactive%'").run();
-  await env.DB.prepare("DELETE FROM company WHERE id LIKE 'co_proactive%'").run();
-});
 
 describe("proactiveGate", () => {
   const now = 1_000_000_000_000;
@@ -60,33 +47,39 @@ describe("proactiveGate", () => {
 
 describe("recordProactiveSuggestion", () => {
   it("writes a WORKER_PROACTIVE_SUGGESTION row the dedup query can read back", async () => {
-    await seedCompany(COMPANY_ID, "active", null);
-    await recordProactiveSuggestion(env, COMPANY_ID);
-    const row = await env.DB.prepare(
-      `SELECT type, ref_id FROM activity_log
-         WHERE company_id = ? AND type = 'WORKER_PROACTIVE_SUGGESTION' LIMIT 1`,
-    )
-      .bind(COMPANY_ID)
-      .first<{ ref_id: string; type: string }>();
+    await seedCompany({ id: COMPANY_ID });
+    await expect(db((client) => lastProactiveSuggestionAt(client, COMPANY_ID))).resolves.toBeNull();
+
+    await db((client) => recordProactiveSuggestion(client, COMPANY_ID));
+
+    const row = await db((client) =>
+      client.activityLog.findFirst({
+        select: { createdAt: true, refId: true, type: true },
+        where: { companyId: COMPANY_ID, type: "WORKER_PROACTIVE_SUGGESTION" },
+      }),
+    );
     expect(row?.type).toBe("WORKER_PROACTIVE_SUGGESTION");
-    expect(row?.ref_id).toBe(`corr-${COMPANY_ID}`);
+    expect(row?.refId).toBe(`corr-${COMPANY_ID}`);
+    await expect(db((client) => lastProactiveSuggestionAt(client, COMPANY_ID))).resolves.toBe(
+      row?.createdAt.getTime(),
+    );
   });
 });
 
 describe("runProactiveSweep", () => {
   it("wakes no DOs when no active company has a complete brief", async () => {
-    await seedCompany("co_proactive_a", "active", null);
-    await seedCompany(
-      "co_proactive_b",
-      "onboarding",
-      JSON.stringify({
+    await seedCompany({ id: "co_proactive_a", status: "active" });
+    await seedCompany({
+      brief: {
         audience: "x",
         brand: { palette: "p", references: "r", voice: "v" },
         channels: ["instagram"],
         industry: "i",
         primaryGoal: "g",
-      }),
-    );
+      },
+      id: "co_proactive_b",
+      status: "onboarding",
+    });
     const result = await runProactiveSweep(env);
     expect(result).toEqual({ errored: 0, skipped: 0, suggested: 0 });
   });

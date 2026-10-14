@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { db, seedCompany } from "#/__tests__/fixtures";
 import { generateBrandImageSkill } from "#/skills/generate-brand-image";
 import type { SkillContext } from "#/skills/registry";
 
@@ -38,13 +39,7 @@ const ctx: SkillContext = {
 };
 
 beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'Img Test', 'img-test', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
+  await seedCompany({ id: COMPANY_ID });
 });
 
 afterEach(() => {
@@ -64,15 +59,18 @@ describe("generateBrandImage", () => {
     expect(result.url).toContain("/assets/");
     expect(result.url).toContain("token=");
 
-    const row = await env.DB.prepare("SELECT kind, mime, bytes, r2_key FROM asset WHERE id = ?")
-      .bind(result.assetId)
-      .first<{ bytes: number; kind: string; mime: string; r2_key: string }>();
+    const row = await db((client) =>
+      client.asset.findUnique({
+        select: { bytes: true, kind: true, mime: true, r2Key: true },
+        where: { id: result.assetId },
+      }),
+    );
     expect(row?.kind).toBe("generated_image");
     expect(row?.mime).toBe("image/png");
     expect(row?.bytes).toBeGreaterThan(0);
 
     if (row) {
-      const obj = await env.ASSETS.get(row.r2_key);
+      const obj = await env.ASSETS.get(row.r2Key);
       expect(obj).not.toBeNull();
     }
   });

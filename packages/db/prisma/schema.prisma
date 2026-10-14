@@ -9,13 +9,16 @@ generator client {
 }
 
 generator workerClient {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma-worker"
-  runtime  = "cloudflare"
+  provider      = "prisma-client"
+  output        = "../src/generated/prisma-worker"
+  runtime       = "cloudflare"
+  compilerBuild = "small"
 }
 
 // Better Auth and product data share Postgres. The agents Worker connects to
-// this schema through Prisma's Cloudflare-compatible PostgreSQL adapter.
+// this schema through Hyperdrive and Prisma's Cloudflare-compatible PostgreSQL
+// adapter; its client uses the size-optimized query compiler to fit the Worker
+// bundle limit.
 
 enum OrgRole {
   OWNER

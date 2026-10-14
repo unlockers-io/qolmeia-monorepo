@@ -1,41 +1,71 @@
-import { log } from "@repo/observability";
 import type { ActivityEntry } from "@repo/worker-api/contracts";
-import type { ActivityInput, ActivityOptions } from "@repo/worker-api/internal";
 
 import type { ActivityEvent } from "#/activity/types";
-import type { Database } from "#/db/client";
-import { toRecord } from "#/lib/records";
+import type { Db } from "#/lib/db";
+import { toRecordOrNull } from "#/lib/records";
 
-type LogActivityInput = ActivityEvent & {
-  actorId?: string;
+type ActivityRecord = ActivityEvent & {
+  actorId?: string | null;
   companyId: string;
   summary: string;
 };
 
-const logActivity = async (db: Database, input: LogActivityInput): Promise<void> => {
-  const remoteInput: ActivityInput = {
-    ...input,
-    payload: input.payload === undefined ? undefined : toRecord(input.payload),
-  };
-  try {
-    await db("activity.log", remoteInput);
-  } catch (error) {
-    log.error({
-      error: error instanceof Error ? error.message : String(error),
-      message: "activity.write_failed",
-      type: input.type,
-    });
-  }
+const recordActivity = async (db: Db, entry: ActivityRecord): Promise<void> => {
+  await db.activityLog.create({
+    data: {
+      actorId: entry.actorId ?? null,
+      companyId: entry.companyId,
+      id: crypto.randomUUID(),
+      payload: entry.payload,
+      refId: entry.refId,
+      refType: entry.refType,
+      summary: entry.summary,
+      type: entry.type,
+    },
+  });
 };
 
 const ACTIVITY_CATEGORIES = ["ACTION", "TICKET", "WORKER", "TEAM", "MEMBER"] as const;
 type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
-type ListActivityOptions = ActivityOptions & { category?: ActivityCategory };
 
-const listActivity = (
-  db: Database,
+type ListActivityOptions = {
+  before?: number;
+  category?: ActivityCategory;
+  companyId?: string;
+  limit?: number;
+  since?: number;
+};
+
+const listActivity = async (
+  db: Db,
   options: ListActivityOptions = {},
-): Promise<ReadonlyArray<ActivityEntry>> => db("activity.list", options);
+): Promise<ReadonlyArray<ActivityEntry>> => {
+  const rows = await db.activityLog.findMany({
+    include: { company: { select: { name: true } } },
+    orderBy: { createdAt: "desc" },
+    take: options.limit ?? 100,
+    where: {
+      companyId: options.companyId,
+      createdAt: {
+        gte: options.since === undefined ? undefined : new Date(options.since),
+        lt: options.before === undefined ? undefined : new Date(options.before),
+      },
+      type: options.category === undefined ? undefined : { startsWith: `${options.category}_` },
+    },
+  });
+  return rows.map((row) => ({
+    actorId: row.actorId,
+    companyId: row.companyId,
+    companyName: row.company.name,
+    createdAt: row.createdAt.getTime(),
+    id: row.id,
+    payload: toRecordOrNull(row.payload),
+    refId: row.refId,
+    refType: row.refType,
+    summary: row.summary,
+    type: row.type,
+  }));
+};
 
-export { ACTIVITY_CATEGORIES, listActivity, logActivity };
-export type { LogActivityInput };
+export { ACTIVITY_CATEGORIES, listActivity, recordActivity };
+export type { ActivityRecord };

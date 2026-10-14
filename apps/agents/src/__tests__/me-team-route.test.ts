@@ -1,5 +1,7 @@
-import { env, exports } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { entitle, seedCompany, seedTeam } from "#/__tests__/fixtures";
 
 const COMPANY_ID = "co_meteam_test";
 const originalFetch = globalThis.fetch;
@@ -13,43 +15,12 @@ const meStaff = {
   user: { id: "staff-1" },
 };
 
-const CORR_ID = `corr-${COMPANY_ID}`;
-const TEAM_ID = `team-${COMPANY_ID}`;
 const WORKER_ID = "ai_mt_d";
 
 beforeEach(async () => {
-  await env.DB.batch([
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO company (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-       VALUES (?, 'MT', 'mt', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-    ).bind(COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO template (id, version, status, display_name, description, system_prompt, model, worker_kind, skill_ids, default_action_type, default_policies, created_at, updated_at)
-       VALUES ('tpl-designer', 1, 'active', 'Designer', 'd', 'sys', 'gpt-x', 'designer', '[]', 'worker_deliverable', '{}', 0, 0)`,
-    ),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, prompt_override, created_at, updated_at)
-       VALUES (?, ?, 'correspondent', NULL, NULL, 'C', NULL, 'active', NULL, 0, 0)`,
-    ).bind(CORR_ID, COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO agent_instance (id, company_id, role, template_id, template_version, display_name, model_override, status, prompt_override, created_at, updated_at)
-       VALUES (?, ?, 'worker', 'tpl-designer', 1, 'Designer', NULL, 'active', NULL, 0, 0)`,
-    ).bind(WORKER_ID, COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO team (id, company_id, confirmed_at, created_at) VALUES (?, ?, 0, 0)`,
-    ).bind(TEAM_ID, COMPANY_ID),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO team_member (team_id, agent_instance_id, can_delegate_to) VALUES (?, ?, ?)`,
-    ).bind(TEAM_ID, CORR_ID, JSON.stringify([WORKER_ID])),
-    env.DB.prepare(
-      `INSERT OR REPLACE INTO team_member (team_id, agent_instance_id, can_delegate_to) VALUES (?, ?, '[]')`,
-    ).bind(TEAM_ID, WORKER_ID),
-    env.DB.prepare(
-      `INSERT OR IGNORE INTO company_template_entitlement
-         (company_id, template_id, enabled, created_at, updated_at)
-       VALUES (?, 'tpl-designer', TRUE, 0, 0)`,
-    ).bind(COMPANY_ID),
-  ]);
+  await seedCompany({ id: COMPANY_ID, name: "MT" });
+  await entitle(COMPANY_ID);
+  await seedTeam(COMPANY_ID, [{ id: WORKER_ID }]);
 });
 
 afterEach(() => {

@@ -1,21 +1,21 @@
-import type { JsonRecord } from "@repo/worker-api/internal";
 import { Hono } from "hono";
 import { z } from "zod";
 
-import { getDb } from "#/db/client";
-import { assetName, persistAsset } from "#/lib/asset-store";
 import type { ValidatedSession } from "#/lib/auth";
+import type { Db, DbVariables } from "#/lib/db";
 import { parsePositiveInt } from "#/lib/pagination";
 import { buildSignedAssetUrl } from "#/lib/r2";
+import type { JsonRecord } from "#/lib/records";
+import { deleteAssets, listAssets, persistAsset } from "#/library/assets";
 
-type Vars = { session: ValidatedSession };
+type Vars = DbVariables & { session: ValidatedSession };
 
 const meAssetsRoutes = new Hono<{ Bindings: Env; Variables: Vars }>();
 
 meAssetsRoutes.get("/assets", async (c) => {
   const { companyId } = c.get("session");
   const limit = parsePositiveInt(c.req.query("limit"), 100, 200);
-  const results = await getDb(c.env)("assets.listCustomer", { companyId, limit });
+  const results = await listAssets(c.var.db, companyId, { limit, visibility: "customer" });
 
   const items = await Promise.all(
     results.map(async (row) => ({
@@ -24,7 +24,7 @@ meAssetsRoutes.get("/assets", async (c) => {
       kind: row.kind,
       metadata: row.metadata,
       mimeType: row.mime,
-      name: assetName(row.metadata, row.id, row.kind),
+      name: row.name,
       size: row.bytes,
       url: await buildSignedAssetUrl(
         { ASSETS_SIGNING_KEY: c.env.ASSETS_SIGNING_KEY },
@@ -49,6 +49,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 const persistImageAsset = async (
   env: Env,
+  db: Db,
   opts: {
     companyId: string;
     extraMeta: JsonRecord;
@@ -58,7 +59,7 @@ const persistImageAsset = async (
 ): Promise<{ assetId: string; bytes: number; mime: string }> => {
   const { companyId, extraMeta, file, kind } = opts;
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const { assetId } = await persistAsset(env, {
+  const { assetId } = await persistAsset(env, db, {
     bytes,
     companyId,
     kind,
@@ -107,7 +108,7 @@ meAssetsRoutes.post("/uploads", async (c) => {
     return c.json({ error: validated.error }, validated.status);
   }
 
-  const { assetId, bytes, mime } = await persistImageAsset(c.env, {
+  const { assetId, bytes, mime } = await persistImageAsset(c.env, c.var.db, {
     companyId,
     extraMeta: {},
     file: validated.file,
@@ -126,7 +127,7 @@ meAssetsRoutes.post("/uploads", async (c) => {
 
 meAssetsRoutes.get("/brand-assets", async (c) => {
   const { companyId } = c.get("session");
-  const results = await getDb(c.env)("assets.listBrand", { companyId });
+  const results = await listAssets(c.var.db, companyId, { kind: "brand_asset", limit: 200 });
 
   const items = await Promise.all(
     results.map(async (row) => {
@@ -168,7 +169,7 @@ meAssetsRoutes.post("/brand-assets", async (c) => {
   const category =
     typeof rawCategory === "string" && BRAND_CATEGORIES.has(rawCategory) ? rawCategory : "other";
 
-  const { assetId, bytes, mime } = await persistImageAsset(c.env, {
+  const { assetId, bytes, mime } = await persistImageAsset(c.env, c.var.db, {
     companyId: session.companyId,
     extraMeta: { category },
     file: validated.file,
@@ -187,14 +188,13 @@ meAssetsRoutes.post("/brand-assets", async (c) => {
 meAssetsRoutes.delete("/brand-assets/:id", async (c) => {
   const session = c.get("session");
   const id = c.req.param("id");
-  const row = await getDb(c.env)("assets.deleteBrand", {
-    assetId: id,
-    companyId: session.companyId,
+  const deleted = await deleteAssets(c.env, c.var.db, session.companyId, {
+    ids: [id],
+    kind: "brand_asset",
   });
-  if (!row) {
+  if (deleted === 0) {
     return c.json({ error: "not found" }, 404);
   }
-  await c.env.ASSETS.delete(row.r2Key);
   return c.json({ ok: true });
 });
 
@@ -209,15 +209,11 @@ meAssetsRoutes.post("/assets/delete", async (c) => {
     return c.json({ error: "invalid body" }, 400);
   }
   const { ids } = parsed.data;
-  const results = await getDb(c.env)("assets.deleteCustomer", {
-    companyId: session.companyId,
+  const deleted = await deleteAssets(c.env, c.var.db, session.companyId, {
     ids,
+    visibility: "customer",
   });
-  if (results.length === 0) {
-    return c.json({ deleted: 0 });
-  }
-  await Promise.allSettled(results.map((row) => c.env.ASSETS.delete(row.r2Key)));
-  return c.json({ deleted: results.length });
+  return c.json({ deleted });
 });
 
 export { meAssetsRoutes };

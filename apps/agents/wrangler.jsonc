@@ -71,17 +71,21 @@
     // Better Auth service (apps/api); the Worker validates sessions against it.
     // Local: http://localhost:4000.
     "AUTH_SERVICE_URL": "https://api.qolmeia.com",
-    // Same apps/api service, reached over /api/internal/* with the shared
-    // secret instead of a user session. All Postgres access goes through here:
-    // workerd rejects Railway's self-signed cert, so the Worker holds no
-    // database credentials at all (ADR 0010). Local: http://127.0.0.1:4000.
-    "API_INTERNAL_URL": "https://api.qolmeia.com",
     // Comma-separated client origins allowed to call the Worker; matched exactly,
     // no wildcards. Local: http://localhost:3000,http://localhost:3001.
     "CLIENT_ORIGINS": "https://app.qolmeia.com,https://admin.qolmeia.com",
   },
-  // INTERNAL_SHARED_SECRET is configured with `wrangler secret put`; local
-  // development reads it from .dev.vars.
+  // Postgres, the system of record (ADR 0010). Hyperdrive holds the origin
+  // credentials and connects to Railway from Cloudflare's network, so workerd
+  // never validates Railway's self-signed certificate. `vite dev` connects to
+  // localConnectionString (the docker Postgres) instead.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "ae9f33ab0aad4f829ae706cea2a03c10",
+      "localConnectionString": "postgresql://qolmeia:qolmeia123@127.0.0.1:5436/qolmeia",
+    },
+  ],
   "r2_buckets": [
     {
       "binding": "ASSETS",
@@ -109,7 +113,6 @@
         "IMAGE_GEN_MODEL": "test/image-model",
         "WORKER_PUBLIC_URL": "http://127.0.0.1:8787",
         "AUTH_SERVICE_URL": "http://127.0.0.1:4000",
-        "API_INTERNAL_URL": "http://127.0.0.1:4010",
         "CLIENT_ORIGINS": "http://localhost:3000,http://localhost:3001",
       },
       "durable_objects": {
@@ -120,6 +123,14 @@
           "binding": "WORKER_JOB",
           "class_name": "WorkerJobWorkflow",
           "name": "qolmeia-worker-job-test",
+        },
+      ],
+      // vitest.config.ts points this at the checkout's own test database.
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE",
+          "id": "test",
+          "localConnectionString": "postgresql://qolmeia:qolmeia123@127.0.0.1:5436/qolmeia_test",
         },
       ],
       "r2_buckets": [{ "binding": "ASSETS", "bucket_name": "qolmeia-assets-test" }],

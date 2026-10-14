@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { db, seedCompany } from "#/__tests__/fixtures";
 import {
   buildSignedAssetUrl,
   fetchAsset,
@@ -72,19 +73,26 @@ const seedServedAsset = async (id: string, mime: string, key: string) => {
     { ASSETS: env.ASSETS },
     { bytes: new TextEncoder().encode("<svg xmlns='http://www.w3.org/2000/svg'/>"), key, mime },
   );
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES ('co_svg', 'S', 's', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  ).run();
-  await env.DB.prepare(
-    `INSERT OR REPLACE INTO asset (id, company_id, kind, r2_key, sha256, mime, bytes, metadata, created_at)
-     VALUES (?, 'co_svg', 'brand_asset', ?, ?, ?, 10, NULL, 0)`,
-  )
-    .bind(id, key, `sha-${id}`, mime)
-    .run();
+  await db((client) =>
+    client.asset.create({
+      data: {
+        bytes: 10,
+        companyId: "co_svg",
+        id,
+        kind: "brand_asset",
+        mime,
+        r2Key: key,
+        sha256: `sha-${id}`,
+      },
+    }),
+  );
 };
 
 describe("asset serving headers", () => {
+  beforeEach(async () => {
+    await seedCompany({ id: "co_svg" });
+  });
+
   it("serves an uploaded SVG with a sandbox CSP + nosniff", async () => {
     await seedServedAsset("svg-asset-1", "image/svg+xml", "org_co_svg/logo.svg");
     const url = await buildSignedAssetUrl(

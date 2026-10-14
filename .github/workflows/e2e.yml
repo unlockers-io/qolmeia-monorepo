@@ -32,7 +32,6 @@ jobs:
       # path that dev and prod use.
       AUTH_SERVICE_INTERNAL_URL: http://127.0.0.1:4000
       WEB_APP_URL: http://127.0.0.1:3001
-      INTERNAL_SHARED_SECRET: e2e-internal-shared-secret-minimum-32-chars
       RESEND_API_KEY: re_e2e_stub
       RESEND_BASE_URL: http://127.0.0.1:3999
     services:

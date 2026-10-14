@@ -1,55 +1,48 @@
-import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { listActivity, logActivity } from "#/activity/log";
+import { db, seedCompany } from "#/__tests__/fixtures";
+import { listActivity, recordActivity, type ActivityRecord } from "#/activity/log";
 
 const COMPANY_ID = "co_activity_test";
+const ACTIVITY_FOREIGN_KEY = /activity_log_company_id_fkey|Foreign key constraint/v;
+
+const record = (entry: ActivityRecord) => db((client) => recordActivity(client, entry));
+
+const list = (since?: number) =>
+  db((client) => listActivity(client, { companyId: COMPANY_ID, since }));
 
 beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'Activity Test', 'activity-test', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
+  await seedCompany({ id: COMPANY_ID, name: "Activity Test" });
 });
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-describe("logActivity + listActivity", () => {
+describe("recordActivity + listActivity", () => {
   it("writes a row that listActivity returns", async () => {
-    await logActivity(env.DB, {
+    await record({
       companyId: COMPANY_ID,
       refId: "ticket-roundtrip-1",
       refType: "ticket",
       summary: "Coisa aconteceu",
       type: "TICKET_DONE",
     });
-    const items = await listActivity(env.DB, { companyId: COMPANY_ID });
+    const items = await list();
     expect(
-      items.find((i) => i.summary === "Coisa aconteceu" && i.type === "TICKET_DONE"),
-    ).toBeTruthy();
+      items.find((item) => item.summary === "Coisa aconteceu" && item.type === "TICKET_DONE"),
+    ).toMatchObject({ companyName: "Activity Test", refId: "ticket-roundtrip-1" });
   });
 
   it("filters by since", async () => {
-    await logActivity(env.DB, {
+    await record({
       companyId: COMPANY_ID,
       refId: "action-old",
       refType: "action",
       summary: "antiga",
       type: "ACTION_EXECUTED",
     });
-    await new Promise<void>((r) => {
-      setTimeout(r, 10);
+    const [old] = await list();
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 10);
     });
-    const cutoff = Date.now();
-    await new Promise<void>((r) => {
-      setTimeout(r, 10);
-    });
-    await logActivity(env.DB, {
+    await record({
       companyId: COMPANY_ID,
       payload: { actionId: "a-new", summary: "draft" },
       refId: "a-new",
@@ -57,25 +50,21 @@ describe("logActivity + listActivity", () => {
       summary: "nova",
       type: "ACTION_PROPOSED",
     });
-    const recent = await listActivity(env.DB, { companyId: COMPANY_ID, since: cutoff });
-    expect(recent.find((i) => i.type === "ACTION_PROPOSED")).toBeTruthy();
-    expect(recent.find((i) => i.type === "ACTION_EXECUTED")).toBeUndefined();
+    const recent = await list((old?.createdAt ?? 0) + 1);
+    expect(recent.find((item) => item.type === "ACTION_PROPOSED")).toBeTruthy();
+    expect(recent.find((item) => item.type === "ACTION_EXECUTED")).toBeUndefined();
   });
 
-  it("swallows write failures (best-effort) and logs to console", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const badDb = {
-      activityLog: { create: () => Promise.reject(new Error("simulated database failure")) },
-    } as unknown as typeof env.DB;
+  it("propagates write failures to the caller", async () => {
     await expect(
-      logActivity(badDb, {
-        companyId: COMPANY_ID,
+      record({
+        companyId: "co_activity_missing",
         refId: "ticket-broken",
         refType: "ticket",
         summary: "won't actually write",
         type: "TICKET_DONE",
       }),
-    ).resolves.toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalled();
+    ).rejects.toThrow(ACTIVITY_FOREIGN_KEY);
+    await expect(list()).resolves.toEqual([]);
   });
 });

@@ -55,7 +55,7 @@ DATABASE_URL=postgresql://qolmeia:qolmeia123@localhost:5436/qolmeia \
 Seed the dev organization, users, product catalog, and agent team:
 
 ```bash
-pnpm --filter=api exec tsx src/scripts/seed-dev.ts
+pnpm --filter=worker-bees db:seed
 ```
 
 ## 5. Run the Stack
@@ -114,11 +114,11 @@ pnpm --filter=worker-bees test -- --run apps/agents/src/__tests__/skill-tool-sch
 
 ## 8. Common Pitfalls
 
-| Symptom                                   | Fix                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------ |
-| Login succeeds but app APIs return 401    | Make `BETTER_AUTH_SECRET` match across API, client, and backoffice       |
-| Client/backoffice cannot reach the Worker | Check `AGENTS_INTERNAL_URL`, defaulting to `http://127.0.0.1:8787`       |
-| Auth routes fail from Next                | Check `AUTH_SERVICE_INTERNAL_URL`, defaulting to `http://127.0.0.1:4000` |
-| Worker has no local data                  | Check its `DATABASE_URL`, then rerun `apps/api/src/scripts/seed-dev.ts`  |
-| Real agent calls fail                     | Set `OPENROUTER_API_KEY` in `apps/agents/.dev.vars`                      |
-| Asset generation or signed URLs fail      | Set `ASSETS_SIGNING_KEY` in `apps/agents/.dev.vars`                      |
+| Symptom                                   | Fix                                                                                    |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| Login succeeds but app APIs return 401    | Make `BETTER_AUTH_SECRET` match across API, client, and backoffice                     |
+| Client/backoffice cannot reach the Worker | Check `AGENTS_INTERNAL_URL`, defaulting to `http://127.0.0.1:8787`                     |
+| Auth routes fail from Next                | Check `AUTH_SERVICE_INTERNAL_URL`, defaulting to `http://127.0.0.1:4000`               |
+| Worker has no local data                  | Check `HYPERDRIVE` in `wrangler.jsonc`, then rerun `pnpm --filter=worker-bees db:seed` |
+| Real agent calls fail                     | Set `OPENROUTER_API_KEY` in `apps/agents/.dev.vars`                                    |
+| Asset generation or signed URLs fail      | Set `ASSETS_SIGNING_KEY` in `apps/agents/.dev.vars`                                    |

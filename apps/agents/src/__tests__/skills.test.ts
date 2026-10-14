@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { db, seedCompany } from "#/__tests__/fixtures";
 import { recallMemorySkill } from "#/skills/recall-memory";
 import type { SkillContext } from "#/skills/registry";
 import { rememberFactSkill } from "#/skills/remember-fact";
@@ -17,22 +18,17 @@ const ctx: SkillContext = {
 };
 
 beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'Skills Test', 'skills-test', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO agent_instance
-       (id, company_id, role, template_id, template_version, display_name,
-        model_override, status, created_at, updated_at)
-     VALUES (?, ?, 'correspondent', NULL, NULL, 'Test Correspondent',
-             NULL, 'active', 0, 0)`,
-  )
-    .bind(AGENT_INSTANCE_ID, COMPANY_ID)
-    .run();
+  await seedCompany({ id: COMPANY_ID });
+  await db((client) =>
+    client.agentInstance.create({
+      data: {
+        companyId: COMPANY_ID,
+        displayName: "Test Correspondent",
+        id: AGENT_INSTANCE_ID,
+        role: "correspondent",
+      },
+    }),
+  );
 });
 
 describe("rememberFact", () => {
@@ -45,11 +41,13 @@ describe("rememberFact", () => {
     expect(result.id).toBeTruthy();
     expect(result.savedAt).toBeGreaterThan(0);
 
-    const { results } = await env.DB.prepare("SELECT content, kind FROM memory_fact WHERE id = ?")
-      .bind(result.id)
-      .all<{ content: string; kind: string }>();
-    expect(results[0]?.content).toBe("minha cor preferida é azul");
-    expect(results[0]?.kind).toBe("preference");
+    const row = await db((client) =>
+      client.memoryFact.findUnique({
+        select: { content: true, kind: true },
+        where: { id: result.id },
+      }),
+    );
+    expect(row).toEqual({ content: "minha cor preferida é azul", kind: "preference" });
   });
 });
 

@@ -3,7 +3,8 @@ import { log } from "@repo/observability";
 import { briefCompleteness } from "@repo/worker-api/brief";
 
 import { CorrespondentV2 } from "#/agents/correspondent";
-import { getDb } from "#/db/client";
+import { listActiveCompanies } from "#/company/company";
+import { withDb, type PrismaClient } from "#/lib/db";
 import {
   lastProactiveSuggestionAt,
   PROACTIVE_PROMPT,
@@ -11,10 +12,10 @@ import {
   recordProactiveSuggestion,
 } from "#/lib/proactive";
 
-const runProactiveSweep = async (
-  env: Env,
-): Promise<{ errored: number; skipped: number; suggested: number }> => {
-  const results = await getDb(env)("companies.listProactive", {});
+type SweepResult = { errored: number; skipped: number; suggested: number };
+
+const sweep = async (db: PrismaClient): Promise<SweepResult> => {
+  const results = await listActiveCompanies(db);
 
   const eligible = results.filter((row) => briefCompleteness(row.brief).isComplete);
 
@@ -22,7 +23,7 @@ const runProactiveSweep = async (
     eligible.map(async (company): Promise<"skipped" | "suggested"> => {
       const gate = proactiveGate({
         isComplete: true,
-        lastSuggestedAt: await lastProactiveSuggestionAt(env, company.id),
+        lastSuggestedAt: await lastProactiveSuggestionAt(db, company.id),
         now: Date.now(),
       });
       if (!gate.ok) {
@@ -32,7 +33,7 @@ const runProactiveSweep = async (
         id: company.id,
         message: { body: PROACTIVE_PROMPT, kind: "signal", type: "proactive.nudge" },
       });
-      await recordProactiveSuggestion(env, company.id);
+      await recordProactiveSuggestion(db, company.id);
       return "suggested";
     }),
   );
@@ -60,5 +61,7 @@ const runProactiveSweep = async (
   });
   return { errored, skipped, suggested };
 };
+
+const runProactiveSweep = (env: Env): Promise<SweepResult> => withDb(env, sweep);
 
 export { runProactiveSweep };

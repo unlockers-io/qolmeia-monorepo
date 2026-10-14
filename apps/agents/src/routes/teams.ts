@@ -1,17 +1,18 @@
-import { log } from "@repo/observability";
 import { Hono } from "hono";
 import { z } from "zod";
 
-import { getDb } from "#/db/client";
 import { requireCustomerForWrites, requireSession, type ValidatedSession } from "#/lib/auth";
-import { seedCompanyMemory } from "#/team/seed-memory";
+import { dbPerRequest, type DbVariables } from "#/lib/db";
+import { confirmTeam } from "#/team/confirm";
+import { TeamError } from "#/team/errors";
 
-type Vars = { session: ValidatedSession };
+type Vars = DbVariables & { session: ValidatedSession };
 
 const teamsRoutes = new Hono<{ Bindings: Env; Variables: Vars }>();
 
 teamsRoutes.use("*", requireSession);
 teamsRoutes.use("*", requireCustomerForWrites);
+teamsRoutes.use("*", dbPerRequest);
 
 const confirmBodySchema = z.object({
   templateIds: z.array(z.string().min(1)).min(1).max(20),
@@ -35,28 +36,19 @@ teamsRoutes.post("/:companyId/confirm", async (c) => {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
 
-  let result;
   try {
-    result = await getDb(c.env)("teams.confirm", {
+    const team = await confirmTeam(c.env, c.var.db, {
       actorId: session.userId,
       companyId,
       templateIds: parsed.data.templateIds,
     });
+    return c.json({ team });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return c.json({ error: message }, 400);
+    if (error instanceof TeamError) {
+      return c.json({ error: error.message }, error.status);
+    }
+    throw error;
   }
-
-  try {
-    await seedCompanyMemory(c.env, companyId, {
-      brief: result.brief,
-      debriefSummary: "Time confirmado via onboarding.",
-    });
-  } catch (error) {
-    log.error({ companyId, error, message: "teams.seedCompanyMemory.failed" });
-  }
-
-  return c.json({ team: result.team });
 });
 
 export { teamsRoutes };

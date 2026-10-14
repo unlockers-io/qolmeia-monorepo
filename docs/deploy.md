@@ -75,18 +75,27 @@ the KV `id` (`SESSIONS`) and `AI_GATEWAY_ACCOUNT_ID`. The prod `vars`:
 
 - `WORKER_PUBLIC_URL=https://agents.qolmeia.com`
 - `AUTH_SERVICE_URL=https://api.qolmeia.com` (var name kept; auth is one feature of the api service)
-- `API_INTERNAL_URL=https://api.qolmeia.com` (every Postgres read and write goes through `/api/internal/*`)
 - `CLIENT_ORIGINS=https://app.qolmeia.com,https://admin.qolmeia.com`
 
 The custom-domain route and the `ai` and `vectorize` bindings are part of the
 production config; local Vite and Vitest runtimes drop the last two.
+
+The Worker reaches Postgres through the `HYPERDRIVE` binding (ADR 0010). On a new
+account, create the config against the Railway connection string and put its id
+in `wrangler.jsonc`:
+
+```bash
+wrangler hyperdrive create qolmeia-postgres --connection-string="postgresql://...?sslmode=require" --caching-disabled
+```
+
+Rotating the Postgres password requires `wrangler hyperdrive update` with the
+new connection string.
 
 ### 4c. Set secrets
 
 ```bash
 wrangler secret put OPENROUTER_API_KEY
 wrangler secret put ASSETS_SIGNING_KEY      # openssl rand -hex 32
-wrangler secret put INTERNAL_SHARED_SECRET  # MUST match apps/api
 wrangler secret put EXA_API_KEY             # optional (webSearch skill)
 wrangler secret put FIRECRAWL_API_KEY       # optional (fetchUrl skill)
 ```
@@ -136,19 +145,17 @@ pnpm --filter=@repo/db db:seed   # idempotent product catalog defaults
 
 Environment:
 
-| Var                      | Value                                                   |
-| ------------------------ | ------------------------------------------------------- |
-| `DATABASE_URL`           | Railway Postgres connection string                      |
-| `BETTER_AUTH_SECRET`     | `openssl rand -base64 48` (shared with the Next apps)   |
-| `CORS_ORIGINS`           | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
-| `AUTH_ALLOWED_HOSTS`     | `qolmeia.com,*.qolmeia.com`                             |
-| `TRUSTED_ORIGINS`        | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
-| `AGENTS_INTERNAL_URL`    | `https://agents.qolmeia.com` (org-create relay target)  |
-| `INTERNAL_SHARED_SECRET` | MUST match the Worker secret                            |
-| `RESEND_API_KEY`         | from Resend                                             |
-| `AUTH_FROM_EMAIL`        | `noreply@email.qolmeia.com` (Resend verifies `email.`)  |
-| `WEB_APP_URL`            | `https://app.qolmeia.com` (drives `useSecureCookies`)   |
-| `NODE_ENV`               | `production` (Better Auth rate limiting is gated on it) |
+| Var                  | Value                                                   |
+| -------------------- | ------------------------------------------------------- |
+| `DATABASE_URL`       | Railway Postgres connection string                      |
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 48` (shared with the Next apps)   |
+| `CORS_ORIGINS`       | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
+| `AUTH_ALLOWED_HOSTS` | `qolmeia.com,*.qolmeia.com`                             |
+| `TRUSTED_ORIGINS`    | `https://app.qolmeia.com,https://admin.qolmeia.com`     |
+| `RESEND_API_KEY`     | from Resend                                             |
+| `AUTH_FROM_EMAIL`    | `noreply@email.qolmeia.com` (Resend verifies `email.`)  |
+| `WEB_APP_URL`        | `https://app.qolmeia.com` (drives `useSecureCookies`)   |
+| `NODE_ENV`           | `production` (Better Auth rate limiting is gated on it) |
 
 ## 6. Vercel: `apps/web`, `apps/backoffice`, `apps/landing`
 
@@ -216,13 +223,12 @@ adds display labels without breaking older Workers or backoffice clients.
 
 For the initial setup:
 
-1. **Cloudflare** first; you need `agents.qolmeia.com` for `AGENTS_INTERNAL_URL`.
-2. **Railway**: auth + Postgres; gives you `api.qolmeia.com`.
+1. **Railway**: auth + Postgres; gives you `api.qolmeia.com` and the connection
+   string for the Hyperdrive config.
+2. **Cloudflare**: Hyperdrive, then the Worker on `agents.qolmeia.com`.
 3. **Vercel**: the two Next apps, pointed at both.
 
-`INTERNAL_SHARED_SECRET` and `BETTER_AUTH_SECRET` must be **identical** across
-the sides that share them. Rotating `INTERNAL_SHARED_SECRET` breaks org-create
-until both the Worker and `apps/api` are redeployed.
+`BETTER_AUTH_SECRET` must be **identical** across `apps/api` and the Next apps.
 
 ## 8. Smoke test after deploy
 

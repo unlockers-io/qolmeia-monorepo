@@ -1,72 +1,65 @@
-import { env, exports } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { logActivity } from "#/activity/log";
-import { proposeAction } from "#/db/action";
+import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
+import { proposeAction } from "#/action/approval";
+import { recordActivity } from "#/activity/log";
 
 const COMPANY_ID = "co_bo_test";
 const OTHER_COMPANY_ID = "co_bo_other";
+const STAFF_ID = "staff-1";
 const originalFetch = globalThis.fetch;
 
 const meStaff = {
   currentOrg: { id: COMPANY_ID, role: "STAFF" },
-  user: { id: "staff-1" },
+  user: { id: STAFF_ID },
 };
 const meCustomer = {
   currentOrg: { id: COMPANY_ID, role: "CUSTOMER" },
   user: { id: "cust-1" },
 };
 
-beforeEach(async () => {
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'BO Test', 'bo-test', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO agent_instance
-       (id, company_id, role, template_id, template_version, display_name,
-        model_override, status, created_at, updated_at)
-     VALUES ('agent-bo-test', ?, 'worker', 'tpl-designer', 1, 'd', NULL, 'active', 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO ticket
-       (id, company_id, agent_instance_id, parent_ticket_id, title, brief,
-        status, origin, workflow_id, result, created_at, updated_at)
-     VALUES ('tkt-bo-test', ?, 'agent-bo-test', NULL, 't', 'b',
-             'awaiting_approval', 'delegation', NULL, NULL, 0, 0)`,
-  )
-    .bind(COMPANY_ID)
-    .run();
+const seedTenant = async (companyId: string, name: string, suffix: string) => {
+  const agentId = `agent-bo-${suffix}`;
+  await seedCompany({ id: companyId, name });
+  await seedTeam(companyId, [{ displayName: "d", id: agentId }]);
+  await seedTicket({
+    agentInstanceId: agentId,
+    brief: "b",
+    companyId,
+    id: `tkt-bo-${suffix}`,
+    status: "awaiting_approval",
+  });
+};
 
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO company
-       (id, name, slug, timezone, locale, status, brief, created_at, updated_at)
-     VALUES (?, 'BO Other', 'bo-other', 'America/Sao_Paulo', 'pt-BR', 'active', NULL, 0, 0)`,
-  )
-    .bind(OTHER_COMPANY_ID)
-    .run();
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO agent_instance
-       (id, company_id, role, template_id, template_version, display_name,
-        model_override, status, created_at, updated_at)
-     VALUES ('agent-bo-other', ?, 'worker', 'tpl-designer', 1, 'd', NULL, 'active', 0, 0)`,
-  )
-    .bind(OTHER_COMPANY_ID)
-    .run();
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO ticket
-       (id, company_id, agent_instance_id, parent_ticket_id, title, brief,
-        status, origin, workflow_id, result, created_at, updated_at)
-     VALUES ('tkt-bo-other', ?, 'agent-bo-other', NULL, 't', 'b',
-             'awaiting_approval', 'delegation', NULL, NULL, 0, 0)`,
-  )
-    .bind(OTHER_COMPANY_ID)
-    .run();
+const propose = (companyId: string, ticketId: string, summary: string) =>
+  db((client) =>
+    proposeAction(client, {
+      actionType: "worker_deliverable",
+      companyId,
+      feedback: null,
+      proposed: { summary },
+      round: 0,
+      summary,
+      ticketId,
+    }),
+  );
+
+const logTicketDone = (companyId: string, refId: string, summary: string) =>
+  db((client) =>
+    recordActivity(client, { companyId, refId, refType: "ticket", summary, type: "TICKET_DONE" }),
+  );
+
+const createCompany = (body: { name: string; slug: string }) =>
+  exports.default.fetch("https://agents.test/api/backoffice/companies?cf_session=tok", {
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+
+beforeEach(async () => {
+  await seedTenant(COMPANY_ID, "BO Test", "test");
+  await seedTenant(OTHER_COMPANY_ID, "BO Other", "other");
 });
 
 afterEach(() => {
@@ -129,13 +122,7 @@ describe("backoffice listing endpoints", () => {
   });
 
   it("lists pending actions sorted by age (oldest first)", async () => {
-    await proposeAction(env.DB, {
-      actionType: "worker_deliverable",
-      companyId: COMPANY_ID,
-      policy: "require_approval",
-      proposed: { summary: "x" },
-      ticketId: "tkt-bo-test",
-    });
+    await propose(COMPANY_ID, "tkt-bo-test", "x");
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
       "https://agents.test/api/backoffice/actions?status=pending&sort=age&cf_session=tok",
@@ -149,13 +136,7 @@ describe("backoffice listing endpoints", () => {
   });
 
   it("lists ALL actions (no status filter) in camelCase", async () => {
-    await proposeAction(env.DB, {
-      actionType: "worker_deliverable",
-      companyId: COMPANY_ID,
-      policy: "require_approval",
-      proposed: { summary: "y" },
-      ticketId: "tkt-bo-test",
-    });
+    await propose(COMPANY_ID, "tkt-bo-test", "y");
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const res = await exports.default.fetch(
       "https://agents.test/api/backoffice/actions?cf_session=tok",
@@ -202,20 +183,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
   });
 
   it("GET /actions?companyId= narrows to that company; unfiltered spans all", async () => {
-    await proposeAction(env.DB, {
-      actionType: "worker_deliverable",
-      companyId: COMPANY_ID,
-      policy: "require_approval",
-      proposed: { summary: "mine" },
-      ticketId: "tkt-bo-test",
-    });
-    await proposeAction(env.DB, {
-      actionType: "worker_deliverable",
-      companyId: OTHER_COMPANY_ID,
-      policy: "require_approval",
-      proposed: { summary: "theirs" },
-      ticketId: "tkt-bo-other",
-    });
+    await propose(COMPANY_ID, "tkt-bo-test", "mine");
+    await propose(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const filtered = await exports.default.fetch(
       `https://agents.test/api/backoffice/actions?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
@@ -234,20 +203,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
   });
 
   it("GET /activity?companyId= narrows to that company; unfiltered spans all", async () => {
-    await logActivity(env.DB, {
-      companyId: COMPANY_ID,
-      refId: "tkt-bo-test",
-      refType: "ticket",
-      summary: "mine",
-      type: "TICKET_DONE",
-    });
-    await logActivity(env.DB, {
-      companyId: OTHER_COMPANY_ID,
-      refId: "tkt-bo-other",
-      refType: "ticket",
-      summary: "theirs",
-      type: "TICKET_DONE",
-    });
+    await logTicketDone(COMPANY_ID, "tkt-bo-test", "mine");
+    await logTicketDone(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const filtered = await exports.default.fetch(
       `https://agents.test/api/backoffice/activity?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
@@ -297,13 +254,7 @@ describe("backoffice list query-param hardening", () => {
   });
 
   it("GET /activity ignores non-numeric limit, since, and before", async () => {
-    await logActivity(env.DB, {
-      companyId: COMPANY_ID,
-      refId: "tkt-bo-test",
-      refType: "ticket",
-      summary: "hardening",
-      type: "TICKET_DONE",
-    });
+    await logTicketDone(COMPANY_ID, "tkt-bo-test", "hardening");
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
 
     const badLimit = await exports.default.fetch(
@@ -347,5 +298,93 @@ describe("operator override decide", () => {
       },
     );
     expect(res.status).toBe(400);
+  });
+});
+
+describe("POST /api/backoffice/companies", () => {
+  beforeEach(async () => {
+    await db((client) =>
+      client.user.create({ data: { email: "staff-1@qolmeia.test", id: STAFF_ID, name: "Staff" } }),
+    );
+  });
+
+  it("creates the organization, owner membership, company, agents, and active entitlements", async () => {
+    await db((client) =>
+      client.agentTemplate.update({
+        data: { status: "retired" },
+        where: { id: "tpl-seo-researcher" },
+      }),
+    );
+    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+
+    const res = await createCompany({ name: "Padaria Nova", slug: "padaria-nova" });
+
+    expect(res.status).toBe(201);
+    const { company } = await res.json<{ company: { id: string; name: string; slug: string } }>();
+    expect(company).toEqual({ id: expect.any(String), name: "Padaria Nova", slug: "padaria-nova" });
+
+    const [organization, membership, stored, agents, entitlements] = await db((client) =>
+      Promise.all([
+        client.organization.findUnique({ where: { id: company.id } }),
+        client.orgMembership.findFirst({ where: { orgId: company.id } }),
+        client.company.findUnique({ where: { id: company.id } }),
+        client.agentInstance.findMany({
+          select: { id: true, role: true },
+          where: { companyId: company.id },
+        }),
+        client.companyTemplateEntitlement.findMany({
+          orderBy: { templateId: "asc" },
+          select: { templateId: true },
+          where: { companyId: company.id },
+        }),
+      ]),
+    );
+    expect(organization).toMatchObject({ name: "Padaria Nova", slug: "padaria-nova" });
+    expect(membership).toMatchObject({ role: "OWNER", userId: STAFF_ID });
+    expect(stored).toMatchObject({ name: "Padaria Nova", slug: "padaria-nova" });
+    expect(agents).toEqual(
+      expect.arrayContaining([
+        { id: `corr-${company.id}`, role: "correspondent" },
+        { id: `planner-${company.id}`, role: "planner" },
+      ]),
+    );
+    expect(agents).toHaveLength(2);
+    expect(entitlements.map(({ templateId }) => templateId)).toEqual([
+      "tpl-designer",
+      "tpl-marketing-strategist",
+      "tpl-redator",
+    ]);
+  });
+
+  it("returns 409 when the slug is already in use", async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    const first = await createCompany({ name: "Primeira", slug: "repetida" });
+    expect(first.status).toBe(201);
+
+    const duplicate = await createCompany({ name: "Segunda", slug: "repetida" });
+
+    expect(duplicate.status).toBe(409);
+    await expect(duplicate.json()).resolves.toEqual({ error: "slug already in use" });
+    await expect(
+      db((client) => client.company.count({ where: { name: "Segunda" } })),
+    ).resolves.toBe(0);
+  });
+
+  it("returns 400 for an invalid slug", async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+
+    const res = await createCompany({ name: "Padaria", slug: "Padaria Nova!" });
+
+    expect(res.status).toBe(400);
+    await expect(db((client) => client.organization.count())).resolves.toBe(0);
+  });
+
+  it("rejects a CUSTOMER session with 403", async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
+
+    const res = await createCompany({ name: "Padaria", slug: "padaria" });
+
+    expect(res.status).toBe(403);
+    await expect(db((client) => client.organization.count())).resolves.toBe(0);
   });
 });
