@@ -20,8 +20,6 @@ Coverage is self-service: each Operator picks their own Companies and discipline
 
 ## 5. Production hardening
 
-- Hyperdrive connects as the Postgres superuser. Create a least-privilege role for the Worker and update the config (ADR 0010).
-- Hyperdrive cannot verify Railway's certificate (`sslmode=require`). Revisit when Railway serves a verifiable one.
 - The Worker has no CD. Deploy it from CI on merge to `main`, with the commit in the deploy message.
 
 ## 6. Smaller items
