@@ -52,11 +52,9 @@ export const linkOnRequestOrigin = (
   return new URL(`${link.pathname}${link.search}`, requestOrigin.origin).toString();
 };
 
-const DEFAULT_FROM_EMAIL = "noreply@email.qolmeia.com";
-
 const mailerFor = (
   resendApiKey: string | undefined,
-  fromEmail: string = DEFAULT_FROM_EMAIL,
+  fromEmail?: string,
 ): MailerConfig | null =>
   resendApiKey !== undefined && resendApiKey !== ""
     ? { apiKey: resendApiKey, from: fromEmail }
@@ -112,7 +110,7 @@ export const createAuth = (config: AuthConfig) => {
     allowedHosts,
     extraPlugins = [],
     fallbackBaseURL,
-    fromEmail = DEFAULT_FROM_EMAIL,
+    fromEmail,
     prisma,
     rateLimitEnabled = false,
     resendApiKey,
