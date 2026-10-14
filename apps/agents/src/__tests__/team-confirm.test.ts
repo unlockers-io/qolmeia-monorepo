@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, entitle, seedCompany } from "#/__tests__/fixtures";
 import { confirmTeam } from "#/team/confirm";
+import { hireMember } from "#/team/members";
 
 const COMPANY_ID = "co_team_test";
 const CORR_ID = `corr-${COMPANY_ID}`;
@@ -137,5 +138,34 @@ describe("confirmTeam", () => {
         kind: "onboarding_summary",
       },
     ]);
+  });
+
+  it("keeps later hires and leaves memory and activity alone on re-confirm", async () => {
+    await confirm();
+    const hired = await db((client) =>
+      hireMember(env, client, {
+        actorId: "cust-1",
+        companyId: COMPANY_ID,
+        displayName: undefined,
+        templateId: "tpl-designer",
+      }),
+    );
+    await confirm();
+
+    const correspondent = await db((client) =>
+      client.teamMember.findUnique({
+        select: { canDelegateTo: true },
+        where: { teamId_agentInstanceId: { agentInstanceId: CORR_ID, teamId: TEAM_ID } },
+      }),
+    );
+    expect(correspondent?.canDelegateTo).toEqual([WORKER_ID, hired.id]);
+    await expect(
+      db((client) => client.memoryFact.count({ where: { companyId: COMPANY_ID } })),
+    ).resolves.toBe(3);
+    await expect(
+      db((client) =>
+        client.activityLog.count({ where: { companyId: COMPANY_ID, type: "TEAM_CONFIRMED" } }),
+      ),
+    ).resolves.toBe(1);
   });
 });

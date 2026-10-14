@@ -7,6 +7,7 @@ import type { PrismaClient } from "#/lib/db";
 import { remember, type NewFact } from "#/memory/memory";
 import { CompanyNotFoundError, TemplateNotFoundError } from "#/team/errors";
 import { emitTeamEvent } from "#/team/events";
+import { lockDelegationTargets } from "#/team/members";
 import { listEntitledTemplates } from "#/template/template";
 
 type ConfirmedTeam = {
@@ -57,10 +58,17 @@ const confirmTeam = async (
     if (missing !== undefined) {
       throw new TemplateNotFoundError(missing);
     }
-    const confirmedAt = new Date();
+    const existing = await tx.team.findUnique({
+      select: { confirmedAt: true },
+      where: { companyId },
+    });
+    const reconfirm = existing !== null && existing.confirmedAt !== null;
+    const delegateTo = reconfirm
+      ? [...new Set([...(await lockDelegationTargets(tx, companyId)), ...workerIds])]
+      : workerIds;
     await tx.team.upsert({
-      create: { companyId, confirmedAt, id: teamId },
-      update: { confirmedAt },
+      create: { companyId, confirmedAt: new Date(), id: teamId },
+      update: reconfirm ? {} : { confirmedAt: new Date() },
       where: { companyId },
     });
     await tx.agentInstance.upsert({
@@ -85,8 +93,8 @@ const confirmTeam = async (
       skipDuplicates: true,
     });
     await tx.teamMember.upsert({
-      create: { agentInstanceId: correspondentId, canDelegateTo: workerIds, teamId },
-      update: { canDelegateTo: workerIds },
+      create: { agentInstanceId: correspondentId, canDelegateTo: delegateTo, teamId },
+      update: { canDelegateTo: delegateTo },
       where: { teamId_agentInstanceId: { agentInstanceId: correspondentId, teamId } },
     });
     await tx.teamMember.createMany({
@@ -94,6 +102,9 @@ const confirmTeam = async (
       skipDuplicates: true,
     });
     await tx.company.update({ data: { status: "active" }, where: { id: companyId } });
+    if (reconfirm) {
+      return;
+    }
     await recordActivity(tx, {
       actorId: input.actorId,
       companyId,
