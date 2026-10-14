@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
+import { safeRedirectPath } from "@repo/app-shell/redirect-path";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import { loginSchema, magicLinkSchema } from "@/lib/form-schemas";
 
 type LoginFormDependencies = {
+  redirectTo: () => string;
   router: Pick<ReturnType<typeof useRouter>, "push" | "refresh">;
   sendMagicLink: (input: {
     callbackURL: string;
@@ -39,6 +41,7 @@ const getSubmitLabel = ({ isMagicLink, isSubmitting }: SubmitLabelState) => {
 };
 
 const DEFAULT_DEPENDENCIES: Omit<LoginFormDependencies, "router"> = {
+  redirectTo: () => safeRedirectPath(new URLSearchParams(window.location.search).get("from")),
   sendMagicLink: async (input) => {
     const { error } = await authClient.signIn.magicLink(input);
     return { error };
@@ -53,7 +56,7 @@ const DEFAULT_DEPENDENCIES: Omit<LoginFormDependencies, "router"> = {
 };
 
 const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }) => {
-  const { router, sendMagicLink, showError, signInEmail } = dependencies;
+  const { redirectTo, router, sendMagicLink, showError, signInEmail } = dependencies;
   const { push, refresh } = router;
   const [loginMethod, setLoginMethod] = useState<"magicLink" | "password">("password");
   const [sent, setSent] = useState(false);
@@ -72,12 +75,17 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
       showError("Não foi possível conectar ao servidor. Tente novamente.");
       return;
     }
-    push("/");
+    push(redirectTo());
     refresh();
   };
 
   const requestMagicLink = async (email: string) => {
-    const callbackURL = `${window.location.origin}/auth/verify`;
+    const verifyUrl = new URL("/auth/verify", window.location.origin);
+    const target = redirectTo();
+    if (target !== "/") {
+      verifyUrl.searchParams.set("from", target);
+    }
+    const callbackURL = verifyUrl.toString();
     try {
       const { error } = await sendMagicLink({ callbackURL, email });
       if (error) {

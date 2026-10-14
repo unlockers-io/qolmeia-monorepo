@@ -2,27 +2,23 @@
 
 Open work items, ordered by impact. Each top-level entry is a PR-sized slice. The product roadmap (connectors, new skills, the Cobrança vertical) lives in [`docs/agent-tools.md`](docs/agent-tools.md).
 
-## 1. Customer provisioning
-
-No route grants a `CUSTOMER` membership: the dev seed and SQL are the only way to attach an Account to a Company. `POST /api/backoffice/companies` also makes the creating Operator an `OWNER` member of the new Company, while ADR 0005 says Operators belong to no customer Company. Design the operator flow that creates a Company and invites its first Customer, and stop writing the Operator's membership.
-
-## 2. Onboarding end to end
+## 1. Onboarding end to end
 
 No automated test runs the onboarding path: a Planner turn with a stubbed model, `extractBrief` and `proposeTeam`, the confirm, then a Correspondent turn that recalls a brief fact. The Playwright suite covers the auth flows only. Add it as a Worker test with the model stubbed at `globalThis.fetch`, the way `worker-job.test.ts` does.
 
-## 3. Operator directory and assigned coverage
+## 2. Operator directory and assigned coverage
 
 Coverage is self-service: each Operator picks their own Companies and disciplines. Assigning coverage to someone else needs a directory of `OWNER`/`STAFF` users first (ADR 0005).
 
-## 4. The `notify-only` feed
+## 3. The `notify-only` feed
 
 `notify-only` executes and records an `ACTION_NOTIFY` activity entry, but no Operator surface lists those entries apart from the general activity log (ADR 0006). No shipped template uses the tier yet.
 
-## 5. Production hardening
+## 4. Production hardening
 
 - The Worker has no CD. Deploy it from CI on merge to `main`, with the commit in the deploy message.
 
-## 6. Smaller items
+## 5. Smaller items
 
 - Activity-log payload renderers: the backoffice prints every payload as JSON. Mirror the `action-renderers` registry with an optional renderer per activity `type`.
 - A staged `--latest` dependency update (including Next 16.4), on its own and not bundled with a deploy.

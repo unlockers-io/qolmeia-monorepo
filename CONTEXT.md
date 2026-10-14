@@ -18,6 +18,10 @@ _Avoid_: user, seat
 The role of an Account: an end-user of a Company who chats with its agents. Used for the human; **Account** is the login record. A Customer belongs to exactly one Company, and every request on the customer surface acts in it (ADR 0011).
 _Avoid_: user, end user
 
+**Invitation**:
+An Operator's e-mailed offer of a Company to a future Account. Accepting it while signed in with that e-mail creates the Account's `CUSTOMER` membership; it is the only way a Customer joins a Company. It expires after 7 days, and re-inviting the same e-mail cancels the pending one.
+_Avoid_: invite code, signup link
+
 **Operator**:
 Qolmeia platform staff who vet AI prompts and results: the human quality layer, and the product's differentiator. The `OWNER`/`STAFF` members of the single internal **Qolmeia org**; they belong to no customer Company and are authorized by role, acting on any Company through backoffice REST (never an agent connection). The Company acted on comes from the URL; the session only proves the role (ADR 0011). An Operator may have optional assigned Companies and disciplines (ADR 0005).
 _Avoid_: admin, moderator, customer

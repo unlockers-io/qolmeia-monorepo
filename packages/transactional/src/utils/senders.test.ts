@@ -2,6 +2,7 @@ import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChangeEmail } from "../emails/change-email";
+import { InvitationEmail } from "../emails/invitation";
 import { MagicLinkEmail } from "../emails/magic-link";
 import { PasswordResetEmail } from "../emails/password-reset";
 import { SignUpAttemptEmail } from "../emails/sign-up-attempt";
@@ -107,6 +108,22 @@ describe("MagicLinkEmail render", () => {
   });
 });
 
+describe("InvitationEmail render", () => {
+  it("includes the accept URL, the company and pt-BR copy", async () => {
+    const { html, text } = await previewEmail(
+      React.createElement(InvitationEmail, {
+        acceptUrl: "https://app.qolmeia.com/convite/inv-123",
+        companyName: "Padaria Nova",
+        userEmail: "cliente@example.com",
+      }),
+    );
+    expect(html).toContain("https://app.qolmeia.com/convite/inv-123");
+    expect(html).toContain("Padaria Nova");
+    expect(html).toContain("cliente@example.com");
+    expect(text).toMatch(/aceitar convite/iv);
+  });
+});
+
 describe("sendTransactionalEmail", () => {
   beforeEach(() => {
     sendMock.mockReset();
@@ -181,6 +198,29 @@ describe("sendTransactionalEmail", () => {
       expect.objectContaining({
         subject: "Confirme a troca de e-mail da sua conta Qolmeia",
         to: "old@example.com",
+      }),
+    );
+  });
+
+  it("sends an invitation to the invited address", async () => {
+    const result = await sendTransactionalEmail(
+      {
+        acceptUrl: "https://app.qolmeia.com/convite/inv-123",
+        companyName: "Padaria Nova",
+        type: "invitation",
+        userEmail: "cliente@example.com",
+      },
+      { apiKey: "re_test" },
+    );
+
+    expect(result.success).toBe(true);
+    expect(sendMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        html: expect.stringContaining("https://app.qolmeia.com/convite/inv-123"),
+        subject: "Seu convite para a Padaria Nova na Qolmeia",
+        tags: [{ name: "type", value: "invitation" }],
+        to: "cliente@example.com",
       }),
     );
   });

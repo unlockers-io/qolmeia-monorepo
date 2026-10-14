@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
+import { safeRedirectPath } from "@repo/app-shell/redirect-path";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -22,7 +23,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { loginSchema } from "@/lib/form-schemas";
-import { safeRedirectPath } from "@/lib/redirect-validation";
 
 type Props = {
   registerPrompt?: ReactNode;

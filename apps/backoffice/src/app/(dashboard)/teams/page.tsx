@@ -10,6 +10,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { InviteCustomerForm } from "@/components/invite-customer-form";
 import { apiGetServer } from "@/lib/api-server";
 import { requireOperator } from "@/lib/auth-helpers";
 
@@ -101,6 +102,9 @@ const TeamsContent = async () => {
                   </Link>
                 );
               })}
+            </div>
+            <div className="border-t border-border px-5 py-4">
+              <InviteCustomerForm companyId={company.id} />
             </div>
           </Card>
         );

@@ -1,3 +1,4 @@
+import { safeRedirectPath } from "@repo/app-shell/redirect-path";
 import {
   Card,
   CardContent,
@@ -17,13 +18,13 @@ export const metadata: Metadata = {
 export const instant = false;
 
 type VerifyPageProps = {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; from?: string }>;
 };
 
 const VerifyContent = async ({ searchParams }: VerifyPageProps) => {
-  const { error } = await searchParams;
+  const { error, from } = await searchParams;
   if (error === undefined || error === "") {
-    redirect("/");
+    redirect(safeRedirectPath(from));
   }
 
   return (

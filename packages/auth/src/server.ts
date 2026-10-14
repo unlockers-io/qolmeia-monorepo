@@ -5,10 +5,12 @@ import { sendTransactionalEmail } from "@repo/transactional";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { magicLink } from "better-auth/plugins/magic-link";
+import { organization } from "better-auth/plugins/organization";
 import { username } from "better-auth/plugins/username";
 import type { BetterAuthPlugin } from "better-auth/types";
 
 import { CLIENT_IP_HEADER } from "./client-ip";
+import { customerInvitations, organizationOptions } from "./organization";
 import { AUTH_COOKIE_PREFIX } from "./session-cookie";
 import { countOperators, createSignupGuard, type OperatorCounter } from "./signup";
 
@@ -50,6 +52,48 @@ export const linkOnRequestOrigin = (
   return new URL(`${link.pathname}${link.search}`, requestOrigin.origin).toString();
 };
 
+const DEFAULT_FROM_EMAIL = "noreply@email.qolmeia.com";
+
+const mailerFor = (
+  resendApiKey: string | undefined,
+  fromEmail: string = DEFAULT_FROM_EMAIL,
+): MailerConfig | null =>
+  resendApiKey !== undefined && resendApiKey !== ""
+    ? { apiKey: resendApiKey, from: fromEmail }
+    : null;
+
+type CustomerInvitationEmail = {
+  acceptUrl: string;
+  companyName: string;
+  email: string;
+  resendApiKey?: string;
+};
+
+const sendCustomerInvitation = async ({
+  acceptUrl,
+  companyName,
+  email,
+  resendApiKey,
+}: CustomerInvitationEmail): Promise<boolean> => {
+  const mailer = mailerFor(resendApiKey);
+  if (!mailer) {
+    log.info({
+      message: "auth: invitation link (no Resend key)",
+      url: acceptUrl,
+      userEmail: email,
+    });
+    return true;
+  }
+  const result = await sendTransactionalEmail(
+    { acceptUrl, companyName, type: "invitation", userEmail: email },
+    mailer,
+  );
+  if (!result.success) {
+    log.error({ error: result.error, message: "auth: failed to send invitation email" });
+  }
+  return result.success;
+};
+
 type AuthConfig = {
   allowedHosts: Array<string>;
   extraPlugins?: Array<BetterAuthPlugin>;
@@ -68,7 +112,7 @@ export const createAuth = (config: AuthConfig) => {
     allowedHosts,
     extraPlugins = [],
     fallbackBaseURL,
-    fromEmail = "noreply@email.qolmeia.com",
+    fromEmail = DEFAULT_FROM_EMAIL,
     prisma,
     rateLimitEnabled = false,
     resendApiKey,
@@ -77,10 +121,7 @@ export const createAuth = (config: AuthConfig) => {
     useSecureCookies = false,
   } = config;
 
-  const mailer: MailerConfig | null =
-    resendApiKey !== undefined && resendApiKey !== ""
-      ? { apiKey: resendApiKey, from: fromEmail }
-      : null;
+  const mailer = mailerFor(resendApiKey, fromEmail);
 
   return betterAuth({
     account: {
@@ -237,6 +278,8 @@ export const createAuth = (config: AuthConfig) => {
           }
         },
       }),
+      organization(organizationOptions),
+      customerInvitations(),
       ...extraPlugins,
     ],
 
@@ -293,5 +336,6 @@ export const createAuth = (config: AuthConfig) => {
   });
 };
 
+export { sendCustomerInvitation };
 export type Auth = ReturnType<typeof createAuth>;
 export type { AuthConfig };

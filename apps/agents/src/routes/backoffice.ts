@@ -1,3 +1,4 @@
+import { sendCustomerInvitation } from "@repo/auth/server";
 import { Prisma } from "@repo/db/worker";
 import type {
   ActionDetailResponse,
@@ -5,6 +6,7 @@ import type {
   ActivityResponse,
   CompanyRoster,
   CoverageResponse,
+  CustomerInvitationResponse,
   SkillCatalogResponse,
   TemplateInput,
   TemplateResponse,
@@ -26,9 +28,11 @@ import {
 import { actionTypeSchema, defaultPoliciesSchema } from "#/action/action-types";
 import { ACTIVITY_CATEGORIES, listActivity } from "#/activity/log";
 import { listCompaniesOverview } from "#/company/company";
+import { inviteCustomer } from "#/company/invitation";
 import { createOrganization } from "#/company/organization";
 import { requireOperator, type IdentityEnv } from "#/identity/gates";
 import { submitDecision } from "#/jobs/decision";
+import { createWorkerAuth } from "#/lib/auth";
 import { dbPerRequest } from "#/lib/db";
 import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
 import { getCoverage, getCoverageOptions, setCoverage } from "#/operator/assignment";
@@ -231,10 +235,7 @@ backofficeRoutes.post("/companies", async (c) => {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
   try {
-    const company = await createOrganization(c.var.db, {
-      ...parsed.data,
-      ownerUserId: c.get("session").userId,
-    });
+    const company = await createOrganization(c.var.db, parsed.data);
     return c.json({ company }, 201);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -242,6 +243,38 @@ backofficeRoutes.post("/companies", async (c) => {
     }
     throw error;
   }
+});
+
+const invitationBodySchema = z.object({ email: z.email().max(254) });
+
+backofficeRoutes.post("/companies/:companyId/invitations", async (c) => {
+  const parsed = invitationBodySchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
+  }
+  const email = parsed.data.email.toLowerCase();
+  const result = await inviteCustomer(createWorkerAuth(c.env, c.var.db), c.var.db, {
+    companyId: c.req.param("companyId"),
+    email,
+    inviterId: c.get("session").userId,
+  });
+  if (result.kind === "company_not_found") {
+    return c.json({ error: "not found" }, 404);
+  }
+  if (result.kind === "already_member") {
+    return c.json({ error: "email already belongs to a member" }, 409);
+  }
+  const sent = await sendCustomerInvitation({
+    acceptUrl: `${c.env.WEB_APP_URL}/convite/${result.invitation.id}`,
+    companyName: result.companyName,
+    email,
+    resendApiKey: c.env.RESEND_API_KEY,
+  });
+  if (!sent) {
+    return c.json({ error: "invitation email failed" }, 502);
+  }
+  const body: CustomerInvitationResponse = { invitation: result.invitation };
+  return c.json(body, 201);
 });
 
 backofficeRoutes.get("/assignments/me", async (c) => {

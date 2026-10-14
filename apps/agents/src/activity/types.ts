@@ -108,6 +108,13 @@ type WorkerProactiveSuggestionEvent = {
   type: "WORKER_PROACTIVE_SUGGESTION";
 };
 
+type CustomerInvitedEvent = {
+  payload: { email: string };
+  refId: string;
+  refType: "invitation";
+  type: "CUSTOMER_INVITED";
+};
+
 type ActivityEvent =
   | ActionProposedEvent
   | ActionApprovedEvent
@@ -123,6 +130,7 @@ type ActivityEvent =
   | MemberRenamedEvent
   | MemberPromptEditedEvent
   | MemberPromptResetEvent
-  | WorkerProactiveSuggestionEvent;
+  | WorkerProactiveSuggestionEvent
+  | CustomerInvitedEvent;
 
 export type { ActivityEvent };

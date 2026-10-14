@@ -23,3 +23,7 @@ export const resetPasswordSchema = z.object({
   confirmPassword: z.string().min(12, "A senha deve ter pelo menos 12 caracteres"),
   password: z.string().min(12, "A senha deve ter pelo menos 12 caracteres"),
 });
+
+export const inviteCustomerSchema = z.object({
+  email: z.email("E-mail inválido"),
+});

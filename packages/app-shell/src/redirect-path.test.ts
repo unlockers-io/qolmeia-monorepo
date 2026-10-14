@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { safeRedirectPath } from "./redirect-validation";
+import { safeRedirectPath } from "./redirect-path";
 
 describe("safeRedirectPath", () => {
   it("accepts a simple in-app path", () => {

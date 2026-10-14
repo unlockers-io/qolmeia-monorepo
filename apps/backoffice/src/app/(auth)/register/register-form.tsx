@@ -1,6 +1,7 @@
 "use client";
 
 import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
+import { safeRedirectPath } from "@repo/app-shell/redirect-path";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -21,7 +22,6 @@ import { Suspense, use, useState } from "react";
 import { toast } from "sonner";
 
 import { registerSchema } from "@/lib/form-schemas";
-import { safeRedirectPath } from "@/lib/redirect-validation";
 
 type Props = {
   searchParams: Promise<{ from?: string }>;

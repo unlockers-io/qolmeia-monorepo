@@ -1,4 +1,4 @@
-const ACTIVITY_CATEGORIES = ["ACTION", "TICKET", "WORKER", "TEAM", "MEMBER"] as const;
+const ACTIVITY_CATEGORIES = ["ACTION", "TICKET", "WORKER", "TEAM", "MEMBER", "CUSTOMER"] as const;
 
 type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
 
@@ -9,6 +9,11 @@ const CATEGORY_STYLE = {
     dot: "bg-primary",
     label: "Ações",
     tag: "bg-highlight-surface text-highlight-surface-foreground",
+  },
+  CUSTOMER: {
+    dot: "bg-warning",
+    label: "Clientes",
+    tag: "bg-warning-surface text-warning-surface-foreground",
   },
   MEMBER: { dot: "bg-muted-foreground", label: "Agentes", tag: "bg-muted text-foreground" },
   TEAM: {

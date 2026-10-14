@@ -302,7 +302,7 @@ describe("POST /api/backoffice/companies", () => {
     );
   });
 
-  it("creates the organization, owner membership, company, agents, and active entitlements", async () => {
+  it("creates the organization, company, agents, and active entitlements without an operator membership", async () => {
     await db((client) =>
       client.agentTemplate.update({
         data: { status: "retired" },
@@ -334,7 +334,7 @@ describe("POST /api/backoffice/companies", () => {
       ]),
     );
     expect(organization).toMatchObject({ name: "Padaria Nova", slug: "padaria-nova" });
-    expect(membership).toMatchObject({ role: "OWNER", userId: STAFF_ID });
+    expect(membership).toBeNull();
     expect(stored).toMatchObject({ name: "Padaria Nova", slug: "padaria-nova" });
     expect(agents).toEqual(
       expect.arrayContaining([

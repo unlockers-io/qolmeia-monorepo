@@ -25,7 +25,7 @@ const recordActivity = async (db: Db, entry: ActivityRecord): Promise<void> => {
   });
 };
 
-const ACTIVITY_CATEGORIES = ["ACTION", "TICKET", "WORKER", "TEAM", "MEMBER"] as const;
+const ACTIVITY_CATEGORIES = ["ACTION", "TICKET", "WORKER", "TEAM", "MEMBER", "CUSTOMER"] as const;
 type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
 
 type ListActivityOptions = {
