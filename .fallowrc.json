@@ -31,17 +31,12 @@
     }
   ],
   "ignoreDependencies": [
-    "@prisma/client",
     "@vitest/coverage-v8",
     "jsdom",
-    "better-auth",
     "hono",
-    "react",
     "react-dom",
     "@react-email/ui",
     "postcss-load-config",
-    "agents",
-    "valibot",
     "@shadcn/lint"
   ],
   "rules": {
