@@ -1,3 +1,4 @@
+import { SignedInRedirect } from "@repo/app-shell/signed-in-redirect";
 import { getSignupState, SIGNUP_CLOSED_MESSAGE } from "@repo/app-shell/signup";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -39,9 +40,12 @@ const Registration = async ({ searchParams }: Props) => {
 };
 
 const RegisterPage = ({ searchParams }: Props) => (
-  <Suspense fallback={<Skeleton className="h-96 w-full rounded-xl" />}>
-    <Registration searchParams={searchParams} />
-  </Suspense>
+  <>
+    <SignedInRedirect />
+    <Suspense fallback={<Skeleton className="h-96 w-full rounded-xl" />}>
+      <Registration searchParams={searchParams} />
+    </Suspense>
+  </>
 );
 
 export default RegisterPage;

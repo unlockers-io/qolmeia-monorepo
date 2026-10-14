@@ -1,4 +1,4 @@
-import { jsonInit, request } from "@/lib/request";
+import { apiGet, apiSend, apiSendForm } from "@/lib/api-client";
 
 type ChannelValue =
   | "discord"
@@ -54,10 +54,10 @@ type BriefPatch = {
   primaryGoal?: string;
 };
 
-const fetchCompany = (): Promise<CompanyResponse> => request<CompanyResponse>("/api/me/company");
+const fetchCompany = (): Promise<CompanyResponse> => apiGet<CompanyResponse>("/api/me/company");
 
 const patchCompanyBrief = (patch: BriefPatch): Promise<CompanyResponse> =>
-  request<CompanyResponse>("/api/me/company", jsonInit("PATCH", patch));
+  apiSend<CompanyResponse>("PATCH", "/api/me/company", patch);
 
 type BrandCategory = "logo" | "other" | "post" | "reference";
 
@@ -85,7 +85,7 @@ type BrandAsset = {
 };
 
 const fetchBrandAssets = async (): Promise<Array<BrandAsset>> => {
-  const body = await request<{ items: Array<BrandAsset> }>("/api/me/brand-assets");
+  const body = await apiGet<{ items: Array<BrandAsset> }>("/api/me/brand-assets");
   return body.items;
 };
 
@@ -93,12 +93,9 @@ const uploadBrandAsset = async (file: File, category: BrandCategory): Promise<Br
   const form = new FormData();
   form.append("file", file);
   form.append("category", category);
-  const uploaded = await request<{ assetId: string; mime: string; url: string }>(
+  const uploaded = await apiSendForm<{ assetId: string; mime: string; url: string }>(
     "/api/me/brand-assets",
-    {
-      body: form,
-      method: "POST",
-    },
+    form,
   );
   return {
     category,
@@ -111,9 +108,7 @@ const uploadBrandAsset = async (file: File, category: BrandCategory): Promise<Br
 };
 
 const deleteBrandAsset = async (id: string): Promise<boolean> => {
-  await request(`/api/me/brand-assets/${id}`, {
-    method: "DELETE",
-  });
+  await apiSend("DELETE", `/api/me/brand-assets/${id}`);
   return true;
 };
 

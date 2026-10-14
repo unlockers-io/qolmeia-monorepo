@@ -3,39 +3,48 @@ import { describe, expect, it } from "vitest";
 
 import { useFlueClient } from "./use-flue-client";
 
-const options = { sessionToken: "first-session", url: "https://chat.example.com/agents/team/1" };
+const url = "https://chat.example.com/agents/team/1";
 
 describe("useFlueClient", () => {
   it("preserves live client identity across unrelated renders", () => {
-    const { rerender, result } = renderHook(useFlueClient, { initialProps: options });
+    const { rerender, result } = renderHook(useFlueClient, { initialProps: url });
     const client = result.current;
-    rerender({ ...options });
+    rerender(url);
     expect(result.current).toBe(client);
   });
 
-  it("replaces the client when the authenticated session changes", () => {
-    const { rerender, result } = renderHook(useFlueClient, { initialProps: options });
-    const original = result.current;
-    const next = { ...options, sessionToken: "second-session" };
-    rerender(next);
-    expect(result.current).not.toBe(original);
-    const authenticated = result.current;
-    rerender({ ...next });
-    expect(result.current).toBe(authenticated);
-  });
-
   it("replaces the client when the company conversation changes", () => {
-    const { rerender, result } = renderHook(useFlueClient, { initialProps: options });
+    const { rerender, result } = renderHook(useFlueClient, { initialProps: url });
     const original = result.current;
-    const next = { ...options, url: "https://chat.example.com/agents/team/2" };
+    const next = "https://chat.example.com/agents/team/2";
     rerender(next);
     expect(result.current).not.toBe(original);
-    expect(result.current.url).toBe(next.url);
+    expect(result.current.url).toBe(next);
   });
 
-  it("does not share authenticated clients between hook instances", () => {
-    const first = renderHook(useFlueClient, { initialProps: options });
-    const second = renderHook(useFlueClient, { initialProps: options });
+  it("does not share clients between hook instances", () => {
+    const first = renderHook(useFlueClient, { initialProps: url });
+    const second = renderHook(useFlueClient, { initialProps: url });
     expect(first.result.current).not.toBe(second.result.current);
+  });
+
+  it("sends no Authorization header, so the session rides the httpOnly cookie", async () => {
+    const requests: Array<Request> = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (input, init) => {
+      requests.push(new Request(input, init));
+      return Promise.resolve(Response.json({ messages: [] }));
+    };
+    try {
+      const { result } = renderHook(useFlueClient, { initialProps: url });
+      await result.current.history().catch(() => null);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+    expect(requests.length).toBeGreaterThan(0);
+    for (const request of requests) {
+      expect(request.headers.has("Authorization")).toBe(false);
+      expect(request.credentials).toBe("include");
+    }
   });
 });

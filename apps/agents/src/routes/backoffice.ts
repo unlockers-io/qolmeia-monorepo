@@ -27,9 +27,9 @@ import { actionTypeSchema, defaultPoliciesSchema } from "#/action/action-types";
 import { ACTIVITY_CATEGORIES, listActivity } from "#/activity/log";
 import { listCompaniesOverview } from "#/company/company";
 import { createOrganization } from "#/company/organization";
+import { requireOperator, type IdentityEnv } from "#/identity/gates";
 import { submitDecision } from "#/jobs/decision";
-import { requireStaffSession, type ValidatedSession } from "#/lib/auth";
-import { dbPerRequest, type DbVariables } from "#/lib/db";
+import { dbPerRequest } from "#/lib/db";
 import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
 import { getCoverage, getCoverageOptions, setCoverage } from "#/operator/assignment";
 import { isKnownSkill, listSkillCatalog } from "#/skills/registry";
@@ -45,12 +45,10 @@ import {
 } from "#/template/template";
 import { listTickets, loadTicket } from "#/ticket/ticket";
 
-type Vars = DbVariables & { session: ValidatedSession };
+const backofficeRoutes = new Hono<IdentityEnv>();
 
-const backofficeRoutes = new Hono<{ Bindings: Env; Variables: Vars }>();
-
-backofficeRoutes.use("*", requireStaffSession);
 backofficeRoutes.use("*", dbPerRequest);
+backofficeRoutes.use("*", requireOperator);
 
 const TICKET_STATUSES: ReadonlyArray<TicketStatus> = [
   "awaiting_approval",

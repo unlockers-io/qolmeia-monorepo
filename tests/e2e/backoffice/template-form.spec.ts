@@ -1,11 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-import { backofficeUrl } from "../../../playwright.config";
+import { operatorAccess } from "../fixtures/operator.fixture";
 import { holdScripts } from "../helpers/hold-scripts";
 
 test.describe("Backoffice template form", () => {
+  test.beforeAll(operatorAccess.grant);
+  test.afterAll(operatorAccess.revoke);
+
   test("keeps the form disabled until it hydrates", async ({ page }) => {
-    await page.context().addCookies([{ name: "e2e-role", url: backofficeUrl, value: "OWNER" }]);
     const displayName = page.getByLabel("Nome de exibição");
     const workerKind = page.getByLabel("Tipo (worker kind)");
     const description = page.getByLabel("Descrição");

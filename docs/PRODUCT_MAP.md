@@ -149,7 +149,7 @@ reject   -> ticket rejected, customer notified via chat
 
 ---
 
-## 3. The engine (`apps/agents` + `apps/api`)
+## 3. The engine (`apps/agents`)
 
 ### 3.1 Agents and specialist execution
 
@@ -195,10 +195,11 @@ SHA-256 deduplication).
 
 ### 3.5 Auth and tenancy
 
-Better Auth provides magic link, email + password, verification, reset, change-email, username, and
-bearer-token support on Postgres. Roles are OWNER, STAFF, and CUSTOMER. The organization id is reused
-verbatim as the product company id, so membership directly gates the Worker surfaces. The agents
-Worker validates sessions by relaying to `/api/me` with a 60-second KV cache.
+Better Auth runs in the agents Worker and provides magic link, email + password, verification, reset,
+change-email, and username support on Postgres. Roles are OWNER and STAFF (operator surface) and
+CUSTOMER (customer surface). The organization id is reused verbatim as the product company id, so
+membership directly gates the Worker surfaces: one identity module resolves every request from the
+session cookie.
 
 ---
 

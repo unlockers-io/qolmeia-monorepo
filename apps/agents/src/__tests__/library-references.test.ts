@@ -1,8 +1,9 @@
 import type { AssetKind, AssetVisibility } from "@repo/db/worker";
-import { env, exports } from "cloudflare:workers";
+import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db, seedCompany } from "#/__tests__/fixtures";
+import { fetchWithCookie, signIn, signInAs } from "#/__tests__/sign-in";
 import { ACTION_TYPE_MODULES } from "#/action/action-types";
 import { assetReference, storeAsset } from "#/library/assets";
 import { generateBrandImageSkill } from "#/skills/generate-brand-image";
@@ -14,13 +15,11 @@ const originalFetch = globalThis.fetch;
 const RED_PIXEL_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-const SESSIONS = new Map(
-  Object.entries({
-    "ref-customer": { id: COMPANY_ID, role: "CUSTOMER" },
-    "ref-operator": { id: "co_qolmeia", role: "STAFF" },
-    "ref-stranger": { id: "co_someone_else", role: "CUSTOMER" },
-  }),
-);
+const QOLMEIA_ORG_ID = "co_qolmeia";
+
+const customer = () => signInAs({ orgId: COMPANY_ID, role: "CUSTOMER" });
+const operator = () => signInAs({ orgId: QOLMEIA_ORG_ID, role: "STAFF" });
+const stranger = () => signInAs({ orgId: "co_someone_else", role: "CUSTOMER" });
 
 const imageResponse = () =>
   Response.json({
@@ -34,19 +33,12 @@ const imageResponse = () =>
     ],
   });
 
-const fakeFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-  const request = new Request(input, init);
-  if (request.url.endsWith("/chat/completions")) {
-    return Promise.resolve(imageResponse());
-  }
-  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
-  const currentOrg = SESSIONS.get(token);
-  return Promise.resolve(
-    currentOrg === undefined
-      ? new Response("unauthorized", { status: 401 })
-      : Response.json({ currentOrg, user: { id: `user-${token}` } }),
+const fakeFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
+  Promise.resolve(
+    new Request(input, init).url.endsWith("/chat/completions")
+      ? imageResponse()
+      : new Response("unexpected request", { status: 500 }),
   );
-};
 
 const store = (input: {
   kind: AssetKind;
@@ -65,10 +57,8 @@ const store = (input: {
     }),
   );
 
-const get = (reference: string, session?: string) =>
-  exports.default.fetch(
-    `https://agents.test${reference}${session === undefined ? "" : `?cf_session=${session}`}`,
-  );
+const get = (reference: string, cookie = "") =>
+  fetchWithCookie(cookie, `https://agents.test${reference}`);
 
 beforeEach(async () => {
   globalThis.fetch = vi.fn(fakeFetch);
@@ -128,8 +118,9 @@ describe("persisted asset references", () => {
       visibility: "customer",
     });
     vi.useFakeTimers({ now: Date.now() + 8 * DAY_MS, toFake: ["Date"] });
+    const cookie = await customer();
 
-    const res = await get(assetReference(assetId), "ref-customer");
+    const res = await get(assetReference(assetId), cookie);
 
     expect(res.status).toBe(200);
     await expect(res.text()).resolves.toBe("png");
@@ -162,9 +153,9 @@ describe("GET /assets/:id", () => {
       visibility: "agent",
     });
 
-    const own = await get(assetReference(delivered.assetId), "ref-customer");
-    const agentFolder = await get(assetReference(scratch.assetId), "ref-customer");
-    const otherCompany = await get(assetReference(delivered.assetId), "ref-stranger");
+    const own = await get(assetReference(delivered.assetId), await customer());
+    const agentFolder = await get(assetReference(scratch.assetId), await customer());
+    const otherCompany = await get(assetReference(delivered.assetId), await stranger());
 
     expect(own.status).toBe(200);
     expect(agentFolder.status).toBe(404);
@@ -179,10 +170,40 @@ describe("GET /assets/:id", () => {
       visibility: "agent",
     });
 
-    const res = await get(assetReference(scratch.assetId), "ref-operator");
+    const res = await get(assetReference(scratch.assetId), await operator());
 
     expect(res.status).toBe(200);
     await expect(res.text()).resolves.toBe("rascunho");
+  });
+
+  it("serves an account on both surfaces with its Operator scope", async () => {
+    const scratch = await store({
+      kind: "knowledge_doc",
+      mime: "text/markdown",
+      text: "rascunho",
+      visibility: "agent",
+    });
+    const cookie = await signIn([
+      { orgId: COMPANY_ID, role: "CUSTOMER" },
+      { orgId: QOLMEIA_ORG_ID, role: "STAFF" },
+    ]);
+
+    const res = await get(assetReference(scratch.assetId), cookie);
+
+    expect(res.status).toBe(200);
+  });
+
+  it("refuses a signed-in account with no membership", async () => {
+    const { assetId } = await store({
+      kind: "generated_image",
+      mime: "image/png",
+      text: "png",
+      visibility: "customer",
+    });
+
+    const res = await get(assetReference(assetId), await signIn([]));
+
+    expect(res.status).toBe(403);
   });
 
   it("sandboxes SVG and marks every asset nosniff", async () => {
@@ -199,8 +220,9 @@ describe("GET /assets/:id", () => {
       visibility: "customer",
     });
 
-    const svgRes = await get(assetReference(svg.assetId), "ref-customer");
-    const pngRes = await get(assetReference(png.assetId), "ref-customer");
+    const cookie = await customer();
+    const svgRes = await get(assetReference(svg.assetId), cookie);
+    const pngRes = await get(assetReference(png.assetId), cookie);
 
     expect(svgRes.headers.get("content-type")).toBe("image/svg+xml");
     expect(svgRes.headers.get("content-security-policy")).toContain("sandbox");

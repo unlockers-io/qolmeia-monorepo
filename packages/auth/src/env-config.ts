@@ -3,29 +3,17 @@ const LOCALHOST_ALLOWED_HOSTS = ["**.localhost", "**.localhost:*", "localhost:*"
 const LOOPBACK_TRUSTED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:3001",
-  "http://localhost:4000",
   "http://127.0.0.1:3000",
   "http://127.0.0.1:3001",
-  "http://127.0.0.1:4000",
 ];
 
-// Also the fallback for the api's CORS allowlist; a zod `.default()` there would be invisible here,
-// leaving Hono and Better Auth disagreeing about which origins are allowed.
-const DEFAULT_CORS_ORIGINS = [
-  "https://qolmeia.web.localhost",
-  "https://qolmeia.landing.localhost",
-  "https://qolmeia.backoffice.localhost",
-];
-
-type EnvAuthConfigOptions = {
-  additionalAllowedHosts?: Array<string>;
-  additionalTrustedOrigins?: Array<string>;
-  secureUrl?: string;
+type AuthEnv = {
+  TRUSTED_ORIGINS?: string;
+  WEB_APP_URL?: string;
 };
 
 type EnvAuthConfig = {
   allowedHosts: Array<string>;
-  rateLimitEnabled: boolean;
   trustedOrigins: Array<string>;
   useSecureCookies: boolean;
 };
@@ -41,31 +29,11 @@ const parseEnvList = (value: string | undefined): Array<string> => {
     .filter((entry) => entry.length > 0);
 };
 
-const envAuthConfig = (options: EnvAuthConfigOptions = {}): EnvAuthConfig => {
-  const corsTrustedOrigins =
-    process.env.CORS_ORIGINS === undefined
-      ? DEFAULT_CORS_ORIGINS
-      : parseEnvList(process.env.CORS_ORIGINS).filter((origin) => origin !== "*");
+const envAuthConfig = (env: AuthEnv): EnvAuthConfig => ({
+  allowedHosts: LOCALHOST_ALLOWED_HOSTS,
+  trustedOrigins: [...LOOPBACK_TRUSTED_ORIGINS, ...parseEnvList(env.TRUSTED_ORIGINS)],
+  useSecureCookies: env.WEB_APP_URL?.startsWith("https://") === true,
+});
 
-  return {
-    allowedHosts: [
-      ...LOCALHOST_ALLOWED_HOSTS,
-      ...parseEnvList(process.env.AUTH_ALLOWED_HOSTS),
-      ...(options.additionalAllowedHosts ?? []),
-    ],
-    rateLimitEnabled:
-      process.env.NODE_ENV === "production" &&
-      (process.env.CI === undefined || process.env.CI === ""),
-    trustedOrigins: [
-      ...LOOPBACK_TRUSTED_ORIGINS,
-      ...corsTrustedOrigins,
-      ...parseEnvList(process.env.TRUSTED_ORIGINS),
-      ...(options.additionalTrustedOrigins ?? []),
-    ],
-    useSecureCookies:
-      (options.secureUrl ?? process.env.WEB_APP_URL)?.startsWith("https://") === true,
-  };
-};
-
-export { DEFAULT_CORS_ORIGINS, envAuthConfig, parseEnvList };
-export type { EnvAuthConfig, EnvAuthConfigOptions };
+export { envAuthConfig, parseEnvList };
+export type { AuthEnv, EnvAuthConfig };

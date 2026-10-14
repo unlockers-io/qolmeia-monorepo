@@ -1,3 +1,4 @@
+import { SignedInRedirect } from "@repo/app-shell/signed-in-redirect";
 import { getSignupState } from "@repo/app-shell/signup";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -37,14 +38,17 @@ const RegisterPrompt = async ({ searchParams }: Props) => {
 };
 
 const LoginPage = ({ searchParams }: Props) => (
-  <LoginForm
-    registerPrompt={
-      <Suspense>
-        <RegisterPrompt searchParams={searchParams} />
-      </Suspense>
-    }
-    searchParams={searchParams}
-  />
+  <>
+    <SignedInRedirect />
+    <LoginForm
+      registerPrompt={
+        <Suspense>
+          <RegisterPrompt searchParams={searchParams} />
+        </Suspense>
+      }
+      searchParams={searchParams}
+    />
+  </>
 );
 
 export default LoginPage;

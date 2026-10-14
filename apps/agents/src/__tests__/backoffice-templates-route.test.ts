@@ -1,7 +1,7 @@
-import { exports } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-const originalFetch = globalThis.fetch;
+import { fetchWithCookie, signInAs, type Persona } from "#/__tests__/sign-in";
+
 type JsonBody =
   | boolean
   | number
@@ -10,10 +10,7 @@ type JsonBody =
   | ReadonlyArray<JsonBody>
   | { readonly [key: string]: JsonBody | undefined };
 
-const meStaff = {
-  currentOrg: { id: "co_tpl_test", role: "STAFF" },
-  user: { id: "staff-tpl" },
-};
+const meStaff: Persona = { orgId: "co_tpl_test", role: "STAFF", userId: "staff-tpl" };
 
 const validBody = {
   defaultActionType: "worker_deliverable",
@@ -35,32 +32,28 @@ type Template = {
 };
 
 const post = (body: JsonBody) =>
-  exports.default.fetch("https://agents.test/api/backoffice/templates?cf_session=tok", {
+  fetchWithCookie(cookie, "https://agents.test/api/backoffice/templates", {
     body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },
     method: "POST",
   });
 
 const patch = (path: string, body: JsonBody) =>
-  exports.default.fetch(`https://agents.test/api/backoffice${path}?cf_session=tok`, {
+  fetchWithCookie(cookie, `https://agents.test/api/backoffice${path}`, {
     body: JSON.stringify(body),
     headers: { "Content-Type": "application/json" },
     method: "PATCH",
   });
 
-beforeEach(() => {
-  globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-});
+let cookie = "";
 
-afterEach(() => {
-  globalThis.fetch = originalFetch;
+beforeEach(async () => {
+  cookie = await signInAs(meStaff);
 });
 
 describe("backoffice skill catalog", () => {
   it("returns the full 12-skill code registry with id + label", async () => {
-    const res = await exports.default.fetch(
-      "https://agents.test/api/backoffice/skills?cf_session=tok",
-    );
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/skills");
     expect(res.status).toBe(200);
     const body = await res.json<{
       items: Array<{ description: string; displayName: string; id: string }>;
@@ -82,9 +75,7 @@ describe("backoffice template CRUD", () => {
     expect(createdBody.template.status).toBe("active");
     expect([...createdBody.template.skillIds]).toEqual(["webSearch", "fetchUrl"]);
 
-    const list = await exports.default.fetch(
-      "https://agents.test/api/backoffice/templates?cf_session=tok",
-    );
+    const list = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/templates");
     expect(list.status).toBe(200);
     const listBody = await list.json<{ items: Array<Template> }>();
     expect(listBody.items.find((t) => t.id === createdBody.template.id)).toBeTruthy();
@@ -139,9 +130,7 @@ describe("backoffice template CRUD", () => {
     const retiredBody = await retired.json<{ template: Template }>();
     expect(retiredBody.template.status).toBe("retired");
 
-    const list = await exports.default.fetch(
-      "https://agents.test/api/backoffice/templates?cf_session=tok",
-    );
+    const list = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/templates");
     const listBody = await list.json<{ items: Array<Template> }>();
     expect(listBody.items.find((t) => t.id === template.id)?.status).toBe("retired");
 

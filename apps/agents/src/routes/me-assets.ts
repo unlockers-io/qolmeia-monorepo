@@ -1,15 +1,13 @@
 import { Hono } from "hono";
 import { z } from "zod";
 
-import type { ValidatedSession } from "#/lib/auth";
-import type { Db, DbVariables } from "#/lib/db";
+import type { IdentityEnv } from "#/identity/gates";
+import type { Db } from "#/lib/db";
 import { parsePositiveInt } from "#/lib/pagination";
 import type { JsonRecord } from "#/lib/records";
 import { assetReference, deleteAssets, listAssets, storeAsset } from "#/library/assets";
 
-type Vars = DbVariables & { session: ValidatedSession };
-
-const meAssetsRoutes = new Hono<{ Bindings: Env; Variables: Vars }>();
+const meAssetsRoutes = new Hono<IdentityEnv>();
 
 meAssetsRoutes.get("/assets", async (c) => {
   const { companyId } = c.get("session");

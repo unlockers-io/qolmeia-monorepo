@@ -2,11 +2,12 @@ import { mkdir } from "node:fs/promises";
 
 import { expect, test as setup } from "@playwright/test";
 
-import { authUrl, backofficeUrl } from "../../../playwright.config";
+import { backofficeUrl } from "../../../playwright.config";
+import { E2E_USER_EMAIL } from "../fixtures/e2e-user";
 import { verification } from "../fixtures/verification.fixture";
 
 const TEST_USER = {
-  email: "e2e-test@qolmeia.localhost",
+  email: E2E_USER_EMAIL,
   name: "E2E Test User",
   password: "TestPassword123!",
 };
@@ -14,12 +15,13 @@ const TEST_USER = {
 setup("create and authenticate test user", async ({ page, request }) => {
   await mkdir("tests/e2e/.auth", { recursive: true });
 
-  const signUpResponse = await request.post(`${authUrl}/api/auth/sign-up/email`, {
+  const signUpResponse = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
     data: {
       email: TEST_USER.email,
       name: TEST_USER.name,
       password: TEST_USER.password,
     },
+    headers: { Origin: backofficeUrl },
   });
   expect([200, 201, 409, 422]).toContain(signUpResponse.status());
   if (process.env.RESEND_API_KEY) {
@@ -28,7 +30,7 @@ setup("create and authenticate test user", async ({ page, request }) => {
     expect(verified.status()).toBe(302);
   }
 
-  const signIn = await request.post(`${authUrl}/api/auth/sign-in/email`, {
+  const signIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
     data: { email: TEST_USER.email, password: TEST_USER.password },
     headers: { Origin: backofficeUrl },
   });

@@ -1,13 +1,9 @@
 import { matchesHostPattern } from "better-auth";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { DEFAULT_CORS_ORIGINS, envAuthConfig, parseEnvList } from "./env-config";
+import { envAuthConfig, parseEnvList } from "./env-config";
 
 describe("parseEnvList", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   it("returns an empty list for undefined or empty input", () => {
     expect(parseEnvList(undefined)).toEqual([]);
     expect(parseEnvList("")).toEqual([]);
@@ -23,18 +19,8 @@ describe("parseEnvList", () => {
 });
 
 describe("envAuthConfig", () => {
-  it("falls back to the shared default origins when CORS_ORIGINS is unset", () => {
-    expect(envAuthConfig().trustedOrigins).toEqual(
-      expect.arrayContaining([...DEFAULT_CORS_ORIGINS]),
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
   it("includes the localhost host patterns and loopback origins by default", () => {
-    const config = envAuthConfig();
+    const config = envAuthConfig({});
     expect(config.allowedHosts).toEqual(
       expect.arrayContaining(["**.localhost", "**.localhost:*", "localhost:*", "127.0.0.1:*"]),
     );
@@ -43,51 +29,24 @@ describe("envAuthConfig", () => {
   });
 
   it("allows portless hosts on port 443 and on its unprivileged fallback port", () => {
-    const { allowedHosts } = envAuthConfig();
+    const { allowedHosts } = envAuthConfig({});
     for (const host of ["qolmeia.web.localhost", "qolmeia.web.localhost:1355"]) {
       expect(allowedHosts.some((pattern) => matchesHostPattern(host, pattern))).toBe(true);
     }
   });
 
-  it("extends allowedHosts from AUTH_ALLOWED_HOSTS", () => {
-    vi.stubEnv("AUTH_ALLOWED_HOSTS", "qolmeia.com,*.qolmeia.com,*.vercel.app");
-    expect(envAuthConfig().allowedHosts).toEqual(
-      expect.arrayContaining(["qolmeia.com", "*.qolmeia.com", "*.vercel.app"]),
-    );
-  });
-
   it("extends trustedOrigins from TRUSTED_ORIGINS", () => {
-    vi.stubEnv("TRUSTED_ORIGINS", "https://app.qolmeia.com,https://api.qolmeia.com");
-    const { trustedOrigins } = envAuthConfig();
+    const { trustedOrigins } = envAuthConfig({
+      TRUSTED_ORIGINS: "https://app.qolmeia.com,https://admin.qolmeia.com",
+    });
     expect(trustedOrigins).toContain("https://app.qolmeia.com");
-    expect(trustedOrigins).toContain("https://api.qolmeia.com");
+    expect(trustedOrigins).toContain("https://admin.qolmeia.com");
     expect(trustedOrigins).toContain("http://localhost:3000");
   });
 
-  it("trusts the origins allowed to send credentialed Hono requests", () => {
-    vi.stubEnv("CORS_ORIGINS", "https://client.qolmeia.com, https://backoffice.qolmeia.com");
-    expect(envAuthConfig().trustedOrigins).toEqual(
-      expect.arrayContaining(["https://client.qolmeia.com", "https://backoffice.qolmeia.com"]),
-    );
-  });
-
-  it("does not trust the non-credentialed CORS wildcard", () => {
-    vi.stubEnv("CORS_ORIGINS", "*");
-    expect(envAuthConfig().trustedOrigins).not.toContain("*");
-  });
-
   it("gates useSecureCookies on WEB_APP_URL being HTTPS", () => {
-    vi.stubEnv("WEB_APP_URL", "http://localhost:3000");
-    expect(envAuthConfig().useSecureCookies).toBe(false);
-    vi.stubEnv("WEB_APP_URL", "https://qolmeia.web.localhost");
-    expect(envAuthConfig().useSecureCookies).toBe(true);
-  });
-
-  it("enables rate limiting only in production outside CI", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("CI", "");
-    expect(envAuthConfig().rateLimitEnabled).toBe(true);
-    vi.stubEnv("CI", "true");
-    expect(envAuthConfig().rateLimitEnabled).toBe(false);
+    expect(envAuthConfig({}).useSecureCookies).toBe(false);
+    expect(envAuthConfig({ WEB_APP_URL: "http://localhost:3000" }).useSecureCookies).toBe(false);
+    expect(envAuthConfig({ WEB_APP_URL: "https://app.qolmeia.com" }).useSecureCookies).toBe(true);
   });
 });

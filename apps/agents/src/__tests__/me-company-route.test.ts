@@ -1,37 +1,29 @@
-import { exports } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { seedCompany } from "#/__tests__/fixtures";
+import { fetchWithCookie, signInAs, type Persona } from "#/__tests__/sign-in";
 
 const COMPANY_ID = "co_mecompany_test";
-const originalFetch = globalThis.fetch;
 
-const meCustomer = {
-  currentOrg: { id: COMPANY_ID, role: "CUSTOMER" },
-  user: { id: "user-1" },
-};
-const meStaff = {
-  currentOrg: { id: COMPANY_ID, role: "STAFF" },
-  user: { id: "staff-1" },
-};
+const meCustomer: Persona = { orgId: COMPANY_ID, role: "CUSTOMER", userId: "user-1" };
+const meStaff: Persona = { orgId: COMPANY_ID, role: "STAFF", userId: "staff-1" };
 
 type CompanyBody = {
   company: { brief: Record<string, unknown>; status: string };
   completeness: { isComplete: boolean; missing: Array<string>; percent: number };
 };
 
-beforeEach(async () => {
-  await seedCompany({ id: COMPANY_ID, status: "onboarding" });
-});
+let cookie = "";
 
-afterEach(() => {
-  globalThis.fetch = originalFetch;
+beforeEach(async () => {
+  cookie = "";
+  await seedCompany({ id: COMPANY_ID, status: "onboarding" });
 });
 
 describe("GET /api/me/company", () => {
   it("returns an empty brief with 0% completeness", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok");
+    cookie = await signInAs(meCustomer);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company");
     expect(res.status).toBe(200);
     const body = await res.json<CompanyBody>();
     expect(body.completeness.percent).toBe(0);
@@ -39,55 +31,10 @@ describe("GET /api/me/company", () => {
   });
 });
 
-describe("a bearer-token client", () => {
-  it("gets the same answer from /api/me and /api/me/company", async () => {
-    const fetchSpy = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    globalThis.fetch = fetchSpy;
-    const headers = { Authorization: "Bearer BEARER_TOK" };
-
-    const me = await exports.default.fetch("https://agents.test/api/me", { headers });
-    const company = await exports.default.fetch("https://agents.test/api/me/company", { headers });
-
-    expect(me.status).toBe(200);
-    expect(company.status).toBe(200);
-    const meBody = await me.json<{ currentOrg: { id: string } }>();
-    const companyBody = await company.json<CompanyBody>();
-    expect(meBody.currentOrg.id).toBe(COMPANY_ID);
-    expect(companyBody.company.status).toBe("onboarding");
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("a multi-org client that named no org", () => {
-  it("gets 400 with the org list, not a 401 that would send it back to login", async () => {
-    globalThis.fetch = vi.fn(() =>
-      Promise.resolve(
-        Response.json({
-          currentOrg: null,
-          orgs: [
-            { id: "co_a", name: "A", role: "CUSTOMER" },
-            { id: "co_b", name: "B", role: "CUSTOMER" },
-          ],
-          user: { id: "user-1" },
-        }),
-      ),
-    );
-
-    const res = await exports.default.fetch(
-      "https://agents.test/api/me/company?cf_session=ambiguous-tok",
-    );
-
-    expect(res.status).toBe(400);
-    const body = await res.json<{ error: string; orgs: ReadonlyArray<{ id: string }> }>();
-    expect(body.error).toBe("org_required");
-    expect(body.orgs.map((org) => org.id)).toEqual(["co_a", "co_b"]);
-  });
-});
-
 describe("PATCH /api/me/company", () => {
   it("merges a partial brief and recomputes completeness", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
+    cookie = await signInAs(meCustomer);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ industry: "alimentação" }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
@@ -100,13 +47,13 @@ describe("PATCH /api/me/company", () => {
   });
 
   it("preserves earlier fields across successive patches", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
+    cookie = await signInAs(meCustomer);
+    await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ industry: "alimentação" }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
     });
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ primaryGoal: "vender mais" }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
@@ -117,8 +64,8 @@ describe("PATCH /api/me/company", () => {
   });
 
   it("403 when STAFF tries to edit the brief", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
+    cookie = await signInAs(meStaff);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ industry: "x" }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
@@ -127,8 +74,8 @@ describe("PATCH /api/me/company", () => {
   });
 
   it("400 on an invalid body", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meCustomer)));
-    const res = await exports.default.fetch("https://agents.test/api/me/company?cf_session=tok", {
+    cookie = await signInAs(meCustomer);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ channels: ["not-a-channel"] }),
       headers: { "content-type": "application/json" },
       method: "PATCH",

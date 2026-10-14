@@ -6,45 +6,25 @@ import { log } from "@repo/observability";
 import { honoEvlog } from "@repo/observability/hono";
 import { env } from "cloudflare:workers";
 import { Hono } from "hono";
-import type { Context } from "hono";
-import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 
 import { CorrespondentV2 } from "#/agents/correspondent";
 import { PlannerV2 } from "#/agents/planner";
-import { requireCustomerAgent } from "#/lib/agent-route-auth";
-import type { SessionEnv } from "#/lib/auth";
+import { requireCustomerOfPathTenant, type IdentityEnv } from "#/identity/gates";
+import { authRoutes } from "#/lib/auth";
+import { dbPerRequest } from "#/lib/db";
 import { conversationProvider } from "#/lib/models";
 import { assetsRoutes } from "#/routes/assets";
 import { backofficeRoutes } from "#/routes/backoffice";
 import { meRoutes } from "#/routes/me";
+import { signupRoutes } from "#/routes/signup";
 import { teamsRoutes } from "#/routes/teams";
-
-export const FLUE_CLIENT_EXPOSED_HEADERS = [
-  "Stream-Next-Offset",
-  "Stream-Up-To-Date",
-  "flue-error-ref",
-  "Location",
-];
 
 setProvider(conversationProvider(env));
 
-const app = new Hono<SessionEnv>();
+const app = new Hono<IdentityEnv>();
 
 app.use("*", honoEvlog());
-
-app.use(
-  "*",
-  cors({
-    allowHeaders: ["Content-Type", "Authorization", "X-Org-Id"],
-    credentials: true,
-    exposeHeaders: FLUE_CLIENT_EXPOSED_HEADERS,
-    origin: (origin, c: Context<{ Bindings: Env }>) => {
-      const allowed = c.env.CLIENT_ORIGINS.split(",").map((value) => value.trim());
-      return allowed.includes(origin) ? origin : null;
-    },
-  }),
-);
 
 app.use("*", async (c, next) => {
   // oxlint-disable-next-line callback-return -- Hono after-middleware: headers are set post-next()
@@ -68,13 +48,14 @@ app.onError((error, c) => {
 });
 
 app.get("/healthz", (c) => c.json({ status: "ok" }));
+app.route("/api/auth", authRoutes);
+app.route("/api/signup", signupRoutes);
 app.route("/api/backoffice", backofficeRoutes);
 app.route("/api/me", meRoutes);
 app.route("/api/teams", teamsRoutes);
 app.route("/assets", assetsRoutes);
 
-app.use("/agents/correspondent/*", requireCustomerAgent);
-app.use("/agents/planner/*", requireCustomerAgent);
+app.use("/agents/*", dbPerRequest, requireCustomerOfPathTenant);
 app.route("/agents/correspondent", createAgentRouter(CorrespondentV2));
 app.route("/agents/planner", createAgentRouter(PlannerV2));
 

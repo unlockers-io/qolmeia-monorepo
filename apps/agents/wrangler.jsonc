@@ -64,12 +64,11 @@
     // `vite dev` swap to http://127.0.0.1:8787 (IPv4, not localhost: vite binds
     // one address and vite.config.ts pins it there so the Next rewrites reach it).
     "WORKER_PUBLIC_URL": "https://agents.qolmeia.com",
-    // Better Auth service (apps/api); the Worker validates sessions against it.
-    // Local: http://localhost:4000.
-    "AUTH_SERVICE_URL": "https://api.qolmeia.com",
-    // Comma-separated client origins allowed to call the Worker; matched exactly,
-    // no wildcards. Local: http://localhost:3000,http://localhost:3001.
-    "CLIENT_ORIGINS": "https://app.qolmeia.com,https://admin.qolmeia.com",
+    // App origins Better Auth accepts requests from and builds emailed links on.
+    "TRUSTED_ORIGINS": "https://app.qolmeia.com,https://admin.qolmeia.com",
+    // The only input to Better Auth's useSecureCookies: https issues the
+    // __Secure- prefixed session cookies existing sessions already carry.
+    "WEB_APP_URL": "https://app.qolmeia.com",
     // Memory's vector index. "in-memory" is a per-isolate store for `vite dev` and
     // tests, which run without the AI and VECTORIZE bindings; any other value
     // requires both bindings and fails loudly without them.
@@ -94,14 +93,6 @@
       "bucket_name": "qolmeia-assets",
     },
   ],
-  "kv_namespaces": [
-    {
-      "binding": "SESSIONS",
-      // 30s session cache for validateSession; keeps the auth service off
-      // the hot path of every backoffice render + every chat request.
-      "id": "4de0e3d0d0364a058ac348a882d7ebb8",
-    },
-  ],
   "env": {
     "test": {
       "name": "worker-bees-test",
@@ -110,8 +101,8 @@
         "AI_GATEWAY_ACCOUNT_ID": "test-account-id",
         "AI_GATEWAY_NAME": "test-gateway",
         "WORKER_PUBLIC_URL": "http://127.0.0.1:8787",
-        "AUTH_SERVICE_URL": "http://127.0.0.1:4000",
-        "CLIENT_ORIGINS": "http://localhost:3000,http://localhost:3001",
+        "TRUSTED_ORIGINS": "http://127.0.0.1:3000,http://127.0.0.1:3001",
+        "WEB_APP_URL": "http://127.0.0.1:3001",
         "MEMORY_BACKEND": "in-memory",
       },
       "durable_objects": {
@@ -133,7 +124,6 @@
         },
       ],
       "r2_buckets": [{ "binding": "ASSETS", "bucket_name": "qolmeia-assets-test" }],
-      "kv_namespaces": [{ "binding": "SESSIONS", "id": "test" }],
     },
   },
   "routes": [{ "pattern": "agents.qolmeia.com", "custom_domain": true }],

@@ -1,10 +1,11 @@
 import type { DecisionOutcome } from "@repo/worker-api/contracts";
 import { introspectWorkflowInstance } from "cloudflare:test";
-import { env, exports } from "cloudflare:workers";
+import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
+import { fetchWithCookie, signInAs } from "#/__tests__/sign-in";
 import { actionIdFor, MAX_REVISIONS } from "#/action/action";
 import { decisionEventType } from "#/jobs/decision";
 import { listAssets } from "#/library/assets";
@@ -13,8 +14,6 @@ const COMPANY_ID = "co_worker_job";
 const DESIGNER_ID = "agent-worker-job-designer";
 const STRATEGIST_ID = "agent-worker-job-strategist";
 const originalFetch = globalThis.fetch;
-
-const meStaff = { currentOrg: { id: COMPANY_ID, role: "STAFF" }, user: { id: "operator-1" } };
 
 type ToolInput = Record<string, ReadonlyArray<string> | string>;
 
@@ -71,7 +70,7 @@ const callTools = (body: z.infer<typeof completionSchema>): Response => {
 const fakeFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const request = new Request(input, init);
   if (!request.url.endsWith("/chat/completions")) {
-    return Response.json(meStaff);
+    return new Response("unexpected request", { status: 500 });
   }
   const body = completionSchema.parse(await request.json());
   return body.messages.some(({ role }) => role === "tool")
@@ -97,9 +96,10 @@ const startJob = async (ticketId: string, agentInstanceId = DESIGNER_ID) => {
   return instance;
 };
 
-const decide = (actionId: string, decision: DecisionOutcome, feedback?: string) =>
-  exports.default.fetch(
-    `https://agents.test/api/backoffice/actions/${actionId}/decide?cf_session=tok`,
+const decide = async (actionId: string, decision: DecisionOutcome, feedback?: string) =>
+  fetchWithCookie(
+    await signInAs({ orgId: "co_qolmeia", role: "STAFF", userId: "operator-1" }),
+    `https://agents.test/api/backoffice/actions/${actionId}/decide`,
     {
       body: JSON.stringify({ decision, feedback }),
       headers: { "Content-Type": "application/json" },
