@@ -60,10 +60,6 @@
     // Unlockers account, which owns the qolmeia.com zone.
     "AI_GATEWAY_ACCOUNT_ID": "e0d80dc903c7091fc398c6729971d0a7",
     "AI_GATEWAY_NAME": "qolmeia",
-    "CORRESPONDENT_MODEL": "anthropic/claude-sonnet-5.5",
-    // Stable Nano Banana 2: image generation and multi-turn/reference editing.
-    // Uses /chat/completions with modalities: ["image", "text"].
-    "IMAGE_GEN_MODEL": "google/gemini-3.1-flash-image",
     // Public URL of this Worker, baked into every signed asset URL. For local
     // `vite dev` swap to http://127.0.0.1:8787 (IPv4, not localhost: vite binds
     // one address and vite.config.ts pins it there so the Next rewrites reach it).
@@ -109,8 +105,6 @@
       "vars": {
         "AI_GATEWAY_ACCOUNT_ID": "test-account-id",
         "AI_GATEWAY_NAME": "test-gateway",
-        "CORRESPONDENT_MODEL": "test/model",
-        "IMAGE_GEN_MODEL": "test/image-model",
         "WORKER_PUBLIC_URL": "http://127.0.0.1:8787",
         "AUTH_SERVICE_URL": "http://127.0.0.1:4000",
         "CLIENT_ORIGINS": "http://localhost:3000,http://localhost:3001",

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db, seedCompany } from "#/__tests__/fixtures";
 import { generateBrandImageSkill } from "#/skills/generate-brand-image";
-import type { SkillContext } from "#/skills/registry";
+import type { SkillContext } from "#/skills/skill";
 
 const COMPANY_ID = "co_img_test";
 const AGENT_INSTANCE_ID = "agent_img_test";

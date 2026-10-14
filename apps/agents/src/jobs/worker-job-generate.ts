@@ -3,9 +3,9 @@ import { generateText, isStepCount } from "ai";
 
 import type { Generation } from "#/action/action-type";
 import type { JobContext } from "#/jobs/worker-job-steps";
-import { getModel } from "#/lib/ai-gateway";
 import { withDb } from "#/lib/db";
-import { buildSkillTools } from "#/skills/registry";
+import { languageModel } from "#/lib/models";
+import { buildSkillTools, loadDisabledSkillIds } from "#/skills/registry";
 import { resolveSystemPrompt } from "#/team/resolve-system-prompt";
 import { loadInstanceWithTemplate, loadTicket } from "#/ticket/ticket";
 
@@ -38,8 +38,12 @@ const generateDeliverable = async (
 ): Promise<Generation> => {
   const { agentInstanceId, companyId, env, ticketId } = job;
   const stepStart = Date.now();
-  const [ticket, { agentInstance, template }] = await withDb(env, (db) =>
-    Promise.all([loadTicket(db, ticketId), loadInstanceWithTemplate(db, agentInstanceId)]),
+  const [ticket, { agentInstance, template }, disabledSkillIds] = await withDb(env, (db) =>
+    Promise.all([
+      loadTicket(db, ticketId),
+      loadInstanceWithTemplate(db, agentInstanceId),
+      loadDisabledSkillIds(db),
+    ]),
   );
   if (ticket === null) {
     throw new Error(`ticket ${ticketId} not properly seeded`);
@@ -55,9 +59,10 @@ const generateDeliverable = async (
     templateId: template.id,
     ticketId,
   });
-  const tools = await buildSkillTools(
+  const tools = buildSkillTools(
     { agentInstanceId: agentInstance.id, companyId, deliverableFolder: "agent", env },
     template.skillIds,
+    disabledSkillIds,
   );
   const result = await generateText({
     instructions: resolveSystemPrompt(agentInstance, template),
@@ -66,7 +71,7 @@ const generateDeliverable = async (
       revision?.priorSummary ?? null,
       revision?.feedback ?? null,
     ),
-    model: getModel(env, template.model),
+    model: languageModel(env, template.model),
     stopWhen: isStepCount(5),
     tools,
   });

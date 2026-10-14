@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
 import { delegateToWorkerSkill } from "#/skills/delegate-to-worker";
-import type { SkillContext } from "#/skills/registry";
+import type { SkillContext } from "#/skills/skill";
 
 const COMPANY_ID = "co_multi_test";
 const CORR_ID = `corr-${COMPANY_ID}`;

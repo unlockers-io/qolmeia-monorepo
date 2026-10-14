@@ -71,7 +71,16 @@ your **account id** (`wrangler whoami`).
 ### 4b. Fill `wrangler.jsonc`
 
 `wrangler.jsonc` already holds the production values. On a new account, replace
-the KV `id` (`SESSIONS`) and `AI_GATEWAY_ACCOUNT_ID`. The prod `vars`:
+the KV `id` (`SESSIONS`) and `AI_GATEWAY_ACCOUNT_ID`.
+
+Every model request goes through `apps/agents/src/lib/models.ts`: the Flue
+conversations (Correspondent and Planner), the Workflow's `generateText`, and
+image generation. It sends each one to
+`https://gateway.ai.cloudflare.com/v1/<AI_GATEWAY_ACCOUNT_ID>/<AI_GATEWAY_NAME>/openrouter/v1`
+with `OPENROUTER_API_KEY` as the bearer token. The conversation and image model
+ids live in that module; specialist models are set per template.
+
+The prod `vars`:
 
 - `WORKER_PUBLIC_URL=https://agents.qolmeia.com`
 - `AUTH_SERVICE_URL=https://api.qolmeia.com` (var name kept; auth is one feature of the api service)
@@ -106,8 +115,8 @@ For an existing deployment, follow [the model upgrade and memory cutover](./mode
 before deploying this Worker. Backfill the new Qwen3 index first; upgrade template
 models only after the new Worker is live. The old memory index is retained.
 
-Push the shared Prisma schema and seed the default template/skill catalog before
-deploying the Worker:
+Push the shared Prisma schema and seed the default templates before deploying the
+Worker:
 
 ```bash
 DATABASE_URL=postgresql://... pnpm --filter=@repo/db db:push

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { withDb } from "#/lib/db";
 import { indexMemoryFacts, recordMemoryFacts } from "#/memory/facts";
-import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { defineSkill } from "#/skills/skill";
 
 const rememberFactInputSchema = z.object({
   content: z.string().min(1).describe("O fato a ser lembrado, em uma frase clara em pt-BR."),
@@ -12,11 +12,11 @@ const rememberFactInputSchema = z.object({
     .describe("Categoria do fato (ex: 'preference', 'decision', 'brand'). Default: 'fact'."),
 });
 
-const rememberFactSkill: UnknownSkill = {
+const rememberFactSkill = defineSkill({
   description:
     "Salva um fato importante que você deve lembrar em conversas futuras (preferências, decisões, fatos do negócio).",
-  async execute(input: SkillInput, ctx: SkillContext): Promise<{ id: string; savedAt: number }> {
-    const { content, kind } = rememberFactInputSchema.parse(input);
+  displayName: "Lembrar fato",
+  async execute({ content, kind }, ctx): Promise<{ id: string; savedAt: number }> {
     const records = await withDb(ctx.env, (db) =>
       recordMemoryFacts(db, [
         {
@@ -36,6 +36,6 @@ const rememberFactSkill: UnknownSkill = {
   },
   id: "rememberFact",
   inputSchema: rememberFactInputSchema,
-};
+});
 
 export { rememberFactSkill };

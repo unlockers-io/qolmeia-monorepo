@@ -31,12 +31,7 @@ describe("webSearch skill", () => {
         }),
       ),
     );
-    const out = (await webSearchSkill.execute(
-      { query: "tendências de café especial" },
-      ctx("k"),
-    )) as {
-      results: Array<{ snippet: string; title: string; url: string }>;
-    };
+    const out = await webSearchSkill.execute({ query: "tendências de café especial" }, ctx("k"));
     expect(out.results[0]).toMatchObject({
       snippet: "corpo do resultado",
       title: "Título",

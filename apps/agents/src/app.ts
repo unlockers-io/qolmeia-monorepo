@@ -4,6 +4,7 @@ import { setProvider } from "@flue/runtime";
 import { createAgentRouter } from "@flue/runtime/routing";
 import { log } from "@repo/observability";
 import { honoEvlog } from "@repo/observability/hono";
+import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { cors } from "hono/cors";
@@ -13,7 +14,7 @@ import { CorrespondentV2 } from "#/agents/correspondent";
 import { PlannerV2 } from "#/agents/planner";
 import { requireCustomerAgent } from "#/lib/agent-route-auth";
 import type { SessionEnv } from "#/lib/auth";
-import { conversationProvider } from "#/lib/flue-models";
+import { conversationProvider } from "#/lib/models";
 import { assetsRoutes } from "#/routes/assets";
 import { backofficeRoutes } from "#/routes/backoffice";
 import { meRoutes } from "#/routes/me";
@@ -26,7 +27,7 @@ export const FLUE_CLIENT_EXPOSED_HEADERS = [
   "Location",
 ];
 
-setProvider(conversationProvider);
+setProvider(conversationProvider(env));
 
 const app = new Hono<SessionEnv>();
 

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { getCompany } from "#/company/company";
 import { withDb } from "#/lib/db";
-import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { defineSkill } from "#/skills/skill";
 import { listEntitledTemplates } from "#/template/template";
 
 const proposeTeamInputSchema = z.object({});
@@ -20,10 +20,11 @@ type ProposeResult = {
   candidates: ReadonlyArray<TeamCandidate>;
 };
 
-const proposeTeamSkill: UnknownSkill = {
+const proposeTeamSkill = defineSkill({
   description:
     "Lê o catálogo de especialistas disponíveis e propõe um Time para a empresa com base no brief atual. Use depois de coletar informação suficiente no debrief.",
-  async execute(_input: SkillInput, ctx: SkillContext): Promise<ProposeResult> {
+  displayName: "Propor time",
+  async execute(_input, ctx): Promise<ProposeResult> {
     const [templates, company] = await withDb(ctx.env, (db) =>
       Promise.all([listEntitledTemplates(db, ctx.companyId), getCompany(db, ctx.companyId)]),
     );
@@ -43,6 +44,6 @@ const proposeTeamSkill: UnknownSkill = {
   },
   id: "proposeTeam",
   inputSchema: proposeTeamInputSchema,
-};
+});
 
 export { proposeTeamSkill };

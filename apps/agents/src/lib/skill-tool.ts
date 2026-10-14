@@ -3,7 +3,8 @@ import * as v from "valibot";
 import * as z from "zod";
 import type { ZodType } from "zod";
 
-import { resolveSkills, type SkillContext, type SkillOverlayMap } from "#/skills/registry";
+import { enabledSkills, runSkill } from "#/skills/registry";
+import type { SkillContext } from "#/skills/skill";
 
 type JsonSchemaNode = {
   description?: string;
@@ -101,16 +102,16 @@ const buildInputSchema = (
 const buildFlueTools = (
   ctx: SkillContext,
   skillIds: ReadonlyArray<string>,
-  overlays: SkillOverlayMap | null,
+  disabledSkillIds: ReadonlyArray<string>,
 ): Array<ToolDefinition> =>
-  resolveSkills(ctx, skillIds, overlays).map((skill) =>
+  enabledSkills(skillIds, disabledSkillIds).map((skill) =>
     defineTool({
       description: skill.description,
       input: buildInputSchema(skill.inputSchema, skill.id),
       name: skill.id,
       // SAFETY: The skill contract restricts every output to JSON-compatible values.
-      // oxlint-disable-next-line no-unsafe-type-assertion -- skill.execute is typed unknown across the skill registry
-      run: async ({ data }) => ({ output: (await skill.execute(data)) as JsonValue }),
+      // oxlint-disable-next-line no-unsafe-type-assertion -- skill results are typed as any JSON-like value across the registry
+      run: async ({ data }) => ({ output: (await runSkill(ctx, skill, data)) as JsonValue }),
     }),
   );
 

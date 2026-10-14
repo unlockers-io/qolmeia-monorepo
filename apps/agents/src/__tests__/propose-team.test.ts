@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany } from "#/__tests__/fixtures";
 import { proposeTeamSkill } from "#/skills/propose-team";
-import type { SkillContext } from "#/skills/registry";
+import type { SkillContext } from "#/skills/skill";
 import { entitleToActiveTemplates } from "#/template/template";
 
 const COMPANY_ID = "co_propose_test";

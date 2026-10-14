@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { getMemoryAdapter, type ScoredRecord } from "#/lib/memory";
-import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { defineSkill } from "#/skills/skill";
 
 const recallMemoryInputSchema = z.object({
   query: z.string().min(1).describe("O que você está procurando, em uma frase clara em pt-BR."),
@@ -18,11 +18,11 @@ type RecallResult = {
   matches: ReadonlyArray<Pick<ScoredRecord, "content" | "createdAt" | "kind" | "score">>;
 };
 
-const recallMemorySkill: UnknownSkill = {
+const recallMemorySkill = defineSkill({
   description:
     "Busca na memória deste agente fatos relevantes para uma consulta. Use quando precisar de algo específico que pode estar fora do contexto atual.",
-  async execute(input: SkillInput, ctx: SkillContext): Promise<RecallResult> {
-    const { query, topK } = recallMemoryInputSchema.parse(input);
+  displayName: "Recordar memória",
+  async execute({ query, topK }, ctx): Promise<RecallResult> {
     const memory = getMemoryAdapter(ctx.env);
     const matches = await memory.retrieve({
       agentInstanceId: ctx.agentInstanceId,
@@ -40,6 +40,6 @@ const recallMemorySkill: UnknownSkill = {
   },
   id: "recallMemory",
   inputSchema: recallMemoryInputSchema,
-};
+});
 
 export { recallMemorySkill };
