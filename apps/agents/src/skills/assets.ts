@@ -76,9 +76,13 @@ const saveAssetInputSchema = z.object({
 const saveAssetSkill: UnknownSkill = {
   description:
     "Salva um documento de texto na biblioteca da empresa. Use 'customer' para uma entrega final que o cliente deve ver, ou 'agent' para material de trabalho interno.",
-  execute: (input: SkillInput, ctx: SkillContext): Promise<{ assetId: string }> => {
+  async execute(
+    input: SkillInput,
+    ctx: SkillContext,
+  ): Promise<{ assetId: string; deliverable: boolean }> {
     const { content, folder, mime, name } = saveAssetInputSchema.parse(input);
-    return withDb(ctx.env, (db) =>
+    const deliverable = (folder ?? "customer") === "customer";
+    const { assetId } = await withDb(ctx.env, (db) =>
       persistAsset(ctx.env, db, {
         bytes: new TextEncoder().encode(content),
         companyId: ctx.companyId,
@@ -86,9 +90,10 @@ const saveAssetSkill: UnknownSkill = {
         metadata: { name },
         mime: mime ?? "text/markdown",
         uploadMetadata: { generatedBy: "agent" },
-        visibility: folder ?? "customer",
+        visibility: deliverable ? ctx.deliverableFolder : "agent",
       }),
     );
+    return { assetId, deliverable };
   },
   id: "saveAsset",
   inputSchema: saveAssetInputSchema,

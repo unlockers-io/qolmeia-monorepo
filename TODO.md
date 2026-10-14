@@ -26,13 +26,7 @@ The §14 "next move" list in the existing doc has been completed. Rewrite the do
 
 Action: add `apps/backoffice/src/app/(dashboard)/error.tsx` and `apps/web/src/app/(client)/error.tsx` with a friendly retry UI ("Connection to the auth service hiccuped; refresh in a moment") plus a `reset()` button.
 
-## 3. Customer-side `decideAction` E2E
-
-The Correspondent's `decideAction` skill is wired into its system prompt and the tool registry, but only the **operator** path is tested end-to-end (`scripts/e2e-chat-flow.mjs`, `scripts/e2e-marketing-flow.mjs`). The customer-side path ("the user types 'aprovado' in the chat, the model maps it to `decision: approved`, the workflow resumes") has no test.
-
-Action: add `scripts/e2e-customer-decide.mjs` that triggers a `worker_deliverable` proposal, then sends "aprovado" as the next user turn via WS, then polls `/api/backoffice/actions` until the action is `executed`.
-
-## 4. Onboarding / Planner E2E
+## 3. Onboarding / Planner E2E
 
 The Prisma dev seed sets `company.status = 'active'` so the Planner is never exercised in the dev seed. The flow exists (`apps/agents/src/agents/planner.ts`, `apps/agents/src/routes/teams.ts → POST /api/teams/:companyId/confirm`) but no test proves the full status-driven routing.
 
@@ -40,7 +34,7 @@ Action:
 
 - Add `scripts/e2e-onboarding-flow.mjs` that flips a test company to `status='onboarding'`, opens a WS to the Planner, runs a debrief, confirms a team, then verifies (a) the status flipped to `active` (b) the Correspondent has its memory seeded with the brief facts (c) a Correspondent chat works.
 
-## 5. §11 product gaps from the prior arch review
+## 4. §11 product gaps from the prior arch review
 
 Each of these is a separate PR.
 
@@ -49,11 +43,6 @@ Each of these is a separate PR.
 - **Multi-org switcher**: `requireAnyMember` / `requireStaff` resolve `currentOrg` via `prisma.orgMembership.findFirst` ordered by `createdAt asc`, which is nondeterministic for a multi-membership user. Better Auth's organization plugin supports `setActiveOrganization`; wire it through and add a switcher to the backoffice sidebar + client nav.
 - **Activity-log payload renderer registry**: mirror of the `action-renderers` registry. Each `activity_log.type` gets an optional per-type renderer for the payload; unknown types fall back to the JSON dump.
 
-## 6. Smaller cleanup
+## 5. Smaller cleanup
 
-- **Pinned trigger, third action type:** the `proposed.draft` extraction in `WorkerJobWorkflow.run` is a hard-coded `if (actionType === "publish_post")` reading the `draftSocialPost` skill result. **When a third structured action type is added (e.g. `send_email` reading `draftEmail`, `schedule_meeting` reading `draftMeeting`), do this refactor as part of that PR:**
-  1. Add an `ACTION_TYPE_DRAFT_SKILL: Record<string, string>` constant near the top of `worker-job.ts` (e.g. `{ publish_post: "draftSocialPost", send_email: "draftEmail" }`).
-  2. Replace the `if (actionType === "publish_post" && draft !== undefined)` branch with a lookup against this record. The Workflow body stops branching per action type.
-  3. Mirror the same record in `apps/backoffice/src/components/action-renderers/index.tsx` so the renderer registry is config-only too.
-     Rationale for waiting: with one structured action type today, the abstraction (~30 LOC + a type) costs more than the one-line `if`. Two types is the inflection point; three guarantees the pattern.
 - The slug validator (`isValidSlug` / `SLUG_CHARS`) is still duplicated between `apps/agents/src/routes/internal.ts` and `apps/auth/src/routes/v1/orgs.ts`. Cross-app, so it needs a shared package (probably `@repo/shared-validation`). Low priority: the duplication is ~15 LOC and both apps already cite the rationale.

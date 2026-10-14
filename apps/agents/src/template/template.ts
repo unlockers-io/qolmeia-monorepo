@@ -2,6 +2,7 @@ import type { AgentTemplate, Skill } from "@repo/db/worker";
 import type { Template, TemplateInput, TemplateStatus } from "@repo/worker-api/contracts";
 import { z } from "zod";
 
+import { actionTypeSchema } from "#/action/action-types";
 import type { Db } from "#/lib/db";
 
 type SkillOverlay = {
@@ -15,7 +16,7 @@ const stringArraySchema = z.array(z.string());
 
 const toTemplate = (row: AgentTemplate): Template => ({
   createdAt: row.createdAt.getTime(),
-  defaultActionType: row.defaultActionType,
+  defaultActionType: actionTypeSchema.parse(row.defaultActionType),
   defaultPolicies: stringRecordSchema.parse(row.defaultPolicies),
   description: row.description,
   displayName: row.displayName,

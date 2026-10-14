@@ -1,9 +1,9 @@
-import type { DecisionOutcome } from "@repo/worker-api/contracts";
+import type { ActionPolicy, DecisionOutcome } from "@repo/worker-api/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
-import { getAction, listPendingActions } from "#/action/action";
-import { completeTicket, proposeAction, recordDecision } from "#/action/approval";
+import { actionIdFor, getAction, listPendingActions } from "#/action/action";
+import { markExecuted, proposeAction, recordDecision } from "#/action/approval";
 import { listActivity } from "#/activity/log";
 import type { JsonRecord } from "#/lib/records";
 import { loadTicket } from "#/ticket/ticket";
@@ -13,16 +13,24 @@ const WORKER_ID = "agent-action-test";
 const TICKET_ID = "tkt-action-test";
 const SECOND_TICKET_ID = "tkt-action-test-2";
 
-const propose = (proposed: JsonRecord = {}, ticketId = TICKET_ID) =>
+type ProposeInput = {
+  policy?: ActionPolicy;
+  proposed?: JsonRecord;
+  round?: number;
+  ticketId?: string;
+};
+
+const propose = ({ policy, proposed, round, ticketId }: ProposeInput = {}) =>
   db((client) =>
     proposeAction(client, {
       actionType: "worker_deliverable",
       companyId: COMPANY_ID,
       feedback: null,
-      proposed,
-      round: 0,
+      policy: policy ?? "require_approval",
+      proposed: proposed ?? {},
+      round: round ?? 0,
       summary: "review this",
-      ticketId,
+      ticketId: ticketId ?? TICKET_ID,
     }),
   );
 
@@ -33,7 +41,18 @@ const decide = (actionId: string, decision: DecisionOutcome, decidedByUserId = "
       companyId: COMPANY_ID,
       decidedByUserId,
       decision,
-      summary: "approved result",
+      round: 0,
+      ticketId: TICKET_ID,
+    }),
+  );
+
+const execute = (actionId: string, policy: ActionPolicy) =>
+  db((client) =>
+    markExecuted(client, {
+      actionId,
+      companyId: COMPANY_ID,
+      policy,
+      result: "approved result",
       ticketId: TICKET_ID,
     }),
   );
@@ -61,105 +80,109 @@ beforeEach(async () => {
 });
 
 describe("proposeAction + getAction", () => {
-  it("inserts a pending action; getAction round-trips it", async () => {
-    const { id } = await propose({ summary: "let's ship X" });
+  it("inserts a pending action keyed by ticket and round; getAction round-trips it", async () => {
+    const { id } = await propose({ proposed: { summary: "let's ship X" } });
+    expect(id).toBe(actionIdFor(TICKET_ID, 0));
     const stored = await action(id);
-    expect(stored).not.toBeNull();
     expect(stored?.status).toBe("pending");
     expect(stored?.policy).toBe("require_approval");
     expect(stored?.proposed.summary).toBe("let's ship X");
   });
+
+  it("is idempotent per round: a retried propose returns the same id and keeps one row", async () => {
+    const first = await propose({ proposed: { attempt: 1 } });
+    const second = await propose({ proposed: { attempt: 2 } });
+    expect(second.id).toBe(first.id);
+    await expect(action(first.id)).resolves.toMatchObject({ proposed: { attempt: 1 } });
+    await expect(activityTypes()).resolves.toEqual(["ACTION_PROPOSED"]);
+  });
+
+  it("clears an ungated action to execute without moving the ticket", async () => {
+    const { id } = await propose({ policy: "auto_execute" });
+    await expect(action(id)).resolves.toMatchObject({ policy: "auto_execute", status: "approved" });
+    await expect(ticket()).resolves.toMatchObject({ status: "in_progress" });
+    await expect(activityTypes()).resolves.toEqual([]);
+  });
 });
 
 describe("recordDecision", () => {
-  it("executes an approved action and records the decider", async () => {
+  it("approves the action and records the decider", async () => {
     const { id } = await propose();
-    await decide(id, "approved");
+    await expect(decide(id, "approved")).resolves.toBe("execute");
     const after = await action(id);
-    expect(after?.status).toBe("executed");
+    expect(after?.status).toBe("approved");
     expect(after?.decidedByUserId).toBe("user-1");
+    await expect(activityTypes()).resolves.toContain("ACTION_APPROVED");
   });
 
   it("is idempotent — a second decision leaves the row alone", async () => {
     const { id } = await propose();
     await decide(id, "approved");
-    await expect(decide(id, "rejected", "user-2")).resolves.toBeUndefined();
+    await decide(id, "rejected", "user-2");
     const after = await action(id);
-    expect(after?.status).toBe("executed");
+    expect(after?.status).toBe("approved");
     expect(after?.decidedByUserId).toBe("user-1");
-    await expect(ticket()).resolves.toMatchObject({ status: "done" });
     await expect(activityTypes()).resolves.not.toContain("ACTION_REJECTED");
+  });
+
+  it("ends the ticket on reject", async () => {
+    const { id } = await propose();
+    await expect(decide(id, "rejected")).resolves.toBe("end");
+    await expect(ticket()).resolves.toMatchObject({ status: "rejected" });
+  });
+});
+
+describe("markExecuted", () => {
+  it("executes an approved action and completes its ticket with the result", async () => {
+    const { id } = await propose();
+    await decide(id, "approved", "operator-1");
+    await execute(id, "require_approval");
+    await expect(action(id)).resolves.toMatchObject({ status: "executed" });
+    const done = await ticket();
+    expect(done?.status).toBe("done");
+    expect(done?.result).toEqual({ summary: "approved result" });
+    await expect(activityTypes()).resolves.toContain("ACTION_EXECUTED");
+  });
+
+  it("is idempotent — a retried execute writes one activity entry", async () => {
+    const { id } = await propose({ policy: "notify_only" });
+    await execute(id, "notify_only");
+    await execute(id, "notify_only");
+    await expect(activityTypes()).resolves.toEqual(["ACTION_NOTIFY"]);
+  });
+
+  it("refuses to execute an action still waiting on its Decision", async () => {
+    const { id } = await propose();
+    await execute(id, "require_approval");
+    await expect(action(id)).resolves.toMatchObject({ status: "pending" });
+    await expect(ticket()).resolves.toMatchObject({ status: "awaiting_approval" });
   });
 });
 
 describe("listPendingActions", () => {
-  it("excludes an action once it is executed", async () => {
+  it("excludes an action once it is decided", async () => {
     const { id } = await propose();
     await decide(id, "approved");
-    await expect(action(id)).resolves.toMatchObject({ status: "executed" });
     await expect(pendingIds()).resolves.not.toContain(id);
   });
 
   it("returns oldest-first within companyId", async () => {
     await seedTicket({ agentInstanceId: WORKER_ID, companyId: COMPANY_ID, id: SECOND_TICKET_ID });
-    const first = await propose({ n: 1 });
+    const first = await propose({ proposed: { n: 1 } });
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 5);
     });
-    const second = await propose({ n: 2 }, SECOND_TICKET_ID);
+    const second = await propose({ proposed: { n: 2 }, ticketId: SECOND_TICKET_ID });
     const ids = await pendingIds();
     expect(ids).toContain(first.id);
     expect(ids.indexOf(first.id)).toBeLessThan(ids.indexOf(second.id));
   });
 
-  it("is idempotent on (ticketId, pending): double-propose returns the same id, one row", async () => {
-    const first = await propose({ attempt: 1 });
-    const second = await propose({ attempt: 2 });
-    expect(second.id).toBe(first.id);
-    const entries = await pending();
-    const forTicket = entries.filter((entry) => entry.ticketId === TICKET_ID);
-    expect(forTicket).toHaveLength(1);
-    expect(forTicket[0]?.id).toBe(first.id);
-  });
-
-  it("allows a fresh propose once the prior action is no longer pending", async () => {
-    const first = await propose({ attempt: 1 });
-    await decide(first.id, "rejected", "op-1");
-    const second = await propose({ attempt: 2 });
-    expect(second.id).not.toBe(first.id);
-  });
-});
-
-describe("approval use cases", () => {
-  it("proposes an action and moves its ticket in one transaction", async () => {
-    const { id } = await propose({ summary: "review this" });
-    await expect(action(id)).resolves.toMatchObject({ status: "pending" });
-    await expect(ticket()).resolves.toMatchObject({ status: "awaiting_approval" });
-    await expect(activityTypes()).resolves.toContain("ACTION_PROPOSED");
-  });
-
-  it("applies approval to the action and ticket in one transaction", async () => {
-    const { id } = await propose({ summary: "approved result" });
-    await decide(id, "approved", "operator-1");
-    const stored = await action(id);
-    const done = await ticket();
-    expect(stored?.status).toBe("executed");
-    expect(done?.status).toBe("done");
-    expect(done?.result).toEqual({ summary: "approved result" });
-  });
-
-  it("completes notify-only work with both activity entries", async () => {
-    await db((client) =>
-      completeTicket(client, {
-        companyId: COMPANY_ID,
-        policy: "notify_only",
-        summary: "finished",
-        ticketId: TICKET_ID,
-      }),
-    );
-    await expect(ticket()).resolves.toMatchObject({ status: "done" });
-    await expect(activityTypes()).resolves.toEqual(
-      expect.arrayContaining(["ACTION_NOTIFY", "TICKET_DONE"]),
-    );
+  it("lists a revision round as a fresh pending action", async () => {
+    const first = await propose();
+    await decide(first.id, "changes_requested");
+    const second = await propose({ round: 1 });
+    expect(second.id).toBe(actionIdFor(TICKET_ID, 1));
+    await expect(pendingIds()).resolves.toEqual([second.id]);
   });
 });

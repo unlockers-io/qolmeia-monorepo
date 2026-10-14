@@ -10,6 +10,7 @@ const COMPANY_ID = "co_extract_test";
 const ctx: SkillContext = {
   agentInstanceId: `planner-${COMPANY_ID}`,
   companyId: COMPANY_ID,
+  deliverableFolder: "customer",
   get env() {
     return env;
   },

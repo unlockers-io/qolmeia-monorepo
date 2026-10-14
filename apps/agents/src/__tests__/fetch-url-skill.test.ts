@@ -7,6 +7,7 @@ const originalFetch = globalThis.fetch;
 const ctx = (env: Record<string, string | undefined>) => ({
   agentInstanceId: "ai_test",
   companyId: "co_test",
+  deliverableFolder: "customer" as const,
   env: env as unknown as Env,
 });
 

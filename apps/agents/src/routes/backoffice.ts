@@ -23,10 +23,11 @@ import {
   listPendingActions,
   listTicketActions,
 } from "#/action/action";
+import { actionTypeSchema, defaultPoliciesSchema } from "#/action/action-types";
 import { ACTIVITY_CATEGORIES, listActivity } from "#/activity/log";
 import { listCompaniesOverview } from "#/company/company";
 import { createOrganization } from "#/company/organization";
-import { decisionEventType } from "#/jobs/decision-event";
+import { submitDecision } from "#/jobs/decision";
 import { requireStaffSession, type ValidatedSession } from "#/lib/auth";
 import { dbPerRequest, type DbVariables } from "#/lib/db";
 import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
@@ -123,7 +124,6 @@ const decideBodySchema = z.object({
 });
 
 backofficeRoutes.post("/actions/:id/decide", async (c) => {
-  const id = c.req.param("id");
   let body: unknown;
   try {
     body = await c.req.json();
@@ -135,37 +135,23 @@ backofficeRoutes.post("/actions/:id/decide", async (c) => {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
 
-  const { db } = c.var;
-  const action = await getAction(db, id);
-  if (!action) {
+  const receipt = await submitDecision(c.env, c.var.db, c.req.param("id"), {
+    ...parsed.data,
+    decidedByUserId: c.get("session").userId,
+  });
+  if (receipt.ok) {
+    return c.json({ ok: true });
+  }
+  if (receipt.reason === "not_found") {
     return c.text("Not found", 404);
   }
-  if (action.status !== "pending") {
-    return c.json({ error: `action already ${action.status}` }, 409);
+  if (receipt.reason === "not_pending") {
+    return c.json({ error: `action already ${receipt.status}` }, 409);
   }
-  if (
-    parsed.data.decision === "changes_requested" &&
-    !(await canRequestChanges(db, action.ticketId))
-  ) {
+  if (receipt.reason === "revision_limit") {
     return c.json({ error: "revision limit reached" }, 409);
   }
-
-  const ticket = await loadTicket(db, action.ticketId);
-  if (ticket === null || ticket.workflowId === null || ticket.workflowId === "") {
-    return c.json({ error: "no workflow for this action" }, 500);
-  }
-
-  const instance = await c.env.WORKER_JOB.get(ticket.workflowId);
-  await instance.sendEvent({
-    payload: {
-      decidedByUserId: c.get("session").userId,
-      decision: parsed.data.decision,
-      feedback: parsed.data.feedback,
-    },
-    type: decisionEventType(id),
-  });
-
-  return c.json({ ok: true });
+  return c.json({ error: "no workflow for this action" }, 500);
 });
 
 backofficeRoutes.get("/activity", async (c) => {
@@ -340,8 +326,8 @@ const skillIdsSchema = z.array(z.string().min(1)).refine((ids) => ids.every(isKn
 });
 
 const templateBodySchema = z.object({
-  defaultActionType: z.string().trim().min(1).max(80).default("worker_deliverable"),
-  defaultPolicies: z.record(z.string(), z.string()).default({}),
+  defaultActionType: actionTypeSchema.default("worker_deliverable"),
+  defaultPolicies: defaultPoliciesSchema.default({}),
   description: z.string().trim().min(1).max(2000),
   displayName: z.string().trim().min(1).max(120),
   model: z.string().trim().min(1).max(160),

@@ -33,7 +33,12 @@ export function PlannerV2({ id }: AgentProps): string {
 
   useModel(`openrouter/${CONVERSATION_MODEL}`, { thinkingLevel: "low" });
 
-  const ctx: SkillContext = { agentInstanceId: plannerIdFor(id), companyId: id, env };
+  const ctx: SkillContext = {
+    agentInstanceId: plannerIdFor(id),
+    companyId: id,
+    deliverableFolder: "customer",
+    env,
+  };
   for (const skillTool of buildFlueTools(ctx, PLANNER_SKILLS, overlays)) {
     useTool(skillTool);
   }

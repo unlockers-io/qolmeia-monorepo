@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildRevisionMessages } from "#/jobs/worker-job";
+import { buildRevisionMessages } from "#/jobs/worker-job-generate";
 
 describe("buildRevisionMessages", () => {
   it("first round is just the brief", () => {

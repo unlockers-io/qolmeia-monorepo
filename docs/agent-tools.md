@@ -36,7 +36,6 @@ policies when the product is ready to trust a fast lane.
 | `delegateToWorker`                       | spawn a child ticket                      | —                                                | Correspondent                                                |
 | `extractBrief`                           | update the company brief                  | — (LLM)                                          | Planner, Correspondent                                       |
 | `proposeTeam`                            | onboarding team proposal                  | — (LLM)                                          | Planner                                                      |
-| `decideAction`                           | resume a gated action                     | —                                                | registered but currently unassigned                          |
 
 **Channel:** web chat only: the Correspondent's Flue agent route (HTTP+SSE).
 
@@ -150,8 +149,16 @@ spike (2026-06-19):
 **Skill:** create `src/skills/<name>.ts` (`{ id, description, inputSchema,
 execute }`) → add to `ALL_SKILLS` in `registry.ts` → add the id to the relevant
 template `skillIds` in `packages/db/src/product-seed.ts` and/or `CORRESPONDENT_SKILLS` → declare any
-secret in `env.d.ts` + `wrangler secret put` + `docs/deploy.md` → if it's an
-outward action, give the template a `defaultPolicies` entry so it's gated.
+secret in `env.d.ts` + `wrangler secret put` + `docs/deploy.md` → a skill that
+writes to the library uses `ctx.deliverableFolder`, so a Worker job's files stay
+in the agent folder until its Action executes.
+
+**Action type:** add the key to `ACTION_TYPES` in
+`packages/worker-api/src/contracts/actions.ts` → add a module under
+`apps/agents/src/action/` with its proposed-payload extraction, executor, and
+default policy (`require_approval` for outward, hard-to-reverse effects) → register
+it in `ACTION_TYPE_MODULES` → add its backoffice renderer, label, and default
+decision (the typed records fail to compile until you do).
 
 **Connector:** add the connector type + webhook route → store per-tenant secret
 in `CONNECTOR_SECRETS` KV → route inbound messages to the Correspondent DO.
