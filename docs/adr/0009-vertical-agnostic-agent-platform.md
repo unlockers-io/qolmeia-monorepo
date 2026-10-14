@@ -1,5 +1,13 @@
 # Qolmeia is a vertical-agnostic agent platform; a vertical = templates + skills + connectors; marketing is just the first one
 
+> **Status (2026-10): stands; paths and seams updated.** The decision is unchanged. The concrete seams it names moved:
+>
+> - Templates are Postgres `template` rows, read through `apps/agents/src/template/template.ts`; D1 is gone ([ADR 0010](./0010-worker-reaches-postgres-through-hyperdrive.md)).
+> - A skill is one `defineSkill` module listed in `ALL_SKILLS`. There is no description overlay: the `skill` table is only an operator kill-switch.
+> - No connector exists: there is no `connector` table, no `CONNECTOR_SECRETS` binding, and no Telegram adapter. The first connector defines its own secret store.
+> - The brief schema is `packages/worker-api/src/brief.ts`; the Planner prompt is `PLANNER_INSTRUCTIONS` in `agents/planner.ts`.
+> - Per-company template entitlements exist (`company_template_entitlement`); `proposeTeam` and team confirm only offer entitled templates. Billing does not.
+
 The product was built as an "AI marketing agency." A customer-discovery session with a coworking operator (Multi.Spaço) wanted almost none of the marketing surface — their ranked needs were collections (cobrança), pre-sales attendance (pré-atendimento), and a lightweight CRM, with "redes sociais" dead last. The principal dor was financial follow-up: "não deixe dinheiro na mesa." This forces the question of whether marketing is _the product_ or _the first vertical_.
 
 **Decision:** marketing is the first vertical, not the product. The orchestration core is domain-neutral and stays that way; a new vertical is added as **data + a few code modules + connectors**, never by forking the engine.

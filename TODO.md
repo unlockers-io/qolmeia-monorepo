@@ -1,48 +1,34 @@
 # TODO
 
-Open work items, ordered by impact. Each top-level entry is a PR-sized slice.
+Open work items, ordered by impact. Each top-level entry is a PR-sized slice. The product roadmap (connectors, new skills, the Cobrança vertical) lives in [`docs/agent-tools.md`](docs/agent-tools.md).
 
-## 1. Update the architecture review (closing deliverable)
+## 1. Decide what re-confirming an active Team does (open product decision)
 
-`docs/architecture/2026-05-26-post-p7-review.md` describes the post-P7.1 system. Since then the following has shipped and the doc is stale:
+`POST /api/teams/:companyId/confirm` on a Company whose Team is already active runs the whole confirm again (`team/confirm.ts`): it overwrites the Correspondent's `can_delegate_to` with the confirmed template set, which drops any Worker hired later, and it seeds the brief facts into Memory a second time. Decide whether a second confirm is refused, merges with the current roster, or replaces it on purpose, then make the route do that and test it.
 
-- **P7.2 cutover**: `apps/api` renamed to `apps/auth`; legacy `connectors/`, `inbox/`, `agents/`, `workers/`, `routines/`, OpenRouter wiring, BullMQ deps all deleted. Prisma schema pruned to Better Auth + `Organization` + `OrgMembership`. Redis removed from `docker-compose.yml`.
-- **Company creation**: operators create a company with `POST /api/backoffice/companies` on the Worker, which writes the `Organization`, the creator's `OWNER` membership, the `company`, its Correspondent and Planner `agent_instance` rows, and its template entitlements in one transaction.
-- **60s session KV cache**: `apps/agents/src/lib/auth.ts → validateSession` memoises `/api/v1/me` in a new `SESSIONS` KV namespace keyed on bearer token (or hash of cookie). Same KV namespace caches the `/api/me` relay in `routes/me.ts`. Takes Better Auth's per-IP 100/15min rate limit off the page-render hot path. Responses carry `X-Cache: hit|miss`.
-- **Structured agent observability**: `apps/agents/src/lib/logger.ts` emits single-line JSON via `console.log`. Workers Logs (already enabled via `observability.enabled`) indexes top-level fields. Hooked at: `agent.turn.start/ok`, `agent.tool.start/ok/err` (auto-wrapped in the skill registry), `agent.connector.start/ok/err`, `agent.presentAction`, `workflow.start/generate.start/generate.ok/propose.ok/waiting/decision.received/ok`.
-- **Image-gen fix**: `generateBrandImage` now uses OpenRouter's `/api/v1/chat/completions` with `modalities: ["image","text"]` (the dedicated `/images/generations` endpoint doesn't exist on OpenRouter). Default model `google/gemini-3.1-flash-image` (stable Nano Banana 2), set as `IMAGE_MODEL` in `apps/agents/src/lib/models.ts`. Response is a `data:image/png;base64,…` URL on `choices[0].message.images[0].image_url.url`.
-- **Redirect-loop fix**: `requireStaff` / `requireCustomer` no longer catch-and-redirect to `/login` on transient `/api/me` failures (the cause of `ERR_TOO_MANY_REDIRECTS` when the auth service rate-limited). 401/403 still redirect; everything else throws so Next renders the error boundary.
-- **Streamdown img override**: markdown `![alt](url)` rendered by the Correspondent no longer creates a `<div>`-inside-`<p>` hydration error; `<MessageResponse>` passes a `components.img` override that emits a plain `<img>`.
-- **Second action type: `publish_post`**: migration `0004_p8_marketing_strategist.sql` adds `default_action_type` column to `template`. `WorkerJobWorkflow.run` reads it to drive `proposeAction(actionType)`. Marketing Strategist template seeded with `default_action_type = 'publish_post'`. New `draftSocialPost` skill emits structured `{platform, body, callToAction, hashtags, tone}`. Workflow captures `result.steps[].toolResults` into `proposed.draft` for typed renderers (stringified at the `step.do` boundary because `Serializable<T>` rejects `unknown`). Backoffice has a new `components/action-renderers/` registry; `PublishPostCard` shows the draft as a real card.
-- **API casing normalization**: bare `GET /api/backoffice/actions` (no query) and `GET /api/backoffice/tickets` previously returned raw snake_case rows while `?status=pending&sort=age` returned camelCase via the mapper. Both list endpoints now pipe through the typed mapper (`mapActionRow`, `mapTicketListItem` via a new `listTickets` helper in `db/ticket.ts`). The backoffice never sees raw column names.
-- **Correspondent multimodal**: the DO now reads `<img>` parts from incoming `UIMessage`s, extracts them into `AttachedImage[]`, and `buildModelMessages` swaps the last user turn for a multi-part `text + image` payload so the vision-capable model can see them. `POST /api/me/uploads` accepts file uploads (≤10MB, PNG/JPEG/WebP/GIF), dedups by sha256, and returns a signed asset URL the client can drop into the prompt. Custom oxlint override on `correspondent.ts` raises the max-lines limit to 500 (the class concentrates three coherent paths (web chat, connector webhook, memory seed) and splitting hurts readability more than the line count does).
-- **Architecture review refactors**: five deepenings landed off the post-P8 architecture review (`/tmp/architecture-review-…html`). C5: `safeJson` consolidated from six call sites into one `db/mappers.ts` helper; `mapAction` + `listActions` + `listActionsForTicket` exported from `db/action.ts` so `routes/backoffice.ts` never reads raw `ActionRow` shapes. C2: KV-cache plumbing (sha256 + key-build + read/write) lifted into `lib/session-cache.ts`; `validateSession` + `/api/me` relay both compose. C3: `activity_log` event types are now a discriminated `ActivityEvent` union in `activity/types.ts` with exhaustive `eventCategory`; `logActivity` constrains `(type, refType, payload)` triplets at compile time. C4: `/api/me/assets` + `/api/me/uploads` split into `routes/me-assets.ts` (the multi-step upload transaction was the cleavage point). C1: Correspondent's web-chat + connector-inbound paths now compose with one `prepareConversationTurn` primitive; the SSRF-guard image resolver lives in `agents/asset-url-resolver.ts`.
+## 2. Customer provisioning
 
-The §14 "next move" list in the existing doc has been completed. Rewrite the doc post-P8: same single-read intent, new state.
+No route grants a `CUSTOMER` membership: the dev seed and SQL are the only way to attach an Account to a Company. `POST /api/backoffice/companies` also makes the creating Operator an `OWNER` member of the new Company, while ADR 0005 says Operators belong to no customer Company. Design the operator flow that creates a Company and invites its first Customer, and stop writing the Operator's membership.
 
-## 2. Error boundaries on the Next apps
+## 3. Onboarding end to end
 
-`requireStaff` / `requireCustomer` now throw on transient `/api/me` failures instead of redirecting (see redirect-loop fix above). Without an `error.tsx` at the route segment, the user sees Next's stock "Application error" page.
+No automated test runs the onboarding path: a Planner turn with a stubbed model, `extractBrief` and `proposeTeam`, the confirm, then a Correspondent turn that recalls a brief fact. The Playwright suite covers the auth flows only. Add it as a Worker test with the model stubbed at `globalThis.fetch`, the way `worker-job.test.ts` does.
 
-Action: add `apps/backoffice/src/app/(dashboard)/error.tsx` and `apps/web/src/app/(client)/error.tsx` with a friendly retry UI ("Connection to the auth service hiccuped; refresh in a moment") plus a `reset()` button.
+## 4. Operator directory and assigned coverage
 
-## 3. Onboarding / Planner E2E
+Coverage is self-service: each Operator picks their own Companies and disciplines. Assigning coverage to someone else needs a directory of `OWNER`/`STAFF` users first (ADR 0005).
 
-The Prisma dev seed sets `company.status = 'active'` so the Planner is never exercised in the dev seed. The flow exists (`apps/agents/src/agents/planner.ts`, `apps/agents/src/routes/teams.ts → POST /api/teams/:companyId/confirm`) but no test proves the full status-driven routing.
+## 5. The `notify-only` feed
 
-Action:
+`notify-only` executes and records an `ACTION_NOTIFY` activity entry, but no Operator surface lists those entries apart from the general activity log (ADR 0006). No shipped template uses the tier yet.
 
-- Add `scripts/e2e-onboarding-flow.mjs` that flips a test company to `status='onboarding'`, opens a WS to the Planner, runs a debrief, confirms a team, then verifies (a) the status flipped to `active` (b) the Correspondent has its memory seeded with the brief facts (c) a Correspondent chat works.
+## 6. Production hardening
 
-## 4. §11 product gaps from the prior arch review
+- Hyperdrive connects as the Postgres superuser. Create a least-privilege role for the Worker and update the config (ADR 0010).
+- Hyperdrive cannot verify Railway's certificate (`sslmode=require`). Revisit when Railway serves a verifiable one.
+- The Worker has no CD. Deploy it from CI on merge to `main`, with the commit in the deploy message.
 
-Each of these is a separate PR.
+## 7. Smaller items
 
-- **WhatsApp / Slack / Discord adapters**: placeholders in `apps/agents/src/connectors/`. WhatsApp is the highest-value: Meta Cloud API webhook + outbound. The Telegram adapter is the model to copy.
-- **Telegram outbound `sendPhoto`**: outbound is text-only today. Adding image outbound means the Designer's results round-trip to a Telegram bot conversation too, not just the web chat.
-- **Multi-org switcher**: `requireAnyMember` / `requireStaff` resolve `currentOrg` via `prisma.orgMembership.findFirst` ordered by `createdAt asc`, which is nondeterministic for a multi-membership user. Better Auth's organization plugin supports `setActiveOrganization`; wire it through and add a switcher to the backoffice sidebar + client nav.
-- **Activity-log payload renderer registry**: mirror of the `action-renderers` registry. Each `activity_log.type` gets an optional per-type renderer for the payload; unknown types fall back to the JSON dump.
-
-## 5. Smaller cleanup
-
-- The slug validator (`isValidSlug` / `SLUG_CHARS`) is still duplicated between `apps/agents/src/routes/internal.ts` and `apps/auth/src/routes/v1/orgs.ts`. Cross-app, so it needs a shared package (probably `@repo/shared-validation`). Low priority: the duplication is ~15 LOC and both apps already cite the rationale.
+- Activity-log payload renderers: the backoffice prints every payload as JSON. Mirror the `action-renderers` registry with an optional renderer per activity `type`.
+- A staged `--latest` dependency update (including Next 16.4), on its own and not bundled with a deploy.

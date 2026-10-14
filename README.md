@@ -1,6 +1,6 @@
 # Qolmeia
 
-Monorepo for Qolmeia, a customer support and agent-orchestration product. The current runtime is two Next.js surfaces and a Cloudflare Worker that hosts Better Auth, Flue agents, customer/operator REST APIs, R2 assets, and approval workflows. Auth and product state share Postgres through Prisma.
+Monorepo for Qolmeia, an agent platform where each customer Company gets a Team of AI agents and human Operators approve sensitive actions. The runtime is a Cloudflare Worker that hosts Better Auth, the Flue agents, the customer and operator REST APIs, R2 assets, and the approval Workflows, plus three Next.js apps on Vercel. Auth and product data share Postgres (on Railway) through Prisma and Hyperdrive.
 
 The complete shipped-feature inventory lives in [`docs/FEATURES.md`](docs/FEATURES.md), with screenshots
 and product flows in [`docs/PRODUCT_MAP.md`](docs/PRODUCT_MAP.md). Architecture details live in
@@ -14,6 +14,7 @@ and product flows in [`docs/PRODUCT_MAP.md`](docs/PRODUCT_MAP.md). Architecture 
 | `apps/agents`     | `worker-bees` | Cloudflare Worker | `https://qolmeia.agents.localhost`     | Better Auth, Flue agents, product APIs, Workflows |
 | `apps/web`        | `web`         | Next.js 16        | `https://qolmeia.web.localhost`        | Customer onboarding and chat                      |
 | `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` | Operator approvals and team management            |
+| `apps/landing`    | `landing`     | Next.js 16        | `https://qolmeia.landing.localhost`    | Public marketing site                             |
 
 ## Packages
 
@@ -21,15 +22,20 @@ and product flows in [`docs/PRODUCT_MAP.md`](docs/PRODUCT_MAP.md). Architecture 
 | ------------------------- | -------------------------------------------------- |
 | `@repo/auth`              | Better Auth factory and the session-cookie helpers |
 | `@repo/db`                | Prisma clients and the shared Postgres schema      |
+| `@repo/worker-api`        | Typed Worker client and its contracts              |
+| `@repo/app-shell`         | Next config, proxy, and session helpers            |
 | `@repo/transactional`     | React Email templates and Resend sender            |
 | `@repo/ui`                | Shared shadcn-style UI package and Tailwind preset |
+| `@repo/social-image`      | Open Graph image text rendering                    |
+| `@repo/observability`     | Structured logging                                 |
+| `@repo/portless-env`      | Dev URLs from portless                             |
 | `@repo/config-vitest`     | Shared Vitest config                               |
 | `@repo/typescript-config` | Shared TypeScript config                           |
 
 ## Prerequisites
 
 - Node.js 24 or newer
-- pnpm 11.1.3, matching `packageManager`
+- pnpm 11, matching `packageManager`
 - Docker, for local Postgres on `:5436`
 - Wrangler, installed through the workspace dependencies
 

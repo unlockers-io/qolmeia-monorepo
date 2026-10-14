@@ -1,5 +1,12 @@
 # Asset library: customer/agent folders, kept separate from agent memory
 
+> **Status (2026-10): amended.** The three stores stand. What changed:
+>
+> - Postgres, not D1, holds the `asset` and `memory_fact` rows, and the Worker reaches it directly ([ADR 0010](./0010-worker-reaches-postgres-through-hyperdrive.md)). "Postgres is auth-only" below is no longer true; Memory stays on Vectorize for recall, with the `memory_fact` row as the authority (`memory/memory.ts`).
+> - The folder lives only in `visibility`. Objects are not moved under `customer/` / `agent/` prefixes: new keys are `org_<companyId>/<assetId>.<ext>` and older objects keep their stored key (`library/assets.ts`).
+> - A Worker job writes its deliverable to the agent folder; the Action type's executor promotes it to the customer folder when the Action executes ([ADR 0006](./0006-approval-gates-only-high-impact-actions.md)). Blanket `knowledge_doc` capture is gone.
+> - Brand identity is the `brand_asset` kind in the customer folder, not a `brand/` subfolder.
+
 `/assets` started as one shared pile that conflated three different things: files the customer should see, working material only the agents need, and "things the agent should remember." Auto-capture made it worse by dumping _every_ Worker text deliverable in as a `knowledge_doc`.
 
 **Decision:** there are **three distinct stores**, and we stop merging them.

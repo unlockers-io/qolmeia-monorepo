@@ -23,23 +23,26 @@ each mapped to the agent(s) that use it. Companion to
 
 Outward, hard-to-reverse tools (publishing, sending, spending) should propose a
 **gated action** (`require-approval` policy, ADR 0006) rather than firing
-directly. The shipped templates currently resolve all deliverables to
-`require-approval`; `auto-execute` and `notify-only` are available as template
-policies when the product is ready to trust a fast lane.
+directly. Skills never cause the effect themselves: a Worker job's skills write
+to the agent folder, and the template's Action type executes only once its
+Policy clears it. The shipped templates gate only the Marketing Strategist's
+`publish_post`; the Designer's, Redator's, and SEO Researcher's
+`worker_deliverable` actions `auto-execute`. `notify-only` is available as a
+template policy; no shipped template uses it.
 
 ## Current tools (live)
 
-| Tool (skill)                             | What it does                              | External dep                                     | Used by                                                      |
-| ---------------------------------------- | ----------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------ |
-| `webSearch`                              | web search                                | **Exa** (`EXA_API_KEY`)                          | Correspondent, Redator, SEO Researcher, + all workers (0010) |
-| `fetchUrl`                               | read a page as markdown                   | **Firecrawl** (`FIRECRAWL_API_KEY` or self-host) | Correspondent + all workers (0010)                           |
-| `generateBrandImage`                     | image generation                          | OpenRouter image model, through AI Gateway       | Designer                                                     |
-| `draftSocialPost`                        | structured post draft (platform/body/CTA) | — (LLM)                                          | Marketing Strategist                                         |
-| `listAssets` / `readAsset` / `saveAsset` | the asset library (R2)                    | R2                                               | Correspondent + all workers (0008)                           |
-| `rememberFact` / `recallMemory`          | semantic memory                           | Workers AI + Vectorize                           | Correspondent + all seeded specialists                       |
-| `delegateToWorker`                       | spawn a child ticket                      | —                                                | Correspondent                                                |
-| `extractBrief`                           | update the company brief                  | — (LLM)                                          | Planner, Correspondent                                       |
-| `proposeTeam`                            | onboarding team proposal                  | — (LLM)                                          | Planner                                                      |
+| Tool (skill)                             | What it does                              | External dep                                     | Used by                                |
+| ---------------------------------------- | ----------------------------------------- | ------------------------------------------------ | -------------------------------------- |
+| `webSearch`                              | web search                                | **Exa** (`EXA_API_KEY`)                          | Correspondent + all workers            |
+| `fetchUrl`                               | read a page as markdown                   | **Firecrawl** (`FIRECRAWL_API_KEY` or self-host) | Correspondent + all workers            |
+| `generateBrandImage`                     | image generation                          | OpenRouter image model, through AI Gateway       | Designer                               |
+| `draftSocialPost`                        | structured post draft (platform/body/CTA) | — (LLM)                                          | Marketing Strategist                   |
+| `listAssets` / `readAsset` / `saveAsset` | the Library                               | R2                                               | Correspondent + all workers            |
+| `rememberFact` / `recallMemory`          | semantic memory                           | Postgres + Workers AI + Vectorize                | Correspondent + all seeded specialists |
+| `delegateToWorker`                       | spawn a child ticket                      | —                                                | Correspondent                          |
+| `extractBrief`                           | update the company brief                  | — (LLM)                                          | Planner, Correspondent                 |
+| `proposeTeam`                            | onboarding team proposal                  | — (LLM)                                          | Planner                                |
 
 **Channel:** web chat only: the Correspondent's Flue agent route (HTTP+SSE).
 
@@ -58,18 +61,18 @@ policies when the product is ready to trust a fast lane.
 Ordered roughly by value. "Type" is **skill** (agent action) or **connector**
 (channel). Publishing/sending ones should be `require-approval`.
 
-| Integration                                           | Value                                                                     | Type      | Agent(s)                                   | Needs                                                 | Gating                                         |
-| ----------------------------------------------------- | ------------------------------------------------------------------------- | --------- | ------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------- |
-| **WhatsApp** (Cloud API / Twilio)                     | the dominant pt-BR customer channel: inbound+outbound chat, like Telegram | connector | Correspondent                              | Meta WhatsApp Business or Twilio creds (KV) + webhook | n/a (channel)                                  |
-| **Email send** (`sendEmail`)                          | outbound campaigns / replies; Resend is already wired for transactional   | skill     | Marketing Strategist, Correspondent        | reuse `RESEND_API_KEY` (or per-tenant domain)         | require-approval                               |
-| **Instagram / Meta Graph** (`publishPost`)            | actually publish the Strategist's drafts + read reach/insights            | skill     | **Social Media Manager** (new), Strategist | Meta app + per-tenant OAuth token (KV)                | require-approval                               |
-| **Gmail / inbound email**                             | treat email as a Correspondent channel (parse + reply)                    | connector | Correspondent                              | Gmail API OAuth or IMAP (KV) + webhook/poll           | n/a                                            |
-| **Google Calendar** (`scheduleEvent`)                 | content calendar, go-live dates, reminders                                | skill     | Planner, Strategist                        | Google OAuth (KV)                                     | notify-only                                    |
-| **Google Drive / Sheets**                             | read/write content calendars & long docs beyond the asset library         | skill     | Redator, Strategist                        | Google OAuth (KV)                                     | auto-execute (read) / require-approval (write) |
-| **LinkedIn** (`publishPost`)                          | B2B publishing                                                            | skill     | Social Media Manager                       | LinkedIn app + OAuth (KV)                             | require-approval                               |
-| **Analytics** (GA4 / Meta Insights) (`readAnalytics`) | close the loop: measure what shipped                                      | skill     | SEO Researcher, Strategist                 | GA4 / Meta tokens (KV)                                | auto-execute                                   |
-| **Slack / Discord**                                   | team-channel connector for orgs that live there                           | connector | Correspondent                              | bot token (KV) + webhook                              | n/a                                            |
-| **Stock / Canva / Figma**                             | source or templatize visuals                                              | skill     | Designer                                   | provider API key                                      | auto-execute                                   |
+| Integration                                           | Value                                                                   | Type      | Agent(s)                                   | Needs                                                 | Gating                                         |
+| ----------------------------------------------------- | ----------------------------------------------------------------------- | --------- | ------------------------------------------ | ----------------------------------------------------- | ---------------------------------------------- |
+| **WhatsApp** (Cloud API / Twilio)                     | the dominant pt-BR customer channel: inbound+outbound chat              | connector | Correspondent                              | Meta WhatsApp Business or Twilio creds (KV) + webhook | n/a (channel)                                  |
+| **Email send** (`sendEmail`)                          | outbound campaigns / replies; Resend is already wired for transactional | skill     | Marketing Strategist, Correspondent        | reuse `RESEND_API_KEY` (or per-tenant domain)         | require-approval                               |
+| **Instagram / Meta Graph** (`publishPost`)            | actually publish the Strategist's drafts + read reach/insights          | skill     | **Social Media Manager** (new), Strategist | Meta app + per-tenant OAuth token (KV)                | require-approval                               |
+| **Gmail / inbound email**                             | treat email as a Correspondent channel (parse + reply)                  | connector | Correspondent                              | Gmail API OAuth or IMAP (KV) + webhook/poll           | n/a                                            |
+| **Google Calendar** (`scheduleEvent`)                 | content calendar, go-live dates, reminders                              | skill     | Planner, Strategist                        | Google OAuth (KV)                                     | notify-only                                    |
+| **Google Drive / Sheets**                             | read/write content calendars & long docs beyond the asset library       | skill     | Redator, Strategist                        | Google OAuth (KV)                                     | auto-execute (read) / require-approval (write) |
+| **LinkedIn** (`publishPost`)                          | B2B publishing                                                          | skill     | Social Media Manager                       | LinkedIn app + OAuth (KV)                             | require-approval                               |
+| **Analytics** (GA4 / Meta Insights) (`readAnalytics`) | close the loop: measure what shipped                                    | skill     | SEO Researcher, Strategist                 | GA4 / Meta tokens (KV)                                | auto-execute                                   |
+| **Slack / Discord**                                   | team-channel connector for orgs that live there                         | connector | Correspondent                              | bot token (KV) + webhook                              | n/a                                            |
+| **Stock / Canva / Figma**                             | source or templatize visuals                                            | skill     | Designer                                   | provider API key                                      | auto-execute                                   |
 
 ### Suggested new agent
 
@@ -175,8 +178,7 @@ default policy (`require_approval` for outward, hard-to-reverse effects) → reg
 it in `ACTION_TYPE_MODULES` → add its backoffice renderer, label, and default
 decision (the typed records fail to compile until you do).
 
-**Connector:** add the connector type + webhook route → store per-tenant secret
-in `CONNECTOR_SECRETS` KV → route inbound messages to the Correspondent DO.
-
-Per-tenant credentials (OAuth tokens, channel secrets) belong in
-`CONNECTOR_SECRETS` KV keyed by company id, never in env vars or product tables.
+**Connector:** none exists yet. The first one adds a webhook route that
+`dispatch()`es inbound messages to the Correspondent, and a per-tenant secret
+store keyed by company id for OAuth tokens and channel secrets, never env vars
+or product tables.
