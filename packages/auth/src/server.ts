@@ -52,10 +52,7 @@ export const linkOnRequestOrigin = (
   return new URL(`${link.pathname}${link.search}`, requestOrigin.origin).toString();
 };
 
-const mailerFor = (
-  resendApiKey: string | undefined,
-  fromEmail?: string,
-): MailerConfig | null =>
+const mailerFor = (resendApiKey: string | undefined, fromEmail?: string): MailerConfig | null =>
   resendApiKey !== undefined && resendApiKey !== ""
     ? { apiKey: resendApiKey, from: fromEmail }
     : null;
