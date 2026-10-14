@@ -38,6 +38,7 @@ const propose = (companyId: string, ticketId: string, summary: string) =>
       actionType: "worker_deliverable",
       companyId,
       feedback: null,
+      policy: "require_approval",
       proposed: { summary },
       round: 0,
       summary,
@@ -45,9 +46,15 @@ const propose = (companyId: string, ticketId: string, summary: string) =>
     }),
   );
 
-const logTicketDone = (companyId: string, refId: string, summary: string) =>
+const logExecuted = (companyId: string, refId: string, summary: string) =>
   db((client) =>
-    recordActivity(client, { companyId, refId, refType: "ticket", summary, type: "TICKET_DONE" }),
+    recordActivity(client, {
+      companyId,
+      refId,
+      refType: "action",
+      summary,
+      type: "ACTION_EXECUTED",
+    }),
   );
 
 const createCompany = (body: { name: string; slug: string }) =>
@@ -203,8 +210,8 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
   });
 
   it("GET /activity?companyId= narrows to that company; unfiltered spans all", async () => {
-    await logTicketDone(COMPANY_ID, "tkt-bo-test", "mine");
-    await logTicketDone(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
+    await logExecuted(COMPANY_ID, "tkt-bo-test", "mine");
+    await logExecuted(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
     const filtered = await exports.default.fetch(
       `https://agents.test/api/backoffice/activity?companyId=${OTHER_COMPANY_ID}&cf_session=tok`,
@@ -254,7 +261,7 @@ describe("backoffice list query-param hardening", () => {
   });
 
   it("GET /activity ignores non-numeric limit, since, and before", async () => {
-    await logTicketDone(COMPANY_ID, "tkt-bo-test", "hardening");
+    await logExecuted(COMPANY_ID, "tkt-bo-test", "hardening");
     globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
 
     const badLimit = await exports.default.fetch(

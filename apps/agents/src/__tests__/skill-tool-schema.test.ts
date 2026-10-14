@@ -10,6 +10,7 @@ import { listSkillCatalog } from "#/skills/registry";
 const ctx: SkillContext = {
   agentInstanceId: "agent_schema_test",
   companyId: "co_schema_test",
+  deliverableFolder: "customer",
   get env() {
     return env;
   },

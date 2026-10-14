@@ -41,7 +41,12 @@ export function CorrespondentV2({ id }: AgentProps): string {
 
   useModel(`openrouter/${env.CORRESPONDENT_MODEL || CONVERSATION_MODEL}`, { thinkingLevel: "low" });
 
-  const ctx: SkillContext = { agentInstanceId: correspondentIdFor(id), companyId: id, env };
+  const ctx: SkillContext = {
+    agentInstanceId: correspondentIdFor(id),
+    companyId: id,
+    deliverableFolder: "customer",
+    env,
+  };
   for (const skillTool of buildFlueTools(ctx, CORRESPONDENT_SKILLS, overlays)) {
     useTool(skillTool);
   }

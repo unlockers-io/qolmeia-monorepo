@@ -12,6 +12,7 @@ const AGENT_INSTANCE_ID = "agent_skills_test";
 const ctx: SkillContext = {
   agentInstanceId: AGENT_INSTANCE_ID,
   companyId: COMPANY_ID,
+  deliverableFolder: "customer",
   get env() {
     return env;
   },

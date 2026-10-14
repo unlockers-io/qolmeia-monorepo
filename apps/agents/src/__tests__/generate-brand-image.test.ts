@@ -33,6 +33,7 @@ const buildChatImageResponse = (b64: string) =>
 const ctx: SkillContext = {
   agentInstanceId: AGENT_INSTANCE_ID,
   companyId: COMPANY_ID,
+  deliverableFolder: "customer",
   get env() {
     return env;
   },
@@ -106,5 +107,23 @@ describe("generateBrandImage", () => {
       assetId: string;
     };
     expect(second.assetId).toBe(first.assetId);
+  });
+
+  it("keeps a Worker job's image in the agent folder until its Action executes", async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve(buildChatImageResponse(RED_PIXEL_B64)));
+    const result = (await generateBrandImageSkill.execute(
+      { prompt: "rascunho" },
+      { ...ctx, deliverableFolder: "agent" },
+    )) as { assetId: string; deliverable: boolean };
+
+    expect(result.deliverable).toBe(true);
+    const row = await db((client) =>
+      client.asset.findUniqueOrThrow({
+        select: { r2Key: true, visibility: true },
+        where: { id: result.assetId },
+      }),
+    );
+    expect(row.visibility).toBe("agent");
+    expect(row.r2Key).toMatch(new RegExp(`^org_${COMPANY_ID}/agent/`, "v"));
   });
 });

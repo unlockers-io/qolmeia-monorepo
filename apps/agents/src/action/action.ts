@@ -1,11 +1,16 @@
 import type { Prisma } from "@repo/db/worker";
 import type { Action, ActionDetail, OperatorCoverage } from "@repo/worker-api/contracts";
 
+import { actionTypeSchema } from "#/action/action-types";
 import type { Db } from "#/lib/db";
-import { toRecord } from "#/lib/records";
+import { toRecord, type JsonRecord } from "#/lib/records";
 import { agentSummarySelect, toAgentSummary } from "#/ticket/ticket";
 
 const MAX_REVISIONS = 3;
+
+const canRevise = (round: number): boolean => round < MAX_REVISIONS;
+
+const actionIdFor = (ticketId: string, round: number): string => `${ticketId}-r${round}`;
 
 const actionInclude = {
   company: { select: { name: true } },
@@ -13,7 +18,7 @@ const actionInclude = {
 } as const satisfies Prisma.ActionInclude;
 
 const toAction = (row: Prisma.ActionGetPayload<{ include: typeof actionInclude }>): Action => ({
-  actionType: row.actionType,
+  actionType: actionTypeSchema.parse(row.actionType),
   agent: toAgentSummary(row.ticket.agentInstance),
   companyId: row.companyId,
   companyName: row.company.name,
@@ -92,12 +97,23 @@ const listTicketActions = async (db: Db, ticketId: string): Promise<ReadonlyArra
   return rows.map(toAction);
 };
 
+const getProposedPayload = async (db: Db, actionId: string): Promise<JsonRecord> => {
+  const { proposed } = await db.action.findUniqueOrThrow({
+    select: { proposed: true },
+    where: { id: actionId },
+  });
+  return toRecord(proposed);
+};
+
 const canRequestChanges = async (db: Db, ticketId: string): Promise<boolean> =>
-  (await db.action.count({ where: { ticketId } })) <= MAX_REVISIONS;
+  canRevise((await db.action.count({ where: { ticketId } })) - 1);
 
 export {
+  actionIdFor,
   canRequestChanges,
+  canRevise,
   getAction,
+  getProposedPayload,
   listActions,
   listPendingActions,
   listTicketActions,

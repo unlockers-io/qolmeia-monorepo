@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
 import { getAction } from "#/action/action";
-import { completeTicket, proposeAction, recordDecision } from "#/action/approval";
+import { markExecuted, proposeAction, recordDecision } from "#/action/approval";
 import { listActivity } from "#/activity/log";
 import { loadTicket } from "#/ticket/ticket";
 
@@ -19,19 +19,36 @@ beforeEach(async () => {
 });
 
 describe("a failed activity write inside a use-case transaction", () => {
-  it("fails notify-only completion and keeps the ticket unchanged", async () => {
+  it("fails notify-only execution and keeps the action and ticket unchanged", async () => {
+    const action = await db((client) =>
+      proposeAction(client, {
+        actionType: "worker_deliverable",
+        companyId: COMPANY_ID,
+        feedback: null,
+        policy: "notify_only",
+        proposed: { summary: "finished" },
+        round: 0,
+        summary: "finished",
+        ticketId: TICKET_ID,
+      }),
+    );
+
     await expect(
       db((client) =>
-        completeTicket(client, {
+        markExecuted(client, {
+          actionId: action.id,
           companyId: UNKNOWN_COMPANY_ID,
           policy: "notify_only",
-          summary: "finished",
+          result: "finished",
           ticketId: TICKET_ID,
         }),
       ),
     ).rejects.toThrow(ACTIVITY_FOREIGN_KEY);
 
-    const ticket = await db((client) => loadTicket(client, TICKET_ID));
+    const [storedAction, ticket] = await db((client) =>
+      Promise.all([getAction(client, action.id), loadTicket(client, TICKET_ID)]),
+    );
+    expect(storedAction?.status).toBe("approved");
     expect(ticket?.status).toBe("in_progress");
     expect(ticket?.result).toBeNull();
   });
@@ -42,6 +59,7 @@ describe("a failed activity write inside a use-case transaction", () => {
         actionType: "worker_deliverable",
         companyId: COMPANY_ID,
         feedback: null,
+        policy: "require_approval",
         proposed: { summary: "review this" },
         round: 0,
         summary: "review this",
@@ -56,7 +74,7 @@ describe("a failed activity write inside a use-case transaction", () => {
           companyId: UNKNOWN_COMPANY_ID,
           decidedByUserId: "operator-1",
           decision: "approved",
-          summary: "approved result",
+          round: 0,
           ticketId: TICKET_ID,
         }),
       ),

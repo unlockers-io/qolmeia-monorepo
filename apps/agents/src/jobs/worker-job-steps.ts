@@ -1,13 +1,14 @@
 import { dispatch } from "@flue/runtime";
 import { log } from "@repo/observability";
-import type { DecisionOutcome } from "@repo/worker-api/contracts";
+import type { ActionPolicy, ActionType } from "@repo/worker-api/contracts";
 
-import { completeTicket, proposeAction, recordDecision } from "#/action/approval";
-import { resolvePolicy } from "#/action/policy";
+import { getProposedPayload } from "#/action/action";
+import type { Generation } from "#/action/action-type";
+import { ACTION_TYPE_MODULES, resolvePolicy } from "#/action/action-types";
+import { markExecuted, proposeAction, recordDecision, type Verdict } from "#/action/approval";
 import { CorrespondentV2 } from "#/agents/correspondent";
-import { getCompany } from "#/company/company";
+import type { DecisionEvent } from "#/jobs/decision";
 import { withDb } from "#/lib/db";
-import { toRecord, type JsonValue } from "#/lib/records";
 import { emitTeamEvent } from "#/team/events";
 import { loadInstanceWithTemplate, loadTicket } from "#/ticket/ticket";
 
@@ -18,25 +19,14 @@ type JobContext = {
   ticketId: string;
 };
 
-type GenerateResult = {
-  skillResultsJson: string;
-  summary: string;
+type Proposal = {
+  actionId: string;
+  actionType: ActionType;
+  policy: ActionPolicy;
 };
 
-type ProposeResult = { actionId: string | null; policy: string };
-
-type ProposedPayload =
-  | { draft: JsonValue; summary: string; ticketId: string }
-  | { summary: string; ticketId: string };
-
-type DecisionEvent = {
-  decidedByUserId: string;
-  decision: DecisionOutcome;
-  feedback?: string;
-};
-
-const signalCorrespondent = async (ctx: JobContext, type: string, body: string): Promise<void> => {
-  const { companyId, ticketId } = ctx;
+const signalCorrespondent = async (job: JobContext, type: string, body: string): Promise<void> => {
+  const { companyId, ticketId } = job;
   try {
     await dispatch(CorrespondentV2, { id: companyId, message: { body, kind: "signal", type } });
   } catch (error) {
@@ -51,106 +41,94 @@ const signalCorrespondent = async (ctx: JobContext, type: string, body: string):
   }
 };
 
-const presentToCustomer = (ctx: JobContext, result: string): Promise<void> =>
+const presentToCustomer = (job: JobContext, result: string): Promise<void> =>
   signalCorrespondent(
-    ctx,
+    job,
     "worker.deliverable_ready",
     `Um especialista do Time concluiu uma tarefa. Apresente este material ao cliente, em pt-BR, de forma calorosa e direta; mantenha as imagens em markdown e não altere o conteúdo:\n\n${result}`,
   );
 
 const CUSTOMER_UPDATES = {
-  changes_requested: {
-    instruction:
-      "O Time revisou o material do pedido abaixo e o especialista já está ajustando. Avise o cliente em uma frase curta, em pt-BR, que o ajuste está em andamento e que a nova versão aparece aqui no chat.",
-    type: "worker.revising",
-  },
-  rejected: {
+  end: {
     instruction:
       "O material do pedido abaixo foi revisado pelo Time e não será entregue. Avise o cliente em pt-BR, de forma breve e cordial, e pergunte se ele quer ajustar o pedido para o Time tentar de novo.",
     type: "worker.deliverable_rejected",
   },
-} satisfies Record<Exclude<DecisionOutcome, "approved">, { instruction: string; type: string }>;
+  revise: {
+    instruction:
+      "O Time revisou o material do pedido abaixo e o especialista já está ajustando. Avise o cliente em uma frase curta, em pt-BR, que o ajuste está em andamento e que a nova versão aparece aqui no chat.",
+    type: "worker.revising",
+  },
+} satisfies Record<Exclude<Verdict, "execute">, { instruction: string; type: string }>;
 
-const reportDecision = async (
-  ctx: JobContext,
-  decision: Exclude<DecisionOutcome, "approved">,
+const reportVerdict = async (
+  job: JobContext,
+  verdict: Exclude<Verdict, "execute">,
 ): Promise<void> => {
-  const ticket = await withDb(ctx.env, (db) => loadTicket(db, ctx.ticketId));
-  const update = CUSTOMER_UPDATES[decision];
+  const ticket = await withDb(job.env, (db) => loadTicket(db, job.ticketId));
+  const update = CUSTOMER_UPDATES[verdict];
   await signalCorrespondent(
-    ctx,
+    job,
     update.type,
     `${update.instruction}\n\nPedido: ${ticket?.brief ?? ""}`,
   );
 };
 
+const announceTicketChange = (job: JobContext): Promise<void> =>
+  emitTeamEvent(job.env, {
+    companyId: job.companyId,
+    reason: "ticket_changed",
+    type: "team:status",
+  });
+
 const proposeDeliverable = async (
-  ctx: JobContext,
+  job: JobContext,
   round: number,
   feedback: string | null,
-  current: GenerateResult,
-): Promise<ProposeResult> => {
-  const { agentInstanceId, companyId, env, ticketId } = ctx;
-  const [{ template }, company] = await withDb(env, (db) =>
-    Promise.all([loadInstanceWithTemplate(db, agentInstanceId), getCompany(db, companyId)]),
-  );
-  if (!company) {
-    throw new Error("company vanished mid-workflow");
-  }
+  generation: Generation,
+): Promise<Proposal> => {
+  const { agentInstanceId, companyId, env, ticketId } = job;
+  const { template } = await withDb(env, (db) => loadInstanceWithTemplate(db, agentInstanceId));
   const actionType = template.defaultActionType;
   const policy = resolvePolicy(actionType, template);
-
-  if (policy === "auto_execute" || policy === "notify_only") {
-    await withDb(env, (db) =>
-      completeTicket(db, { companyId, policy, summary: current.summary, ticketId }),
-    );
-    await emitTeamEvent(env, { companyId, reason: "ticket_changed", type: "team:status" });
-    await presentToCustomer(ctx, current.summary);
-    return { actionId: null, policy };
-  }
-
-  const skillResults: Partial<Record<string, JsonValue>> = toRecord(
-    JSON.parse(current.skillResultsJson),
-  );
-  const draft = skillResults.draftSocialPost;
-  const proposedPayload: ProposedPayload =
-    actionType === "publish_post" && draft !== undefined
-      ? { draft, summary: current.summary, ticketId }
-      : { summary: current.summary, ticketId };
+  const proposed = ACTION_TYPE_MODULES[actionType].propose(generation);
   const { id: actionId } = await withDb(env, (db) =>
     proposeAction(db, {
       actionType,
       companyId,
       feedback,
-      proposed: proposedPayload,
+      policy,
+      proposed,
       round,
-      summary: current.summary,
+      summary: generation.summary,
       ticketId,
     }),
   );
-  await emitTeamEvent(env, { companyId, reason: "ticket_changed", type: "team:status" });
-
+  if (policy === "require_approval") {
+    await announceTicketChange(job);
+  }
   log.info({
     actionId,
+    actionType,
     agentInstanceId,
     companyId,
     message: "workflow.propose.ok",
     policy,
     ticketId,
   });
-  return { actionId, policy };
+  return { actionId, actionType, policy };
 };
 
 const applyDecision = async (
-  ctx: JobContext,
-  actionId: string,
-  current: GenerateResult,
+  job: JobContext,
+  proposal: Proposal,
+  round: number,
   event: DecisionEvent,
-): Promise<DecisionOutcome> => {
-  const { agentInstanceId, companyId, env, ticketId } = ctx;
+): Promise<Verdict> => {
+  const { agentInstanceId, companyId, env, ticketId } = job;
   const { decidedByUserId, decision, feedback } = event;
   log.info({
-    actionId,
+    actionId: proposal.actionId,
     agentInstanceId,
     companyId,
     decidedByUserId,
@@ -159,23 +137,43 @@ const applyDecision = async (
     message: "workflow.decision.received",
     ticketId,
   });
-  await withDb(env, (db) =>
+  const verdict = await withDb(env, (db) =>
     recordDecision(db, {
-      actionId,
+      actionId: proposal.actionId,
       companyId,
       decidedByUserId,
       decision,
       feedback,
-      summary: current.summary,
+      round,
       ticketId,
     }),
   );
-  await emitTeamEvent(env, { companyId, reason: "ticket_changed", type: "team:status" });
-  await (decision === "approved"
-    ? presentToCustomer(ctx, current.summary)
-    : reportDecision(ctx, decision));
-  return decision;
+  await announceTicketChange(job);
+  if (verdict !== "execute") {
+    await reportVerdict(job, verdict);
+  }
+  return verdict;
 };
 
-export { applyDecision, proposeDeliverable };
-export type { DecisionEvent, GenerateResult, JobContext, ProposeResult };
+const executeAction = async (job: JobContext, proposal: Proposal): Promise<void> => {
+  const { companyId, env, ticketId } = job;
+  const proposed = await withDb(env, (db) => getProposedPayload(db, proposal.actionId));
+  const result = await ACTION_TYPE_MODULES[proposal.actionType].execute(
+    { companyId, env },
+    proposed,
+  );
+  await withDb(env, (db) =>
+    markExecuted(db, {
+      actionId: proposal.actionId,
+      companyId,
+      policy: proposal.policy,
+      result,
+      ticketId,
+    }),
+  );
+  await announceTicketChange(job);
+  await presentToCustomer(job, result);
+};
+
+export { applyDecision, executeAction, proposeDeliverable };
+export type { JobContext, Proposal };

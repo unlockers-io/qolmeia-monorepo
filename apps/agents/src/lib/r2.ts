@@ -1,5 +1,7 @@
 const encoder = new TextEncoder();
 
+const SIGNED_IMAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 type UploadInput = {
   bytes: ArrayBuffer | Uint8Array;
   key: string;
@@ -88,4 +90,11 @@ const buildSignedAssetUrl = async (
   return `${baseUrl.replace(/\/$/v, "")}/assets/${assetId}?token=${encodeURIComponent(token)}`;
 };
 
-export { buildSignedAssetUrl, fetchAsset, signAssetToken, uploadAsset, verifyAssetToken };
+export {
+  buildSignedAssetUrl,
+  fetchAsset,
+  SIGNED_IMAGE_TTL_MS,
+  signAssetToken,
+  uploadAsset,
+  verifyAssetToken,
+};

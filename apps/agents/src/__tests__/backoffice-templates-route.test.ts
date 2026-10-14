@@ -57,7 +57,7 @@ afterEach(() => {
 });
 
 describe("backoffice skill catalog", () => {
-  it("returns the full 13-skill code registry with id + label", async () => {
+  it("returns the full 12-skill code registry with id + label", async () => {
     const res = await exports.default.fetch(
       "https://agents.test/api/backoffice/skills?cf_session=tok",
     );
@@ -65,7 +65,7 @@ describe("backoffice skill catalog", () => {
     const body = await res.json<{
       items: Array<{ description: string; displayName: string; id: string }>;
     }>();
-    expect(body.items.length).toBe(13);
+    expect(body.items.length).toBe(12);
     const webSearch = body.items.find((s) => s.id === "webSearch");
     expect(webSearch?.displayName).toBeTruthy();
     expect(webSearch?.description).toBeTruthy();
@@ -93,6 +93,16 @@ describe("backoffice template CRUD", () => {
   it("rejects an unknown skill id with 400", async () => {
     const res = await post({ ...validBody, skillIds: ["webSearch", "doesNotExist"] });
     expect(res.status).toBe(400);
+  });
+
+  it("rejects an unknown action type or policy key with 400", async () => {
+    const unknownType = await post({ ...validBody, defaultActionType: "publish_asset" });
+    expect(unknownType.status).toBe(400);
+    const unknownKey = await post({
+      ...validBody,
+      defaultPolicies: { publish_asset: "require_approval" },
+    });
+    expect(unknownKey.status).toBe(400);
   });
 
   it("rejects an empty display name with 400", async () => {

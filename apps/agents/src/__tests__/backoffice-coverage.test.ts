@@ -33,6 +33,7 @@ const seedPendingAction = async (input: {
       actionType: "publish_post",
       companyId: input.companyId,
       feedback: null,
+      policy: "require_approval",
       proposed: { summary: input.displayName },
       round: 0,
       summary: input.displayName,

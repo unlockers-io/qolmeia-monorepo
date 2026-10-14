@@ -20,7 +20,8 @@ ADR 0005 made Operators the human quality layer. That could have meant "a human 
 
 ## Consequences
 
-- The Workflow must **loop** on `request-changes` rather than terminate. Today it resolves cleanly only on approve/reject; the revise loop (feed feedback → re-generate → re-propose → wait again) is a follow-up.
-- A **soft cap** (max revise rounds / cost budget) guards against an unbounded loop; the operator can always reject to end it.
-- **notify-only** needs a real destination — an operator monitoring feed distinct from the blocking queue. The activity log exists; surfacing notify-only there (or a dedicated feed) is a follow-up; it's currently unused in templates.
-- Which action-types are impactful is a per-template `default_policies` decision, overridable per-company later if needed.
+- The Workflow loops on `request-changes`: the feedback goes back to the Worker, which regenerates and re-proposes a new Action for the next round, and the Workflow waits again.
+- A **soft cap** of three revise rounds (`MAX_REVISIONS`) applies in both the decide route, which refuses a change request at the cap, and the Workflow, which ends the Ticket as rejected if one arrives anyway. The operator can always reject to end it.
+- Approval controls the effect. Generation writes the Worker's files to the agent folder; the Action executes only after it is cleared (immediately for `auto-execute` and `notify-only`, after approval for `require-approval`), and its action type's executor promotes those files to the customer folder and presents the result. A rejected Action's files never reach the customer folder.
+- Each action type declares its default policy next to its proposed payload and executor (`publish_post`: `require-approval`; `worker_deliverable`: `auto-execute`). A template's `default_policies` entry overrides it per action type, overridable per-company later if needed.
+- **notify-only** still needs a real destination: it records an `ACTION_NOTIFY` activity entry, and an operator monitoring feed distinct from the blocking queue is a follow-up. No seeded template uses it.

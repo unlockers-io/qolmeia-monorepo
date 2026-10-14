@@ -6,6 +6,8 @@ import type {
   TicketStatus,
 } from "@repo/db/enums";
 
+import type { ActionType } from "./actions";
+
 type WireValue =
   | boolean
   | number
@@ -47,7 +49,7 @@ type TicketListRow = Ticket & {
 };
 
 type Action = {
-  actionType: string;
+  actionType: ActionType;
   agent: AgentSummary;
   companyId: string;
   companyName: string;
@@ -110,7 +112,7 @@ type CoverageResponse = {
 
 type Template = {
   createdAt: number;
-  defaultActionType: string;
+  defaultActionType: ActionType;
   defaultPolicies: Record<string, string>;
   description: string;
   displayName: string;
@@ -125,8 +127,8 @@ type Template = {
 };
 
 type TemplateInput = {
-  defaultActionType: string;
-  defaultPolicies: Record<string, string>;
+  defaultActionType: ActionType;
+  defaultPolicies: Partial<Record<ActionType, ActionPolicy>>;
   description: string;
   displayName: string;
   model: string;

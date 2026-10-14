@@ -117,9 +117,9 @@ Template-defined specialists are not conversational Flue agents. `delegateToWork
 
 ## §7. Skills catalog
 
-Skills are code modules, `{ id, description, inputSchema (zod), execute(input, ctx) }`, registered in [`apps/agents/src/skills/registry.ts`](../apps/agents/src/skills/registry.ts) and exposed to agents as Flue tools (zod → JSON Schema → Valibot in `lib/skill-tool.ts`; Flue validates tool input with Valibot only). 13 today:
+Skills are code modules, `{ id, description, inputSchema (zod), execute(input, ctx) }`, registered in [`apps/agents/src/skills/registry.ts`](../apps/agents/src/skills/registry.ts) and exposed to agents as Flue tools (zod → JSON Schema → Valibot in `lib/skill-tool.ts`; Flue validates tool input with Valibot only). 12 today:
 
-`rememberFact` · `recallMemory` · `delegateToWorker` · `generateBrandImage` · `draftSocialPost` · `decideAction` · `extractBrief` · `proposeTeam` · `listAssets` · `readAsset` · `saveAsset` · `webSearch` · `fetchUrl`
+`rememberFact` · `recallMemory` · `delegateToWorker` · `generateBrandImage` · `draftSocialPost` · `extractBrief` · `proposeTeam` · `listAssets` · `readAsset` · `saveAsset` · `webSearch` · `fetchUrl`
 
 A template's `skillIds` selects which tools the Workflow exposes while generating that specialist's
 deliverable. Worker kinds seeded today: `designer`, `marketing-strategist`, `redator`, and

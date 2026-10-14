@@ -58,6 +58,9 @@ const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
   return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 };
 
+const folderKey = (companyId: string, visibility: AssetVisibility): string =>
+  `org_${companyId}/${visibility}`;
+
 type PersistAssetInput = {
   bytes: Uint8Array;
   companyId: string;
@@ -76,8 +79,9 @@ const persistAsset = async (
 ): Promise<{ assetId: string }> => {
   const sha256 = await sha256Hex(input.bytes);
   const ext = EXTENSION_BY_MIME.get(input.mime) ?? input.fallbackExt ?? "bin";
-  const folder = input.kind === "brand_asset" ? `${input.visibility}/brand` : input.visibility;
-  const r2Key = `org_${input.companyId}/${folder}/${sha256}.${ext}`;
+  const folder = folderKey(input.companyId, input.visibility);
+  const subfolder = input.kind === "brand_asset" ? "/brand" : "";
+  const r2Key = `${folder}${subfolder}/${sha256}.${ext}`;
   await uploadAsset(env, {
     bytes: input.bytes,
     key: r2Key,
@@ -101,6 +105,50 @@ const persistAsset = async (
     where: { companyId_sha256: { companyId: input.companyId, sha256 } },
   });
   return { assetId: asset.id };
+};
+
+type StoredAsset = { id: string; mime: string; r2Key: string };
+
+const moveToCustomerFolder = async (
+  env: Pick<Env, "ASSETS">,
+  db: Db,
+  companyId: string,
+  asset: StoredAsset,
+): Promise<void> => {
+  const object = await fetchAsset(env, asset.r2Key);
+  if (!object) {
+    throw new Error(`asset ${asset.id} is missing from R2 at ${asset.r2Key}`);
+  }
+  const r2Key = asset.r2Key.replace(
+    folderKey(companyId, "agent"),
+    folderKey(companyId, "customer"),
+  );
+  await uploadAsset(env, {
+    bytes: await object.arrayBuffer(),
+    key: r2Key,
+    metadata: object.customMetadata,
+    mime: asset.mime,
+  });
+  await db.asset.update({ data: { r2Key, visibility: "customer" }, where: { id: asset.id } });
+  await env.ASSETS.delete(asset.r2Key);
+};
+
+const promoteAssets = async (
+  env: Pick<Env, "ASSETS">,
+  db: Db,
+  companyId: string,
+  assetIds: ReadonlyArray<string>,
+): Promise<ReadonlyArray<{ id: string; mime: string }>> => {
+  const rows = await db.asset.findMany({
+    select: { id: true, mime: true, r2Key: true, visibility: true },
+    where: { companyId, id: { in: [...assetIds] } },
+  });
+  await Promise.all(
+    rows.flatMap((row) =>
+      row.visibility === "agent" ? [moveToCustomerFolder(env, db, companyId, row)] : [],
+    ),
+  );
+  return rows.map(({ id, mime }) => ({ id, mime }));
 };
 
 const listAssets = async (
@@ -173,6 +221,7 @@ export {
   listAssets,
   listBrandReferences,
   persistAsset,
+  promoteAssets,
   readAssetText,
 };
 export type { AssetRecord, AssetSummary };
