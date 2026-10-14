@@ -108,8 +108,22 @@ in `wrangler.jsonc`:
 wrangler hyperdrive create qolmeia-postgres --connection-string="postgresql://...?sslmode=require" --caching-disabled
 ```
 
-Rotating the Postgres password requires `wrangler hyperdrive update` with the
-new connection string.
+The config connects as the least-privilege role `qolmeia_worker`, never as
+`postgres` (ADR 0010). On a new database, create it as `postgres` first:
+
+```sql
+CREATE ROLE qolmeia_worker LOGIN PASSWORD '<openssl rand -hex 32>';
+GRANT CONNECT ON DATABASE railway TO qolmeia_worker;
+GRANT USAGE ON SCHEMA public TO qolmeia_worker;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO qolmeia_worker;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO qolmeia_worker;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO qolmeia_worker;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO qolmeia_worker;
+```
+
+To rotate its password, run `ALTER ROLE qolmeia_worker PASSWORD '...'` as
+`postgres`, then `wrangler hyperdrive update <id> --origin-password '...'`.
+Schema pushes keep using the `postgres` connection string.
 
 ### 4c. Set secrets
 
