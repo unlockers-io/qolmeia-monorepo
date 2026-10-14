@@ -17,7 +17,7 @@ describe("isSignupOpen", () => {
 describe("countOperators", () => {
   it("counts OWNER and STAFF memberships only", async () => {
     const count = vi.fn(() => Promise.resolve(2));
-    await expect(countOperators({ orgMembership: { count } } as never)).resolves.toBe(2);
+    await expect(countOperators({ orgMembership: { count } })).resolves.toBe(2);
     expect(count).toHaveBeenCalledWith({ where: { role: { in: ["OWNER", "STAFF"] } } });
   });
 });

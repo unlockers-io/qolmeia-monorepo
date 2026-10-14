@@ -1,20 +1,16 @@
 import type { OperatorCoverage } from "@repo/worker-api/contracts";
-import { exports } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
+import { fetchWithCookie, signInAs, type Persona } from "#/__tests__/sign-in";
 import { proposeAction } from "#/action/approval";
 import { getCoverage, getCoverageOptions, setCoverage } from "#/operator/assignment";
 
 const COMPANY_A = "co_cov_a";
 const COMPANY_B = "co_cov_b";
 const OPERATOR = "op-cov-1";
-const originalFetch = globalThis.fetch;
 
-const meStaff = {
-  currentOrg: { id: "qolmeia-internal", role: "STAFF" },
-  user: { id: OPERATOR },
-};
+const meStaff: Persona = { orgId: "qolmeia-internal", role: "STAFF", userId: OPERATOR };
 
 const seedPendingAction = async (input: {
   companyId: string;
@@ -45,7 +41,10 @@ const seedPendingAction = async (input: {
 const cover = (coverage: OperatorCoverage) =>
   db((client) => setCoverage(client, OPERATOR, coverage));
 
+let cookie = "";
+
 beforeEach(async () => {
+  cookie = "";
   await seedPendingAction({
     companyId: COMPANY_A,
     displayName: "Cov A",
@@ -58,13 +57,10 @@ beforeEach(async () => {
   });
 });
 
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
-
 const pendingCompanyIds = async (query = ""): Promise<Array<string>> => {
-  const res = await exports.default.fetch(
-    `https://agents.test/api/backoffice/actions?status=pending&cf_session=covtok${query}`,
+  const res = await fetchWithCookie(
+    cookie,
+    `https://agents.test/api/backoffice/actions?status=pending${query}`,
   );
   const body = await res.json<{ items: Array<{ companyId: string }> }>();
   return body.items.map((a) => a.companyId);
@@ -91,9 +87,10 @@ describe("operator coverage DB", () => {
 
 describe("GET/PUT /api/backoffice/assignments/me", () => {
   it("returns empty coverage + option lists, then reflects a PUT", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
-    const before = await exports.default.fetch(
-      "https://agents.test/api/backoffice/assignments/me?cf_session=covtok",
+    cookie = await signInAs(meStaff);
+    const before = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/assignments/me",
     );
     const beforeBody = await before.json<{
       assigned: { companies: Array<string>; disciplines: Array<string> };
@@ -108,17 +105,15 @@ describe("GET/PUT /api/backoffice/assignments/me", () => {
     expect(beforeBody.options.disciplines).toContain("designer");
     expect(beforeBody.options.disciplineNames).toMatchObject({ designer: "Designer" });
 
-    const put = await exports.default.fetch(
-      "https://agents.test/api/backoffice/assignments/me?cf_session=covtok",
-      {
-        body: JSON.stringify({ companies: [COMPANY_A], disciplines: [] }),
-        headers: { "content-type": "application/json" },
-        method: "PUT",
-      },
-    );
+    const put = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/assignments/me", {
+      body: JSON.stringify({ companies: [COMPANY_A], disciplines: [] }),
+      headers: { "content-type": "application/json" },
+      method: "PUT",
+    });
     expect(put.status).toBe(200);
-    const after = await exports.default.fetch(
-      "https://agents.test/api/backoffice/assignments/me?cf_session=covtok",
+    const after = await fetchWithCookie(
+      cookie,
+      "https://agents.test/api/backoffice/assignments/me",
     );
     const afterBody = await after.json<{ assigned: { companies: Array<string> } }>();
     expect(afterBody.assigned.companies).toEqual([COMPANY_A]);
@@ -127,7 +122,7 @@ describe("GET/PUT /api/backoffice/assignments/me", () => {
 
 describe("approval queue narrows to coverage", () => {
   it("no coverage = sees every company", async () => {
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
     const ids = await pendingCompanyIds();
     expect(ids).toContain(COMPANY_A);
     expect(ids).toContain(COMPANY_B);
@@ -135,7 +130,7 @@ describe("approval queue narrows to coverage", () => {
 
   it("company coverage filters the queue to that company", async () => {
     await cover({ companies: [COMPANY_A], disciplines: [] });
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
     const ids = await pendingCompanyIds();
     expect(ids).toContain(COMPANY_A);
     expect(ids).not.toContain(COMPANY_B);
@@ -143,7 +138,7 @@ describe("approval queue narrows to coverage", () => {
 
   it("discipline coverage filters by the producing agent's worker_kind", async () => {
     await cover({ companies: [], disciplines: ["redator"] });
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
     const ids = await pendingCompanyIds();
     expect(ids).toContain(COMPANY_B);
     expect(ids).not.toContain(COMPANY_A);
@@ -151,7 +146,7 @@ describe("approval queue narrows to coverage", () => {
 
   it("explicit ?companyId= drills past coverage", async () => {
     await cover({ companies: [COMPANY_A], disciplines: [] });
-    globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(meStaff)));
+    cookie = await signInAs(meStaff);
     const ids = await pendingCompanyIds(`&companyId=${COMPANY_B}`);
     expect(ids).toContain(COMPANY_B);
     expect(ids).not.toContain(COMPANY_A);

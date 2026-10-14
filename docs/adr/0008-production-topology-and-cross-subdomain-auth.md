@@ -12,6 +12,8 @@ The repo only codifies the Worker deploy; auth and the Next apps had no target, 
 | `apps/api` + **Postgres**     | **Railway**    | Hono/Node service + managed Postgres (Better Auth tables) |
 | `apps/web`, `apps/backoffice` | **Vercel**     | two Next 16 projects                                      |
 
+> **⚠️ SUPERSEDED (2026-10), the `apps/api` row.** `apps/api` is retired: the Worker hosts Better Auth, and Railway hosts only Postgres. See [ADR 0011](./0011-worker-hosts-better-auth.md).
+
 **Decision — domains + auth cookie:** everything under **`qolmeia.com`** (e.g. `app.` = client, `admin.` = backoffice, `api.` = api service, `agents.` = Worker; exact names TBD). The session is a **cross-subdomain cookie on `.qolmeia.com`**:
 
 - Better Auth sets the cookie on the `.qolmeia.com` parent (`advanced.crossSubDomainCookies`), so every subdomain sends it.

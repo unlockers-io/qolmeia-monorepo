@@ -1,16 +1,5 @@
-import { AGENTS_SERVER_URL } from "@repo/app-shell/agents-url";
-import { createServerApi } from "@repo/worker-api";
-import { headers } from "next/headers";
+import { createAppServerApi } from "@repo/app-shell/server-api";
 
-import { getActiveOrgId } from "@/lib/auth-helpers";
-
-const { apiGetServer } = createServerApi({
-  baseUrl: AGENTS_SERVER_URL,
-  readCookieHeader: async () => {
-    const headersList = await headers();
-    return headersList.get("cookie") ?? "";
-  },
-  readOrgId: getActiveOrgId,
-});
+const { apiGetServer } = createAppServerApi();
 
 export { apiGetServer };

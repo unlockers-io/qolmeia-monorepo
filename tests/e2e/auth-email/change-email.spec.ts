@@ -1,14 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { prisma } from "@repo/db";
 
-import { authUrl } from "../../../playwright.config";
+import { backofficeUrl } from "../../../playwright.config";
 import { verification } from "../fixtures/verification.fixture";
 import { extractLink, waitForEmail } from "../helpers/resend";
 import { makeTestEmail, makeTestUsername } from "../helpers/test-email";
 
 test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
-test.use({ extraHTTPHeaders: { Origin: authUrl }, storageState: { cookies: [], origins: [] } });
+test.use({
+  extraHTTPHeaders: { Origin: backofficeUrl },
+  storageState: { cookies: [], origins: [] },
+});
 
 test.describe("Change email (two-stage confirmation + verification)", () => {
   test("user changes email — both stage-1 and stage-2 mails leave Resend, new email signs in", async ({
@@ -19,14 +22,14 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
     const username = makeTestUsername(currentEmail);
     const password = "ChangeEmailPwd1!";
 
-    const signUp = await request.post(`${authUrl}/api/auth/sign-up/email`, {
+    const signUp = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
       data: { email: currentEmail, name: "Change Me", password, username },
     });
     expect([200, 201]).toContain(signUp.status());
     const verify = await verification.forVerifyEmail(currentEmail);
     await request.get(verify.url, { failOnStatusCode: false, maxRedirects: 0 });
 
-    const signIn = await request.post(`${authUrl}/api/auth/sign-in/email`, {
+    const signIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email: currentEmail, password },
     });
     expect(signIn.status()).toBe(200);
@@ -45,11 +48,11 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
 
     const since = Date.now();
 
-    const change = await request.post(`${authUrl}/api/auth/change-email`, {
+    const change = await request.post(`${backofficeUrl}/api/auth/change-email`, {
       data: { newEmail },
       headers: {
         Cookie: cookieHeader,
-        Referer: `${authUrl}/`,
+        Referer: `${backofficeUrl}/`,
       },
     });
     expect(change.status()).toBe(200);
@@ -86,13 +89,13 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
     const stale = await prisma.user.findUnique({ where: { email: currentEmail } });
     expect(stale).toBeNull();
 
-    const oldLogin = await request.post(`${authUrl}/api/auth/sign-in/email`, {
+    const oldLogin = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email: currentEmail, password },
       failOnStatusCode: false,
     });
     expect(oldLogin.status()).toBeGreaterThanOrEqual(400);
 
-    const newLogin = await request.post(`${authUrl}/api/auth/sign-in/email`, {
+    const newLogin = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email: newEmail, password },
     });
     expect(newLogin.status()).toBe(200);

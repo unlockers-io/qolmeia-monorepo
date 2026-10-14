@@ -2,13 +2,15 @@ import { instant } from "@next/playwright";
 import { expect, test } from "@playwright/test";
 
 import { backofficeUrl } from "../../../playwright.config";
+import { operatorAccess } from "../fixtures/operator.fixture";
 
 const backofficeRoot = new RegExp(`${backofficeUrl.replaceAll(".", String.raw`\.`)}/$`, "v");
 
 test.describe("Instant navigation", () => {
-  test("ticket shell renders on initial load", async ({ page }) => {
-    await page.context().addCookies([{ name: "e2e-role", url: backofficeUrl, value: "OWNER" }]);
+  test.beforeAll(operatorAccess.grant);
+  test.afterAll(operatorAccess.revoke);
 
+  test("ticket shell renders on initial load", async ({ page }) => {
     await instant(
       page,
       async () => {
@@ -30,8 +32,6 @@ test.describe("Instant navigation", () => {
 
   for (const { heading, path } of shellHeadings) {
     test(`${path} serves its page heading from the prerendered shell`, async ({ page }) => {
-      await page.context().addCookies([{ name: "e2e-role", url: backofficeUrl, value: "OWNER" }]);
-
       await instant(
         page,
         async () => {
@@ -46,8 +46,6 @@ test.describe("Instant navigation", () => {
   test("the home shell paints its heading while the data areas are still skeletons", async ({
     page,
   }) => {
-    await page.context().addCookies([{ name: "e2e-role", url: backofficeUrl, value: "OWNER" }]);
-
     await instant(
       page,
       async () => {
@@ -63,8 +61,6 @@ test.describe("Instant navigation", () => {
   test("navigating to the dashboard home keeps the persistent shell without a reload", async ({
     page,
   }) => {
-    await page.context().addCookies([{ name: "e2e-role", url: backofficeUrl, value: "OWNER" }]);
-
     await page.goto("/tickets");
 
     const shell = page.locator('aside[aria-label="Navegação principal"]');

@@ -1,5 +1,7 @@
 import { prisma } from "@repo/db";
 
+import { E2E_USER_EMAIL } from "../fixtures/e2e-user";
+
 const cleanup = async () => {
   if (!process.env.DATABASE_URL) {
     return;
@@ -8,7 +10,7 @@ const cleanup = async () => {
   try {
     const users = await prisma.user.deleteMany({
       where: {
-        OR: [{ email: "e2e-test@qolmeia.localhost" }, { email: { endsWith: "@resend.dev" } }],
+        OR: [{ email: E2E_USER_EMAIL }, { email: { endsWith: "@resend.dev" } }],
       },
     });
     const verifications = await prisma.verification.deleteMany({

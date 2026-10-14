@@ -6,7 +6,6 @@
   "entry": [
     "oxlint.config.ts",
     "**/prisma.config.ts",
-    "apps/api/src/lib/vitest-setup.ts",
     "apps/agents/scripts/*.ts",
     "apps/*/src/lib/observability.ts",
     "packages/transactional/src/emails/**/*.tsx",
@@ -18,10 +17,6 @@
   ],
   "ignorePatterns": [".github/ci/*.mjs"],
   "ignoreExports": [
-    {
-      "file": "apps/api/src/middleware/error-handler.ts",
-      "exports": ["isPrismaKnownError"]
-    },
     {
       "file": "apps/web/src/app/not-found.tsx",
       "exports": ["metadata"]

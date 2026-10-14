@@ -1,6 +1,6 @@
 # Qolmeia
 
-Monorepo for Qolmeia, a customer support and agent-orchestration product. The current runtime is split across Better Auth, two Next.js surfaces, and a Cloudflare Worker that hosts Flue agents, customer/operator REST APIs, R2 assets, and approval workflows. Auth and product state share Postgres through Prisma.
+Monorepo for Qolmeia, a customer support and agent-orchestration product. The current runtime is two Next.js surfaces and a Cloudflare Worker that hosts Better Auth, Flue agents, customer/operator REST APIs, R2 assets, and approval workflows. Auth and product state share Postgres through Prisma.
 
 The complete shipped-feature inventory lives in [`docs/FEATURES.md`](docs/FEATURES.md), with screenshots
 and product flows in [`docs/PRODUCT_MAP.md`](docs/PRODUCT_MAP.md). Architecture details live in
@@ -9,18 +9,17 @@ and product flows in [`docs/PRODUCT_MAP.md`](docs/PRODUCT_MAP.md). Architecture 
 
 ## Apps
 
-| App               | Package       | Framework         | Dev URL                                | Purpose                                               |
-| ----------------- | ------------- | ----------------- | -------------------------------------- | ----------------------------------------------------- |
-| `apps/api`        | `api`         | Hono on Node 24   | `https://qolmeia.api.localhost`        | Better Auth and `/api/v1/me` membership relay         |
-| `apps/agents`     | `worker-bees` | Cloudflare Worker | `http://127.0.0.1:8787`                | Flue agents, Prisma/R2-backed product APIs, Workflows |
-| `apps/web`        | `web`         | Next.js 16        | `https://qolmeia.web.localhost`        | Customer onboarding and chat                          |
-| `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` | Operator approvals and team management                |
+| App               | Package       | Framework         | Dev URL                                | Purpose                                           |
+| ----------------- | ------------- | ----------------- | -------------------------------------- | ------------------------------------------------- |
+| `apps/agents`     | `worker-bees` | Cloudflare Worker | `https://qolmeia.agents.localhost`     | Better Auth, Flue agents, product APIs, Workflows |
+| `apps/web`        | `web`         | Next.js 16        | `https://qolmeia.web.localhost`        | Customer onboarding and chat                      |
+| `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` | Operator approvals and team management            |
 
 ## Packages
 
 | Package                   | Purpose                                            |
 | ------------------------- | -------------------------------------------------- |
-| `@repo/auth`              | Better Auth factory shared by API and Next apps    |
+| `@repo/auth`              | Better Auth factory and the session-cookie helpers |
 | `@repo/db`                | Prisma clients and the shared Postgres schema      |
 | `@repo/transactional`     | React Email templates and Resend sender            |
 | `@repo/ui`                | Shared shadcn-style UI package and Tailwind preset |
@@ -51,19 +50,17 @@ pnpm dev
 Each app has its own environment file. Copy from the committed examples:
 
 ```bash
-cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 cp apps/backoffice/.env.example apps/backoffice/.env
 cp apps/agents/.dev.vars.example apps/agents/.dev.vars
 ```
 
-`BETTER_AUTH_SECRET` must match across `apps/api`, `apps/web`, and `apps/backoffice`. `apps/agents/.dev.vars` holds Worker-only secrets such as `OPENROUTER_API_KEY`, plus `DATABASE_URL` and `BETTER_AUTH_SECRET` for the seed script. The Worker itself reaches the docker Postgres through the `HYPERDRIVE` binding's `localConnectionString`.
+`apps/agents/.dev.vars` holds the Worker's secrets: `BETTER_AUTH_SECRET` and `OPENROUTER_API_KEY`, plus `DATABASE_URL` for the seed script. The Next apps hold no secrets in development. The Worker itself reaches the docker Postgres through the `HYPERDRIVE` binding's `localConnectionString`.
 
 ## Useful Commands
 
 ```bash
 pnpm dev                  # run all apps through Turbo
-pnpm dev --filter=api
 pnpm dev --filter=worker-bees
 pnpm dev --filter=web
 pnpm dev --filter=backoffice
@@ -84,4 +81,4 @@ pnpm build
 | Backoffice | OWNER    | `operator@qolmeia.dev` | `Qolmeia-Dev-OperatorPass!` |
 | Client     | CUSTOMER | `customer@qolmeia.dev` | `Qolmeia-Dev-CustomerPass!` |
 
-The client flow is magic-link first. In local development, watch the `apps/api` logs for the link.
+The client login also offers magic links. Without `RESEND_API_KEY`, the Worker logs every magic-link and password-reset URL; open it as-is.

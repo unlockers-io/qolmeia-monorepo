@@ -1,13 +1,16 @@
 import { expect, test } from "@playwright/test";
 
-import { authUrl } from "../../../playwright.config";
+import { backofficeUrl } from "../../../playwright.config";
 import { verification } from "../fixtures/verification.fixture";
 import { extractLink, waitForEmail } from "../helpers/resend";
 import { makeTestEmail, makeTestUsername } from "../helpers/test-email";
 
 test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
-test.use({ extraHTTPHeaders: { Origin: authUrl }, storageState: { cookies: [], origins: [] } });
+test.use({
+  extraHTTPHeaders: { Origin: backofficeUrl },
+  storageState: { cookies: [], origins: [] },
+});
 
 test.describe("Password reset", () => {
   test("user can request reset, set a new password, and sign in", async ({ request }, testInfo) => {
@@ -16,7 +19,7 @@ test.describe("Password reset", () => {
     const originalPassword = "OriginalPassword1!";
     const newPassword = "BrandNewPassword2!";
 
-    const signUp = await request.post(`${authUrl}/api/auth/sign-up/email`, {
+    const signUp = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
       data: { email, name: "Reset Me", password: originalPassword, username },
     });
     expect([200, 201]).toContain(signUp.status());
@@ -25,7 +28,7 @@ test.describe("Password reset", () => {
 
     const since = Date.now();
 
-    const reset = await request.post(`${authUrl}/api/auth/request-password-reset`, {
+    const reset = await request.post(`${backofficeUrl}/api/auth/request-password-reset`, {
       data: { email, redirectTo: "/reset-password" },
     });
     expect(reset.status()).toBe(200);
@@ -42,18 +45,18 @@ test.describe("Password reset", () => {
     expect(token).not.toBe("");
 
     const resetResponse = await request.post(
-      `${authUrl}/api/auth/reset-password?token=${encodeURIComponent(token)}`,
+      `${backofficeUrl}/api/auth/reset-password?token=${encodeURIComponent(token)}`,
       { data: { newPassword } },
     );
     expect(resetResponse.status()).toBe(200);
 
-    const oldSignIn = await request.post(`${authUrl}/api/auth/sign-in/email`, {
+    const oldSignIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email, password: originalPassword },
       failOnStatusCode: false,
     });
     expect(oldSignIn.status()).not.toBe(200);
 
-    const newSignIn = await request.post(`${authUrl}/api/auth/sign-in/email`, {
+    const newSignIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email, password: newPassword },
     });
     expect(newSignIn.status()).toBe(200);

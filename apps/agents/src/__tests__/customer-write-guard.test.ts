@@ -1,17 +1,13 @@
-import { exports } from "cloudflare:workers";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+
+import { fetchWithCookie, signInAs } from "#/__tests__/sign-in";
 
 const COMPANY_ID = "co_write_guard_test";
-const ORIGINAL_FETCH = globalThis.fetch;
 
-const meStaff = {
-  currentOrg: { id: COMPANY_ID, role: "STAFF" },
-  user: { id: "staff-1" },
-};
+type CustomerRoute = { body?: BodyInit; method: string; path: string };
 
-type WriteRoute = { body?: BodyInit; method: string; path: string };
-
-const WRITE_ROUTES: Array<WriteRoute> = [
+const CUSTOMER_ROUTES: Array<CustomerRoute> = [
+  { method: "GET", path: "/api/me/company" },
   { body: JSON.stringify({}), method: "PATCH", path: "/api/me/company" },
   {
     body: JSON.stringify({ templateId: "tpl-designer" }),
@@ -32,38 +28,24 @@ const WRITE_ROUTES: Array<WriteRoute> = [
   },
 ];
 
-const callAs = (role: typeof meStaff, route: WriteRoute, token: string): Promise<Response> => {
-  globalThis.fetch = vi.fn(() => Promise.resolve(Response.json(role)));
-  return exports.default.fetch(`https://agents.test${route.path}?cf_session=${token}`, {
+const statusOf = async (cookie: string, route: CustomerRoute): Promise<number> => {
+  const res = await fetchWithCookie(cookie, `https://agents.test${route.path}`, {
     body: route.body,
     method: route.method,
   });
+  return res.status;
 };
 
-afterEach(() => {
-  globalThis.fetch = ORIGINAL_FETCH;
-});
-
-describe("customer write guard", () => {
-  it.each(WRITE_ROUTES)("rejects a STAFF session on $method $path", async (route) => {
-    const res = await callAs(meStaff, route, `staff-${route.method}-${route.path}`);
-    expect(res.status).toBe(403);
+describe("customer surface guard", () => {
+  it.each(CUSTOMER_ROUTES)("refuses an Operator on $method $path", async (route) => {
+    const cookie = await signInAs({ orgId: COMPANY_ID, role: "STAFF" });
+    expect(await statusOf(cookie, route)).toBe(403);
   });
 
-  it("still lets a STAFF session read", async () => {
-    const res = await callAs(meStaff, { method: "GET", path: "/api/me/company" }, "staff-read");
-    expect(res.status).not.toBe(403);
-  });
-});
-
-describe("session guard on the merged /api/me mount", () => {
-  it("returns 401 for a credential-less read of /api/me/assets", async () => {
-    const fetchSpy = vi.fn();
-    globalThis.fetch = fetchSpy;
-
-    const res = await exports.default.fetch("https://agents.test/api/me/assets");
-
-    expect(res.status).toBe(401);
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
+  it.each(CUSTOMER_ROUTES)(
+    "asks a signed-out caller to sign in on $method $path",
+    async (route) => {
+      expect(await statusOf("", route)).toBe(401);
+    },
+  );
 });

@@ -60,7 +60,7 @@ describe("Chat", () => {
   });
 
   it("renders the empty state when there are no messages", () => {
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     expect(screen.getByText("Comece a conversa")).toBeInTheDocument();
   });
 
@@ -70,7 +70,6 @@ describe("Chat", () => {
         agent="planner"
 
         companyId="co_test"
-        sessionToken="tok"
       />,
     );
     expect(screen.getByText(PLANNER_GREETING)).toBeInTheDocument();
@@ -90,7 +89,6 @@ describe("Chat", () => {
         agent="planner"
 
         companyId="co_test"
-        sessionToken="tok"
       />,
     );
     expect(screen.getByText(PLANNER_GREETING)).toBeInTheDocument();
@@ -105,7 +103,6 @@ describe("Chat", () => {
         agent="planner"
 
         companyId="co_test"
-        sessionToken="tok"
       />,
     );
     expect(screen.queryByText(/Um agente está respondendo/v)).not.toBeInTheDocument();
@@ -117,7 +114,6 @@ describe("Chat", () => {
         agent="correspondent"
 
         companyId="co_test"
-        sessionToken="tok"
       />,
     );
     expect(screen.queryByText(PLANNER_GREETING)).not.toBeInTheDocument();
@@ -130,7 +126,6 @@ describe("Chat", () => {
         agent="planner"
 
         companyId="co_test"
-        sessionToken="tok"
       />,
     );
     expect(screen.queryByText(PLANNER_GREETING)).not.toBeInTheDocument();
@@ -154,7 +149,6 @@ describe("Chat", () => {
         agent="planner"
 
         companyId="co_test"
-        sessionToken="tok"
       />,
     );
     expect(screen.queryByText(PLANNER_GREETING)).not.toBeInTheDocument();
@@ -179,7 +173,6 @@ describe("Chat", () => {
         agent="planner"
 
         companyId="co_test"
-        sessionToken="tok"
       />,
     );
     expect(screen.queryByText(PLANNER_KICKOFF)).not.toBeInTheDocument();
@@ -211,7 +204,7 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     expect(screen.queryByText(/Um especialista do Time/v)).not.toBeInTheDocument();
     expect(screen.queryByText(/was updated/v)).not.toBeInTheDocument();
     expect(screen.getByText("Sua arte ficou pronta!")).toBeInTheDocument();
@@ -219,7 +212,7 @@ describe("Chat", () => {
 
   it("shows a loading skeleton until durable history is ready", () => {
     chatState.historyReady = false;
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     expect(screen.queryByText("Comece a conversa")).not.toBeInTheDocument();
   });
 
@@ -240,7 +233,7 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     expect(screen.getByText("Encaminhando para o time…")).toBeInTheDocument();
   });
 
@@ -266,7 +259,7 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     expect(screen.getByText("oi")).toBeInTheDocument();
     expect(document.querySelectorAll('[class*="rounded-2xl"]')).toHaveLength(1);
   });
@@ -289,7 +282,7 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     expect(screen.queryByText("Encaminhando para o time…")).not.toBeInTheDocument();
     expect(screen.getByText("Encaminhei para o Designer.")).toBeInTheDocument();
   });
@@ -307,13 +300,13 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     expect(screen.getByText("oi")).toBeInTheDocument();
     expect(screen.getByText("olá!")).toBeInTheDocument();
   });
 
   it("sends the typed message on submit", () => {
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     const textarea = screen.getByLabelText("Mensagem");
     fireEvent.change(textarea, { target: { value: "preciso de ajuda" } });
     fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
@@ -322,7 +315,7 @@ describe("Chat", () => {
 
   it("does not send while a reply is streaming", () => {
     chatState.status = "streaming";
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     const textarea = screen.getByLabelText("Mensagem");
     fireEvent.change(textarea, { target: { value: "outra" } });
     fireEvent.submit(textarea.closest("form") as HTMLFormElement);
@@ -331,7 +324,7 @@ describe("Chat", () => {
 
   it("shows the thinking indicator while submitted", () => {
     chatState.status = "submitted";
-    render(<Chat companyId="co_test" sessionToken="tok" />);
+    render(<Chat companyId="co_test" />);
     expect(screen.getByText(/Um agente está respondendo/v)).toBeInTheDocument();
   });
 });

@@ -83,7 +83,6 @@ describe("createServerApi", () => {
       basePath: "/api/backoffice",
       baseUrl: "https://w.example",
       readCookieHeader: () => Promise.resolve("session=abc"),
-      readOrgId: () => Promise.resolve("org_1"),
     });
     const out = await apiGetServer<{ items: ReadonlyArray<string> }>("/tickets");
 
@@ -94,7 +93,7 @@ describe("createServerApi", () => {
     expect(init?.cache).toBe("no-store");
   });
 
-  it("names the tenant with X-Org-Id on every server read", async () => {
+  it("names no tenant: the Worker picks the org from the session", async () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(Response.json({ ok: true })),
     );
@@ -103,12 +102,11 @@ describe("createServerApi", () => {
     const { apiGetServer } = createServerApi({
       baseUrl: "https://w.example",
       readCookieHeader: () => Promise.resolve("session=abc"),
-      readOrgId: () => Promise.resolve("org_2"),
     });
-    await apiGetServer("/me/company");
+    await apiGetServer("/api/me/company");
 
     const init = fetchMock.mock.calls[0]?.[1];
-    expect(new Headers(init?.headers).get("X-Org-Id")).toBe("org_2");
+    expect(new Headers(init?.headers).has("X-Org-Id")).toBe(false);
   });
 
   it("omits the Cookie header when the request carries none", async () => {
@@ -120,7 +118,6 @@ describe("createServerApi", () => {
     const { apiGetServer } = createServerApi({
       baseUrl: "",
       readCookieHeader: () => Promise.resolve(""),
-      readOrgId: () => Promise.resolve("org_1"),
     });
     await apiGetServer("/me");
 

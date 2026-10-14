@@ -7,7 +7,7 @@ import { Suspense } from "react";
 import { TemplateForm } from "@/components/template-form";
 import { ApiError } from "@/lib/api-client";
 import { apiGetServer } from "@/lib/api-server";
-import { requireStaff } from "@/lib/auth-helpers";
+import { requireOperator } from "@/lib/auth-helpers";
 
 export const metadata: Metadata = { title: "Editar modelo" };
 
@@ -19,7 +19,7 @@ type EditTemplatePageProps = {
 };
 
 const EditTemplateContent = async ({ params }: EditTemplatePageProps) => {
-  await requireStaff();
+  await requireOperator();
   const { id } = await params;
 
   let detail: TemplateResponse | null = null;

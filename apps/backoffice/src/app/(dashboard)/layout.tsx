@@ -5,11 +5,11 @@ import { Suspense } from "react";
 
 import { Sidebar } from "@/components/sidebar";
 import { apiGetServer } from "@/lib/api-server";
-import { requireStaff } from "@/lib/auth-helpers";
+import { requireOperator } from "@/lib/auth-helpers";
 
 const SidebarData = async () => {
   const [me, pendingRes] = await Promise.all([
-    requireStaff(),
+    requireOperator(),
     apiGetServer<ActionsResponse>("/actions?status=pending&sort=age").catch(() => null),
   ]);
 
@@ -19,7 +19,7 @@ const SidebarData = async () => {
   return (
     <Sidebar
       pendingCount={pendingCount}
-      user={{ email: me.user.email, name: displayName, role: me.role }}
+      user={{ email: me.user.email, name: displayName, role: me.org.role }}
     />
   );
 };

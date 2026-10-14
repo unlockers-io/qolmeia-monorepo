@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { TemplatesList } from "@/components/templates-list";
-import { requireStaff } from "@/lib/auth-helpers";
+import { requireOperator } from "@/lib/auth-helpers";
 
 export const metadata: Metadata = { title: "Modelos" };
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Modelos" };
 export const instant = true;
 
 const TemplatesContent = async () => {
-  await requireStaff();
+  await requireOperator();
   return <TemplatesList />;
 };
 

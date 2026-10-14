@@ -1,12 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { createUseFlueChat, type ConversationHookOptions } from "./use-flue-chat";
+import { createUseFlueChat } from "./use-flue-chat";
 
 const hookSendMessage = vi.fn();
-let capturedOptions: ConversationHookOptions | undefined;
-const useFlueChat = createUseFlueChat((options) => {
-  capturedOptions = options;
+let capturedUrl: string | undefined;
+const useFlueChat = createUseFlueChat((url) => {
+  capturedUrl = url;
   return {
     error: undefined,
     historyReady: true,
@@ -42,6 +42,6 @@ describe("useFlueChat", () => {
       }),
     );
 
-    expect(capturedOptions?.url).toBe("/agents/correspondent/co_test");
+    expect(capturedUrl).toBe("/agents/correspondent/co_test");
   });
 });

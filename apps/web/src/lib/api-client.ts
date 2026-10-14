@@ -1,5 +1,5 @@
 import { createBrowserApi } from "@repo/worker-api";
 
-const { apiSendForm } = createBrowserApi();
+const { apiGet, apiSend, apiSendForm } = createBrowserApi();
 
-export { apiSendForm };
+export { apiGet, apiSend, apiSendForm };

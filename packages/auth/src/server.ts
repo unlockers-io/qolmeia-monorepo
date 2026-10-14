@@ -1,16 +1,16 @@
 import { isLoopbackHost } from "@better-auth/core/utils/host";
-import type { PrismaClient } from "@repo/db";
 import { log } from "@repo/observability";
 import type { MailerConfig } from "@repo/transactional";
 import { sendTransactionalEmail } from "@repo/transactional";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { bearer } from "better-auth/plugins/bearer";
 import { magicLink } from "better-auth/plugins/magic-link";
 import { username } from "better-auth/plugins/username";
 import type { BetterAuthPlugin } from "better-auth/types";
 
-import { countOperators, createSignupGuard } from "./signup";
+import { CLIENT_IP_HEADER } from "./client-ip";
+import { AUTH_COOKIE_PREFIX } from "./session-cookie";
+import { countOperators, createSignupGuard, type OperatorCounter } from "./signup";
 
 const CALLBACK_FALLBACK_PATH = "/";
 
@@ -53,8 +53,9 @@ export const linkOnRequestOrigin = (
 type AuthConfig = {
   allowedHosts: Array<string>;
   extraPlugins?: Array<BetterAuthPlugin>;
+  fallbackBaseURL: string;
   fromEmail?: string;
-  prisma: PrismaClient;
+  prisma: OperatorCounter;
   rateLimitEnabled?: boolean;
   resendApiKey?: string;
   secret: string;
@@ -66,6 +67,7 @@ export const createAuth = (config: AuthConfig) => {
   const {
     allowedHosts,
     extraPlugins = [],
+    fallbackBaseURL,
     fromEmail = "noreply@email.qolmeia.com",
     prisma,
     rateLimitEnabled = false,
@@ -89,11 +91,12 @@ export const createAuth = (config: AuthConfig) => {
     },
 
     advanced: {
-      cookiePrefix: "qolmeia",
+      cookiePrefix: AUTH_COOKIE_PREFIX,
       defaultCookieAttributes: {
         httpOnly: true,
         sameSite: "lax" as const,
       },
+      ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
       useSecureCookies,
     },
 
@@ -101,7 +104,7 @@ export const createAuth = (config: AuthConfig) => {
 
     baseURL: {
       allowedHosts,
-      fallback: "http://localhost:4000",
+      fallback: fallbackBaseURL,
       protocol: "auto",
     },
 
@@ -214,7 +217,6 @@ export const createAuth = (config: AuthConfig) => {
 
     plugins: [
       username(),
-      bearer(),
       magicLink({
         sendMagicLink: async ({ email, url }, ctx) => {
           const link = linkOnRequestOrigin(url, ctx?.headers, trustedOrigins);

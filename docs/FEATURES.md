@@ -284,10 +284,10 @@ round, so a retried step does not duplicate actions, activity, or released files
 - Durable chat submissions, replayable history, SSE reconnection, and polling fallback for roster
   state.
 - Workflow waits survive Worker and Durable Object eviction.
-- Session cache keys hash bearer tokens and cookies rather than storing credentials in keys.
 - Session-authorized asset references, content-type protection, and sandboxed SVG responses.
-- Explicit CORS origins, secure headers, request IDs, request-size limits, and API/auth rate limits.
-- Constant-time comparison protects the shared secret used for internal company provisioning.
+- Same-origin browser traffic with host-only session cookies on each app.
+- Better Auth rate limits stored in Postgres, keyed on the browser's address that the Next proxy
+  forwards with a shared secret, compared in constant time.
 - Structured logs cover agent tools, model usage, delegation, Workflows, scheduling, API errors, and
   cache failures.
 - `/healthz` endpoints support service health checks.
