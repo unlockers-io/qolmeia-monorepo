@@ -241,12 +241,13 @@ round, so a retried step does not duplicate actions, activity, or released files
 
 ### 3.6 Memory, research, and assets
 
-- Durable facts are stored in Postgres and semantic vectors use Workers AI (`bge-m3`) plus
-  Vectorize when those bindings are configured.
-- Local/test environments fall back to an in-memory semantic adapter.
+- Durable facts are stored in Postgres, the authority; their vectors use Workers AI plus Vectorize
+  for recall. A missing binding fails loudly outside `vite dev` and tests.
+- `vite dev` and tests use an in-memory index (`MEMORY_BACKEND=in-memory`).
 - Image generation supports `1:1`, `16:9`, `4:3`, and `9:16`; the default product flow uses `1:1`.
 - Agent-created and customer-uploaded assets live in R2 with Postgres metadata, tenant-scoped keys,
-  SHA-256 deduplication, customer/agent visibility, and signed delivery URLs.
+  SHA-256 deduplication, and customer/agent visibility. Content references an asset as
+  `/assets/<id>`, which never expires and is served after a session check.
 - Web research combines Exa search results with Firecrawl page extraction.
 
 ### 3.7 Proactive work suggestions
@@ -266,8 +267,8 @@ round, so a retried step does not duplicate actions, activity, or released files
 - Agent chat paths require a customer role and require the path company id to match the session.
 - Customer writes are rejected for staff/owner sessions; operator writes use the backoffice router.
 - Product queries and mutations are scoped by company id.
-- New organizations can be provisioned through the authenticated API, which creates the matching
-  company, Planner, Correspondent, owner membership, and template entitlements.
+- Operators create organizations through `POST /api/backoffice/companies`, which creates the
+  matching company, Planner, Correspondent, owner membership, and template entitlements.
 
 ### 4.2 Storage and runtime
 
@@ -275,9 +276,9 @@ round, so a retried step does not duplicate actions, activity, or released files
 - **Flue 2 Durable Objects**: persistent Planner and Correspondent conversations.
 - **Cloudflare Workflows**: durable specialist execution, approval waits, and revisions.
 - **R2**: private binary and text assets.
-- **KV**: hashed session and membership relay caches; cache failures degrade to the auth service.
 - **Workers AI + Vectorize**: production semantic memory.
-- **OpenRouter**: configurable conversational, specialist, and image-generation models.
+- **OpenRouter through Cloudflare AI Gateway**: conversational, specialist, and image-generation
+  models.
 
 ### 4.3 Reliability and security
 
@@ -288,8 +289,7 @@ round, so a retried step does not duplicate actions, activity, or released files
 - Same-origin browser traffic with host-only session cookies on each app.
 - Better Auth rate limits stored in Postgres, keyed on the browser's address that the Next proxy
   forwards with a shared secret, compared in constant time.
-- Structured logs cover agent tools, model usage, delegation, Workflows, scheduling, API errors, and
-  cache failures.
+- Structured logs cover agent tools, model usage, delegation, Workflows, scheduling, and API errors.
 - `/healthz` endpoints support service health checks.
 
 ## 5. Implemented but not part of the default customer flow

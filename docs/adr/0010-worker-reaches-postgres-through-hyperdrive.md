@@ -1,5 +1,7 @@
 # The Worker reaches Postgres through Hyperdrive and owns product data
 
+> **Status (2026-10): amended by [ADR 0011](./0011-worker-hosts-better-auth.md).** `apps/api` no longer keeps Better Auth and `/api/me`; it is retired, and the Worker hosts both. With Better Auth and React Email the upload is about 3.1 MiB gzip, so the Worker needs Workers Paid.
+
 Product data moved from D1 to Postgres (see the superseded [ADR 0002](./0002-d1-system-of-record.md)), but the agents Worker could not open a Postgres connection: workerd validates TLS against public CAs, and Railway's Postgres presents a self-signed certificate. The workaround made `apps/api` the Worker's database. Every read and write was an HTTP call to `/api/internal/agents/<op>`, authenticated with `INTERNAL_SHARED_SECRET`, dispatched through switch statements to Prisma functions. That seam covered 56 operations and about 1.3k lines that existed only to cross it. It also cost three things:
 
 - **A remote ORM.** Types and validation were declared three times (Worker forwarder, client contract, API zod schema). Outputs were cast, never validated. Dates crossed as epoch milliseconds and were converted again on the Worker. Domain logic was split across the seam: delegation authorized on the Worker over four RPC reads, and team errors travelled as a hand-synced string vocabulary.

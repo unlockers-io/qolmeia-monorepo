@@ -1,6 +1,11 @@
 # Production topology: split hosting under one parent domain, cross-subdomain auth cookie
 
-> **⚠️ SUPERSEDED (2026-08), auth cookie only.** The hosting split stands, but the cross-subdomain cookie was dropped: Better Auth now sets host-only cookies and each Next app proxies `/api/auth/*` and its Worker routes through its own origin, the same model as dev. See [`docs/deploy.md`](../deploy.md) §3. The record below is retained as the original rationale.
+> **⚠️ SUPERSEDED (2026-10).** Two parts of this decision no longer hold:
+>
+> - **The cross-subdomain cookie** (2026-08): Better Auth sets host-only cookies, and each Next app proxies `/api/auth/*` and its Worker routes through its own origin, the same model as dev. `CORS_ORIGINS`, `CLIENT_ORIGINS`, and the `NEXT_PUBLIC_*_URL` direct calls are gone.
+> - **The `apps/api` row** (2026-10): `apps/api` is retired. The Worker hosts Better Auth ([ADR 0011](./0011-worker-hosts-better-auth.md)) and reaches Postgres through Hyperdrive ([ADR 0010](./0010-worker-reaches-postgres-through-hyperdrive.md)); Railway hosts only Postgres.
+>
+> What stands: the Worker on Cloudflare, the Next apps on Vercel, everything under `qolmeia.com`. The provisioning sequence below (D1, KV, `ASSETS_SIGNING_KEY`, `INTERNAL_SHARED_SECRET`) is obsolete; [`docs/deploy.md`](../deploy.md) is the current one. The record below is retained as the original rationale.
 
 The repo only codifies the Worker deploy; auth and the Next apps had no target, and the dev auth flow relies on a `.localhost` proxy trick that doesn't translate to prod. This fixes where each piece runs and how the session survives across them.
 
@@ -11,8 +16,6 @@ The repo only codifies the Worker deploy; auth and the Next apps had no target, 
 | `apps/agents` (worker-bees)   | **Cloudflare** | `wrangler deploy`; D1, R2, KV, Vectorize, Workflows       |
 | `apps/api` + **Postgres**     | **Railway**    | Hono/Node service + managed Postgres (Better Auth tables) |
 | `apps/web`, `apps/backoffice` | **Vercel**     | two Next 16 projects                                      |
-
-> **⚠️ SUPERSEDED (2026-10), the `apps/api` row.** `apps/api` is retired: the Worker hosts Better Auth, and Railway hosts only Postgres. See [ADR 0011](./0011-worker-hosts-better-auth.md).
 
 **Decision — domains + auth cookie:** everything under **`qolmeia.com`** (e.g. `app.` = client, `admin.` = backoffice, `api.` = api service, `agents.` = Worker; exact names TBD). The session is a **cross-subdomain cookie on `.qolmeia.com`**:
 

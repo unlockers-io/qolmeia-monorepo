@@ -4,11 +4,11 @@ This guide brings up the current stack: the Cloudflare Worker (agents and Better
 
 ## 1. Prerequisites
 
-| Tool    | Version            | Check              |
-| ------- | ------------------ | ------------------ |
-| Node.js | 24 or newer        | `node --version`   |
-| pnpm    | 11.1.3             | `pnpm --version`   |
-| Docker  | any recent version | `docker --version` |
+| Tool    | Version                                                         | Check              |
+| ------- | --------------------------------------------------------------- | ------------------ |
+| Node.js | 24 or newer                                                     | `node --version`   |
+| pnpm    | 11 (`packageManager` pins the exact version; Corepack picks it) | `pnpm --version`   |
+| Docker  | any recent version                                              | `docker --version` |
 
 ## 2. Install and Start Postgres
 
@@ -17,7 +17,7 @@ pnpm install
 docker compose up -d
 ```
 
-Docker starts Postgres on host port `5436`. Redis may still be present in compose for legacy compatibility. Auth and agent product state live in Postgres; R2 holds binary assets.
+Docker starts Postgres on host port `5436`. Postgres holds auth and product data; under `vite dev` R2 is a local Miniflare bucket and Memory uses the in-memory index (`MEMORY_BACKEND=in-memory`).
 
 ## 3. Environment Files
 
@@ -48,7 +48,7 @@ DATABASE_URL=postgresql://qolmeia:qolmeia123@localhost:5436/qolmeia \
   pnpm --filter=@repo/db db:push
 ```
 
-Seed the dev organization, users, product catalog, and agent team:
+Seed the dev organization, the two logins, the default templates, and the agent team (idempotent; reads `DATABASE_URL` and `BETTER_AUTH_SECRET` from `apps/agents/.dev.vars`):
 
 ```bash
 pnpm --filter=worker-bees db:seed
@@ -85,7 +85,9 @@ Seeded accounts:
 | Backoffice | OWNER    | `operator@qolmeia.dev` | `Qolmeia-Dev-OperatorPass!` |
 | Client     | CUSTOMER | `customer@qolmeia.dev` | `Qolmeia-Dev-CustomerPass!` |
 
-The client login also offers magic links. Without `RESEND_API_KEY` the Worker logs every magic-link and password-reset URL; open it as-is.
+The client login also offers magic links. Without `RESEND_API_KEY` the Worker logs every magic-link and password-reset URL; open it as-is. The seed only sets a password when it creates the user, so an account first created through a magic link has none.
+
+portless prefixes each URL with the checkout's branch name in a git worktree (e.g. `https://<branch>.qolmeia.web.localhost:1355`); `portless get qolmeia.web` prints it. Node clients need `NODE_EXTRA_CA_CERTS=~/.portless/ca.pem` to trust it.
 
 ## 7. Verify
 
@@ -103,14 +105,17 @@ Useful targeted checks:
 pnpm --filter=web typecheck
 pnpm --filter=worker-bees typecheck
 pnpm --filter=web test -- --run src/components/chat.test.tsx
-pnpm --filter=worker-bees test -- --run apps/agents/src/__tests__/skill-tool-schema.test.ts
+pnpm --filter=worker-bees test -- --run src/__tests__/skill-tool-schema.test.ts
 ```
+
+Worker tests run against Postgres through the local Hyperdrive binding, in a database named after the checkout path, so worktrees run the suite in parallel. Model calls are stubbed; no OpenRouter key is needed.
 
 ## 8. Common Pitfalls
 
-| Symptom                                   | Fix                                                                                    |
-| ----------------------------------------- | -------------------------------------------------------------------------------------- |
-| Client/backoffice cannot reach the Worker | Check `AGENTS_INTERNAL_URL`, defaulting to `http://127.0.0.1:8787`                     |
-| Sign-in fails with a 500 from the Worker  | Set `BETTER_AUTH_SECRET` (32+ characters) in `apps/agents/.dev.vars`                   |
-| Worker has no local data                  | Check `HYPERDRIVE` in `wrangler.jsonc`, then rerun `pnpm --filter=worker-bees db:seed` |
-| Real agent calls fail                     | Set `OPENROUTER_API_KEY` in `apps/agents/.dev.vars`                                    |
+| Symptom                                     | Fix                                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Client/backoffice cannot reach the Worker   | Check `AGENTS_INTERNAL_URL`, defaulting to `http://127.0.0.1:8787`                                           |
+| Sign-in fails with a 500 from the Worker    | Set `BETTER_AUTH_SECRET` (32+ characters) in `apps/agents/.dev.vars`                                         |
+| Worker has no local data                    | Check `HYPERDRIVE` in `wrangler.jsonc`, then rerun `pnpm --filter=worker-bees db:seed`                       |
+| Real agent calls fail with 401              | Set a real `OPENROUTER_API_KEY` in `apps/agents/.dev.vars` ("User not found" means the key is a placeholder) |
+| `vite` or `vitest` fails to load its config | Pass `--configLoader runner`                                                                                 |
