@@ -207,9 +207,9 @@ There are 12 registered skills:
 | `webSearch`          | Searches the live web through Exa and returns sources.                                                                   |
 | `fetchUrl`           | Fetches and converts a page through Firecrawl for deeper reading.                                                        |
 
-Database overlays can change a skill description or disable it. Flue agents refresh overlays on every
-delivery, and every invocation rechecks the live kill switch before executing. Specialist Workflows
-load the current overlay when assembling their tools.
+Each skill's description and input schema come from its code module. Operators can disable a skill
+with a `skill` row (`enabled = false`): Flue agents read the kill switch at the start of every turn,
+and specialist Workflows read it when each generation step assembles its tools.
 
 ### 3.4 Delegation and workload routing
 

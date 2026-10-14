@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { defineSkill } from "#/skills/skill";
 
 const webSearchInputSchema = z.object({
   numResults: z
@@ -33,11 +33,11 @@ type WebSearchResult = {
 const EXA_ENDPOINT = "https://api.exa.ai/search";
 const SNIPPET_MAX = 800;
 
-const webSearchSkill: UnknownSkill = {
+const webSearchSkill = defineSkill({
   description:
     "Busca na web (notícias, tendências, concorrentes, fatos atuais) e retorna trechos com as fontes. Use para fundamentar conteúdo em informação verificável e recente.",
-  async execute(input: SkillInput, ctx: SkillContext): Promise<WebSearchResult> {
-    const { numResults, query } = webSearchInputSchema.parse(input);
+  displayName: "Buscar na web",
+  async execute({ numResults, query }, ctx): Promise<WebSearchResult> {
     const apiKey = ctx.env.EXA_API_KEY;
     if (apiKey === undefined || apiKey === "") {
       throw new Error("EXA_API_KEY não configurada; busca na web indisponível.");
@@ -69,6 +69,6 @@ const webSearchSkill: UnknownSkill = {
   },
   id: "webSearch",
   inputSchema: webSearchInputSchema,
-};
+});
 
 export { webSearchSkill };

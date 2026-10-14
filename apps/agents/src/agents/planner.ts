@@ -9,9 +9,11 @@ import {
 import { plannerIdFor } from "@repo/worker-api/contracts";
 import { env } from "cloudflare:workers";
 
-import { CONVERSATION_MODEL } from "#/lib/flue-models";
+import { withDb } from "#/lib/db";
+import { CONVERSATION_MODEL } from "#/lib/models";
 import { buildFlueTools } from "#/lib/skill-tool";
-import { loadSkillOverlays, type SkillContext, type SkillOverlayMap } from "#/skills/registry";
+import { loadDisabledSkillIds } from "#/skills/registry";
+import type { SkillContext } from "#/skills/skill";
 
 const PLANNER_SKILLS = ["extractBrief", "proposeTeam"];
 
@@ -26,12 +28,15 @@ Sua missão tem duas etapas:
 O cliente confirma fora do chat (botão na UI). Quando isso acontecer, o Correspondente assume; você fica em standby para um futuro re-plano se ele quiser ajustar o Time.`;
 
 export function PlannerV2({ id }: AgentProps): string {
-  const [overlays, setOverlays] = usePersistentState<SkillOverlayMap | null>("skillOverlays", null);
+  const [disabledSkillIds, setDisabledSkillIds] = usePersistentState<ReadonlyArray<string>>(
+    "disabledSkillIds",
+    [],
+  );
   useAgentStart(async () => {
-    setOverlays(await loadSkillOverlays(env, PLANNER_SKILLS));
+    setDisabledSkillIds(await withDb(env, loadDisabledSkillIds));
   });
 
-  useModel(`openrouter/${CONVERSATION_MODEL}`, { thinkingLevel: "low" });
+  useModel(CONVERSATION_MODEL, { thinkingLevel: "low" });
 
   const ctx: SkillContext = {
     agentInstanceId: plannerIdFor(id),
@@ -39,7 +44,7 @@ export function PlannerV2({ id }: AgentProps): string {
     deliverableFolder: "customer",
     env,
   };
-  for (const skillTool of buildFlueTools(ctx, PLANNER_SKILLS, overlays)) {
+  for (const skillTool of buildFlueTools(ctx, PLANNER_SKILLS, disabledSkillIds)) {
     useTool(skillTool);
   }
 

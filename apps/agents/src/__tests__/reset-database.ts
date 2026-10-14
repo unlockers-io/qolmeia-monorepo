@@ -1,6 +1,6 @@
 import "#/lib/observability";
 
-import { DEFAULT_SKILLS, DEFAULT_TEMPLATES } from "@repo/db/worker";
+import { DEFAULT_TEMPLATES } from "@repo/db/worker";
 import { env } from "cloudflare:workers";
 import { afterAll, beforeEach } from "vitest";
 
@@ -31,7 +31,6 @@ beforeEach(async () => {
   await withDb(env, async (db) => {
     await truncate(db);
     await db.agentTemplate.createMany({ data: [...DEFAULT_TEMPLATES] });
-    await db.skill.createMany({ data: [...DEFAULT_SKILLS] });
   });
   const keys = await env.SESSIONS.list();
   await Promise.allSettled(keys.keys.map(({ name }) => env.SESSIONS.delete(name)));

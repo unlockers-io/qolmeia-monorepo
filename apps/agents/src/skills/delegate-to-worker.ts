@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { withDb } from "#/lib/db";
-import type { SkillContext, SkillInput, UnknownSkill } from "#/skills/registry";
+import { defineSkill } from "#/skills/skill";
 import { delegateTicket } from "#/ticket/delegation";
 
 const delegateInputSchema = z.object({
@@ -16,11 +16,11 @@ const delegateInputSchema = z.object({
     .describe("Tipo do especialista (ex: 'designer', 'marketing-strategist')."),
 });
 
-const delegateToWorkerSkill: UnknownSkill = {
+const delegateToWorkerSkill = defineSkill({
   description:
     "Delega uma tarefa a um especialista do Time. Use quando o pedido exige uma especialidade que você não executa diretamente (ex: criar imagem → designer).",
-  async execute(input: SkillInput, ctx: SkillContext) {
-    const { brief, workerKind } = delegateInputSchema.parse(input);
+  displayName: "Delegar para especialista",
+  async execute({ brief, workerKind }, ctx) {
     return withDb(ctx.env, (db) =>
       delegateTicket(ctx.env, db, {
         brief,
@@ -32,6 +32,6 @@ const delegateToWorkerSkill: UnknownSkill = {
   },
   id: "delegateToWorker",
   inputSchema: delegateInputSchema,
-};
+});
 
 export { delegateToWorkerSkill };

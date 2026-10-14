@@ -255,13 +255,8 @@ model AgentTemplate {
 }
 
 model Skill {
-  id            String   @id
-  displayName   String   @map("display_name")
-  description   String
-  paramHints    Json?    @map("param_hints")
-  defaultConfig Json?    @map("default_config")
-  enabled       Boolean  @default(true)
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id      String  @id
+  enabled Boolean @default(true)
 
   @@map("skill")
 }
