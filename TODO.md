@@ -14,11 +14,7 @@ Coverage is self-service: each Operator picks their own Companies and discipline
 
 `notify-only` executes and records an `ACTION_NOTIFY` activity entry, but no Operator surface lists those entries apart from the general activity log (ADR 0006). No shipped template uses the tier yet.
 
-## 4. Production hardening
-
-- The Worker has no CD. Deploy it from CI on merge to `main`, with the commit in the deploy message.
-
-## 5. Smaller items
+## 4. Smaller items
 
 - Activity-log payload renderers: the backoffice prints every payload as JSON. Mirror the `action-renderers` registry with an optional renderer per activity `type`.
 - A staged `--latest` dependency update (including Next 16.4), on its own and not bundled with a deploy.

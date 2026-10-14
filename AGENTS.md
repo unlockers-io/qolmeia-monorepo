@@ -93,7 +93,7 @@ The browser never talks to the Worker directly: each Next app rewrites `/api/aut
   Worker entry is the virtual module `virtual:flue/worker`; `flueWorkerConfig()` merges the per-agent
   Durable Object bindings into the Cloudflare plugin's config, and `vite build` writes the merged
   `dist/worker_bees/wrangler.json` (with a `.wrangler/deploy/config.json` redirect that `wrangler deploy`
-  follows). `wrangler.jsonc` has no `main`. Deploy is `vite build && wrangler deploy` ([`docs/deploy.md`](docs/deploy.md)).
+  follows). `wrangler.jsonc` has no `main`. Workers Builds deploys it on every merge to `main`; `pnpm run deploy` (`vite build && wrangler deploy`) deploys by hand ([`docs/deploy.md`](docs/deploy.md)).
 
 ## Environment
 
