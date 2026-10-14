@@ -2,9 +2,8 @@ import { z } from "zod";
 
 import { withDb } from "#/lib/db";
 import { generateImage, type ImagePromptPart } from "#/lib/models";
-import { buildSignedAssetUrl, SIGNED_IMAGE_TTL_MS } from "#/lib/r2";
-import { listBrandReferences, persistAsset } from "#/library/assets";
-import { defineSkill, type SkillContext } from "#/skills/skill";
+import { assetReference, readBrandReferences, storeAsset } from "#/library/assets";
+import { defineSkill } from "#/skills/skill";
 
 const generateBrandImageInputSchema = z.object({
   aspectRatio: z
@@ -31,46 +30,7 @@ const aspectHint = (aspect: string): string => {
   return " (proporção 1:1, quadrado)";
 };
 
-const decodeBase64 = (b64: string): Uint8Array => {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) {
-    out[i] = bin.codePointAt(i) ?? 0;
-  }
-  return out;
-};
-
-const encodeBase64 = (bytes: Uint8Array): string => {
-  let bin = "";
-  for (const byte of bytes) {
-    bin += String.fromCodePoint(byte);
-  }
-  return btoa(bin);
-};
-
 const MAX_BRAND_REFS = 3;
-
-const loadBrandReferences = async (ctx: SkillContext): Promise<Array<string>> => {
-  const results = await withDb(ctx.env, (db) =>
-    listBrandReferences(db, ctx.companyId, MAX_BRAND_REFS),
-  );
-
-  const settled = await Promise.allSettled(
-    results.map(async (row) => {
-      const object = await ctx.env.ASSETS.get(row.r2Key);
-      if (!object) {
-        return null;
-      }
-      const bytes = new Uint8Array(await object.arrayBuffer());
-      return `data:${row.mime};base64,${encodeBase64(bytes)}`;
-    }),
-  );
-  return settled.flatMap((result) =>
-    result.status === "fulfilled" && result.value !== null && result.value !== ""
-      ? [result.value]
-      : [],
-  );
-};
 
 const parseDataUrl = (url: string): { bytes: Uint8Array; mime: string } | null => {
   const match = /^data:(?<mime>[^;]+);base64,(?<b64>.+)$/v.exec(url);
@@ -81,7 +41,7 @@ const parseDataUrl = (url: string): { bytes: Uint8Array; mime: string } | null =
   if (mime === undefined || b64 === undefined) {
     return null;
   }
-  return { bytes: decodeBase64(b64), mime };
+  return { bytes: Uint8Array.fromBase64(b64), mime };
 };
 
 type GenerateResult = { assetId: string; deliverable: true; url: string } | { error: string };
@@ -93,7 +53,9 @@ const generateBrandImageSkill = defineSkill({
   async execute({ aspectRatio = "1:1", prompt }, ctx): Promise<GenerateResult> {
     const fullPrompt = `${prompt}${aspectHint(aspectRatio)}`;
 
-    const brandRefs = await loadBrandReferences(ctx);
+    const brandRefs = await withDb(ctx.env, (db) =>
+      readBrandReferences(ctx.env, db, ctx.companyId, MAX_BRAND_REFS),
+    );
     const userContent: string | Array<ImagePromptPart> =
       brandRefs.length > 0
         ? [
@@ -101,7 +63,10 @@ const generateBrandImageSkill = defineSkill({
               text: `${fullPrompt}\n\nUse as imagens de referência da marca anexadas para manter a identidade visual (cores, estilo, logotipo).`,
               type: "text",
             },
-            ...brandRefs.map((url): ImagePromptPart => ({ image_url: { url }, type: "image_url" })),
+            ...brandRefs.map(({ bytes, mime }): ImagePromptPart => ({
+              image_url: { url: `data:${mime};base64,${bytes.toBase64()}` },
+              type: "image_url",
+            })),
           ]
         : fullPrompt;
 
@@ -118,26 +83,17 @@ const generateBrandImageSkill = defineSkill({
     }
     const { bytes, mime } = decoded;
     const { assetId } = await withDb(ctx.env, (db) =>
-      persistAsset(ctx.env, db, {
+      storeAsset(ctx.env, db, {
         bytes,
         companyId: ctx.companyId,
-        fallbackExt: "png",
         kind: "generated_image",
         metadata: { aspectRatio, prompt },
         mime,
-        uploadMetadata: { aspectRatio, prompt },
         visibility: ctx.deliverableFolder,
       }),
     );
 
-    const url = await buildSignedAssetUrl(
-      { ASSETS_SIGNING_KEY: ctx.env.ASSETS_SIGNING_KEY },
-      ctx.env.WORKER_PUBLIC_URL,
-      assetId,
-      SIGNED_IMAGE_TTL_MS,
-    );
-
-    return { assetId, deliverable: true, url };
+    return { assetId, deliverable: true, url: assetReference(assetId) };
   },
   id: "generateBrandImage",
   inputSchema: generateBrandImageInputSchema,

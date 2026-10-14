@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 describe("generateBrandImage", () => {
-  it("uploads to R2, writes an asset row, returns a signed URL", async () => {
+  it("uploads to R2, writes an asset row, returns its stable reference", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(buildChatImageResponse(RED_PIXEL_B64)));
 
     const result = (await generateBrandImageSkill.execute(
@@ -56,9 +56,7 @@ describe("generateBrandImage", () => {
       ctx,
     )) as { assetId: string; url: string };
 
-    expect(result.assetId).toBeTruthy();
-    expect(result.url).toContain("/assets/");
-    expect(result.url).toContain("token=");
+    expect(result.url).toBe(`/assets/${result.assetId}`);
 
     const row = await db((client) =>
       client.asset.findUnique({
@@ -119,11 +117,10 @@ describe("generateBrandImage", () => {
     expect(result.deliverable).toBe(true);
     const row = await db((client) =>
       client.asset.findUniqueOrThrow({
-        select: { r2Key: true, visibility: true },
+        select: { visibility: true },
         where: { id: result.assetId },
       }),
     );
     expect(row.visibility).toBe("agent");
-    expect(row.r2Key).toMatch(new RegExp(`^org_${COMPANY_ID}/agent/`, "v"));
   });
 });

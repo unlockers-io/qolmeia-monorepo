@@ -4,9 +4,10 @@ import { z } from "zod";
 import {
   EMBEDDING_DIMENSIONS,
   EMBEDDING_MODEL,
+  embeddingsSchema,
   MEMORY_INDEX,
-  embeddingSchema,
-} from "#/lib/memory/embedding";
+  toVector,
+} from "#/memory/vectors";
 
 const config = z
   .object({
@@ -58,22 +59,12 @@ const main = async (): Promise<void> => {
     // Bound provider load. Upserts keep source IDs, so reruns are idempotent.
     const vectors = [];
     for (const fact of facts) {
-      const embedding = await request(embeddingSchema, `/ai/run/${EMBEDDING_MODEL}`, {
+      const [values] = await request(embeddingsSchema, `/ai/run/${EMBEDDING_MODEL}`, {
         body: JSON.stringify({ text: [fact.content] }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
-      vectors.push({
-        id: fact.id,
-        metadata: {
-          agentInstanceId: fact.agentInstanceId,
-          companyId: fact.companyId,
-          content: fact.content,
-          createdAt: fact.createdAt.getTime(),
-          kind: fact.kind,
-        },
-        values: embedding,
-      });
+      vectors.push(toVector(fact, values));
     }
     const body = new FormData();
     body.set(

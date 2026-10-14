@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { getMemoryAdapter, type ScoredRecord } from "#/lib/memory";
+import { withDb } from "#/lib/db";
+import { recall } from "#/memory/memory";
 import { defineSkill } from "#/skills/skill";
 
 const recallMemoryInputSchema = z.object({
@@ -15,7 +16,7 @@ const recallMemoryInputSchema = z.object({
 });
 
 type RecallResult = {
-  matches: ReadonlyArray<Pick<ScoredRecord, "content" | "createdAt" | "kind" | "score">>;
+  matches: ReadonlyArray<{ content: string; createdAt: number; kind: string; score: number }>;
 };
 
 const recallMemorySkill = defineSkill({
@@ -23,18 +24,19 @@ const recallMemorySkill = defineSkill({
     "Busca na memória deste agente fatos relevantes para uma consulta. Use quando precisar de algo específico que pode estar fora do contexto atual.",
   displayName: "Recordar memória",
   async execute({ query, topK }, ctx): Promise<RecallResult> {
-    const memory = getMemoryAdapter(ctx.env);
-    const matches = await memory.retrieve({
-      agentInstanceId: ctx.agentInstanceId,
-      query,
-      topK: topK ?? 4,
-    });
+    const facts = await withDb(ctx.env, (db) =>
+      recall(ctx.env, db, ctx.companyId, {
+        agentInstanceId: ctx.agentInstanceId,
+        text: query,
+        topK: topK ?? 4,
+      }),
+    );
     return {
-      matches: matches.map((match) => ({
-        content: match.content,
-        createdAt: match.createdAt,
-        kind: match.kind,
-        score: match.score,
+      matches: facts.map((fact) => ({
+        content: fact.content,
+        createdAt: fact.createdAt.getTime(),
+        kind: fact.kind,
+        score: fact.score,
       })),
     };
   },

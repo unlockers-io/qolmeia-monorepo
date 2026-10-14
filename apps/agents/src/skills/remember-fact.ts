@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { withDb } from "#/lib/db";
-import { indexMemoryFacts, recordMemoryFacts } from "#/memory/facts";
+import { remember } from "#/memory/memory";
 import { defineSkill } from "#/skills/skill";
 
 const rememberFactInputSchema = z.object({
@@ -17,22 +17,15 @@ const rememberFactSkill = defineSkill({
     "Salva um fato importante que você deve lembrar em conversas futuras (preferências, decisões, fatos do negócio).",
   displayName: "Lembrar fato",
   async execute({ content, kind }, ctx): Promise<{ id: string; savedAt: number }> {
-    const records = await withDb(ctx.env, (db) =>
-      recordMemoryFacts(db, [
-        {
-          agentInstanceId: ctx.agentInstanceId,
-          companyId: ctx.companyId,
-          content,
-          kind: kind ?? "fact",
-        },
+    const [fact] = await withDb(ctx.env, (db) =>
+      remember(ctx.env, db, ctx.companyId, [
+        { agentInstanceId: ctx.agentInstanceId, content, kind: kind ?? "fact" },
       ]),
     );
-    await indexMemoryFacts(ctx.env, records);
-    const [record] = records;
-    if (record === undefined) {
+    if (fact === undefined) {
       throw new Error("rememberFact: no fact recorded");
     }
-    return { id: record.id, savedAt: record.createdAt };
+    return { id: fact.id, savedAt: fact.createdAt.getTime() };
   },
   id: "rememberFact",
   inputSchema: rememberFactInputSchema,

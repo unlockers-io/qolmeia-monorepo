@@ -53,6 +53,6 @@ const releaseDeliverable = (
   ctx: ExecutionContext,
   assetIds: ReadonlyArray<string>,
 ): Promise<ReadonlyArray<{ id: string; mime: string }>> =>
-  withDb(ctx.env, (db) => promoteAssets(ctx.env, db, ctx.companyId, assetIds));
+  withDb(ctx.env, (db) => promoteAssets(db, ctx.companyId, assetIds));
 
 export { deliverableSchema, readDeliverable, releaseDeliverable };

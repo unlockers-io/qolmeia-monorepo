@@ -52,6 +52,10 @@ const nextConfig: NextConfig = {
         destination: `${agentsUrl}/api/backoffice/:path*`,
         source: "/api/backoffice/:path*",
       },
+      {
+        destination: `${agentsUrl}/assets/:id`,
+        source: "/assets/:id",
+      },
     ]),
 
   serverExternalPackages: ["@prisma/client", "@repo/db"],
