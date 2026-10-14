@@ -9,11 +9,11 @@
 - **`customer` folder** — visible to the customer _and_ the agents. Finished deliverables and the customer's own uploads live here.
   - Contains a **`brand/` subfolder** = brand identity (logo, palette, references). The "Identidade da Marca" settings section writes here; this is today's `brand_asset` kind.
 - **`agent` folder** — agent-only working material: raw `fetchUrl` scrapes, intermediate drafts, scratch files. The customer never sees it.
-- Assets gain a **`visibility`** field (`customer` | `agent`). `/api/me/assets` returns only `customer`; the agent skills (`listAssets`/`readAsset`/`saveAsset`) reach both. R2 keys move under the folder prefix: `org_<companyId>/customer/...` and `org_<companyId>/agent/...`. Structure within each folder can evolve.
+- Assets gain a **`visibility`** field (`customer` | `agent`). `/api/me/assets` returns only `customer`; the agent skills (`listAssets`/`readAsset`/`saveAsset`) reach both. The row is the authority: the folder lives only in `visibility`, R2 keys are `org_<companyId>/<assetId>.<ext>`, and promotion to the customer folder is a single row update. Objects stored before this change keep their stored `r2Key`.
 
 ## 2. Memory — semantic facts, not files
 
-Important information the agent saves on purpose and recalls semantically. **This already exists**: `rememberFact` / `recallMemory` over the pluggable adapter in `apps/agents/src/lib/memory/` (`in-memory` for dev, `vectorize` for prod). It stays on **Cloudflare Vectorize**, not pgvector — the D1/R2 Worker has no Postgres connection (Postgres is auth-only), and the adapter keeps a future swap cheap. Memory is not the library; a fact is not a file.
+Important information the agent saves on purpose and recalls semantically. **This already exists**: `rememberFact` / `recallMemory` over the Memory module in `apps/agents/src/memory/` (`in-memory` for dev and tests, `vectorize` everywhere else). It stays on **Cloudflare Vectorize**, not pgvector — the D1/R2 Worker has no Postgres connection (Postgres is auth-only), and the adapter keeps a future swap cheap. Memory is not the library; a fact is not a file.
 
 ## 3. Capture policy — curated, not blanket
 

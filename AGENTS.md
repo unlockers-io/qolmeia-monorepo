@@ -42,7 +42,7 @@ Monorepo managed by pnpm workspaces + Turborepo. Node 24, pnpm 10. Mid-migration
 | `apps/backoffice` | `backoffice`  | Next.js 16        | `https://qolmeia.backoffice.localhost` (portless) | Operator panel (OWNER/STAFF roles).                                                                                                     |
 | `apps/landing`    | `landing`     | Next.js 16        | `https://qolmeia.landing.localhost` (portless)    | Public marketing site. No auth, no Worker calls.                                                                                        |
 
-The browser never talks to `:8787` directly in dev: each Next app rewrites the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code and the rewrites reach the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). Prod works the same way: every session cookie is host-only on its app.
+The browser never talks to `:8787` directly in dev: each Next app rewrites the Worker's surface to itself (`/api/backoffice/*` on backoffice; `/api/me/*`, `/api/teams/*`, and the `/agents/*` chat HTTP+SSE on client; `/assets/:id` on both) so the Better Auth cookie stays first-party: `.localhost` hosts are a public suffix, so no cookie can span `qolmeia.web.localhost` and `localhost:8787`. Server-side code and the rewrites reach the Worker via `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). Prod works the same way: every session cookie is host-only on its app.
 
 ### Key runtime moves (P1–P7)
 
@@ -52,7 +52,8 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
   Both are mounted explicitly in `app.ts` via `createAgentRouter`, behind `requireCustomerAgent` middleware.
 - **Approvals run on Workflows**: every Worker job spawns a `WorkerJobWorkflow`; gated actions pause on `waitForEvent("decision-<actionId>")` until an operator decides via `/api/backoffice/actions/:id/decide`.
 - **Postgres is the system of record for auth and product data.** `apps/api` reads the auth tables through Prisma. The Worker reaches Postgres through the `HYPERDRIVE` binding and Prisma's `cloudflare` client, with a short-lived client inside each request, Workflow step, or skill call (`lib/db.ts`). Product data lives in domain modules (`team/`, `ticket/`, `action/`, `company/`, `library/`, `memory/`, `activity/`, `template/`, `operator/`). Each use case is one interactive transaction, with its activity entry written inside it (ADR 0010). Schema in `packages/db/prisma/schema.prisma`.
-- **R2 holds binary assets** (`ASSETS` binding), served via HMAC-signed URLs from `/assets/:id`.
+- **R2 holds binary assets** (`ASSETS` binding). The Library module (`library/assets.ts`) owns them: the `asset` row is the authority, and persisted content references an asset as `/assets/:id`, which the Worker serves after a session check (a Customer reads their Company's customer folder; an Operator reads any Company).
+- **Memory owns two stores** (`memory/memory.ts`): `remember` writes the `memory_fact` row and its Vectorize vector, `recall` queries Vectorize and reads the rows back. `MEMORY_BACKEND=in-memory` swaps Vectorize for a per-isolate index in `vite dev` and tests; anywhere else a missing `AI` or `VECTORIZE` binding throws.
 - **KV holds a session-validation cache** (`SESSIONS` binding) to keep the auth service off the hot path.
 
 ### Packages
@@ -98,7 +99,7 @@ The browser never talks to `:8787` directly in dev: each Next app rewrites the W
 Each app has its own `.env.example`:
 
 - **apps/api**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CORS_ORIGINS` (must be explicit; Better Auth refuses `*` for cross-origin cookies), optional `RESEND_API_KEY`, `AUTH_FROM_EMAIL`.
-- **apps/agents**: `.dev.vars` (not `.env`). Holds `OPENROUTER_API_KEY` and `ASSETS_SIGNING_KEY`, plus `DATABASE_URL` and `BETTER_AUTH_SECRET` for the Node scripts in `scripts/` (seed, memory reindex). `wrangler.jsonc` defines the rest in its `vars` block (`AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_NAME`, `AUTH_SERVICE_URL`, `WORKER_PUBLIC_URL`, `CLIENT_ORIGINS`) and the `HYPERDRIVE` binding, whose `localConnectionString` points `vite dev` at the docker Postgres.
+- **apps/agents**: `.dev.vars` (not `.env`). Holds `OPENROUTER_API_KEY`, plus `DATABASE_URL` and `BETTER_AUTH_SECRET` for the Node scripts in `scripts/` (seed, memory reindex). `wrangler.jsonc` defines the rest in its `vars` block (`AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_NAME`, `AUTH_SERVICE_URL`, `WORKER_PUBLIC_URL`, `CLIENT_ORIGINS`, `MEMORY_BACKEND`) and the `HYPERDRIVE` binding, whose `localConnectionString` points `vite dev` at the docker Postgres.
 - **apps/web**: `BETTER_AUTH_SECRET` (matches `apps/api`), `DATABASE_URL` (Next `proxy.ts` validates sessions via Prisma). Auth and the agents Worker are same-origin: `next.config.ts` rewrites `/api/auth/*` to `AUTH_SERVICE_INTERNAL_URL` (default `http://127.0.0.1:4000`) and `/api/me/*` + `/api/teams/*` + `/agents/*` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). `next build` bakes both URLs into the rewrites, so prod sets them on the Vercel project.
 - **apps/backoffice**: same as client (its Worker rewrite covers `/api/backoffice/*`).
 

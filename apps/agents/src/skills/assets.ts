@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { withDb } from "#/lib/db";
-import { listAssets, persistAsset, readAssetText, type AssetSummary } from "#/library/assets";
+import { listAssets, readAssetText, storeAsset, type AssetSummary } from "#/library/assets";
 import { defineSkill } from "#/skills/skill";
 
 const ASSET_KINDS = [
@@ -80,13 +80,12 @@ const saveAssetSkill = defineSkill({
   ): Promise<{ assetId: string; deliverable: boolean }> {
     const deliverable = (folder ?? "customer") === "customer";
     const { assetId } = await withDb(ctx.env, (db) =>
-      persistAsset(ctx.env, db, {
+      storeAsset(ctx.env, db, {
         bytes: new TextEncoder().encode(content),
         companyId: ctx.companyId,
         kind: "knowledge_doc",
         metadata: { name },
         mime: mime ?? "text/markdown",
-        uploadMetadata: { generatedBy: "agent" },
         visibility: deliverable ? ctx.deliverableFolder : "agent",
       }),
     );

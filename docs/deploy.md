@@ -104,7 +104,6 @@ new connection string.
 
 ```bash
 wrangler secret put OPENROUTER_API_KEY
-wrangler secret put ASSETS_SIGNING_KEY      # openssl rand -hex 32
 wrangler secret put EXA_API_KEY             # optional (webSearch skill)
 wrangler secret put FIRECRAWL_API_KEY       # optional (fetchUrl skill)
 ```

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
 import { actionIdFor, MAX_REVISIONS } from "#/action/action";
 import { decisionEventType } from "#/jobs/decision";
+import { listAssets } from "#/library/assets";
 
 const COMPANY_ID = "co_worker_job";
 const DESIGNER_ID = "agent-worker-job-designer";
@@ -119,18 +120,13 @@ const actionRows = (ticketId: string) =>
   );
 
 const assetsByName = async () => {
-  const rows = await db((client) =>
-    client.asset.findMany({
-      select: { metadata: true, r2Key: true, visibility: true },
-      where: { companyId: COMPANY_ID },
-    }),
-  );
-  return new Map(rows.map((row) => [JSON.stringify(row.metadata), row]));
+  const assets = await db((client) => listAssets(client, COMPANY_ID));
+  return new Map(assets.map((asset) => [asset.name, asset]));
 };
 
-const customerFolderKeys = async () => {
-  const listed = await env.ASSETS.list({ prefix: `org_${COMPANY_ID}/customer/` });
-  return listed.objects.map(({ key }) => key);
+const customerFolder = async () => {
+  const assets = await db((client) => listAssets(client, COMPANY_ID, { visibility: "customer" }));
+  return assets.map(({ id }) => id);
 };
 
 const activityTypes = async (ticketId: string) => {
@@ -179,11 +175,8 @@ describe("WorkerJobWorkflow", () => {
       status: "done",
     });
     const assets = await assetsByName();
-    expect(assets.get(JSON.stringify({ name: "entrega-0.md" }))).toMatchObject({
-      r2Key: expect.stringContaining(`org_${COMPANY_ID}/customer/`),
-      visibility: "customer",
-    });
-    await expect(customerFolderKeys()).resolves.toHaveLength(1);
+    expect(assets.get("entrega-0.md")?.visibility).toBe("customer");
+    await expect(customerFolder()).resolves.toHaveLength(1);
     await expect(activityTypes("tkt-auto")).resolves.toEqual(["ACTION_EXECUTED"]);
   });
 
@@ -211,8 +204,8 @@ describe("WorkerJobWorkflow", () => {
 
     await expect(ticketRow("tkt-approve")).resolves.toMatchObject({ status: "awaiting_approval" });
     const drafted = await assetsByName();
-    expect(drafted.get(JSON.stringify({ name: "entrega-0.md" }))?.visibility).toBe("agent");
-    await expect(customerFolderKeys()).resolves.toEqual([]);
+    expect(drafted.get("entrega-0.md")?.visibility).toBe("agent");
+    await expect(customerFolder()).resolves.toEqual([]);
 
     const res = await decide(actionId, "approved");
     expect(res.status).toBe(200);
@@ -224,8 +217,8 @@ describe("WorkerJobWorkflow", () => {
     ]);
     await expect(ticketRow("tkt-approve")).resolves.toMatchObject({ status: "done" });
     const released = await assetsByName();
-    expect(released.get(JSON.stringify({ name: "entrega-0.md" }))?.visibility).toBe("customer");
-    await expect(customerFolderKeys()).resolves.toHaveLength(1);
+    expect(released.get("entrega-0.md")?.visibility).toBe("customer");
+    await expect(customerFolder()).resolves.toHaveLength(1);
     await expect(activityTypes("tkt-approve")).resolves.toEqual([
       "ACTION_PROPOSED",
       "ACTION_APPROVED",
@@ -252,8 +245,8 @@ describe("WorkerJobWorkflow", () => {
       status: "rejected",
     });
     const assets = await assetsByName();
-    expect(assets.get(JSON.stringify({ name: "entrega-0.md" }))?.visibility).toBe("agent");
-    await expect(customerFolderKeys()).resolves.toEqual([]);
+    expect(assets.get("entrega-0.md")?.visibility).toBe("agent");
+    await expect(customerFolder()).resolves.toEqual([]);
   });
 
   it("revises on request-changes and releases only the approved round", async () => {
@@ -283,8 +276,8 @@ describe("WorkerJobWorkflow", () => {
       { id: second, policy: "require_approval", status: "executed" },
     ]);
     const assets = await assetsByName();
-    expect(assets.get(JSON.stringify({ name: "entrega-0.md" }))?.visibility).toBe("agent");
-    expect(assets.get(JSON.stringify({ name: "entrega-1.md" }))?.visibility).toBe("customer");
+    expect(assets.get("entrega-0.md")?.visibility).toBe("agent");
+    expect(assets.get("entrega-1.md")?.visibility).toBe("customer");
   });
 
   it("ends the Ticket when changes are requested past the revision cap", async () => {
@@ -317,7 +310,7 @@ describe("WorkerJobWorkflow", () => {
     });
     expect(prompts).toHaveLength(MAX_REVISIONS + 1);
     await expect(ticketRow("tkt-cap")).resolves.toMatchObject({ status: "rejected" });
-    await expect(customerFolderKeys()).resolves.toEqual([]);
+    await expect(customerFolder()).resolves.toEqual([]);
   });
 
   it("presents the approved draft when a publish_post Action executes", async () => {

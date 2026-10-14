@@ -1,11 +1,10 @@
-import { log } from "@repo/observability";
 import type { CompanyBrief } from "@repo/worker-api/brief";
 import { correspondentIdFor, teamIdFor, workerIdFor } from "@repo/worker-api/contracts";
 
 import { recordActivity } from "#/activity/log";
 import { getCompany } from "#/company/company";
 import type { PrismaClient } from "#/lib/db";
-import { indexMemoryFacts, recordMemoryFacts, type NewMemoryFact } from "#/memory/facts";
+import { remember, type NewFact } from "#/memory/memory";
 import { CompanyNotFoundError, TemplateNotFoundError } from "#/team/errors";
 import { emitTeamEvent } from "#/team/events";
 import { listEntitledTemplates } from "#/template/template";
@@ -18,10 +17,7 @@ type ConfirmedTeam = {
 
 const ONBOARDING_SUMMARY = "Time confirmado via onboarding.";
 
-const briefFacts = (
-  brief: Partial<CompanyBrief>,
-  owner: Pick<NewMemoryFact, "agentInstanceId" | "companyId">,
-): Array<NewMemoryFact> => {
+const briefFacts = (brief: Partial<CompanyBrief>, agentInstanceId: string): Array<NewFact> => {
   const facts = [
     { kind: "industry", label: "Setor", value: brief.industry },
     { kind: "goal", label: "Objetivo principal", value: brief.primaryGoal },
@@ -34,9 +30,9 @@ const briefFacts = (
     ...facts.flatMap(({ kind, label, value }) =>
       value === undefined || value === ""
         ? []
-        : [{ ...owner, content: `${label}: ${value}`, kind }],
+        : [{ agentInstanceId, content: `${label}: ${value}`, kind }],
     ),
-    { ...owner, content: ONBOARDING_SUMMARY, kind: "onboarding_summary" },
+    { agentInstanceId, content: ONBOARDING_SUMMARY, kind: "onboarding_summary" },
   ];
 };
 
@@ -51,7 +47,7 @@ const confirmTeam = async (
   const teamId = teamIdFor(companyId);
   const workerIds = templateIds.map((templateId) => workerIdFor(templateId, companyId));
 
-  const facts = await db.$transaction(async (tx) => {
+  await db.$transaction(async (tx) => {
     const company = await getCompany(tx, companyId);
     if (!company) {
       throw new CompanyNotFoundError();
@@ -107,21 +103,8 @@ const confirmTeam = async (
       summary: "Time confirmado.",
       type: "TEAM_CONFIRMED",
     });
-    return recordMemoryFacts(
-      tx,
-      briefFacts(company.brief, { agentInstanceId: correspondentId, companyId }),
-    );
+    await remember(env, tx, companyId, briefFacts(company.brief, correspondentId));
   });
-
-  try {
-    await indexMemoryFacts(env, facts);
-  } catch (error) {
-    log.error({
-      companyId,
-      error: error instanceof Error ? error.message : String(error),
-      message: "team.confirm.memory_index_failed",
-    });
-  }
   await emitTeamEvent(env, { companyId, reason: "confirmed", type: "team:roster" });
   return { correspondentId, teamId, workerIds };
 };

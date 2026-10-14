@@ -4,9 +4,8 @@ import { z } from "zod";
 import type { ValidatedSession } from "#/lib/auth";
 import type { Db, DbVariables } from "#/lib/db";
 import { parsePositiveInt } from "#/lib/pagination";
-import { buildSignedAssetUrl } from "#/lib/r2";
 import type { JsonRecord } from "#/lib/records";
-import { deleteAssets, listAssets, persistAsset } from "#/library/assets";
+import { assetReference, deleteAssets, listAssets, storeAsset } from "#/library/assets";
 
 type Vars = DbVariables & { session: ValidatedSession };
 
@@ -17,22 +16,16 @@ meAssetsRoutes.get("/assets", async (c) => {
   const limit = parsePositiveInt(c.req.query("limit"), 100, 200);
   const results = await listAssets(c.var.db, companyId, { limit, visibility: "customer" });
 
-  const items = await Promise.all(
-    results.map(async (row) => ({
-      createdAt: new Date(row.createdAt).toISOString(),
-      id: row.id,
-      kind: row.kind,
-      metadata: row.metadata,
-      mimeType: row.mime,
-      name: row.name,
-      size: row.bytes,
-      url: await buildSignedAssetUrl(
-        { ASSETS_SIGNING_KEY: c.env.ASSETS_SIGNING_KEY },
-        c.env.WORKER_PUBLIC_URL,
-        row.id,
-      ),
-    })),
-  );
+  const items = results.map((row) => ({
+    createdAt: new Date(row.createdAt).toISOString(),
+    id: row.id,
+    kind: row.kind,
+    metadata: row.metadata,
+    mimeType: row.mime,
+    name: row.name,
+    size: row.bytes,
+    url: assetReference(row.id),
+  }));
 
   return c.json({ items, nextCursor: null });
 });
@@ -45,7 +38,6 @@ const ALLOWED_UPLOAD_MIME = new Set([
   "image/svg+xml",
   "image/webp",
 ]);
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 const persistImageAsset = async (
   env: Env,
@@ -59,13 +51,12 @@ const persistImageAsset = async (
 ): Promise<{ assetId: string; bytes: number; mime: string }> => {
   const { companyId, extraMeta, file, kind } = opts;
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const { assetId } = await persistAsset(env, db, {
+  const { assetId } = await storeAsset(env, db, {
     bytes,
     companyId,
     kind,
     metadata: { originalName: file.name || null, ...extraMeta },
     mime: file.type,
-    uploadMetadata: { uploader: "customer" },
     visibility: "customer",
   });
   return { assetId, bytes: bytes.length, mime: file.type };
@@ -115,38 +106,25 @@ meAssetsRoutes.post("/uploads", async (c) => {
     kind: "user_upload",
   });
 
-  const url = await buildSignedAssetUrl(
-    { ASSETS_SIGNING_KEY: c.env.ASSETS_SIGNING_KEY },
-    c.env.WORKER_PUBLIC_URL,
-    assetId,
-    SEVEN_DAYS_MS,
-  );
-
-  return c.json({ assetId, mime, size: bytes, url });
+  return c.json({ assetId, mime, size: bytes, url: assetReference(assetId) });
 });
 
 meAssetsRoutes.get("/brand-assets", async (c) => {
   const { companyId } = c.get("session");
   const results = await listAssets(c.var.db, companyId, { kind: "brand_asset", limit: 200 });
 
-  const items = await Promise.all(
-    results.map(async (row) => {
-      const metadata = brandAssetMetadataSchema.safeParse(row.metadata);
-      return {
-        category: metadata.success ? (metadata.data.category ?? "other") : "other",
-        createdAt: new Date(row.createdAt).toISOString(),
-        id: row.id,
-        mimeType: row.mime,
-        name: metadata.success ? (metadata.data.originalName ?? null) : null,
-        size: row.bytes,
-        url: await buildSignedAssetUrl(
-          { ASSETS_SIGNING_KEY: c.env.ASSETS_SIGNING_KEY },
-          c.env.WORKER_PUBLIC_URL,
-          row.id,
-        ),
-      };
-    }),
-  );
+  const items = results.map((row) => {
+    const metadata = brandAssetMetadataSchema.safeParse(row.metadata);
+    return {
+      category: metadata.success ? (metadata.data.category ?? "other") : "other",
+      createdAt: new Date(row.createdAt).toISOString(),
+      id: row.id,
+      mimeType: row.mime,
+      name: metadata.success ? (metadata.data.originalName ?? null) : null,
+      size: row.bytes,
+      url: assetReference(row.id),
+    };
+  });
 
   return c.json({ items });
 });
@@ -175,14 +153,8 @@ meAssetsRoutes.post("/brand-assets", async (c) => {
     file: validated.file,
     kind: "brand_asset",
   });
-  const url = await buildSignedAssetUrl(
-    { ASSETS_SIGNING_KEY: c.env.ASSETS_SIGNING_KEY },
-    c.env.WORKER_PUBLIC_URL,
-    assetId,
-    SEVEN_DAYS_MS,
-  );
 
-  return c.json({ assetId, category, mime, size: bytes, url });
+  return c.json({ assetId, category, mime, size: bytes, url: assetReference(assetId) });
 });
 
 meAssetsRoutes.delete("/brand-assets/:id", async (c) => {

@@ -5,7 +5,7 @@ import { AssetImage } from "./asset-image";
 
 describe("AssetImage", () => {
   it.each([
-    "https://assets.example.com/assets/private?expires=123&signature=test-signature",
+    "/assets/0b6f5d1e-4a8c-4f0e-9a51-6c2d3b7e8f90",
     "blob:https://app.example.com/upload-preview",
   ])("fetches %s directly without putting private content in the optimizer cache", (src) => {
     render(<AssetImage alt="Referência de marca" height={800} src={src} width={800} />);

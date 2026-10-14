@@ -11,10 +11,7 @@ export default defineConfig({
     cloudflareTest({
       main: "./src/__tests__/worker-entry.ts",
       miniflare: {
-        bindings: {
-          ASSETS_SIGNING_KEY: "vitest-assets-signing-key",
-          OPENROUTER_API_KEY: "test-openrouter-key",
-        },
+        bindings: { OPENROUTER_API_KEY: "test-openrouter-key" },
         hyperdrives: { HYPERDRIVE: testDatabaseUrl },
       },
       wrangler: { configPath: "./wrangler.jsonc", environment: "test" },

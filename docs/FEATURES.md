@@ -80,7 +80,8 @@ Planner are protected from customer pause operations so the core experience rema
   downloadable.
 - Single-select, select-all, single delete, and bulk delete are available with destructive-action
   confirmation.
-- Downloads use expiring HMAC-signed URLs; R2 objects are private and SVG responses are sandboxed.
+- Files load same-origin from `/assets/:id` with the customer's session; R2 objects are private and
+  SVG responses are sandboxed.
 - Uploads are deduplicated per company by SHA-256.
 
 ### 1.6 Customer activity
@@ -284,7 +285,7 @@ round, so a retried step does not duplicate actions, activity, or released files
   state.
 - Workflow waits survive Worker and Durable Object eviction.
 - Session cache keys hash bearer tokens and cookies rather than storing credentials in keys.
-- HMAC-signed expiring asset URLs, content-type protection, and sandboxed SVG responses.
+- Session-authorized asset references, content-type protection, and sandboxed SVG responses.
 - Explicit CORS origins, secure headers, request IDs, request-size limits, and API/auth rate limits.
 - Constant-time comparison protects the shared secret used for internal company provisioning.
 - Structured logs cover agent tools, model usage, delegation, Workflows, scheduling, API errors, and
@@ -313,11 +314,11 @@ Those items are roadmap candidates in [`agent-tools.md`](agent-tools.md), not cu
 
 ## 7. Main API capability map
 
-| Audience     | Prefix                                         | Capabilities                                                                                             |
-| ------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Public/auth  | `/api/auth/*`                                  | Magic links, email/password, verification, recovery, session management.                                 |
-| Customer     | `/api/me/*`                                    | Membership relay, company brief, templates/catalogue, team management/events, assets/uploads, activity.  |
-| Customer     | `/api/teams/*`                                 | Onboarding team confirmation.                                                                            |
-| Customer     | `/agents/planner/*`, `/agents/correspondent/*` | Durable Flue 2 chat submission and observation.                                                          |
-| Operator     | `/api/backoffice/*`                            | Tickets, approvals, decisions, activity, coverage, company creation, companies/teams, skills, templates. |
-| Signed asset | `/assets/:id`                                  | Time-limited R2 asset delivery.                                                                          |
+| Audience    | Prefix                                         | Capabilities                                                                                             |
+| ----------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Public/auth | `/api/auth/*`                                  | Magic links, email/password, verification, recovery, session management.                                 |
+| Customer    | `/api/me/*`                                    | Membership relay, company brief, templates/catalogue, team management/events, assets/uploads, activity.  |
+| Customer    | `/api/teams/*`                                 | Onboarding team confirmation.                                                                            |
+| Customer    | `/agents/planner/*`, `/agents/correspondent/*` | Durable Flue 2 chat submission and observation.                                                          |
+| Operator    | `/api/backoffice/*`                            | Tickets, approvals, decisions, activity, coverage, company creation, companies/teams, skills, templates. |
+| Asset       | `/assets/:id`                                  | R2 asset delivery: a Customer's own customer folder, or any Company for an Operator.                     |
