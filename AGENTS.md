@@ -57,23 +57,23 @@ The browser never talks to the Worker directly: each Next app rewrites `/api/aut
 
 ### Packages
 
-| Package                   | Purpose                                                                                                                              |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `@repo/auth`              | `createAuth` factory wrapping Better Auth (magic-link + email/password), hosted by the Worker; session-cookie and client-IP helpers. |
-| `@repo/db`                | Prisma schema plus Node and Cloudflare Worker client entry points.                                                                   |
-| `@repo/transactional`     | React Email templates + Resend sender.                                                                                               |
-| `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the two Next apps.                                                        |
-| `@repo/social-image`      | Open Graph image text rendering (fontkit + Geist) for the Next apps.                                                                 |
-| `@repo/config-vitest`     | Shared Vitest config.                                                                                                                |
-| `@repo/typescript-config` | Shared tsconfig bases.                                                                                                               |
-| `@repo/app-shell`         | Next glue shared by `web` and `backoffice`: `./next-config`, `./proxy`, `./session`, `./server-api`, `./auth-client`, `./signup`.    |
-| `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`).                                   |
-| `@repo/observability`     | Structured logging. Exports `./client`, `./fields`, `./next`, `./next/instrumentation`, `./hono`.                                    |
-| `@repo/portless-env`      | `applyPortlessUrls`: fills dev URL env vars from `portless get`.                                                                     |
+| Package                   | Purpose                                                                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@repo/auth`              | `createAuth` factory wrapping Better Auth (magic-link + email/password + organization invitations), hosted by the Worker; session-cookie and client-IP helpers. |
+| `@repo/db`                | Prisma schema plus Node and Cloudflare Worker client entry points.                                                                                              |
+| `@repo/transactional`     | React Email templates + Resend sender.                                                                                                                          |
+| `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the two Next apps.                                                                                   |
+| `@repo/social-image`      | Open Graph image text rendering (fontkit + Geist) for the Next apps.                                                                                            |
+| `@repo/config-vitest`     | Shared Vitest config.                                                                                                                                           |
+| `@repo/typescript-config` | Shared tsconfig bases.                                                                                                                                          |
+| `@repo/app-shell`         | Next glue shared by `web` and `backoffice`: `./next-config`, `./proxy`, `./session`, `./server-api`, `./auth-client`, `./signup`.                               |
+| `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`).                                                              |
+| `@repo/observability`     | Structured logging. Exports `./client`, `./fields`, `./next`, `./next/instrumentation`, `./hono`.                                                               |
+| `@repo/portless-env`      | `applyPortlessUrls`: fills dev URL env vars from `portless get`.                                                                                                |
 
 ### The canonical E2E flow
 
-1. **Sign-up / magic-link**: Better Auth on the Worker, reached through the app's `/api/auth/*` rewrite, issues a host-only cookie on that app.
+1. **Invitation and sign-in**: an Operator invites the Customer's e-mail from the backoffice (`POST /api/backoffice/companies/:companyId/invitations`); the e-mailed link opens `/convite/<id>` on the web app, which signs the visitor in (magic link or password) and accepts through Better Auth's organization plugin, creating the `CUSTOMER` membership. Better Auth on the Worker, reached through the app's `/api/auth/*` rewrite, issues a host-only cookie on that app.
 2. **Client opens**: `requireCustomer` → `GET /api/me` on `apps/agents`, answered in-process by the identity module.
 3. **status === "onboarding"**: chat against `/agents/planner/<companyId>`. Planner calls `extractBrief` and `proposeTeam`, then surfaces a "Confirmar Time" button.
 4. **Customer confirms**: `POST /api/teams/:companyId/confirm` materialises `team` + `team_member`, flips `company.status = 'active'`, and seeds Correspondent memory.
@@ -140,7 +140,7 @@ App configs resolve those URLs through `@repo/portless-env` rather than hardcodi
 
 - Path aliases: `@/*` → `src/*` in every app + package.
 - pt-BR is the user-facing locale across agents, backoffice, and client.
-- Activity-log `type` strings are stable and free-form; the backoffice categorises by prefix (`ACTION_*`, `TICKET_*`, `WORKER_*`, `TEAM_*`, `MEMBER_*`).
+- Activity-log `type` strings are stable and free-form; the backoffice categorises by prefix (`ACTION_*`, `TICKET_*`, `WORKER_*`, `TEAM_*`, `MEMBER_*`, `CUSTOMER_*`).
 - Operator REST is `/api/backoffice/*` (`routes/backoffice.ts`, OWNER/STAFF only). Customer REST is `/api/me/*` and `/api/teams/*` (`routes/me.ts`, `routes/me-assets.ts`, `routes/teams.ts`).
 - Agent paths at `/agents/<name>/<companyId>`, `/api/me/*` and `/api/teams/*` are gated to the CUSTOMER role; a company id in the path must be the session's. Operators don't open a connection to a DO; they call REST.
 - Turbo caches: be conscious that `apps/agents` reads `wrangler.jsonc` vars at build time.

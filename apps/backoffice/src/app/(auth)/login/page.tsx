@@ -1,10 +1,9 @@
+import { safeRedirectPath } from "@repo/app-shell/redirect-path";
 import { SignedInRedirect } from "@repo/app-shell/signed-in-redirect";
 import { getSignupState } from "@repo/app-shell/signup";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-
-import { safeRedirectPath } from "@/lib/redirect-validation";
 
 import { LoginForm } from "./login-form";
 

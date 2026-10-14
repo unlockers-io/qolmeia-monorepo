@@ -143,6 +143,15 @@ type SkillCatalogEntry = {
   id: string;
 };
 
+type CustomerInvitation = {
+  email: string;
+  expiresAt: number;
+  id: string;
+};
+
+type CustomerInvitationInput = { email: string };
+type CustomerInvitationResponse = { invitation: CustomerInvitation };
+
 type TemplatesResponse = { items: ReadonlyArray<Template> };
 type TemplateResponse = { template: Template };
 type SkillCatalogResponse = { items: ReadonlyArray<SkillCatalogEntry> };
@@ -157,6 +166,9 @@ export type {
   ActivityResponse,
   AgentSummary,
   CoverageResponse,
+  CustomerInvitation,
+  CustomerInvitationInput,
+  CustomerInvitationResponse,
   DecisionOutcome,
   OperatorCoverage,
   SkillCatalogEntry,

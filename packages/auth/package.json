@@ -23,7 +23,8 @@
     "@repo/observability": "workspace:*",
     "@repo/transactional": "workspace:*",
     "@repo/worker-api": "workspace:*",
-    "better-auth": "^1.7.6"
+    "better-auth": "^1.7.6",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@repo/config-vitest": "workspace:*",

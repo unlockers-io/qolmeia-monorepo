@@ -18,6 +18,10 @@ see [`ARCHITECTURE.md`](ARCHITECTURE.md).
 - **Magic-link sign-in** for customers, with email delivery through Resend in configured
   environments and link logging in local development.
 - **Email verification callback** at `/auth/verify`, including safe callback-path validation.
+- **Invitations**: a Customer joins a Company through an Operator's e-mailed invitation. The link
+  opens `/convite/<id>`, which sends a signed-out visitor through the login and back, then accepts
+  the invitation and opens the chat. An expired, used, or other-e-mail invitation shows a pt-BR
+  error.
 - **Role-aware access**: only `CUSTOMER` memberships enter the client app; other roles are sent to
   a no-access screen.
 - **Persistent sessions** backed by Postgres, with secure, HTTP-only cookies and a short-lived
@@ -98,7 +102,9 @@ Planner are protected from customer pause operations so the core experience rema
 - Email-and-password registration and sign-in with a 12-character minimum password.
 - Email verification, password recovery, and password reset flows.
 - Transactional emails for welcome/verification, magic link, password reset, change-email
-  confirmation, and attempted duplicate registration.
+  confirmation, attempted duplicate registration, and Customer invitations.
+- "Convidar cliente" on each company card in `/teams` e-mails a Customer invitation. Re-inviting the
+  same e-mail cancels the pending invitation; an e-mail that already has a membership is refused.
 - Only `OWNER` and `STAFF` memberships can enter the backoffice or call operator APIs. The UI guard
   and Worker API enforce the role independently.
 
@@ -268,7 +274,10 @@ round, so a retried step does not duplicate actions, activity, or released files
 - Customer writes are rejected for staff/owner sessions; operator writes use the backoffice router.
 - Product queries and mutations are scoped by company id.
 - Operators create organizations through `POST /api/backoffice/companies`, which creates the
-  matching company, Planner, Correspondent, owner membership, and template entitlements.
+  matching company, Planner, Correspondent, and template entitlements. The Operator gets no
+  membership in it.
+- Customers get their `CUSTOMER` membership only by accepting an invitation (Better Auth's
+  organization plugin). Customers cannot invite members or create organizations.
 
 ### 4.2 Storage and runtime
 
@@ -314,11 +323,11 @@ Those items are roadmap candidates in [`agent-tools.md`](agent-tools.md), not cu
 
 ## 7. Main API capability map
 
-| Audience    | Prefix                                         | Capabilities                                                                                             |
-| ----------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Public/auth | `/api/auth/*`                                  | Magic links, email/password, verification, recovery, session management.                                 |
-| Customer    | `/api/me/*`                                    | Membership relay, company brief, templates/catalogue, team management/events, assets/uploads, activity.  |
-| Customer    | `/api/teams/*`                                 | Onboarding team confirmation.                                                                            |
-| Customer    | `/agents/planner/*`, `/agents/correspondent/*` | Durable Flue 2 chat submission and observation.                                                          |
-| Operator    | `/api/backoffice/*`                            | Tickets, approvals, decisions, activity, coverage, company creation, companies/teams, skills, templates. |
-| Asset       | `/assets/:id`                                  | R2 asset delivery: a Customer's own customer folder, or any Company for an Operator.                     |
+| Audience    | Prefix                                         | Capabilities                                                                                                                   |
+| ----------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Public/auth | `/api/auth/*`                                  | Magic links, email/password, verification, recovery, session management, accepting invitations.                                |
+| Customer    | `/api/me/*`                                    | Membership relay, company brief, templates/catalogue, team management/events, assets/uploads, activity.                        |
+| Customer    | `/api/teams/*`                                 | Onboarding team confirmation.                                                                                                  |
+| Customer    | `/agents/planner/*`, `/agents/correspondent/*` | Durable Flue 2 chat submission and observation.                                                                                |
+| Operator    | `/api/backoffice/*`                            | Tickets, approvals, decisions, activity, coverage, company creation, customer invitations, companies/teams, skills, templates. |
+| Asset       | `/assets/:id`                                  | R2 asset delivery: a Customer's own customer folder, or any Company for an Operator.                                           |

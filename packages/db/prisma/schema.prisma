@@ -104,10 +104,13 @@ model Organization {
   slug      String   @unique
   timezone  String   @default("America/Sao_Paulo")
   currency  String   @default("BRL")
+  logo      String?
+  metadata  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   memberships OrgMembership[]
+  invitations Invitation[]
 
   @@index([slug])
 }
@@ -127,6 +130,7 @@ model User {
   sessions    Session[]
   accounts    Account[]
   memberships OrgMembership[]
+  invitations Invitation[]
 
   @@index([email])
 }
@@ -141,7 +145,8 @@ model Session {
   userAgent      String?
   // Set by Better Auth's admin/impersonation flows. Kept nullable so the
   // column round-trips even when impersonation is disabled.
-  impersonatedBy String?
+  impersonatedBy       String?
+  activeOrganizationId String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -206,6 +211,24 @@ model OrgMembership {
 
   @@unique([userId, orgId])
   @@index([orgId, role])
+}
+
+// Better Auth organization-plugin invitation. An Operator invites a Customer by e-mail; accepting
+// it creates the OrgMembership with the invitation's role.
+model Invitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String       @default("pending")
+  expiresAt      DateTime
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([email])
 }
 
 model Company {

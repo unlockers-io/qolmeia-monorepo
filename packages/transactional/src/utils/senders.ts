@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { ChangeEmail } from "../emails/change-email";
+import { InvitationEmail } from "../emails/invitation";
 import { MagicLinkEmail } from "../emails/magic-link";
 import { PasswordResetEmail } from "../emails/password-reset";
 import { SignUpAttemptEmail } from "../emails/sign-up-attempt";
@@ -57,12 +58,20 @@ type MagicLinkPayload = {
   username?: string;
 };
 
+type InvitationPayload = {
+  acceptUrl: string;
+  companyName: string;
+  userEmail: string;
+  userId?: string;
+};
+
 type TransactionalEmail =
   | ({ type: "welcome" } & WelcomePayload)
   | ({ type: "sign-up-attempt" } & SignUpAttemptPayload)
   | ({ type: "password-reset" } & PasswordResetPayload)
   | ({ type: "change-email-confirmation" } & ChangeEmailPayload)
-  | ({ type: "magic-link" } & MagicLinkPayload);
+  | ({ type: "magic-link" } & MagicLinkPayload)
+  | ({ type: "invitation" } & InvitationPayload);
 
 type EmailBuild = { subject: string; template: React.ReactElement; to: string };
 
@@ -78,6 +87,11 @@ const TEMPLATES = {
     subject: "Confirme a troca de e-mail da sua conta Qolmeia",
     template: React.createElement(ChangeEmail, { changeUrl, currentEmail, newEmail, username }),
     to: currentEmail,
+  }),
+  invitation: ({ acceptUrl, companyName, userEmail }: InvitationPayload) => ({
+    subject: `Seu convite para a ${companyName} na Qolmeia`,
+    template: React.createElement(InvitationEmail, { acceptUrl, companyName, userEmail }),
+    to: userEmail,
   }),
   "magic-link": ({ url, userEmail, username }: MagicLinkPayload) => ({
     subject: "Seu link de acesso à Qolmeia",
@@ -123,6 +137,7 @@ const TEMPLATES = {
   }),
 } satisfies {
   "change-email-confirmation": TemplateBuilder<ChangeEmailPayload>;
+  invitation: TemplateBuilder<InvitationPayload>;
   "magic-link": TemplateBuilder<MagicLinkPayload>;
   "password-reset": TemplateBuilder<PasswordResetPayload>;
   "sign-up-attempt": TemplateBuilder<SignUpAttemptPayload>;

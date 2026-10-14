@@ -1,7 +1,7 @@
 import { createProxy } from "@repo/app-shell/proxy";
 
 export const proxy = createProxy({
-  protectedRoutes: ["/", "/assets", "/activity", "/empresa", "/no-access"],
+  protectedRoutes: ["/", "/assets", "/activity", "/convite", "/empresa", "/no-access"],
 });
 
 export const config = {

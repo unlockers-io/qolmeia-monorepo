@@ -3,13 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import { LoginFormView as LoginForm, type LoginFormDependencies } from "./login-form";
 
-const renderLoginForm = () => {
+const renderLoginForm = (redirectTo = "/") => {
   const push = vi.fn();
   const refresh = vi.fn();
   const sendMagicLink = vi.fn(() => Promise.resolve({ error: null }));
   const showError = vi.fn();
   const signInEmail = vi.fn(() => Promise.resolve({ error: null }));
   const dependencies: LoginFormDependencies = {
+    redirectTo: () => redirectTo,
     router: {
       push: (href) => {
         push(href);
@@ -107,5 +108,38 @@ describe("LoginForm", () => {
 
     expect(await screen.findByText("E-mail inválido")).toBeInTheDocument();
     expect(sendMagicLink).not.toHaveBeenCalled();
+  });
+
+  it("returns to the invitation after signing in with a password", async () => {
+    const { push } = renderLoginForm("/convite/inv-1");
+
+    fireEvent.change(screen.getByLabelText(/E-mail/v), {
+      target: { value: "pedro+customer@filho.me" },
+    });
+    fireEvent.change(screen.getByLabelText(/Senha/v), {
+      target: { value: "Senha123!" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/convite/inv-1");
+    });
+  });
+
+  it("carries the invitation through the magic link", async () => {
+    const { sendMagicLink } = renderLoginForm("/convite/inv-1");
+
+    fireEvent.change(screen.getByLabelText(/E-mail/v), {
+      target: { value: "pedro+customer@filho.me" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar com link mágico" }));
+    fireEvent.click(screen.getByRole("button", { name: "Enviar link mágico" }));
+
+    await waitFor(() => {
+      expect(sendMagicLink).toHaveBeenCalledWith({
+        callbackURL: "http://localhost:3000/auth/verify?from=%2Fconvite%2Finv-1",
+        email: "pedro+customer@filho.me",
+      });
+    });
   });
 });
