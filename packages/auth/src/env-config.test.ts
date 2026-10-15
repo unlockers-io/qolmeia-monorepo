@@ -1,52 +1,103 @@
 import { matchesHostPattern } from "better-auth";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { envAuthConfig, parseEnvList } from "./env-config";
+import { DEFAULT_CORS_ORIGINS, envAuthConfig, parseEnvList, webAppUrl } from "./env-config";
 
 describe("parseEnvList", () => {
-  it("returns an empty list for undefined or empty input", () => {
+  it("returns an empty list for missing input", () => {
     expect(parseEnvList(undefined)).toEqual([]);
     expect(parseEnvList("")).toEqual([]);
   });
 
-  it("splits on commas and trims each entry", () => {
-    expect(parseEnvList(" a.com , b.com ")).toEqual(["a.com", "b.com"]);
-  });
-
-  it("drops empty entries", () => {
-    expect(parseEnvList("a.com,,b.com,")).toEqual(["a.com", "b.com"]);
+  it("normalizes comma-separated input", () => {
+    expect(parseEnvList(" a.com ,, b.com ")).toEqual(["a.com", "b.com"]);
   });
 });
 
 describe("envAuthConfig", () => {
-  it("includes the localhost host patterns and loopback origins by default", () => {
-    const config = envAuthConfig({});
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("includes local hosts and loopback origins", () => {
+    const config = envAuthConfig();
     expect(config.allowedHosts).toEqual(
       expect.arrayContaining(["**.localhost", "**.localhost:*", "localhost:*", "127.0.0.1:*"]),
     );
-    expect(config.trustedOrigins).toContain("http://localhost:3000");
-    expect(config.trustedOrigins).toContain("http://127.0.0.1:3000");
+    expect(config.trustedOrigins).toEqual(
+      expect.arrayContaining(["http://localhost:3000", "http://127.0.0.1:3000"]),
+    );
   });
 
   it("allows portless hosts on port 443 and on its unprivileged fallback port", () => {
-    const { allowedHosts } = envAuthConfig({});
-    for (const host of ["qolmeia.web.localhost", "qolmeia.web.localhost:1355"]) {
+    const { allowedHosts } = envAuthConfig();
+    for (const host of [
+      "qolmeia.web.localhost",
+      "qolmeia.web.localhost:1355",
+      "fix-styles.qolmeia.web.localhost",
+      "fix-styles.qolmeia.web.localhost:1355",
+      "localhost:3000",
+      "127.0.0.1:4000",
+    ]) {
       expect(allowedHosts.some((pattern) => matchesHostPattern(host, pattern))).toBe(true);
     }
   });
 
-  it("extends trustedOrigins from TRUSTED_ORIGINS", () => {
-    const { trustedOrigins } = envAuthConfig({
-      TRUSTED_ORIGINS: "https://app.qolmeia.com,https://admin.qolmeia.com",
-    });
-    expect(trustedOrigins).toContain("https://app.qolmeia.com");
-    expect(trustedOrigins).toContain("https://admin.qolmeia.com");
-    expect(trustedOrigins).toContain("http://localhost:3000");
+  it("includes configured hosts and explicit CORS origins", () => {
+    vi.stubEnv("AUTH_ALLOWED_HOSTS", "example.com,*.example.com");
+    vi.stubEnv("CORS_ORIGINS", "https://web.example.com,*");
+    vi.stubEnv("TRUSTED_ORIGINS", "https://service.example.com");
+
+    const config = envAuthConfig();
+    expect(config.allowedHosts).toEqual(expect.arrayContaining(["example.com", "*.example.com"]));
+    expect(config.trustedOrigins).toEqual(
+      expect.arrayContaining(["https://web.example.com", "https://service.example.com"]),
+    );
+    expect(config.trustedOrigins).not.toContain("*");
   });
 
-  it("gates useSecureCookies on WEB_APP_URL being HTTPS", () => {
-    expect(envAuthConfig({}).useSecureCookies).toBe(false);
-    expect(envAuthConfig({ WEB_APP_URL: "http://localhost:3000" }).useSecureCookies).toBe(false);
-    expect(envAuthConfig({ WEB_APP_URL: "https://app.qolmeia.com" }).useSecureCookies).toBe(true);
+  it("includes product-specific hosts and origins", () => {
+    const config = envAuthConfig({
+      additionalAllowedHosts: ["desktop.example.com"],
+      additionalTrustedOrigins: ["example-app:/"],
+    });
+    expect(config.allowedHosts).toContain("desktop.example.com");
+    expect(config.trustedOrigins).toContain("example-app:/");
+  });
+
+  it("derives cookie security from configuration", () => {
+    expect(envAuthConfig({ secureUrl: "https://web.example.com" }).useSecureCookies).toBe(true);
+    expect(envAuthConfig({ secureUrl: "http://localhost:3000" }).useSecureCookies).toBe(false);
+    vi.stubEnv("WEB_APP_URL", "https://web.example.com");
+    expect(envAuthConfig().useSecureCookies).toBe(true);
+    vi.stubEnv("WEB_APP_URL", "");
+    expect(envAuthConfig().useSecureCookies).toBe(false);
+  });
+
+  it("links back to the web app at WEB_APP_URL", () => {
+    vi.stubEnv("WEB_APP_URL", "https://web.example.com");
+    expect(envAuthConfig().webAppUrl).toBe("https://web.example.com");
+    vi.stubEnv("WEB_APP_URL", "");
+    expect(envAuthConfig().webAppUrl).toBeUndefined();
+  });
+
+  it("rejects a WEB_APP_URL that is not a URL", () => {
+    vi.stubEnv("WEB_APP_URL", "web.example.com");
+    expect(() => webAppUrl()).toThrow("WEB_APP_URL must be a valid URL");
+    expect(() => envAuthConfig()).toThrow("WEB_APP_URL must be a valid URL");
+  });
+
+  it("falls back to the shared default origins when CORS_ORIGINS is unset", () => {
+    expect(envAuthConfig().trustedOrigins).toEqual(
+      expect.arrayContaining([...DEFAULT_CORS_ORIGINS]),
+    );
+  });
+
+  it("enables rate limiting only in production outside CI", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("CI", "");
+    expect(envAuthConfig().rateLimitEnabled).toBe(true);
+    vi.stubEnv("CI", "true");
+    expect(envAuthConfig().rateLimitEnabled).toBe(false);
   });
 });
