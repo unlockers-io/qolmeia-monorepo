@@ -21,31 +21,6 @@ const createNextConfig = ({ host, publicUrlEnv, workerPaths }: AppConfig): NextC
   const agentsUrl = agentsServerUrl();
 
   return {
-    allowedDevOrigins: [`${host}.localhost`, `*.${host}.localhost`, "*.vercel.app"],
-    cacheComponents: true,
-
-    experimental: {
-      exposeTestingApiInProductionBuild: process.env.EXPOSE_TESTING_API === "1",
-      instantInsights: { validationLevel: "manual-warning" },
-      turbopackRustReactCompiler: true,
-    },
-
-    headers: () =>
-      Promise.resolve([
-        {
-          headers: [
-            { key: "X-Frame-Options", value: "DENY" },
-            { key: "X-Content-Type-Options", value: "nosniff" },
-            { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          ],
-          source: "/:path*",
-        },
-      ]),
-
-    partialPrefetching: true,
-    reactCompiler: true,
-    reactStrictMode: true,
-
     rewrites: () =>
       Promise.resolve(
         ["/api/auth/:path*", ...workerPaths].map((source) => ({
@@ -54,7 +29,6 @@ const createNextConfig = ({ host, publicUrlEnv, workerPaths }: AppConfig): NextC
         })),
       ),
 
-    transpilePackages: ["@repo/app-shell", "@repo/ui", "@repo/worker-api"],
     turbopack: {
       rules: {
         "*.{ts,tsx}": {

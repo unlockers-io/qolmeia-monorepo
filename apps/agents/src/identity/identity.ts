@@ -1,4 +1,5 @@
 import { log } from "@repo/observability";
+import type { ResolvedSession } from "@repo/observability/auth";
 import {
   activeMembership,
   type MeOrg,
@@ -17,16 +18,16 @@ type Identity = { companyId: string; role: OrgRole; userId: string };
 type Unresolved = { kind: "signed-out" } | { kind: "unavailable" };
 
 type IdentityResult =
-  | { identity: Identity; kind: "signed-in" }
+  | { authSession: ResolvedSession; identity: Identity; kind: "signed-in" }
   | { kind: "forbidden" }
   | Unresolved;
 
-type MeResult = { kind: "signed-in"; me: MeResponse } | Unresolved;
+type MeResult = { authSession: ResolvedSession; kind: "signed-in"; me: MeResponse } | Unresolved;
 
 const readUser = async (
   auth: WorkerAuth,
   headers: Headers,
-): Promise<{ kind: "signed-in"; user: MeUser } | Unresolved> => {
+): Promise<{ authSession: ResolvedSession; kind: "signed-in"; user: MeUser } | Unresolved> => {
   try {
     const session = await auth.api.getSession({ headers });
     if (session === null) {
@@ -34,6 +35,7 @@ const readUser = async (
     }
     const { user } = session;
     return {
+      authSession: session,
       kind: "signed-in",
       user: {
         displayName: user.displayName ?? null,
@@ -87,7 +89,7 @@ const readMe = async (auth: WorkerAuth, db: Db, headers: Headers): Promise<MeRes
   const orgs = await readOrgs(db, session.user.id);
   return orgs === null
     ? { kind: "unavailable" }
-    : { kind: "signed-in", me: { orgs, user: session.user } };
+    : { authSession: session.authSession, kind: "signed-in", me: { orgs, user: session.user } };
 };
 
 /** Acts through the caller's membership on the first of `surfaces` it has one on. */
@@ -105,6 +107,7 @@ const resolveIdentity = async (
   return org === undefined
     ? { kind: "forbidden" }
     : {
+        authSession: result.authSession,
         identity: { companyId: org.id, role: org.role, userId: result.me.user.id },
         kind: "signed-in",
       };
