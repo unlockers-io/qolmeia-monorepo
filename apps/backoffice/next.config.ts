@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   ...createNextConfig({
-    host: "qolmeia.backoffice",
     publicUrlEnv: "BACKOFFICE_URL",
     workerPaths: ["/api/backoffice/:path*", "/assets/:id"],
   }),

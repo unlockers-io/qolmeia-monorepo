@@ -1,10 +1,7 @@
 import { applyPortlessUrls } from "@repo/portless-env";
 import type { NextConfig } from "next";
 
-applyPortlessUrls({
-  NEXT_PUBLIC_LANDING_URL: ["qolmeia.landing"],
-  NEXT_PUBLIC_WEB_APP_URL: ["qolmeia.web"],
-});
+applyPortlessUrls(["NEXT_PUBLIC_LANDING_URL", "NEXT_PUBLIC_WEB_APP_URL"]);
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["qolmeia.landing.localhost", "*.qolmeia.landing.localhost", "*.vercel.app"],

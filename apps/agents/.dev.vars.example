@@ -10,6 +10,16 @@ DATABASE_URL=postgresql://qolmeia:qolmeia123@127.0.0.1:5436/qolmeia
 # with `openssl rand -base64 48`. `pnpm db:seed` signs up the dev logins with it.
 BETTER_AUTH_SECRET=
 
+# Optional: comma-separated extra hostnames Better Auth accepts when deriving
+# its base URL. `**.localhost`, `**.localhost:*`, `localhost:*` and
+# `127.0.0.1:*` are built in, so local dev needs nothing here.
+# AUTH_ALLOWED_HOSTS=
+# App origins Better Auth trusts on top of the loopback ports. Unset, it trusts
+# the web and backoffice portless URLs; `vite dev` fills it in a worktree.
+# CORS_ORIGINS=https://qolmeia.web.localhost,https://qolmeia.backoffice.localhost
+# Extra trusted origins. wrangler.jsonc sets the production app domains here.
+# TRUSTED_ORIGINS=
+
 # Resend API key for auth emails (magic link, verification, reset). Leave unset
 # in dev: the Worker logs each link instead, and it opens as-is.
 RESEND_API_KEY=

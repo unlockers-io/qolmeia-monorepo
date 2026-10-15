@@ -85,7 +85,7 @@ The browser never talks to the Worker directly: each Next app rewrites `/api/aut
 | `@repo/app-shell`         | Next glue shared by `web` and `backoffice`: `./next-config`, `./proxy`, `./session`, `./server-api`, `./auth-client`, `./signup`.                               |
 | `@repo/worker-api`        | Typed client for the agents Worker plus its request/response contracts (`./contracts`, `./brief`).                                                              |
 | `@repo/observability`     | Structured logging. Exports `./client`, `./fields`, `./next`, `./next/instrumentation`, `./hono`.                                                               |
-| `@repo/portless-env`      | `applyPortlessUrls`: fills dev URL env vars from `portless get`.                                                                                                |
+| `@repo/portless-env`      | App registry (`./apps`: portless names, loopback ports, URL env defaults) + `applyPortlessUrls`, which fills dev URL env vars from `portless get`.              |
 
 ### The canonical E2E flow
 
@@ -115,7 +115,7 @@ The browser never talks to the Worker directly: each Next app rewrites `/api/aut
 
 Each app has its own `.env.example`:
 
-- **apps/agents**: `.dev.vars` (not `.env`). Holds `BETTER_AUTH_SECRET` and `OPENROUTER_API_KEY`, optional `RESEND_API_KEY`, plus `DATABASE_URL` for the Node scripts in `scripts/` (seed, memory reindex). `wrangler.jsonc` defines the rest in its `vars` block (`AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_NAME`, `WORKER_PUBLIC_URL`, `TRUSTED_ORIGINS`, `WEB_APP_URL`, `MEMORY_BACKEND`) and the `HYPERDRIVE` binding, whose `localConnectionString` points `vite dev` at the docker Postgres. Prod also sets the `TRUSTED_PROXY_SECRET` secret.
+- **apps/agents**: `.dev.vars` (not `.env`). Holds `BETTER_AUTH_SECRET` and `OPENROUTER_API_KEY`, optional `RESEND_API_KEY`, plus `DATABASE_URL` for the Node scripts in `scripts/` (seed, memory reindex). `wrangler.jsonc` defines the rest in its `vars` block (`AI_GATEWAY_ACCOUNT_ID`, `AI_GATEWAY_NAME`, `WORKER_PUBLIC_URL`, `TRUSTED_ORIGINS`, `WEB_APP_URL`, `MEMORY_BACKEND`) and the `HYPERDRIVE` binding, whose `localConnectionString` points `vite dev` at the docker Postgres. Prod also sets the `TRUSTED_PROXY_SECRET` secret. Better Auth reads `envAuthConfig()` from `process.env`, which `nodejs_compat` fills from those vars and secrets. `CORS_ORIGINS` is unset there, so it defaults to the web and backoffice portless URLs, and `vite dev` sets it from portless in a worktree.
 - **apps/web**: no database URL and no auth secret. `next.config.ts` (`createNextConfig` from `@repo/app-shell`) rewrites `/api/auth/*`, `/api/me`, `/api/me/*`, `/api/teams/*`, `/agents/*` and `/assets/:id` to `AGENTS_INTERNAL_URL` (default `http://127.0.0.1:8787`). `next build` bakes it into the rewrites, so prod sets it on the Vercel project, together with `TRUSTED_PROXY_SECRET`.
 - **apps/backoffice**: same as client (its Worker rewrites cover `/api/auth/*`, `/api/backoffice/*` and `/assets/:id`).
 
@@ -150,7 +150,7 @@ pnpm dev
 
 The dev org is pinned to `cmpg10ke30000147uj4gpeadb` (slug `qolmeia-dev`). Both logins accept the passwords above; the client login defaults to e-mail and password and also offers a magic link. The seed only sets a password when it creates the user, so an account first created through a magic link has none. Without `RESEND_API_KEY`, the Worker logs every magic-link and password-reset URL; open it as-is and it signs you in on the app that requested it.
 
-App configs resolve those URLs through `@repo/portless-env` rather than hardcoding them. `applyPortlessUrls({ ENV_VAR: ["<subdomain>"] })` runs in `createNextConfig` and `apps/agents/vite.config.ts` and shells out to `portless get` for every name, filling the env var only when it is unset or still holds the canonical `*.localhost` default. It is a no-op unless `PORTLESS_URL` is set, so CI and production keep their real values. Import it by bare specifier (`@repo/portless-env`): a relative path resolves from the process cwd and breaks `next start apps/web` from the repo root.
+`packages/portless-env/src/apps.ts` is the app registry: each app's portless name and loopback port, the URL env vars each app fills, and the canonical `https://<name>.localhost` defaults derived from the names. Add or rename an app there. `@repo/auth/env-config` reads its host patterns, loopback origins, and `CORS_ORIGINS` default from the browser-safe `@repo/portless-env/apps`. App configs call `applyPortlessUrls(["WEB_APP_URL", …])` in `createNextConfig`, `apps/landing/next.config.ts`, and `apps/agents/vite.config.ts`; it runs `portless get` once per app and fills each env var only when it is unset or still holds the canonical default. It is a no-op unless `PORTLESS_URL` is set, so CI and production keep their real values. Import it by bare specifier (`@repo/portless-env`): a relative path resolves from the process cwd and breaks `next start apps/web` from the repo root.
 
 ## Conventions
 

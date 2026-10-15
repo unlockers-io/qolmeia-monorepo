@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   ...createNextConfig({
-    host: "qolmeia.web",
     publicUrlEnv: "WEB_APP_URL",
     workerPaths: [
       "/api/me",

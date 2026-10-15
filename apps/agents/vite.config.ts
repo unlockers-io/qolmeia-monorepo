@@ -4,14 +4,10 @@ import { applyPortlessUrls } from "@repo/portless-env";
 import { defineConfig } from "vite";
 import zodCompiler from "zod-compiler/vite";
 
-const DEV_VARS = ["TRUSTED_ORIGINS", "WEB_APP_URL", "WORKER_PUBLIC_URL"];
+const DEV_VARS = ["CORS_ORIGINS", "WEB_APP_URL", "WORKER_PUBLIC_URL"] as const;
 
 export default defineConfig(({ command }) => {
-  applyPortlessUrls({
-    TRUSTED_ORIGINS: ["qolmeia.web", "qolmeia.backoffice"],
-    WEB_APP_URL: ["qolmeia.web"],
-    WORKER_PUBLIC_URL: ["qolmeia.agents"],
-  });
+  applyPortlessUrls(DEV_VARS);
   const fluePlugins = flue();
   const applyFlueWorkerConfig = flueWorkerConfig();
 

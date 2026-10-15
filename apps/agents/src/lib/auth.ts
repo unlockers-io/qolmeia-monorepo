@@ -7,10 +7,9 @@ import { withDb, type PrismaClient } from "#/lib/db";
 
 const createWorkerAuth = (env: Env, db: PrismaClient) =>
   createAuth({
-    ...envAuthConfig(env),
+    ...envAuthConfig(),
     fallbackBaseURL: env.WORKER_PUBLIC_URL,
     prisma: db,
-    rateLimitEnabled: process.env.NODE_ENV === "production",
     resendApiKey: env.RESEND_API_KEY,
     secret: env.BETTER_AUTH_SECRET,
   });

@@ -21,6 +21,7 @@
   "dependencies": {
     "@better-auth/core": "^1.7.6",
     "@repo/observability": "workspace:*",
+    "@repo/portless-env": "workspace:*",
     "@repo/transactional": "workspace:*",
     "@repo/worker-api": "workspace:*",
     "better-auth": "^1.7.6",
