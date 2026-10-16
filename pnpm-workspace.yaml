@@ -110,3 +110,7 @@ minimumReleaseAgeExclude:
   - "@testing-library/jest-dom@7.0.1"
   - cn@0.2.4
   - "@shadcn/lint@0.1.0"
+
+patchedDependencies:
+  # shortcut: jest-dom 7.0.1 types only augment Vitest 4's Assertion, drop once testing-library/jest-dom#742 ships
+  "@testing-library/jest-dom@7.0.1": patches/@testing-library__jest-dom@7.0.1.patch

@@ -103,7 +103,7 @@ The browser never talks to the Worker directly: each Next app rewrites `/api/aut
 - **Linter**: oxlint (NOT ESLint). Config in `oxlint.config.ts`.
 - **Formatter**: oxfmt (NOT Prettier). Config in `.oxfmtrc.json`. Sorts imports.
 - **Pre-commit**: Husky + lint-staged runs `oxlint` + `oxfmt`.
-- **Testing**: Vitest. `apps/agents` uses `@cloudflare/vitest-pool-workers` against Miniflare; its tests reach Postgres through the local Hyperdrive binding, in a database named after the checkout path, so worktrees run the suite in parallel.
+- **Testing**: Vitest. `apps/agents` uses `@cloudflare/vitest-plugin` against Miniflare; its tests reach Postgres through the local Hyperdrive binding, in a database named after the checkout path, so worktrees run the suite in parallel.
 - **Dead code**: `pnpm fallow:dead` (fallow) runs in CI's lint job; fix every unused export it reports.
 - **Bundler (agents)**: Vite, via `@flue/vite` + `@cloudflare/vite-plugin`. The
   Worker entry is the virtual module `virtual:flue/worker`; `flueWorkerConfig()` merges the per-agent
