@@ -170,7 +170,7 @@ The customer reaches the Correspondent over the **web chat only**: the Flue agen
 
 ## §13. Tooling, conventions & local dev
 
-- **Linter** oxlint · **Formatter** oxfmt (sorts imports) · **Dead code** fallow · **Tests** Vitest (`apps/agents` runs on `@cloudflare/vitest-pool-workers` against Miniflare, with Postgres through the local Hyperdrive binding) · **Pre-commit** Husky + lint-staged.
+- **Linter** oxlint · **Formatter** oxfmt (sorts imports) · **Dead code** fallow · **Tests** Vitest (`apps/agents` runs on `@cloudflare/vitest-plugin` against Miniflare, with Postgres through the local Hyperdrive binding) · **Pre-commit** Husky + lint-staged.
 - **Agents bundler** Vite with `@flue/vite` + `@cloudflare/vite-plugin`.
 - **Imports** `#/*` → `src/*` (Node subpath imports) in `apps/agents`; `@/*` → `src/*` in the Next apps.
 - **Client chat** uses `@flue/react` (`useFlueAgent` over the SDK client: durable history snapshot, live SSE, reconnection from checkpoints, optimistic reconcile); the SSR-safe `Chat` shell gates the hook behind a client-only flag and shows a skeleton until `historyReady`. The Planner's greeting and first question render client-side without a synthetic submission. Live roster updates stream from the `TeamEvents` Durable Object at `/api/me/team/events`, with a 30-second polling fallback.
