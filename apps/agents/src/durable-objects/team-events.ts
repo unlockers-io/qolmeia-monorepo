@@ -11,7 +11,7 @@ class TeamEvents extends DurableObject<Env> {
   readonly #subscribers = new Set<TeamEventSubscriber>();
 
   // fallow-ignore-next-line unused-class-member -- invoked through the DurableObjectStub in team/events.ts
-  async fetch(request: Request): Promise<Response> {
+  override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/broadcast") {
       const event = await request.json<TeamEvent>();
