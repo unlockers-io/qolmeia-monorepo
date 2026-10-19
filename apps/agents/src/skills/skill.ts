@@ -10,7 +10,13 @@ type SkillContext = {
 
 type SkillInput = Parameters<z.ZodType["parse"]>[0];
 
-type SkillResult = boolean | null | number | object | string;
+type SkillResult =
+  | boolean
+  | null
+  | number
+  | string
+  | ReadonlyArray<SkillResult>
+  | { readonly [key: string]: SkillResult | undefined };
 
 type Skill<Schema extends z.ZodObject = z.ZodObject, Result extends SkillResult = SkillResult> = {
   description: string;
