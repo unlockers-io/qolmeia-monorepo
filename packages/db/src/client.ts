@@ -14,10 +14,26 @@ const searchPathSchema = (databaseUrl: string | undefined): string | undefined =
   return schema === null || schema === "" ? undefined : schema;
 };
 
+const assertDatabaseUrl = () => {
+  const url = process.env.DATABASE_URL;
+  if (url === undefined || url.trim() === "") {
+    throw new Error(
+      "DATABASE_URL is not set. Set it in the environment; packages/db/.env.example has the local value.",
+    );
+  }
+};
+
+class PrismaPgRequiringUrl extends PrismaPg {
+  override async connect() {
+    assertDatabaseUrl();
+    return super.connect();
+  }
+}
+
 const createPrismaClient = (): PrismaClient => {
   const connectionString = process.env.DATABASE_URL;
   const schema = searchPathSchema(connectionString);
-  const adapter = new PrismaPg(
+  const adapter = new PrismaPgRequiringUrl(
     {
       connectionString,
       options: schema === undefined ? undefined : `-c search_path=${schema}`,
