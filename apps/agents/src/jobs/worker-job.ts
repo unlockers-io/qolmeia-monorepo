@@ -22,7 +22,7 @@ type WorkerJobParams = {
 type WorkerJobResult = { actionId: string; outcome: "ended" | "executed"; revisions: number };
 
 class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
-  async run(
+  override async run(
     event: Readonly<WorkflowEvent<WorkerJobParams>>,
     step: WorkflowStep,
   ): Promise<WorkerJobResult> {
