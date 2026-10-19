@@ -58,14 +58,10 @@ const handleResponse = async <T>(res: Response): Promise<T> => {
     const body = await res.text().catch(() => "");
     throw new ApiError(res.status, body);
   }
-  if (res.status === 204) {
-    // SAFETY: Delete endpoints bind T to null and HTTP 204 has no response body.
-    // oxlint-disable-next-line no-unsafe-type-assertion -- a generic T cannot be narrowed to null from the status code
-    return null as T;
-  }
-  // SAFETY: Callers bind T to the contract of the first-party route they request.
+  const body: unknown = res.status === 204 ? null : await res.json();
+  // SAFETY: Callers bind T to the contract of the first-party route they request; 204 routes bind it to null.
   // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and callers own the route contract
-  return res.json() as Promise<T>;
+  return body as T;
 };
 
 type SendMethod = "DELETE" | "PATCH" | "POST" | "PUT";

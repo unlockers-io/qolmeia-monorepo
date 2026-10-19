@@ -2,54 +2,51 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "./generated/prisma/client";
 
-// SAFETY: globalThis has no typed slot for Prisma's process-wide singleton.
-// oxlint-disable-next-line no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- globalThis has no typed prisma slot to narrow to
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
+const searchPathSchema = (databaseUrl: string | undefined): string | undefined => {
+  if (databaseUrl === undefined || !URL.canParse(databaseUrl)) {
+    return undefined;
+  }
+  const schema = new URL(databaseUrl).searchParams.get("schema");
+  return schema === null || schema === "" ? undefined : schema;
 };
 
+const assertDatabaseUrl = () => {
+  const url = process.env.DATABASE_URL;
+  if (url === undefined || url.trim() === "") {
+    throw new Error(
+      "DATABASE_URL is not set. Set it in the environment; packages/db/.env.example has the local value.",
+    );
+  }
+};
+
+class PrismaPgRequiringUrl extends PrismaPg {
+  override async connect() {
+    assertDatabaseUrl();
+    return super.connect();
+  }
+}
+
 const createPrismaClient = (): PrismaClient => {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (databaseUrl === undefined || databaseUrl === "") {
-    throw new Error("DATABASE_URL is required");
-  }
-  if (!URL.canParse(databaseUrl)) {
-    throw new Error("DATABASE_URL must be a valid URL");
-  }
-  const schema = new URL(databaseUrl).searchParams.get("schema") ?? undefined;
-  const adapter = new PrismaPg(
+  const connectionString = process.env.DATABASE_URL;
+  const schema = searchPathSchema(connectionString);
+  const adapter = new PrismaPgRequiringUrl(
     {
-      connectionString: databaseUrl,
-      options: schema === undefined || schema === "" ? undefined : `-c search_path=${schema}`,
+      connectionString,
+      options: schema === undefined ? undefined : `-c search_path=${schema}`,
     },
     { schema },
   );
   return new PrismaClient({ adapter });
 };
 
-const getPrismaClient = (): PrismaClient => {
-  globalForPrisma.prisma ??= createPrismaClient();
-  return globalForPrisma.prisma;
-};
+export const prisma = globalThis.prisma ?? createPrismaClient();
 
-const isPrismaClientKey = (client: PrismaClient, key: PropertyKey): key is keyof PrismaClient =>
-  key in client;
-
-export const prisma = new Proxy(
-  // SAFETY: The proxy target is never read because every access runs through get.
-  // oxlint-disable-next-line no-unsafe-type-assertion -- the Proxy target only has to satisfy the PrismaClient type
-  {} as PrismaClient,
-  {
-    get(_target, prop) {
-      const client = getPrismaClient();
-      if (!isPrismaClientKey(client, prop)) {
-        return undefined;
-      }
-      const value: unknown = client[prop];
-      // oxlint-disable-next-line no-unsafe-return -- Function.prototype.bind is typed `any`; the trap forwards whatever the client exposes
-      return typeof value === "function" ? value.bind(client) : value;
-    },
-  },
-);
+if (process.env.NODE_ENV !== "production") {
+  globalThis.prisma = prisma;
+}
 
 export * from "./generated/prisma/client";

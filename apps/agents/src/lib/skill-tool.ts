@@ -1,4 +1,4 @@
-import { defineTool, type JsonValue, type ToolDefinition } from "@flue/runtime";
+import { defineTool, type ToolDefinition, type ToolInputSchema } from "@flue/runtime";
 import * as v from "valibot";
 import * as z from "zod";
 import type { ZodType } from "zod";
@@ -6,24 +6,16 @@ import type { ZodType } from "zod";
 import { enabledSkills, runSkill } from "#/skills/registry";
 import type { SkillContext } from "#/skills/skill";
 
-type JsonSchemaNode = {
-  description?: string;
-  enum?: ReadonlyArray<JsonValue>;
-  format?: string;
-  items?: JsonSchemaNode;
-  maxLength?: number;
-  minLength?: number;
-  properties?: Record<string, JsonSchemaNode>;
-  required?: ReadonlyArray<string>;
-  type?: string;
-};
+type JsonSchemaNode = z.core.JSONSchema._JSONSchema;
+
+type SchemaObject = z.core.JSONSchema.JSONSchema;
 
 type AnySchema = v.GenericSchema<unknown, unknown>;
 
 const describe = (schema: AnySchema, description: string | undefined): AnySchema =>
   description === undefined ? schema : v.pipe(schema, v.description(description));
 
-const convertString = (node: JsonSchemaNode): AnySchema => {
+const convertString = (node: SchemaObject): AnySchema => {
   let schema: v.GenericSchema<string, string> = v.string();
   if (node.minLength !== undefined) {
     schema = v.pipe(schema, v.minLength(node.minLength));
@@ -45,14 +37,36 @@ const convertEnum = (values: ReadonlyArray<unknown>, path: string): AnySchema =>
   return v.picklist(options);
 };
 
-const convert = (node: JsonSchemaNode, path: string): AnySchema => {
+type ConvertNode = (node: JsonSchemaNode, path: string) => AnySchema;
+
+const convertObject = (
+  node: SchemaObject,
+  path: string,
+  convertChild: ConvertNode,
+): v.ObjectSchema<v.ObjectEntries, undefined> => {
+  const required = new Set(node.required);
+  const entries: v.ObjectEntries = {};
+  for (const [key, child] of Object.entries(node.properties ?? {})) {
+    const converted = convertChild(child, `${path}.${key}`);
+    entries[key] = required.has(key) ? converted : v.optional(converted);
+  }
+  return v.object(entries);
+};
+
+const convert: ConvertNode = (node, path) => {
+  if (typeof node === "boolean") {
+    throw new TypeError(`Skill input schema: unsupported boolean schema at ${path}`);
+  }
   if (node.enum !== undefined) {
     return describe(convertEnum(node.enum, path), node.description);
   }
+  if (Array.isArray(node.type)) {
+    throw new TypeError(`Skill input schema: unsupported multi-type node at ${path}`);
+  }
   switch (node.type) {
     case "array": {
-      if (!node.items) {
-        throw new Error(`Skill input schema: array without items at ${path}`);
+      if (node.items === undefined || Array.isArray(node.items)) {
+        throw new TypeError(`Skill input schema: array without a single items schema at ${path}`);
       }
       return describe(v.array(convert(node.items, `${path}[]`)), node.description);
     }
@@ -64,13 +78,7 @@ const convert = (node: JsonSchemaNode, path: string): AnySchema => {
       return describe(v.number(), node.description);
     }
     case "object": {
-      const required = new Set(node.required);
-      const entries: v.ObjectEntries = {};
-      for (const [key, child] of Object.entries(node.properties ?? {})) {
-        const converted = convert(child, `${path}.${key}`);
-        entries[key] = required.has(key) ? converted : v.optional(converted);
-      }
-      return describe(v.object(entries), node.description);
+      return describe(convertObject(node, path, convert), node.description);
     }
     case "string": {
       return describe(convertString(node), node.description);
@@ -78,25 +86,21 @@ const convert = (node: JsonSchemaNode, path: string): AnySchema => {
     case undefined: {
       throw new Error(`Skill input schema: unsupported node without a type at ${path}`);
     }
+    case "null": {
+      throw new Error(`Skill input schema: unsupported null node at ${path}`);
+    }
     default: {
-      throw new Error(`Skill input schema: unsupported node at ${path} (type: ${node.type})`);
+      throw new Error(`Skill input schema: unsupported node at ${path}`);
     }
   }
 };
 
-const buildInputSchema = (
-  schema: ZodType,
-  skillId: string,
-): v.GenericSchema<Record<string, JsonValue>, unknown> => {
-  // SAFETY: JsonSchemaNode is an all-optional view and convert validates every field it reads.
-  // oxlint-disable-next-line no-unsafe-type-assertion -- zod's toJSONSchema returns an untyped JSON Schema document
-  const node = z.toJSONSchema(schema) as JsonSchemaNode;
+const buildInputSchema = (schema: ZodType, skillId: string): ToolInputSchema => {
+  const node = z.toJSONSchema(schema);
   if (node.type !== "object") {
     throw new Error(`Skill "${skillId}" input schema must be a top-level object`);
   }
-  // SAFETY: The checked object node makes convert return a record-producing schema.
-  // oxlint-disable-next-line no-unsafe-type-assertion -- convert is typed for any node, not the object node checked above
-  return convert(node, skillId) as v.GenericSchema<Record<string, JsonValue>, unknown>;
+  return convertObject(node, skillId, convert);
 };
 
 const buildFlueTools = (
@@ -109,9 +113,7 @@ const buildFlueTools = (
       description: skill.description,
       input: buildInputSchema(skill.inputSchema, skill.id),
       name: skill.id,
-      // SAFETY: The skill contract restricts every output to JSON-compatible values.
-      // oxlint-disable-next-line no-unsafe-type-assertion -- skill results are typed as any JSON-like value across the registry
-      run: async ({ data }) => ({ output: (await runSkill(ctx, skill, data)) as JsonValue }),
+      run: async ({ data }) => ({ output: await runSkill(ctx, skill, data) }),
     }),
   );
 

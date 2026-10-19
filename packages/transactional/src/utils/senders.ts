@@ -65,19 +65,28 @@ type InvitationPayload = {
   userId?: string;
 };
 
-type TransactionalEmail =
-  | ({ type: "welcome" } & WelcomePayload)
-  | ({ type: "sign-up-attempt" } & SignUpAttemptPayload)
-  | ({ type: "password-reset" } & PasswordResetPayload)
-  | ({ type: "change-email-confirmation" } & ChangeEmailPayload)
-  | ({ type: "magic-link" } & MagicLinkPayload)
-  | ({ type: "invitation" } & InvitationPayload);
+type PayloadByType = {
+  "change-email-confirmation": ChangeEmailPayload;
+  invitation: InvitationPayload;
+  "magic-link": MagicLinkPayload;
+  "password-reset": PasswordResetPayload;
+  "sign-up-attempt": SignUpAttemptPayload;
+  welcome: WelcomePayload;
+};
+
+type EmailType = keyof PayloadByType;
+
+type TransactionalEmail = {
+  [Type in EmailType]: { type: Type } & PayloadByType[Type];
+}[EmailType];
 
 type EmailBuild = { subject: string; template: React.ReactElement; to: string };
 
 type TemplateBuilder<P> = (payload: P) => EmailBuild;
 
-const TEMPLATES = {
+type TemplateRegistry = { [Type in EmailType]: TemplateBuilder<PayloadByType[Type]> };
+
+const TEMPLATES: TemplateRegistry = {
   "change-email-confirmation": ({
     changeUrl,
     currentEmail,
@@ -135,21 +144,14 @@ const TEMPLATES = {
     template: React.createElement(WelcomeEmail, { userEmail, username, verificationUrl }),
     to: userEmail,
   }),
-} satisfies {
-  "change-email-confirmation": TemplateBuilder<ChangeEmailPayload>;
-  invitation: TemplateBuilder<InvitationPayload>;
-  "magic-link": TemplateBuilder<MagicLinkPayload>;
-  "password-reset": TemplateBuilder<PasswordResetPayload>;
-  "sign-up-attempt": TemplateBuilder<SignUpAttemptPayload>;
-  welcome: TemplateBuilder<WelcomePayload>;
 };
+
+const buildEmail = <Type extends EmailType>(type: Type, payload: PayloadByType[Type]): EmailBuild =>
+  TEMPLATES[type](payload);
 
 const createTransactionalEmailSender =
   (send: SendEmail) => (email: TransactionalEmail, config: MailerConfig) => {
-    // SAFETY: TEMPLATES satisfies a builder contract for every discriminant.
-    // oxlint-disable-next-line no-unsafe-type-assertion -- indexing TEMPLATES by a union key loses the per-discriminant builder type
-    const builder = TEMPLATES[email.type] as TemplateBuilder<typeof email>;
-    const { subject, template, to } = builder(email);
+    const { subject, template, to } = buildEmail(email.type, email);
     return send({
       apiKey: config.apiKey,
       defaultReplyTo: config.defaultReplyTo,
