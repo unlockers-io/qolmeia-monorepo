@@ -82,7 +82,7 @@ const generateBrandImageSkill = defineSkill({
       return { error: `Image gen returned non-data URL we can't ingest: ${imageUrl.slice(0, 60)}` };
     }
     const { bytes, mime } = decoded;
-    const { assetId } = await withDb(ctx.env, (db) =>
+    const { id: assetId } = await withDb(ctx.env, (db) =>
       storeAsset(ctx.env, db, {
         bytes,
         companyId: ctx.companyId,

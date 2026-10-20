@@ -85,25 +85,29 @@ const storeAsset = async (
   env: LibraryEnv,
   db: Db,
   input: StoreAssetInput,
-): Promise<{ assetId: string }> => {
+): Promise<AssetRecord> => {
   const { companyId } = input;
   const sha256 = await sha256Hex(input.bytes);
   const existing = await db.asset.findUnique({
-    select: { id: true, visibility: true },
-    where: { companyId_sha256: { companyId, sha256 } },
+    where: { companyId_kind_sha256: { companyId, kind: input.kind, sha256 } },
   });
   if (existing) {
     if (existing.visibility === "agent" && input.visibility === "customer") {
-      await promoteAssets(db, companyId, [existing.id]);
+      return toAssetRecord(
+        await db.asset.update({
+          data: { visibility: "customer" },
+          where: { id: existing.id },
+        }),
+      );
     }
-    return { assetId: existing.id };
+    return toAssetRecord(existing);
   }
   const id = crypto.randomUUID();
   const r2Key = `org_${companyId}/${id}.${EXTENSION_BY_MIME.get(input.mime) ?? "bin"}`;
   await env.ASSETS.put(r2Key, input.bytes, { httpMetadata: { contentType: input.mime } });
   try {
-    await db.asset.create({
-      data: {
+    const row = await db.asset.upsert({
+      create: {
         bytes: input.bytes.length,
         companyId,
         id,
@@ -114,12 +118,17 @@ const storeAsset = async (
         sha256,
         visibility: input.visibility,
       },
+      update: input.visibility === "customer" ? { visibility: "customer" } : {},
+      where: { companyId_kind_sha256: { companyId, kind: input.kind, sha256 } },
     });
+    if (row.id !== id) {
+      await env.ASSETS.delete(r2Key);
+    }
+    return toAssetRecord(row);
   } catch (error) {
     await env.ASSETS.delete(r2Key);
     throw error;
   }
-  return { assetId: id };
 };
 
 const listAssets = async (

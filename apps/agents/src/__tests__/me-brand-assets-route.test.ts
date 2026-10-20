@@ -1,7 +1,9 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { seedCompany } from "#/__tests__/fixtures";
+import { db, seedCompany } from "#/__tests__/fixtures";
 import { fetchWithCookie, signInAs, type Persona } from "#/__tests__/sign-in";
+import { listAssets, readBrandReferences, storeAsset } from "#/library/assets";
 
 const COMPANY_ID = "co_brandassets_test";
 
@@ -32,9 +34,9 @@ describe("POST /api/me/brand-assets", () => {
       method: "POST",
     });
     expect(res.status).toBe(200);
-    const body = await res.json<{ assetId: string; category: string }>();
-    expect(body.category).toBe("logo");
-    expect(body.assetId).toBeTruthy();
+    const body = await res.json<{ asset: { category: string; id: string } }>();
+    expect(body.asset.category).toBe("logo");
+    expect(body.asset.id).toBeTruthy();
   });
 
   it("falls back to 'other' for an unknown category", async () => {
@@ -43,8 +45,8 @@ describe("POST /api/me/brand-assets", () => {
       body: uploadForm("bogus"),
       method: "POST",
     });
-    const body = await res.json<{ category: string }>();
-    expect(body.category).toBe("other");
+    const body = await res.json<{ asset: { category: string } }>();
+    expect(body.asset.category).toBe("other");
   });
 
   it("403 when STAFF tries to upload", async () => {
@@ -64,7 +66,9 @@ describe("GET + DELETE /api/me/brand-assets", () => {
       body: uploadForm("post"),
       method: "POST",
     });
-    const { assetId } = await created.json<{ assetId: string }>();
+    const {
+      asset: { id: assetId },
+    } = await created.json<{ asset: { id: string } }>();
 
     const listRes = await fetchWithCookie(cookie, "https://agents.test/api/me/brand-assets");
     const list = await listRes.json<{ items: Array<{ category: string; id: string }> }>();
@@ -80,5 +84,65 @@ describe("GET + DELETE /api/me/brand-assets", () => {
     const afterRes = await fetchWithCookie(cookie, "https://agents.test/api/me/brand-assets");
     const after = await afterRes.json<{ items: Array<{ id: string }> }>();
     expect(after.items.some((a) => a.id === assetId)).toBe(false);
+  });
+});
+
+describe("brand asset identity", () => {
+  it.each(["user_upload", "generated_image"] as const)(
+    "keeps identical %s bytes separate from brand references",
+    async (kind) => {
+      const original = await db((client) =>
+        storeAsset(env, client, {
+          bytes: pngBytes,
+          companyId: COMPANY_ID,
+          kind,
+          metadata: {},
+          mime: "image/png",
+          visibility: "customer",
+        }),
+      );
+      cookie = await signInAs(meCustomer);
+      const created = await fetchWithCookie(cookie, "https://agents.test/api/me/brand-assets", {
+        body: uploadForm("logo"),
+        method: "POST",
+      });
+      expect(created.status).toBe(200);
+      const { asset } = await created.json<{ asset: { category: string; id: string } }>();
+      expect(asset.id).not.toBe(original.id);
+      const listed = await fetchWithCookie(cookie, "https://agents.test/api/me/brand-assets");
+      expect(await listed.json()).toEqual({ items: [asset] });
+      const references = await db((client) => readBrandReferences(env, client, COMPANY_ID, 4));
+      expect(references).toEqual([{ bytes: pngBytes, mime: "image/png" }]);
+      const deleted = await fetchWithCookie(
+        cookie,
+        `https://agents.test/api/me/brand-assets/${asset.id}`,
+        { method: "DELETE" },
+      );
+      expect(deleted.status).toBe(200);
+      expect(await db((client) => listAssets(client, COMPANY_ID))).toMatchObject([
+        { id: original.id, kind },
+      ]);
+      const originalRow = await db((client) =>
+        client.asset.findUniqueOrThrow({ where: { id: original.id } }),
+      );
+      expect(await env.ASSETS.get(originalRow.r2Key)).not.toBeNull();
+    },
+  );
+
+  it("returns the original same-kind metadata on a re-upload with a different category", async () => {
+    cookie = await signInAs(meCustomer);
+    const upload = (category: string) =>
+      fetchWithCookie(cookie, "https://agents.test/api/me/brand-assets", {
+        body: uploadForm(category),
+        method: "POST",
+      });
+    const firstResponse = await upload("logo");
+    const first = await firstResponse.json<{ asset: { category: string } }>();
+    const repeatedResponse = await upload("reference");
+    const repeated = await repeatedResponse.json();
+    expect(first.asset.category).toBe("logo");
+    expect(repeated).toEqual(first);
+    const listed = await fetchWithCookie(cookie, "https://agents.test/api/me/brand-assets");
+    expect(await listed.json()).toEqual({ items: [first.asset] });
   });
 });

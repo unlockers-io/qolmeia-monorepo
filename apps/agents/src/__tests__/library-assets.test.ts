@@ -75,7 +75,7 @@ afterEach(async () => {
 
 describe("library assets", () => {
   it("stores a text deliverable, lists it, and reads it back", async () => {
-    const { assetId } = await store("# Plano\n\nSegunda: post de lançamento.");
+    const { id: assetId } = await store("# Plano\n\nSegunda: post de lançamento.");
 
     const assets = await list({ kind: "knowledge_doc" });
     expect(assets.find((asset) => asset.id === assetId)?.kind).toBe("knowledge_doc");
@@ -84,15 +84,22 @@ describe("library assets", () => {
     expect(text?.content).toContain("post de lançamento");
   });
 
-  it("dedups identical content on (company, sha256)", async () => {
+  it("dedups identical content on (company, kind, sha256)", async () => {
     const first = await store("conteúdo idêntico para dedup");
     const second = await store("conteúdo idêntico para dedup");
-    expect(second.assetId).toBe(first.assetId);
+    expect(second.id).toBe(first.id);
     await expect(storedKeys()).resolves.toHaveLength(1);
   });
 
+  it("deduplicates concurrent same-kind uploads and preserves the stored metadata", async () => {
+    const [first, second] = await Promise.all([store("concurrent"), store("concurrent")]);
+    expect(first).toEqual(second);
+    await expect(storedKeys()).resolves.toHaveLength(1);
+    await expect(rows()).resolves.toHaveLength(1);
+  });
+
   it("is tenant-scoped: another company cannot read the asset", async () => {
-    const { assetId } = await store("segredo da empresa A que B não deve ler");
+    const { id: assetId } = await store("segredo da empresa A que B não deve ler");
     await expect(read(OTHER_COMPANY_ID, assetId)).resolves.toBeNull();
   });
 
@@ -101,10 +108,10 @@ describe("library assets", () => {
     const agentScratch = await store("rascunho interno do agente", "agent");
 
     const customerOnly = await list({ visibility: "customer" });
-    expect(customerOnly.map(({ id }) => id)).toEqual([customer.assetId]);
+    expect(customerOnly.map(({ id }) => id)).toEqual([customer.id]);
 
     const agentOnly = await list({ visibility: "agent" });
-    expect(agentOnly.map(({ id }) => id)).toEqual([agentScratch.assetId]);
+    expect(agentOnly.map(({ id }) => id)).toEqual([agentScratch.id]);
   });
 });
 
@@ -131,7 +138,7 @@ describe("library consistency", () => {
   });
 
   it("promotes to the customer folder without moving the object", async () => {
-    const { assetId } = await store("rascunho aprovado", "agent");
+    const { id: assetId } = await store("rascunho aprovado", "agent");
     const [before] = await rows();
 
     await expect(db((client) => promoteAssets(client, COMPANY_ID, [assetId]))).resolves.toEqual([
@@ -147,12 +154,12 @@ describe("library consistency", () => {
     const draft = await store("mesmo conteúdo", "agent");
     const delivered = await store("mesmo conteúdo", "customer");
 
-    expect(delivered.assetId).toBe(draft.assetId);
+    expect(delivered.id).toBe(draft.id);
     await expect(list({ visibility: "customer" })).resolves.toHaveLength(1);
   });
 
   it("deletes the object and its row together", async () => {
-    const { assetId } = await store("descartável");
+    const { id: assetId } = await store("descartável");
 
     await expect(
       db((client) => deleteAssets(env, client, COMPANY_ID, { ids: [assetId] })),
@@ -163,7 +170,7 @@ describe("library consistency", () => {
   });
 
   it("keeps the asset whole when R2 rejects the delete", async () => {
-    const { assetId } = await store("permanece");
+    const { id: assetId } = await store("permanece");
     vi.spyOn(env.ASSETS, "delete").mockRejectedValueOnce(new Error("r2 unavailable"));
 
     await expect(
@@ -180,11 +187,9 @@ describe("library authorization", () => {
     const delivered = await store("entrega do cliente");
     const scratch = await store("material do agente", "agent");
 
-    await expect(open(delivered.assetId, "CUSTOMER", COMPANY_ID)).resolves.toBe(
-      "entrega do cliente",
-    );
-    await expect(open(scratch.assetId, "CUSTOMER", COMPANY_ID)).resolves.toBeNull();
-    await expect(open(delivered.assetId, "CUSTOMER", OTHER_COMPANY_ID)).resolves.toBeNull();
+    await expect(open(delivered.id, "CUSTOMER", COMPANY_ID)).resolves.toBe("entrega do cliente");
+    await expect(open(scratch.id, "CUSTOMER", COMPANY_ID)).resolves.toBeNull();
+    await expect(open(delivered.id, "CUSTOMER", OTHER_COMPANY_ID)).resolves.toBeNull();
   });
 
   it.each(["OWNER", "STAFF"] as const)(
@@ -193,8 +198,8 @@ describe("library authorization", () => {
       const delivered = await store("entrega do cliente");
       const scratch = await store("material do agente", "agent");
 
-      await expect(open(delivered.assetId, role, "co_qolmeia")).resolves.toBe("entrega do cliente");
-      await expect(open(scratch.assetId, role, "co_qolmeia")).resolves.toBe("material do agente");
+      await expect(open(delivered.id, role, "co_qolmeia")).resolves.toBe("entrega do cliente");
+      await expect(open(scratch.id, role, "co_qolmeia")).resolves.toBe("material do agente");
     },
   );
 });

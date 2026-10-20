@@ -5,7 +5,13 @@ import type { IdentityEnv } from "#/identity/gates";
 import type { Db } from "#/lib/db";
 import { parsePositiveInt } from "#/lib/pagination";
 import type { JsonRecord } from "#/lib/records";
-import { assetReference, deleteAssets, listAssets, storeAsset } from "#/library/assets";
+import {
+  assetReference,
+  deleteAssets,
+  listAssets,
+  storeAsset,
+  type AssetRecord,
+} from "#/library/assets";
 
 const meAssetsRoutes = new Hono<IdentityEnv>();
 
@@ -46,10 +52,10 @@ const persistImageAsset = async (
     file: File;
     kind: "brand_asset" | "user_upload";
   },
-): Promise<{ assetId: string; bytes: number; mime: string }> => {
+): Promise<AssetRecord> => {
   const { companyId, extraMeta, file, kind } = opts;
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const { assetId } = await storeAsset(env, db, {
+  return storeAsset(env, db, {
     bytes,
     companyId,
     kind,
@@ -57,7 +63,6 @@ const persistImageAsset = async (
     mime: file.type,
     visibility: "customer",
   });
-  return { assetId, bytes: bytes.length, mime: file.type };
 };
 
 const readUploadedImage = (
@@ -82,6 +87,19 @@ const brandAssetMetadataSchema = z.object({
   originalName: z.string().optional(),
 });
 
+const toBrandAsset = (row: AssetRecord) => {
+  const metadata = brandAssetMetadataSchema.safeParse(row.metadata);
+  return {
+    category: metadata.success ? (metadata.data.category ?? "other") : "other",
+    createdAt: new Date(row.createdAt).toISOString(),
+    id: row.id,
+    mimeType: row.mime,
+    name: metadata.success ? (metadata.data.originalName ?? null) : null,
+    size: row.bytes,
+    url: assetReference(row.id),
+  };
+};
+
 meAssetsRoutes.post("/uploads", async (c) => {
   const { companyId } = c.get("session");
 
@@ -97,7 +115,11 @@ meAssetsRoutes.post("/uploads", async (c) => {
     return c.json({ error: validated.error }, validated.status);
   }
 
-  const { assetId, bytes, mime } = await persistImageAsset(c.env, c.var.db, {
+  const {
+    bytes,
+    id: assetId,
+    mime,
+  } = await persistImageAsset(c.env, c.var.db, {
     companyId,
     extraMeta: {},
     file: validated.file,
@@ -111,18 +133,7 @@ meAssetsRoutes.get("/brand-assets", async (c) => {
   const { companyId } = c.get("session");
   const results = await listAssets(c.var.db, companyId, { kind: "brand_asset", limit: 200 });
 
-  const items = results.map((row) => {
-    const metadata = brandAssetMetadataSchema.safeParse(row.metadata);
-    return {
-      category: metadata.success ? (metadata.data.category ?? "other") : "other",
-      createdAt: new Date(row.createdAt).toISOString(),
-      id: row.id,
-      mimeType: row.mime,
-      name: metadata.success ? (metadata.data.originalName ?? null) : null,
-      size: row.bytes,
-      url: assetReference(row.id),
-    };
-  });
+  const items = results.map(toBrandAsset);
 
   return c.json({ items });
 });
@@ -145,14 +156,14 @@ meAssetsRoutes.post("/brand-assets", async (c) => {
   const category =
     typeof rawCategory === "string" && BRAND_CATEGORIES.has(rawCategory) ? rawCategory : "other";
 
-  const { assetId, bytes, mime } = await persistImageAsset(c.env, c.var.db, {
+  const asset = await persistImageAsset(c.env, c.var.db, {
     companyId: session.companyId,
     extraMeta: { category },
     file: validated.file,
     kind: "brand_asset",
   });
 
-  return c.json({ assetId, category, mime, size: bytes, url: assetReference(assetId) });
+  return c.json({ asset: toBrandAsset(asset) });
 });
 
 meAssetsRoutes.delete("/brand-assets/:id", async (c) => {

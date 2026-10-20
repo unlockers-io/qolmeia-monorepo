@@ -443,7 +443,7 @@ model Asset {
   visibility AssetVisibility @default(customer)
   company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@unique([companyId, sha256])
+  @@unique([companyId, kind, sha256])
   @@index([companyId, kind, createdAt])
   @@map("asset")
 }

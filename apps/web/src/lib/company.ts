@@ -93,18 +93,8 @@ const uploadBrandAsset = async (file: File, category: BrandCategory): Promise<Br
   const form = new FormData();
   form.append("file", file);
   form.append("category", category);
-  const uploaded = await apiSendForm<{ assetId: string; mime: string; url: string }>(
-    "/api/me/brand-assets",
-    form,
-  );
-  return {
-    category,
-    createdAt: new Date().toISOString(),
-    id: uploaded.assetId,
-    mimeType: uploaded.mime,
-    name: file.name || null,
-    url: uploaded.url,
-  };
+  const { asset } = await apiSendForm<{ asset: BrandAsset }>("/api/me/brand-assets", form);
+  return asset;
 };
 
 const deleteBrandAsset = async (id: string): Promise<boolean> => {
