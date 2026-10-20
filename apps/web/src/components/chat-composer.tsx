@@ -174,10 +174,9 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
       }
     } catch {
       toast.error("Não foi possível enviar. Tente novamente.");
-    } finally {
-      submittingRef.current = false;
-      setSubmitting(false);
     }
+    submittingRef.current = false;
+    setSubmitting(false);
   };
 
   const canSubmit =
