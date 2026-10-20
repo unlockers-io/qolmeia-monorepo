@@ -11,9 +11,7 @@
   "compatibility_date": "2026-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
-  // Weekly proactive "suggest next work" sweep (Mondays 13:00 UTC ≈ 10:00 BRT).
-  // → src/cloudflare.ts scheduled() → runProactiveSweep.
-  "triggers": { "crons": ["0 13 * * 1"] },
+  "triggers": { "crons": ["0 13 * * 1", "* * * * *"] },
   // One Durable Object class per exported agent function, named after it. The
   // bindings are generated at build time; migration history stays append-only.
   // Flue beta used persisted schema v5 while Flue 2 uses v8, so v3 drains the
