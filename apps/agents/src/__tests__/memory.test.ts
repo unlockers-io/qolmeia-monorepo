@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam } from "#/__tests__/fixtures";
-import { recall, remember } from "#/memory/memory";
+import { publishPendingFacts, recall, remember } from "#/memory/memory";
 import { EMBEDDING_DIMENSIONS } from "#/memory/vectors";
 
 const COMPANY_ID = "co_memory";
@@ -71,7 +71,7 @@ describe("Memory", () => {
     await expect(factCount()).resolves.toBe(0);
   });
 
-  it("writes no fact when the vector index rejects it", async () => {
+  it("keeps a committed fact pending when the vector index rejects it", async () => {
     const vector = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.1);
     const unavailable = {
       AI: { run: () => Promise.resolve({ data: [vector] }) } as unknown as Ai,
@@ -81,13 +81,14 @@ describe("Memory", () => {
       } as unknown as VectorizeIndex,
     };
 
-    await expect(
-      db((client) =>
-        remember(unavailable, client, COMPANY_ID, [
-          { agentInstanceId: correspondentId, content: "fato", kind: "fact" },
-        ]),
-      ),
-    ).rejects.toThrow("vectorize unavailable");
-    await expect(factCount()).resolves.toBe(0);
+    const saved = await db((client) =>
+      remember(unavailable, client, COMPANY_ID, [
+        { agentInstanceId: correspondentId, content: "fato", kind: "fact" },
+      ]),
+    );
+    await expect(factCount()).resolves.toBe(1);
+    expect(saved[0]?.indexedAt).toBeNull();
+    await db((client) => publishPendingFacts(env, client));
+    expect(await recallFor(correspondentId, "fato")).toMatchObject([{ id: saved[0]?.id }]);
   });
 });

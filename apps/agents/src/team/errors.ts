@@ -42,6 +42,14 @@ class MemberNotPausableError extends TeamError {
   }
 }
 
+class MemberPromptNotEditableError extends TeamError {
+  readonly status = 409;
+
+  constructor(role: string) {
+    super(`cannot edit the prompt of a ${role}`);
+  }
+}
+
 class InvalidDisplayNameError extends TeamError {
   readonly status = 400;
 
@@ -64,6 +72,7 @@ export {
   InvalidDisplayNameError,
   MemberNotFoundError,
   MemberNotPausableError,
+  MemberPromptNotEditableError,
   TeamError,
   TemplateNotFoundError,
   TemplateRetiredError,

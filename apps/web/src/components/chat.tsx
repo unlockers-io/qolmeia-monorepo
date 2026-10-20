@@ -17,10 +17,8 @@ import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { agentAvatarClass } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
-import type { FileUIPart } from "ai";
 import { ArrowDown, ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
-import { toast } from "sonner";
 
 import { ChatComposer } from "@/components/chat-composer";
 import type { ChatMessage, UseFlueChatResult } from "@/lib/use-flue-chat";
@@ -237,17 +235,6 @@ const ChatView = ({
   const isCorrespondent = agentName === "correspondent";
   const lastIndex = visibleMessages.length - 1;
 
-  const handleSend = (message: { files: Array<FileUIPart>; text: string }) => {
-    const run = async () => {
-      try {
-        await sendMessage(message);
-      } catch {
-        toast.error("Não foi possível enviar. Tente novamente.");
-      }
-    };
-    void run();
-  };
-
   if (!historyReady) {
     return <ChatSkeleton />;
   }
@@ -341,7 +328,7 @@ const ChatView = ({
         </MessageScroller>
       </MessageScrollerProvider>
 
-      <ChatComposer disabled={isThinking} onSend={handleSend} status={status} />
+      <ChatComposer disabled={isThinking} onSend={sendMessage} status={status} />
     </div>
   );
 };

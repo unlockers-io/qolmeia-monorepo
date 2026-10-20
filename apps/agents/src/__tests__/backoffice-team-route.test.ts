@@ -206,3 +206,52 @@ describe("backoffice member detail extras + pause/resume", () => {
     await expect(res.json()).resolves.toEqual({ error: "cannot pause/resume a correspondent" });
   });
 });
+
+describe("conversational member prompts", () => {
+  it.each(["correspondent", "planner"] as const)(
+    "refuses %s prompt writes without renaming or appending activity",
+    async (role) => {
+      if (role === "planner") {
+        await db((client) =>
+          client.agentInstance.update({ data: { role }, where: { id: CORR_ID } }),
+        );
+      }
+      cookie = await signInAs(meStaff);
+      const before = await db((client) => client.activityLog.count());
+      for (const promptOverride of ["ignored override", null]) {
+        const response = await fetchWithCookie(
+          cookie,
+          `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${CORR_ID}`,
+          {
+            body: JSON.stringify({ displayName: "changed", promptOverride }),
+            headers: { "content-type": "application/json" },
+            method: "PATCH",
+          },
+        );
+        expect(response.status).toBe(409);
+      }
+      expect(await db((client) => client.activityLog.count())).toBe(before);
+      expect(
+        await db((client) => client.agentInstance.findUniqueOrThrow({ where: { id: CORR_ID } })),
+      ).toMatchObject({ displayName: "Correspondente", promptOverride: null });
+    },
+  );
+});
+
+it("refuses combined status and prompt patches instead of silently dropping the prompt", async () => {
+  cookie = await signInAs(meStaff);
+  const response = await fetchWithCookie(
+    cookie,
+    `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}`,
+    {
+      body: JSON.stringify({ promptOverride: "novo prompt", status: "paused" }),
+      headers: { "content-type": "application/json" },
+      method: "PATCH",
+    },
+  );
+  expect(response.status).toBe(400);
+  expect(
+    await db((client) => client.agentInstance.findUniqueOrThrow({ where: { id: WORKER_ID } })),
+  ).toMatchObject({ promptOverride: null, status: "active" });
+  expect(await db((client) => client.activityLog.count())).toBe(0);
+});

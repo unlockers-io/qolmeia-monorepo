@@ -78,6 +78,10 @@ const main = async (): Promise<void> => {
       body,
       method: "POST",
     });
+    await prisma.memoryFact.updateMany({
+      data: { indexedAt: new Date() },
+      where: { id: { in: facts.map(({ id }) => id) } },
+    });
     count += facts.length;
     cursor = facts.at(-1)?.id;
     console.log(`Queued ${count} facts; mutation ${mutation.mutationId}`);

@@ -5,6 +5,7 @@ import type { Generation } from "#/action/action-type";
 import type { Verdict } from "#/action/approval";
 import { decisionEventType, type DecisionEvent } from "#/jobs/decision";
 import { generateDeliverable, type Revision } from "#/jobs/worker-job-generate";
+import { notifyCustomer } from "#/jobs/worker-job-notify";
 import {
   applyDecision,
   executeAction,
@@ -66,6 +67,11 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
         const verdict = await step.do(`decide-${round}`, (): Promise<Verdict> =>
           applyDecision(job, proposal, round, decision.payload),
         );
+        if (verdict !== "execute") {
+          await step.do(`notify-decision-${round}`, () =>
+            notifyCustomer(job, proposal.actionId, verdict),
+          );
+        }
         if (verdict === "end") {
           return finish({ actionId: proposal.actionId, outcome: "ended", revisions: round });
         }
@@ -79,6 +85,9 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
       }
 
       await step.do(`execute-${round}`, (): Promise<void> => executeAction(job, proposal));
+      await step.do(`notify-executed-${round}`, () =>
+        notifyCustomer(job, proposal.actionId, "execute"),
+      );
       return finish({ actionId: proposal.actionId, outcome: "executed", revisions: round });
     }
   }

@@ -1,6 +1,7 @@
 import type { MemoryFact } from "@repo/db/worker";
+import { log } from "@repo/observability";
 
-import type { Db } from "#/lib/db";
+import type { Db, PrismaClient } from "#/lib/db";
 import { inMemoryIndex } from "#/memory/in-memory";
 import { vectorizeIndex } from "#/memory/vectorize";
 import type { VectorIndex, VectorQuery } from "#/memory/vectors";
@@ -28,27 +29,56 @@ const memoryIndex = (env: MemoryEnv): VectorIndex => {
   return vectorizeIndex({ AI: env.AI, VECTORIZE: env.VECTORIZE });
 };
 
+const insertFacts = (
+  db: Db,
+  companyId: string,
+  facts: ReadonlyArray<NewFact>,
+): Promise<Array<MemoryFact>> =>
+  db.memoryFact.createManyAndReturn({
+    data: facts.map((fact) => ({ ...fact, companyId, id: crypto.randomUUID() })),
+  });
+
+const publishFacts = async (
+  index: VectorIndex,
+  db: PrismaClient,
+  facts: ReadonlyArray<MemoryFact>,
+): Promise<void> => {
+  if (facts.length === 0) {
+    return;
+  }
+  await index.upsert(facts);
+  await db.memoryFact.updateMany({
+    data: { indexedAt: new Date() },
+    where: { id: { in: facts.map(({ id }) => id) } },
+  });
+};
+
+const publishPendingFacts = async (env: MemoryEnv, db: PrismaClient): Promise<number> => {
+  const facts = await db.memoryFact.findMany({
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take: 50,
+    where: { indexedAt: null },
+  });
+  await publishFacts(memoryIndex(env), db, facts);
+  return facts.length;
+};
+
 const remember = async (
   env: MemoryEnv,
-  db: Db,
+  db: PrismaClient,
   companyId: string,
   facts: ReadonlyArray<NewFact>,
 ): Promise<ReadonlyArray<MemoryFact>> => {
   const index = memoryIndex(env);
-  const rows = await db.memoryFact.createManyAndReturn({
-    data: facts.map((fact) => ({
-      agentInstanceId: fact.agentInstanceId,
-      companyId,
-      content: fact.content,
-      id: crypto.randomUUID(),
-      kind: fact.kind,
-    })),
-  });
+  const rows = await insertFacts(db, companyId, facts);
   try {
-    await index.upsert(rows);
+    await publishFacts(index, db, rows);
   } catch (error) {
-    await db.memoryFact.deleteMany({ where: { id: { in: rows.map(({ id }) => id) } } });
-    throw error;
+    log.error({
+      companyId,
+      error: error instanceof Error ? error.message : String(error),
+      message: "memory.publication.pending",
+    });
   }
   return rows;
 };
@@ -75,5 +105,5 @@ const recall = async (
   });
 };
 
-export { recall, remember };
+export { insertFacts, publishPendingFacts, recall, remember };
 export type { NewFact, RecalledFact };

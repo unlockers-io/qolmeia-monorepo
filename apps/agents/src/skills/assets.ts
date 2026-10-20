@@ -79,7 +79,7 @@ const saveAssetSkill = defineSkill({
     ctx,
   ): Promise<{ assetId: string; deliverable: boolean }> {
     const deliverable = (folder ?? "customer") === "customer";
-    const { assetId } = await withDb(ctx.env, (db) =>
+    const { id: assetId } = await withDb(ctx.env, (db) =>
       storeAsset(ctx.env, db, {
         bytes: new TextEncoder().encode(content),
         companyId: ctx.companyId,

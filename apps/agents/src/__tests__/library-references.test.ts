@@ -111,7 +111,7 @@ describe("persisted asset references", () => {
   });
 
   it("still resolves a reference after the old 7-day signing window", async () => {
-    const { assetId } = await store({
+    const { id: assetId } = await store({
       kind: "generated_image",
       mime: "image/png",
       text: "png",
@@ -129,7 +129,7 @@ describe("persisted asset references", () => {
 
 describe("GET /assets/:id", () => {
   it("requires a session", async () => {
-    const { assetId } = await store({
+    const { id: assetId } = await store({
       kind: "generated_image",
       mime: "image/png",
       text: "png",
@@ -153,9 +153,9 @@ describe("GET /assets/:id", () => {
       visibility: "agent",
     });
 
-    const own = await get(assetReference(delivered.assetId), await customer());
-    const agentFolder = await get(assetReference(scratch.assetId), await customer());
-    const otherCompany = await get(assetReference(delivered.assetId), await stranger());
+    const own = await get(assetReference(delivered.id), await customer());
+    const agentFolder = await get(assetReference(scratch.id), await customer());
+    const otherCompany = await get(assetReference(delivered.id), await stranger());
 
     expect(own.status).toBe(200);
     expect(agentFolder.status).toBe(404);
@@ -170,7 +170,7 @@ describe("GET /assets/:id", () => {
       visibility: "agent",
     });
 
-    const res = await get(assetReference(scratch.assetId), await operator());
+    const res = await get(assetReference(scratch.id), await operator());
 
     expect(res.status).toBe(200);
     await expect(res.text()).resolves.toBe("rascunho");
@@ -188,13 +188,13 @@ describe("GET /assets/:id", () => {
       { orgId: QOLMEIA_ORG_ID, role: "STAFF" },
     ]);
 
-    const res = await get(assetReference(scratch.assetId), cookie);
+    const res = await get(assetReference(scratch.id), cookie);
 
     expect(res.status).toBe(200);
   });
 
   it("refuses a signed-in account with no membership", async () => {
-    const { assetId } = await store({
+    const { id: assetId } = await store({
       kind: "generated_image",
       mime: "image/png",
       text: "png",
@@ -221,8 +221,8 @@ describe("GET /assets/:id", () => {
     });
 
     const cookie = await customer();
-    const svgRes = await get(assetReference(svg.assetId), cookie);
-    const pngRes = await get(assetReference(png.assetId), cookie);
+    const svgRes = await get(assetReference(svg.id), cookie);
+    const pngRes = await get(assetReference(png.id), cookie);
 
     expect(svgRes.headers.get("content-type")).toBe("image/svg+xml");
     expect(svgRes.headers.get("content-security-policy")).toContain("sandbox");

@@ -145,7 +145,7 @@ A weekly **proactive sweep** (`scheduled()` cron) gates each active company on b
 ## §9. Library and Memory
 
 - **Library** (`library/assets.ts`) owns an asset end to end: it stores the R2 object and then the row (deleting the object if the row fails), promotes agent material to the customer folder with one row update, deletes objects before rows, and serves bytes after `readerScope` authorizes the reader ([ADR 0007](adr/0007-asset-library-folders-vs-memory.md)). Persisted content references an asset as `/assets/<id>`, which never expires; the Worker serves it behind `requireMember` (a Customer reads their Company's customer folder; an Operator reads any Company).
-- **Memory** (`memory/memory.ts`) owns two stores: `remember` writes the `memory_fact` rows and their vectors (deleting the rows if the index write fails), and `recall` queries the index and reads the matching rows back, scoped to the Company.
+- **Memory** (`memory/memory.ts`) owns two stores: `remember` commits `memory_fact` rows before publishing their vectors. Rows with no `indexed_at` are durable pending work, retried in batches of 50 by the per-minute scheduled handler using the same fact IDs. Team confirmation inserts its facts inside the team transaction and leaves publication to that handler, and `recall` queries the index and reads the matching rows back, scoped to the Company.
 
 ## §10. Channels
 

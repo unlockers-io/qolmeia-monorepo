@@ -4,7 +4,7 @@ import { correspondentIdFor, teamIdFor, workerIdFor } from "@repo/worker-api/con
 import { recordActivity } from "#/activity/log";
 import { getCompany } from "#/company/company";
 import type { PrismaClient } from "#/lib/db";
-import { remember, type NewFact } from "#/memory/memory";
+import { insertFacts, type NewFact } from "#/memory/memory";
 import { CompanyNotFoundError, TemplateNotFoundError } from "#/team/errors";
 import { emitTeamEvent } from "#/team/events";
 import { lockDelegationTargets } from "#/team/members";
@@ -114,7 +114,7 @@ const confirmTeam = async (
       summary: "Time confirmado.",
       type: "TEAM_CONFIRMED",
     });
-    await remember(env, tx, companyId, briefFacts(company.brief, correspondentId));
+    await insertFacts(tx, companyId, briefFacts(company.brief, correspondentId));
   });
   await emitTeamEvent(env, { companyId, reason: "confirmed", type: "team:roster" });
   return { correspondentId, teamId, workerIds };

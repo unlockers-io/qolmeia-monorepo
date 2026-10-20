@@ -9,6 +9,7 @@ import {
   InvalidDisplayNameError,
   MemberNotFoundError,
   MemberNotPausableError,
+  MemberPromptNotEditableError,
   TemplateNotFoundError,
   TemplateRetiredError,
 } from "#/team/errors";
@@ -20,9 +21,14 @@ const teamMemberPatchSchema = z.object({
   promptOverride: z.union([z.string().trim().min(1).max(20_000), z.null()]).optional(),
 });
 
-const backofficeTeamMemberPatchSchema = teamMemberPatchSchema.extend({
-  status: z.enum(["active", "paused"]).optional(),
-});
+const backofficeTeamMemberPatchSchema = teamMemberPatchSchema
+  .extend({
+    status: z.enum(["active", "paused"]).optional(),
+  })
+  .refine(
+    ({ displayName, promptOverride, status }) =>
+      status === undefined || (displayName === undefined && promptOverride === undefined),
+  );
 
 const hireTeamMemberSchema = z.object({
   displayName: z.string().trim().min(1).max(80).optional(),
@@ -268,6 +274,9 @@ const updateMember = (
   changeRoster(env, db, {
     change: async (tx) => {
       const member = await findMember(tx, input);
+      if (input.promptOverride !== undefined && member.role !== "worker") {
+        throw new MemberPromptNotEditableError(member.role);
+      }
       if (input.displayName !== undefined) {
         await renameMember(tx, { ...input, displayName: input.displayName }, member.displayName);
       }
