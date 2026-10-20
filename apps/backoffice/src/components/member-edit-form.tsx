@@ -204,14 +204,16 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
             </div>
           </Field>
 
-          <PromptEditor
-            busy={busy}
-            initialValue={member.promptOverride}
-            onReset={handleResetPrompt}
-            onSave={handleSavePrompt}
-            templatePrompt={member.templateSystemPrompt}
-            updatedAt={member.promptOverrideUpdatedAt}
-          />
+          {member.role === "worker" ? (
+            <PromptEditor
+              busy={busy}
+              initialValue={member.promptOverride}
+              onReset={handleResetPrompt}
+              onSave={handleSavePrompt}
+              templatePrompt={member.templateSystemPrompt}
+              updatedAt={member.promptOverrideUpdatedAt}
+            />
+          ) : null}
         </CardContent>
       </Card>
     </div>
