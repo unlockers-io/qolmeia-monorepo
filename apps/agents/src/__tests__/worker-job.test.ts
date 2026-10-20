@@ -1,3 +1,4 @@
+import type { dispatch } from "@flue/runtime";
 import type { DecisionOutcome } from "@repo/worker-api/contracts";
 import { introspectWorkflowInstance } from "cloudflare:test";
 import { env } from "cloudflare:workers";
@@ -8,6 +9,8 @@ import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
 import { fetchWithCookie, signInAs } from "#/__tests__/sign-in";
 import { actionIdFor, MAX_REVISIONS } from "#/action/action";
 import { decisionEventType } from "#/jobs/decision";
+import { createNotifyCustomer } from "#/jobs/worker-job-notify";
+import { executeAction } from "#/jobs/worker-job-steps";
 import { listAssets } from "#/library/assets";
 
 const COMPANY_ID = "co_worker_job";
@@ -86,9 +89,19 @@ const gateDesigner = () =>
     }),
   );
 
-const startJob = async (ticketId: string, agentInstanceId = DESIGNER_ID) => {
+const startJob = async (ticketId: string, agentInstanceId = DESIGNER_ID, failingStep?: string) => {
   await seedTicket({ agentInstanceId, companyId: COMPANY_ID, id: ticketId, workflowId: ticketId });
   const instance = await introspectWorkflowInstance(env.WORKER_JOB, ticketId);
+  await instance.modify(async (modifier) => {
+    await modifier.disableRetryDelays();
+    if (failingStep !== undefined) {
+      await modifier.mockStepError({ name: failingStep }, new Error("admission failed"), 1);
+    }
+    for (let round = 0; round <= MAX_REVISIONS; round += 1) {
+      await modifier.mockStepResult({ name: `notify-executed-${round}` }, { accepted: true });
+      await modifier.mockStepResult({ name: `notify-decision-${round}` }, { accepted: true });
+    }
+  });
   await env.WORKER_JOB.create({
     id: ticketId,
     params: { agentInstanceId, companyId: COMPANY_ID, ticketId },
@@ -351,4 +364,83 @@ describe("decide route", () => {
     const again = await decide(actionId, "rejected");
     expect(again.status).toBe(409);
   });
+});
+
+describe("required customer delivery", () => {
+  it("retries a failed notification checkpoint without re-executing completed work", async () => {
+    const ticketId = "tkt-delivery-retry";
+    await using instance = await startJob(ticketId, DESIGNER_ID, "notify-executed-0");
+    await instance.waitForStatus("complete");
+    await expect(activityTypes(ticketId)).resolves.toEqual(["ACTION_EXECUTED"]);
+    await expect(customerFolder()).resolves.toHaveLength(1);
+    expect(prompts).toHaveLength(1);
+    const job = { agentInstanceId: DESIGNER_ID, companyId: COMPANY_ID, env, ticketId };
+    await executeAction(job, {
+      actionId: actionIdFor(ticketId, 0),
+      actionType: "worker_deliverable",
+      policy: "auto_execute",
+    });
+    await expect(activityTypes(ticketId)).resolves.toEqual(["ACTION_EXECUTED"]);
+  });
+
+  it.each(["rejected", "changes_requested"] as const)(
+    "retries the %s notification independently of the decision",
+    async (decision) => {
+      await gateDesigner();
+      const ticketId = `tkt-notify-${decision}`;
+      await using instance = await startJob(ticketId, DESIGNER_ID, "notify-decision-0");
+      await instance.waitForStepResult({ name: "propose-0" });
+      const response = await decide(actionIdFor(ticketId, 0), decision, "ajuste");
+      expect(response.status).toBe(200);
+      if (decision === "changes_requested") {
+        await instance.waitForStepResult({ name: "propose-1" });
+        const approved = await decide(actionIdFor(ticketId, 1), "approved");
+        expect(approved.status).toBe(200);
+      }
+      await instance.waitForStatus("complete");
+      const activities = await activityTypes(ticketId);
+      expect(
+        activities.filter(
+          (type) =>
+            type === (decision === "rejected" ? "ACTION_REJECTED" : "ACTION_CHANGES_REQUESTED"),
+        ),
+      ).toHaveLength(1);
+    },
+  );
+
+  it.each(["execute", "end", "revise"] as const)(
+    "awaits %s admission and reuses the delivery key after an ambiguous failure",
+    async (verdict) => {
+      const ticketId = `tkt-admission-${verdict}`;
+      await using instance = await startJob(ticketId);
+      await instance.waitForStatus("complete");
+      const accepted = Promise.withResolvers<Awaited<ReturnType<typeof dispatch>>>();
+      const send = vi
+        .fn<typeof dispatch>()
+        .mockRejectedValueOnce(new Error("receipt lost"))
+        .mockReturnValueOnce(accepted.promise);
+      const notify = createNotifyCustomer(send);
+      const job = { agentInstanceId: DESIGNER_ID, companyId: COMPANY_ID, env, ticketId };
+      const actionId = actionIdFor(ticketId, 0);
+      await expect(notify(job, actionId, verdict)).rejects.toThrow("receipt lost");
+      let settled = false;
+      const observeAdmission = async () => {
+        await notify(job, actionId, verdict);
+        settled = true;
+      };
+      const retried = observeAdmission();
+      await vi.waitFor(() => {
+        expect(send).toHaveBeenCalledTimes(2);
+      });
+      expect(settled).toBe(false);
+      expect(send.mock.calls[1]).toEqual(send.mock.calls[0]);
+      expect(send.mock.calls[0]?.[1]).toMatchObject({
+        idempotencyKey: expect.stringContaining(actionId),
+        message: { kind: "signal" },
+      });
+      accepted.resolve({ acceptedAt: "now", submissionId: "accepted", uid: "uid" });
+      await retried;
+      expect(settled).toBe(true);
+    },
+  );
 });
