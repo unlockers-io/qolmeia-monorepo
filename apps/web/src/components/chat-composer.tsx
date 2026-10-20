@@ -53,11 +53,13 @@ const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
 
 type ChatComposerProps = {
   disabled: boolean;
-  onSend: (message: { files: Array<FileUIPart>; text: string }) => void;
+  onSend: (message: { files: Array<FileUIPart>; text: string }) => Promise<void>;
   status: ChatStatus;
 };
 
 const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<ReadonlyArray<Attachment>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -145,10 +147,10 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   };
 
-  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = input.trim();
-    if (disabled || isUploading) {
+    if (disabled || isUploading || submittingRef.current) {
       return;
     }
     if (!text && readyAttachments.length === 0) {
@@ -160,20 +162,32 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
       type: "file",
       url: attachment.url,
     }));
-    onSend({ files, text: text || " " });
-    setInput("");
-    setAttachments([]);
-    const el = textareaRef.current;
-    if (el) {
-      el.style.height = "auto";
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      await onSend({ files, text: text || " " });
+      setInput("");
+      setAttachments([]);
+      const el = textareaRef.current;
+      if (el) {
+        el.style.height = "auto";
+      }
+    } catch {
+      toast.error("Não foi possível enviar. Tente novamente.");
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
   const canSubmit =
-    !disabled && !isUploading && (input.trim().length > 0 || readyAttachments.length > 0);
+    !disabled &&
+    !isUploading &&
+    !submitting &&
+    (input.trim().length > 0 || readyAttachments.length > 0);
 
   let submitIcon = <CornerDownLeft aria-hidden className="size-4" />;
-  if (status === "submitted" || status === "streaming") {
+  if (submitting || status === "submitted" || status === "streaming") {
     submitIcon = <LoadingSpinner className="size-4" />;
   } else if (status === "error") {
     submitIcon = <X aria-hidden className="size-4" />;
@@ -183,12 +197,15 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
     <div className="flex-none border-t border-border bg-card px-6 py-4">
       <form
         className="flex flex-col gap-2 rounded-xl border border-input bg-background p-2"
-        onSubmit={handleSubmit}
+        onSubmit={(event) => {
+          void handleSubmit(event);
+        }}
       >
         <input
           accept={ALLOWED_UPLOAD_MIME.join(",")}
           aria-label="Anexar imagem"
           className="sr-only"
+          disabled={submitting}
           name="attachment"
           onChange={handleFileSelected}
           ref={fileInputRef}
@@ -213,6 +230,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
                 <AttachmentActions>
                   <AttachmentAction
                     aria-label={`Remover ${attachment.name}`}
+                    disabled={submitting}
                     onClick={() => {
                       handleRemoveAttachment(attachment);
                     }}
@@ -233,6 +251,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
             "max-h-40 min-h-11 w-full resize-none rounded-md bg-transparent px-2 py-2 text-base outline-none",
             "placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none sm:text-sm",
           )}
+          disabled={submitting}
           name="message"
           onChange={(event) => {
             setInput(event.currentTarget.value);
@@ -249,7 +268,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
         <div className="flex items-center justify-end gap-2">
           <Button
             aria-label="Anexar imagem"
-            disabled={disabled || isUploading}
+            disabled={disabled || isUploading || submitting}
             onClick={handleAttachClick}
             size="icon"
             type="button"

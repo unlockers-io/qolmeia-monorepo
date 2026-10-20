@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ChatMessage, UseFlueChatResult } from "@/lib/use-flue-chat";
@@ -305,12 +305,15 @@ describe("Chat", () => {
     expect(screen.getByText("olá!")).toBeInTheDocument();
   });
 
-  it("sends the typed message on submit", () => {
+  it("sends the typed message on submit", async () => {
     render(<Chat companyId="co_test" />);
     const textarea = screen.getByLabelText("Mensagem");
     fireEvent.change(textarea, { target: { value: "preciso de ajuda" } });
     fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
     expect(sendMessage).toHaveBeenCalledWith({ files: [], text: "preciso de ajuda" });
+    await waitFor(() => {
+      expect(textarea).toHaveValue("");
+    });
   });
 
   it("does not send while a reply is streaming", () => {
@@ -327,4 +330,16 @@ describe("Chat", () => {
     render(<Chat companyId="co_test" />);
     expect(screen.getByText(/Um agente está respondendo/v)).toBeInTheDocument();
   });
+});
+
+it("keeps the draft when the chat transport rejects submission", async () => {
+  sendMessage.mockRejectedValueOnce(new Error("transport unavailable"));
+  render(<ChatView agent="correspondent" chat={{ ...chatState, messages: [], status: "ready" }} />);
+  const textarea = screen.getByLabelText("Mensagem");
+  fireEvent.change(textarea, { target: { value: "retomar este pedido" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
+  await waitFor(() => {
+    expect(textarea).toBeEnabled();
+  });
+  expect(textarea).toHaveValue("retomar este pedido");
 });
