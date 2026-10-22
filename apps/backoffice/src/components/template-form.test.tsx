@@ -17,9 +17,9 @@ const router: AppRouterInstance = {
   refresh: vi.fn<() => void>(),
   replace: vi.fn<() => void>(),
 };
-const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
-  Promise.resolve(Response.json({ items: [] })),
-);
+const listItems = (_url: string, _init?: RequestInit) =>
+  Promise.resolve(Response.json({ items: [] }));
+const fetchMock = vi.fn(listItems);
 
 const renderForm = () =>
   render(
@@ -34,6 +34,7 @@ const saves = () => fetchMock.mock.calls.filter(([, init]) => init?.method === "
 
 beforeEach(() => {
   vi.clearAllMocks();
+  fetchMock.mockImplementation(listItems);
   vi.stubGlobal("fetch", fetchMock);
 });
 
@@ -74,5 +75,36 @@ describe("TemplateForm", () => {
     expect(screen.getByLabelText("Tipo de ação padrão")).toHaveAccessibleDescription(
       "Um destes: publish_post, worker_deliverable.",
     );
+  });
+
+  it("reports a failed save in the form alert and clears it on the next change", async () => {
+    renderForm();
+    fireEvent.change(screen.getByLabelText("Nome de exibição"), {
+      target: { value: "Pesquisador de SEO" },
+    });
+    fireEvent.change(screen.getByLabelText("Tipo (worker kind)"), {
+      target: { value: "seo-researcher" },
+    });
+    fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Pesquisa SEO" } });
+    fireEvent.change(screen.getByLabelText("Prompt do sistema"), {
+      target: { value: "Você pesquisa SEO." },
+    });
+    fireEvent.change(screen.getByLabelText("Modelo (LLM)"), {
+      target: { value: "openai/gpt-6.1-sol" },
+    });
+    fetchMock.mockImplementation((url, init) =>
+      init?.method === "POST"
+        ? Promise.resolve(new Response("boom", { status: 500 }))
+        : listItems(url, init),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Criar modelo" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Algo falhou do nosso lado. Tente de novo em instantes.");
+    expect(saves()).toHaveLength(1);
+
+    fireEvent.change(screen.getByLabelText("Descrição"), { target: { value: "Pesquisa de SEO" } });
+    expect(alert).not.toBeInTheDocument();
   });
 });

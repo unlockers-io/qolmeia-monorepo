@@ -6,6 +6,7 @@ import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { ACTION_TYPES, type Template } from "@repo/worker-api/contracts";
@@ -29,7 +30,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
   const {
     busy,
     errors,
-    formRef,
+    formId,
     handleSubmit,
     handleToggleStatus,
     setField,
@@ -37,6 +38,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
     skills,
     skillsLoading,
     statusPending,
+    submitError,
     submitLabel,
     toggleSkill,
     values,
@@ -64,10 +66,11 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
 
       <ClientReadyForm
         className="flex flex-col gap-5"
+        id={formId}
         noValidate
         onSubmit={handleSubmit}
-        ref={formRef}
       >
+        <FormAlert message={submitError} />
         <Card>
           <CardContent className="flex flex-col gap-5">
             <div className="grid gap-5 sm:grid-cols-2">

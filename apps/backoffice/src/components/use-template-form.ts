@@ -7,7 +7,7 @@ import {
 } from "@repo/worker-api/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -114,7 +114,7 @@ const toFormValues = (initial: Template | undefined): Record<FieldKey, string> =
 const useTemplateForm = (initial: Template | undefined) => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const formRef = useRef<HTMLFormElement>(null);
+  const formId = useId();
 
   const isEdit = initial !== undefined;
 
@@ -132,9 +132,6 @@ const useTemplateForm = (initial: Template | undefined) => {
   const saveMutation = useMutation({
     mutationFn: (input: TemplateInput) =>
       isEdit ? updateTemplate(initial.id, input) : createTemplate(input),
-    onError: (error) => {
-      toast.error(describeRequestError(error, "Não foi possível salvar o modelo."));
-    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: templateKeys.all });
       toast.success(isEdit ? "Modelo atualizado." : "Modelo criado.");
@@ -157,10 +154,12 @@ const useTemplateForm = (initial: Template | undefined) => {
   });
 
   const setField = (key: FieldKey, value: string) => {
+    saveMutation.reset();
     setValues((prev) => ({ ...prev, [key]: value }));
   };
 
   const toggleSkill = (id: string) => {
+    saveMutation.reset();
     setSkillIds((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
@@ -169,7 +168,7 @@ const useTemplateForm = (initial: Template | undefined) => {
     setSubmitAttempted(true);
     const parsed = formSchema.safeParse(values);
     if (!parsed.success) {
-      focusFirstInvalidField(formRef.current);
+      focusFirstInvalidField(formId);
       return;
     }
     saveMutation.mutate({
@@ -192,6 +191,10 @@ const useTemplateForm = (initial: Template | undefined) => {
   };
 
   const busy = saveMutation.isPending;
+  const submitError =
+    saveMutation.error === null
+      ? null
+      : describeRequestError(saveMutation.error, "Não foi possível salvar o modelo.");
   const skills = skillsData?.items ?? [];
   const editLabel = isEdit ? "Salvar alterações" : "Criar modelo";
   const submitLabel = busy ? "Salvando…" : editLabel;
@@ -199,7 +202,7 @@ const useTemplateForm = (initial: Template | undefined) => {
   return {
     busy,
     errors,
-    formRef,
+    formId,
     handleSubmit,
     handleToggleStatus,
     setField,
@@ -207,6 +210,7 @@ const useTemplateForm = (initial: Template | undefined) => {
     skills,
     skillsLoading,
     statusPending: statusMutation.isPending,
+    submitError,
     submitLabel,
     toggleSkill,
     values,

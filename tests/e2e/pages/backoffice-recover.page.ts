@@ -5,13 +5,13 @@ export class BackofficeRecoverPage {
   private readonly emailInput: Locator;
   private readonly submitButton: Locator;
   private readonly successToast: Locator;
-  private readonly errorToast: Locator;
+  private readonly formAlert: Locator;
 
   constructor(private readonly page: Page) {
     this.emailInput = page.getByLabel(/e-?mail/iu);
     this.submitButton = page.getByRole("button", { name: /enviar link|send.*link/iu });
     this.successToast = page.locator('[data-sonner-toast][data-type="success"]');
-    this.errorToast = page.locator('[data-sonner-toast][data-type="error"]');
+    this.formAlert = page.locator('[data-slot="form-alert"]');
   }
 
   goto = async () => {
@@ -27,7 +27,7 @@ export class BackofficeRecoverPage {
     await expect(this.successToast).toBeVisible();
   };
 
-  expectErrorToast = async () => {
-    await expect(this.errorToast).toBeVisible();
+  expectFormAlert = async () => {
+    await expect(this.formAlert).toBeVisible();
   };
 }

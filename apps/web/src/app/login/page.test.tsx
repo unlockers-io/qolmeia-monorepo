@@ -6,9 +6,12 @@ import { LoginFormView as LoginForm, type LoginFormDependencies } from "./login-
 const renderLoginForm = (redirectTo = "/") => {
   const push = vi.fn();
   const refresh = vi.fn();
-  const sendMagicLink = vi.fn(() => Promise.resolve({ error: null }));
-  const showError = vi.fn();
-  const signInEmail = vi.fn(() => Promise.resolve({ error: null }));
+  const sendMagicLink = vi.fn<LoginFormDependencies["sendMagicLink"]>(() =>
+    Promise.resolve({ error: null }),
+  );
+  const signInEmail = vi.fn<LoginFormDependencies["signInEmail"]>(() =>
+    Promise.resolve({ error: null }),
+  );
   const dependencies: LoginFormDependencies = {
     redirectTo: () => redirectTo,
     router: {
@@ -20,15 +23,12 @@ const renderLoginForm = (redirectTo = "/") => {
       },
     },
     sendMagicLink,
-    showError: (message) => {
-      showError(message);
-    },
     signInEmail,
   };
 
   render(<LoginForm dependencies={dependencies} />);
 
-  return { push, refresh, sendMagicLink, showError, signInEmail };
+  return { push, refresh, sendMagicLink, signInEmail };
 };
 
 describe("LoginForm", () => {
@@ -126,6 +126,21 @@ describe("LoginForm", () => {
     });
     expect(screen.getByText("Informe sua senha")).toBeInTheDocument();
     expect(signInEmail).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed sign-in in the form alert and clears it on the next change", async () => {
+    const { signInEmail } = renderLoginForm();
+    signInEmail.mockResolvedValueOnce({ error: { code: "INVALID_EMAIL_OR_PASSWORD" } });
+    fireEvent.change(screen.getByLabelText(/E-mail/v), {
+      target: { value: "pedro+customer@filho.me" },
+    });
+    fireEvent.change(screen.getByLabelText(/Senha/v), { target: { value: "Senha123!" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("E-mail ou senha incorretos.");
+    fireEvent.change(screen.getByLabelText(/Senha/v), { target: { value: "Senha1234!" } });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("validates the e-mail with the form schema before sending a magic link", async () => {

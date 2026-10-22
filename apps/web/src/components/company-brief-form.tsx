@@ -7,6 +7,7 @@ import { Input } from "@repo/ui/components/input";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { MissingBriefBadge } from "@repo/ui/compositions/missing-brief-badge";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -83,9 +84,6 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
 
   const mutation = useMutation({
     mutationFn: (patch: BriefPatch) => patchCompanyBrief(patch),
-    onError: () => {
-      toast.error("Não foi possível salvar. Tente novamente.");
-    },
     onSuccess: (res) => {
       queryClient.setQueryData(queryKey, res);
       toast.success("Informações da empresa salvas.");
@@ -97,6 +95,7 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
   const isComplete = filled === REQUIRED_COUNT;
 
   const setField = (key: keyof FormState) => (value: string) => {
+    mutation.reset();
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -119,6 +118,9 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
       </CardHeader>
       <CardContent>
         <ClientReadyForm className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          <FormAlert
+            message={mutation.isError ? "Não foi possível salvar. Tente novamente." : null}
+          />
           <div className="grid gap-5 sm:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="brief-industry">

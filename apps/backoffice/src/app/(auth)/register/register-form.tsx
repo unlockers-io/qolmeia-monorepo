@@ -14,12 +14,13 @@ import {
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, use, useRef, useState } from "react";
+import { Suspense, use, useState } from "react";
 import { toast } from "sonner";
 
 import { registerSchema } from "@/lib/form-schemas";
@@ -51,11 +52,17 @@ const LoginLink = ({ searchParams }: Props) => {
 const RegisterForm = ({ searchParams }: Props) => {
   const { push, refresh } = useRouter();
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: { confirmPassword: "", email: "", name: "", password: "" },
+    listeners: {
+      onChange: () => {
+        setSubmitError(null);
+      },
+    },
     onSubmit: async ({ value }) => {
+      setSubmitError(null);
       const { from } = await searchParams;
       const redirectTo = safeRedirectPath(from);
       try {
@@ -66,7 +73,7 @@ const RegisterForm = ({ searchParams }: Props) => {
           password: value.password,
         });
         if (result.error) {
-          toast.error(authErrorMessage(result.error, "Não foi possível criar a conta."));
+          setSubmitError(authErrorMessage(result.error, "Não foi possível criar a conta."));
           return;
         }
         const { token } = result.data;
@@ -75,15 +82,15 @@ const RegisterForm = ({ searchParams }: Props) => {
           return;
         }
       } catch {
-        toast.error("Não foi possível conectar ao servidor. Tente novamente.");
+        setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
         return;
       }
       toast.success("Conta criada. Bem-vindo à Qolmeia!");
       push(redirectTo);
       refresh();
     },
-    onSubmitInvalid: () => {
-      focusFirstInvalidField(formRef.current);
+    onSubmitInvalid: ({ formApi }) => {
+      focusFirstInvalidField(formApi.formId);
     },
     validationLogic: revalidateLogic(),
     validators: { onDynamic: registerSchema },
@@ -124,12 +131,13 @@ const RegisterForm = ({ searchParams }: Props) => {
       </CardHeader>
       <ClientReadyForm
         className="flex flex-col gap-(--card-spacing)"
+        id={form.formId}
         noValidate
         onSubmit={handleSubmit}
-        ref={formRef}
       >
         <CardContent>
           <FieldGroup>
+            <FormAlert message={submitError} />
             <form.Field name="name">
               {(field) => {
                 const isInvalid = !field.state.meta.isValid;

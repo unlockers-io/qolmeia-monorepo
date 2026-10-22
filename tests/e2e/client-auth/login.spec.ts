@@ -13,7 +13,7 @@ test.describe("Client login", () => {
     releaseScripts();
     await clientLoginPage.signIn("e2e-test@qolmeia.localhost", "WrongPassword!!");
 
-    await clientLoginPage.expectErrorToast();
+    await clientLoginPage.expectFormAlert();
     expect(page.url()).toContain("/login");
   });
 });

@@ -4,6 +4,7 @@ import { Button } from "@repo/ui/components/button";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import type {
@@ -11,7 +12,7 @@ import type {
   CustomerInvitationResponse,
 } from "@repo/worker-api/contracts";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
-import { useId, useRef } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 
 import { ApiError, apiSend, describeRequestError } from "@/lib/api-client";
@@ -21,11 +22,17 @@ const CONFLICT = 409;
 
 const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
   const emailId = useId();
-  const formRef = useRef<HTMLFormElement>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: { email: "" },
+    listeners: {
+      onChange: () => {
+        setSubmitError(null);
+      },
+    },
     onSubmit: async ({ formApi, value }) => {
+      setSubmitError(null);
       const body: CustomerInvitationInput = { email: value.email };
       try {
         const { invitation } = await apiSend<CustomerInvitationResponse>(
@@ -36,15 +43,15 @@ const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
         toast.success(`Convite enviado para ${invitation.email}.`);
         formApi.reset();
       } catch (error) {
-        toast.error(
+        setSubmitError(
           error instanceof ApiError && error.status === CONFLICT
             ? "Este e-mail já pertence a uma conta com acesso."
             : describeRequestError(error, "Não foi possível enviar o convite."),
         );
       }
     },
-    onSubmitInvalid: () => {
-      focusFirstInvalidField(formRef.current);
+    onSubmitInvalid: ({ formApi }) => {
+      focusFirstInvalidField(formApi.formId);
     },
     validationLogic: revalidateLogic(),
     validators: { onDynamic: inviteCustomerSchema },
@@ -53,14 +60,15 @@ const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
   return (
     <ClientReadyForm
       className="flex flex-col gap-2"
+      id={form.formId}
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
         event.stopPropagation();
         void form.handleSubmit();
       }}
-      ref={formRef}
     >
+      <FormAlert message={submitError} />
       <form.Field name="email">
         {(field) => {
           const isInvalid = !field.state.meta.isValid;

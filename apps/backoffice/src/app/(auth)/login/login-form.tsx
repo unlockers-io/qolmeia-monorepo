@@ -14,14 +14,14 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 
 import { loginSchema } from "@/lib/form-schemas";
 
@@ -31,7 +31,6 @@ type Props = {
 };
 
 type LoginDependencies = {
-  showError: (message: string) => void;
   signInEmail: (credentials: {
     email: string;
     password: string;
@@ -39,21 +38,23 @@ type LoginDependencies = {
   useAppRouter: () => Pick<ReturnType<typeof useRouter>, "push" | "refresh">;
 };
 
-const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependencies) => {
+const createLoginForm = ({ signInEmail, useAppRouter }: LoginDependencies) => {
   const Form = ({ registerPrompt, searchParams }: Props) => {
     const { push, refresh } = useAppRouter();
     const [showUnverifiedNotice, setShowUnverifiedNotice] = useState(false);
-    const formRef = useRef<HTMLFormElement>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     const form = useForm({
       defaultValues: { email: "", password: "" },
       listeners: {
         onChange: () => {
           setShowUnverifiedNotice(false);
+          setSubmitError(null);
         },
       },
       onSubmit: async ({ value }) => {
         setShowUnverifiedNotice(false);
+        setSubmitError(null);
         try {
           const { error } = await signInEmail({
             email: value.email,
@@ -64,19 +65,21 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
               setShowUnverifiedNotice(true);
               return;
             }
-            showError(authErrorMessage(error, "Não foi possível entrar. Verifique seus dados."));
+            setSubmitError(
+              authErrorMessage(error, "Não foi possível entrar. Verifique seus dados."),
+            );
             return;
           }
         } catch {
-          showError("Não foi possível conectar ao servidor. Tente novamente.");
+          setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
           return;
         }
         const { from } = await searchParams;
         push(safeRedirectPath(from));
         refresh();
       },
-      onSubmitInvalid: () => {
-        focusFirstInvalidField(formRef.current);
+      onSubmitInvalid: ({ formApi }) => {
+        focusFirstInvalidField(formApi.formId);
       },
       validationLogic: revalidateLogic(),
       validators: { onDynamic: loginSchema },
@@ -98,12 +101,13 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
         </CardHeader>
         <ClientReadyForm
           className="flex flex-col gap-(--card-spacing)"
+          id={form.formId}
           noValidate
           onSubmit={handleSubmit}
-          ref={formRef}
         >
           <CardContent>
             <FieldGroup>
+              <FormAlert message={submitError} />
               <form.Field name="email">
                 {(field) => {
                   const isInvalid = !field.state.meta.isValid;
@@ -197,9 +201,6 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
 };
 
 const LoginForm = createLoginForm({
-  showError: (message) => {
-    toast.error(message);
-  },
   signInEmail: async (credentials) => {
     const { error } = await authClient.signIn.email(credentials);
     return { error };

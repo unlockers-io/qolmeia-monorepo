@@ -13,41 +13,48 @@ import {
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { resetPasswordSchema } from "@/lib/form-schemas";
 
 const ResetPasswordForm = ({ token }: { token: string }) => {
   const { push } = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: { confirmPassword: "", password: "" },
+    listeners: {
+      onChange: () => {
+        setSubmitError(null);
+      },
+    },
     onSubmit: async ({ value }) => {
+      setSubmitError(null);
       try {
         const { error } = await authClient.resetPassword({
           newPassword: value.password,
           token,
         });
         if (error) {
-          toast.error(authErrorMessage(error, "Não foi possível redefinir a senha."));
+          setSubmitError(authErrorMessage(error, "Não foi possível redefinir a senha."));
           return;
         }
       } catch {
-        toast.error("Não foi possível conectar ao servidor. Tente novamente.");
+        setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
         return;
       }
       toast.success("Senha redefinida com sucesso.");
       push("/login");
     },
-    onSubmitInvalid: () => {
-      focusFirstInvalidField(formRef.current);
+    onSubmitInvalid: ({ formApi }) => {
+      focusFirstInvalidField(formApi.formId);
     },
     validationLogic: revalidateLogic(),
     validators: { onDynamic: resetPasswordSchema },
@@ -69,12 +76,13 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
       </CardHeader>
       <ClientReadyForm
         className="flex flex-col gap-(--card-spacing)"
+        id={form.formId}
         noValidate
         onSubmit={handleSubmit}
-        ref={formRef}
       >
         <CardContent>
           <FieldGroup>
+            <FormAlert message={submitError} />
             <form.Field name="password">
               {(field) => {
                 const isInvalid = !field.state.meta.isValid;

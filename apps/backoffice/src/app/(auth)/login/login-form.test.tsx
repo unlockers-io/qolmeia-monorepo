@@ -4,14 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createLoginForm, type LoginDependencies } from "./login-form";
 
-const showError = vi.fn();
 const push = vi.fn();
 const refresh = vi.fn();
 const signInEmail = vi.fn<LoginDependencies["signInEmail"]>(() => Promise.resolve({ error: null }));
 const LoginForm = createLoginForm({
-  showError: (message) => {
-    showError(message);
-  },
   signInEmail,
   useAppRouter: () => ({
     push: (path) => {
@@ -69,6 +65,21 @@ describe("LoginForm", () => {
     });
     expect(screen.getByText("Informe sua senha")).toBeInTheDocument();
     expect(signInEmail).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed sign-in in the form alert and clears it on the next change", async () => {
+    signInEmail.mockResolvedValueOnce({ error: { code: "INVALID_EMAIL_OR_PASSWORD" } });
+    render(<LoginForm searchParams={Promise.resolve({})} />);
+    fireEvent.change(screen.getByLabelText(/E-mail/v), {
+      target: { value: "voce@empresa.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "senha" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("E-mail ou senha incorretos.");
+    fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "senha2" } });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("clears the unverified e-mail notice on the next change", async () => {

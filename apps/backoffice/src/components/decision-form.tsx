@@ -3,10 +3,12 @@
 import { Button } from "@repo/ui/components/button";
 import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { cn } from "@repo/ui/lib/utils";
 import type { ActionsResponse, DecisionOutcome } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
-import { type Ref, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 
 import { apiGet, apiSend, describeRequestError } from "@/lib/api-client";
@@ -62,6 +64,17 @@ const SUCCESS_COPY = {
 const submitLabel = (decision: DecisionOutcome | null): string =>
   decision === null ? "Escolha uma decisão" : SUBMIT_LABEL[decision];
 
+const feedbackError = (feedback: string, required: boolean): string | null => {
+  const length = feedback.trim().length;
+  if (length > MAX_FEEDBACK) {
+    return `Use no máximo ${MAX_FEEDBACK} caracteres.`;
+  }
+  if (required && length === 0) {
+    return "Escreva o motivo: o especialista usa isso para entender a decisão.";
+  }
+  return null;
+};
+
 const nextPendingId = async (currentId: string): Promise<string | null> => {
   try {
     const { items } = await apiGet<ActionsResponse>("/actions?status=pending");
@@ -93,6 +106,8 @@ const DecisionOption = ({ decisionMissing, onSelect, option, selected }: Decisio
     >
       <input
         aria-describedby={decisionMissing ? `${descriptionId} decision-error` : descriptionId}
+        // oxlint-disable-next-line jsx-a11y/role-supports-aria-props -- focusFirstInvalidField finds the first option through it, and browsers still expose it on radios
+        aria-invalid={decisionMissing}
         checked={selected}
         className="sr-only"
         id={inputId}
@@ -122,21 +137,13 @@ const DecisionOption = ({ decisionMissing, onSelect, option, selected }: Decisio
 
 type FeedbackFieldProps = {
   decision: DecisionOutcome | null;
-  missing: boolean;
+  error: string | null;
   onChange: (value: string) => void;
-  ref: Ref<HTMLTextAreaElement>;
   required: boolean;
   value: string;
 };
 
-const FeedbackField = ({
-  decision,
-  missing,
-  onChange,
-  ref,
-  required,
-  value,
-}: FeedbackFieldProps) => (
+const FeedbackField = ({ decision, error, onChange, required, value }: FeedbackFieldProps) => (
   <div className="flex flex-col gap-1.5">
     <label className="flex items-center justify-between" htmlFor="decision-feedback">
       <span className="text-sm font-medium text-foreground">
@@ -155,21 +162,19 @@ const FeedbackField = ({
       </span>
     </label>
     <Textarea
-      aria-describedby={missing ? "decision-feedback-error" : undefined}
-      aria-invalid={missing}
+      aria-describedby={error === null ? undefined : "decision-feedback-error"}
+      aria-invalid={error !== null}
       aria-required={required}
       id="decision-feedback"
-      maxLength={MAX_FEEDBACK}
       onChange={(e) => {
         onChange(e.target.value);
       }}
       placeholder={decision === null ? "Escolha uma decisão acima." : PLACEHOLDER[decision]}
-      ref={ref}
       value={value}
     />
-    {missing && (
+    {error !== null && (
       <p className="text-xs text-destructive" id="decision-feedback-error" role="alert">
-        Escreva o motivo: o especialista usa isso para entender a decisão.
+        {error}
       </p>
     )}
   </div>
@@ -177,15 +182,16 @@ const FeedbackField = ({
 
 const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormProps) => {
   const { push, refresh } = useRouter();
+  const formId = useId();
   const [decision, setDecision] = useState<DecisionOutcome | null>(defaultDecision);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const feedbackRef = useRef<HTMLTextAreaElement>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const feedbackRequired = decision !== null && decision !== "approved";
+  const invalidFeedback = feedbackError(feedback, feedbackRequired);
   const decisionMissing = submitAttempted && decision === null;
-  const feedbackMissing = submitAttempted && feedbackRequired && feedback.trim().length === 0;
   const options = allowChanges
     ? OPTIONS
     : OPTIONS.filter((opt) => opt.value !== "changes_requested");
@@ -195,17 +201,13 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
     if (submitting) {
       return;
     }
-    if (decision === null) {
-      setSubmitAttempted(true);
-      e.currentTarget.querySelector<HTMLInputElement>('input[name="decision"]')?.focus();
-      return;
-    }
-    if (feedbackRequired && feedback.trim().length === 0) {
-      setSubmitAttempted(true);
-      feedbackRef.current?.focus();
+    setSubmitAttempted(true);
+    if (decision === null || invalidFeedback !== null) {
+      focusFirstInvalidField(formId);
       return;
     }
     setSubmitting(true);
+    setSubmitError(null);
     try {
       await apiSend("POST", `/actions/${actionId}/decide`, {
         decision,
@@ -218,7 +220,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
       push(nextId === null ? "/approvals" : `/approvals/${nextId}`);
       refresh();
     } catch (error) {
-      toast.error(describeRequestError(error, "Não foi possível enviar a decisão."));
+      setSubmitError(describeRequestError(error, "Não foi possível enviar a decisão."));
     }
     setSubmitting(false);
   };
@@ -226,10 +228,12 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
   return (
     <ClientReadyForm
       className="flex flex-col gap-3.5"
+      id={formId}
       onSubmit={(e) => {
         void handleSubmit(e);
       }}
     >
+      <FormAlert message={submitError} />
       <fieldset className="flex flex-col gap-2">
         <legend className="sr-only">Decisão</legend>
         {options.map((opt) => (
@@ -238,6 +242,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
             key={opt.value}
             onSelect={() => {
               setDecision(opt.value);
+              setSubmitError(null);
             }}
             option={opt}
             selected={decision === opt.value}
@@ -257,9 +262,11 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
 
       <FeedbackField
         decision={decision}
-        missing={feedbackMissing}
-        onChange={setFeedback}
-        ref={feedbackRef}
+        error={submitAttempted ? invalidFeedback : null}
+        onChange={(value) => {
+          setFeedback(value);
+          setSubmitError(null);
+        }}
         required={feedbackRequired}
         value={feedback}
       />
