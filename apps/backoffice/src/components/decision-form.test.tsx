@@ -38,15 +38,18 @@ describe("DecisionForm", () => {
   it("asks for a decision on submit instead of disabling the button", async () => {
     renderForm();
     const submit = screen.getByRole("button", { name: "Escolha uma decisão" });
+    const group = screen.getByRole("radiogroup", { name: "Decisão" });
     const approve = screen.getByRole("radio", { name: /Aprovar/v });
     expect(submit).toBeEnabled();
     expect(screen.queryByText("Escolha uma decisão.")).not.toBeInTheDocument();
-    expect(approve).toHaveAttribute("aria-invalid", "false");
+    expect(group).toHaveAttribute("aria-invalid", "false");
+    expect(approve).not.toHaveAttribute("aria-invalid");
 
     fireEvent.click(submit);
 
     expect(screen.getByText("Escolha uma decisão.")).toBeInTheDocument();
-    expect(approve).toHaveAttribute("aria-invalid", "true");
+    expect(group).toHaveAttribute("aria-invalid", "true");
+    expect(group).toHaveAccessibleDescription("Escolha uma decisão.");
     await waitFor(() => {
       expect(approve).toHaveFocus();
     });
@@ -54,7 +57,7 @@ describe("DecisionForm", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: /Rejeitar/v }));
     expect(screen.queryByText("Escolha uma decisão.")).not.toBeInTheDocument();
-    expect(approve).toHaveAttribute("aria-invalid", "false");
+    expect(group).toHaveAttribute("aria-invalid", "false");
   });
 
   it("keeps the feedback error until the feedback is no longer blank", async () => {

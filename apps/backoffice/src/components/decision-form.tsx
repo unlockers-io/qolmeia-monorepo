@@ -85,13 +85,12 @@ const nextPendingId = async (currentId: string): Promise<string | null> => {
 };
 
 type DecisionOptionProps = {
-  decisionMissing: boolean;
   onSelect: () => void;
   option: (typeof OPTIONS)[number];
   selected: boolean;
 };
 
-const DecisionOption = ({ decisionMissing, onSelect, option, selected }: DecisionOptionProps) => {
+const DecisionOption = ({ onSelect, option, selected }: DecisionOptionProps) => {
   const inputId = `decision-${option.value}`;
   const descriptionId = `${inputId}-description`;
   return (
@@ -105,9 +104,7 @@ const DecisionOption = ({ decisionMissing, onSelect, option, selected }: Decisio
       htmlFor={inputId}
     >
       <input
-        aria-describedby={decisionMissing ? `${descriptionId} decision-error` : descriptionId}
-        // oxlint-disable-next-line jsx-a11y/role-supports-aria-props -- focusFirstInvalidField finds the first option through it, and browsers still expose it on radios
-        aria-invalid={decisionMissing}
+        aria-describedby={descriptionId}
         checked={selected}
         className="sr-only"
         id={inputId}
@@ -132,6 +129,51 @@ const DecisionOption = ({ decisionMissing, onSelect, option, selected }: Decisio
         </span>
       </span>
     </label>
+  );
+};
+
+type DecisionGroupProps = {
+  allowChanges: boolean;
+  decision: DecisionOutcome | null;
+  missing: boolean;
+  onSelect: (value: DecisionOutcome) => void;
+};
+
+const DecisionGroup = ({ allowChanges, decision, missing, onSelect }: DecisionGroupProps) => {
+  const options = allowChanges
+    ? OPTIONS
+    : OPTIONS.filter((opt) => opt.value !== "changes_requested");
+  return (
+    <>
+      <fieldset
+        aria-describedby={missing ? "decision-error" : undefined}
+        aria-invalid={missing}
+        className="flex flex-col gap-2"
+        role="radiogroup"
+      >
+        <legend className="sr-only">Decisão</legend>
+        {options.map((opt) => (
+          <DecisionOption
+            key={opt.value}
+            onSelect={() => {
+              onSelect(opt.value);
+            }}
+            option={opt}
+            selected={decision === opt.value}
+          />
+        ))}
+      </fieldset>
+      {missing && (
+        <p className="text-xs text-destructive" id="decision-error" role="alert">
+          Escolha uma decisão.
+        </p>
+      )}
+      {!allowChanges && (
+        <p className="text-xs text-muted-foreground">
+          Esta é a última revisão permitida: aprove ou rejeite esta versão.
+        </p>
+      )}
+    </>
   );
 };
 
@@ -192,9 +234,6 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
   const feedbackRequired = decision !== null && decision !== "approved";
   const invalidFeedback = feedbackError(feedback, feedbackRequired);
   const decisionMissing = submitAttempted && decision === null;
-  const options = allowChanges
-    ? OPTIONS
-    : OPTIONS.filter((opt) => opt.value !== "changes_requested");
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -234,31 +273,15 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
       }}
     >
       <FormAlert message={submitError} />
-      <fieldset className="flex flex-col gap-2">
-        <legend className="sr-only">Decisão</legend>
-        {options.map((opt) => (
-          <DecisionOption
-            decisionMissing={decisionMissing}
-            key={opt.value}
-            onSelect={() => {
-              setDecision(opt.value);
-              setSubmitError(null);
-            }}
-            option={opt}
-            selected={decision === opt.value}
-          />
-        ))}
-      </fieldset>
-      {decisionMissing && (
-        <p className="text-xs text-destructive" id="decision-error" role="alert">
-          Escolha uma decisão.
-        </p>
-      )}
-      {!allowChanges && (
-        <p className="text-xs text-muted-foreground">
-          Esta é a última revisão permitida: aprove ou rejeite esta versão.
-        </p>
-      )}
+      <DecisionGroup
+        allowChanges={allowChanges}
+        decision={decision}
+        missing={decisionMissing}
+        onSelect={(value) => {
+          setDecision(value);
+          setSubmitError(null);
+        }}
+      />
 
       <FeedbackField
         decision={decision}
