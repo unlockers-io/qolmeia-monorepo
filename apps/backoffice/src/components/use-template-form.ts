@@ -88,6 +88,29 @@ const parsePolicies = (raw: string): TemplateInput["defaultPolicies"] => {
   return policiesRecordSchema.parse(JSON.parse(trimmed));
 };
 
+const EMPTY_FORM_VALUES: Record<FieldKey, string> = {
+  defaultActionType: "worker_deliverable",
+  defaultPolicies: "{}",
+  description: "",
+  displayName: "",
+  model: "",
+  systemPrompt: "",
+  workerKind: "",
+};
+
+const toFormValues = (initial: Template | undefined): Record<FieldKey, string> =>
+  initial === undefined
+    ? EMPTY_FORM_VALUES
+    : {
+        defaultActionType: initial.defaultActionType,
+        defaultPolicies: JSON.stringify(initial.defaultPolicies, null, 2),
+        description: initial.description,
+        displayName: initial.displayName,
+        model: initial.model,
+        systemPrompt: initial.systemPrompt,
+        workerKind: initial.workerKind,
+      };
+
 const useTemplateForm = (initial: Template | undefined) => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -95,15 +118,7 @@ const useTemplateForm = (initial: Template | undefined) => {
 
   const isEdit = initial !== undefined;
 
-  const [values, setValues] = useState({
-    defaultActionType: initial?.defaultActionType ?? "worker_deliverable",
-    defaultPolicies: initial ? JSON.stringify(initial.defaultPolicies, null, 2) : "{}",
-    description: initial?.description ?? "",
-    displayName: initial?.displayName ?? "",
-    model: initial?.model ?? "",
-    systemPrompt: initial?.systemPrompt ?? "",
-    workerKind: initial?.workerKind ?? "",
-  });
+  const [values, setValues] = useState(() => toFormValues(initial));
   const [skillIds, setSkillIds] = useState<ReadonlyArray<string>>(initial?.skillIds ?? []);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const errors = submitAttempted ? fieldErrors(values) : {};

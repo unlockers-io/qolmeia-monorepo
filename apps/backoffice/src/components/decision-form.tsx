@@ -6,7 +6,7 @@ import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { cn } from "@repo/ui/lib/utils";
 import type { ActionsResponse, DecisionOutcome } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { type Ref, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { apiGet, apiSend, describeRequestError } from "@/lib/api-client";
@@ -71,6 +71,110 @@ const nextPendingId = async (currentId: string): Promise<string | null> => {
   }
 };
 
+type DecisionOptionProps = {
+  decisionMissing: boolean;
+  onSelect: () => void;
+  option: (typeof OPTIONS)[number];
+  selected: boolean;
+};
+
+const DecisionOption = ({ decisionMissing, onSelect, option, selected }: DecisionOptionProps) => {
+  const inputId = `decision-${option.value}`;
+  const descriptionId = `${inputId}-description`;
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition-colors has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+        selected
+          ? "border-primary bg-highlight-surface ring-1 ring-primary/40"
+          : "border-border hover:border-input hover:bg-accent",
+      )}
+      htmlFor={inputId}
+    >
+      <input
+        aria-describedby={decisionMissing ? `${descriptionId} decision-error` : descriptionId}
+        checked={selected}
+        className="sr-only"
+        id={inputId}
+        name="decision"
+        onChange={onSelect}
+        type="radio"
+        value={option.value}
+      />
+      <span
+        aria-hidden
+        className={cn(
+          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-(length:--decision-border-width) transition-colors",
+          selected ? "border-primary" : "border-input",
+        )}
+      >
+        {selected && <span className="size-2 rounded-full bg-primary" />}
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-sm font-semibold text-foreground">{option.label}</span>
+        <span className="text-xs leading-snug text-muted-foreground" id={descriptionId}>
+          {option.description}
+        </span>
+      </span>
+    </label>
+  );
+};
+
+type FeedbackFieldProps = {
+  decision: DecisionOutcome | null;
+  missing: boolean;
+  onChange: (value: string) => void;
+  ref: Ref<HTMLTextAreaElement>;
+  required: boolean;
+  value: string;
+};
+
+const FeedbackField = ({
+  decision,
+  missing,
+  onChange,
+  ref,
+  required,
+  value,
+}: FeedbackFieldProps) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="flex items-center justify-between" htmlFor="decision-feedback">
+      <span className="text-sm font-medium text-foreground">
+        Observações{" "}
+        <span
+          className={cn(
+            "ml-1 text-xs font-normal",
+            required ? "text-warning-surface-foreground" : "text-muted-foreground",
+          )}
+        >
+          {required ? "(obrigatório)" : "(opcional)"}
+        </span>
+      </span>
+      <span className="text-xs text-muted-foreground tabular-nums">
+        {value.length}/{MAX_FEEDBACK}
+      </span>
+    </label>
+    <Textarea
+      aria-describedby={missing ? "decision-feedback-error" : undefined}
+      aria-invalid={missing}
+      aria-required={required}
+      id="decision-feedback"
+      maxLength={MAX_FEEDBACK}
+      onChange={(e) => {
+        onChange(e.target.value);
+      }}
+      placeholder={decision === null ? "Escolha uma decisão acima." : PLACEHOLDER[decision]}
+      ref={ref}
+      value={value}
+    />
+    {missing && (
+      <p className="text-xs text-destructive" id="decision-feedback-error" role="alert">
+        Escreva o motivo: o especialista usa isso para entender a decisão.
+      </p>
+    )}
+  </div>
+);
+
 const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormProps) => {
   const { push, refresh } = useRouter();
   const [decision, setDecision] = useState<DecisionOutcome | null>(defaultDecision);
@@ -128,53 +232,17 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
     >
       <fieldset className="flex flex-col gap-2">
         <legend className="sr-only">Decisão</legend>
-        {options.map((opt) => {
-          const inputId = `decision-${opt.value}`;
-          const descriptionId = `${inputId}-description`;
-          const selected = decision === opt.value;
-          return (
-            <label
-              className={cn(
-                "flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition-colors has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
-                selected
-                  ? "border-primary bg-highlight-surface ring-1 ring-primary/40"
-                  : "border-border hover:border-input hover:bg-accent",
-              )}
-              htmlFor={inputId}
-              key={opt.value}
-            >
-              <input
-                aria-describedby={
-                  decisionMissing ? `${descriptionId} decision-error` : descriptionId
-                }
-                checked={selected}
-                className="sr-only"
-                id={inputId}
-                name="decision"
-                onChange={() => {
-                  setDecision(opt.value);
-                }}
-                type="radio"
-                value={opt.value}
-              />
-              <span
-                aria-hidden
-                className={cn(
-                  "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-(length:--decision-border-width) transition-colors",
-                  selected ? "border-primary" : "border-input",
-                )}
-              >
-                {selected && <span className="size-2 rounded-full bg-primary" />}
-              </span>
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-sm font-semibold text-foreground">{opt.label}</span>
-                <span className="text-xs leading-snug text-muted-foreground" id={descriptionId}>
-                  {opt.description}
-                </span>
-              </span>
-            </label>
-          );
-        })}
+        {options.map((opt) => (
+          <DecisionOption
+            decisionMissing={decisionMissing}
+            key={opt.value}
+            onSelect={() => {
+              setDecision(opt.value);
+            }}
+            option={opt}
+            selected={decision === opt.value}
+          />
+        ))}
       </fieldset>
       {decisionMissing && (
         <p className="text-xs text-destructive" id="decision-error" role="alert">
@@ -187,42 +255,14 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
         </p>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <label className="flex items-center justify-between" htmlFor="decision-feedback">
-          <span className="text-sm font-medium text-foreground">
-            Observações{" "}
-            <span
-              className={cn(
-                "ml-1 text-xs font-normal",
-                feedbackRequired ? "text-warning-surface-foreground" : "text-muted-foreground",
-              )}
-            >
-              {feedbackRequired ? "(obrigatório)" : "(opcional)"}
-            </span>
-          </span>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {feedback.length}/{MAX_FEEDBACK}
-          </span>
-        </label>
-        <Textarea
-          aria-describedby={feedbackMissing ? "decision-feedback-error" : undefined}
-          aria-invalid={feedbackMissing}
-          aria-required={feedbackRequired}
-          id="decision-feedback"
-          maxLength={MAX_FEEDBACK}
-          onChange={(e) => {
-            setFeedback(e.target.value);
-          }}
-          placeholder={decision === null ? "Escolha uma decisão acima." : PLACEHOLDER[decision]}
-          ref={feedbackRef}
-          value={feedback}
-        />
-        {feedbackMissing && (
-          <p className="text-xs text-destructive" id="decision-feedback-error" role="alert">
-            Escreva o motivo: o especialista usa isso para entender a decisão.
-          </p>
-        )}
-      </div>
+      <FeedbackField
+        decision={decision}
+        missing={feedbackMissing}
+        onChange={setFeedback}
+        ref={feedbackRef}
+        required={feedbackRequired}
+        value={feedback}
+      />
 
       <Button
         className="w-full"
