@@ -36,3 +36,13 @@ export const resetPasswordSchema = z
 export const inviteCustomerSchema = z.object({
   email: z.email("E-mail inválido"),
 });
+
+const maxLength = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, `Use no máximo ${max.toLocaleString("pt-BR")} caracteres.`);
+
+export const memberNameSchema = z.object({ displayName: maxLength(80) });
+
+export const promptSchema = z.object({ prompt: maxLength(20_000) });
