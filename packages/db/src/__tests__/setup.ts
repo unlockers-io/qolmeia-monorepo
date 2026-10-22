@@ -6,6 +6,7 @@ const result = dotenv.config({
 });
 
 const parsedDatabaseUrl = result.parsed?.DATABASE_URL;
+
 if (parsedDatabaseUrl !== undefined && parsedDatabaseUrl !== "") {
   vi.stubEnv("DATABASE_URL", parsedDatabaseUrl);
 }

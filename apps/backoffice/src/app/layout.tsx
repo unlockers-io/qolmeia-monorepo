@@ -10,11 +10,13 @@ import { Providers } from "@/components/providers";
 
 const hanken = Hanken_Grotesk({ display: "swap", subsets: ["latin"], variable: "--font-hanken" });
 const sora = Sora({ display: "swap", subsets: ["latin"], variable: "--font-sora" });
+
 const jetbrainsMono = JetBrains_Mono({
   display: "swap",
   subsets: ["latin"],
   variable: "--font-jetbrains",
 });
+
 const metadataBase =
   URL.parse(process.env.BACKOFFICE_URL ?? "") ?? new URL("https://admin.qolmeia.com");
 

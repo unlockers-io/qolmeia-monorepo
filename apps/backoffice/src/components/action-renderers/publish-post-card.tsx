@@ -44,10 +44,13 @@ const draftSchema = z.record(z.string(), z.unknown());
 
 const readDraft = (proposed: Action["proposed"]): Draft | null => {
   const parsed = draftSchema.safeParse(proposed.draft);
+
   if (!parsed.success) {
     return null;
   }
+
   const draft = parsed.data;
+
   return {
     body: typeof draft.body === "string" ? draft.body : undefined,
     callToAction: typeof draft.callToAction === "string" ? draft.callToAction : undefined,
@@ -73,14 +76,17 @@ type PublishPostCardProps = {
 
 const PublishPostCard = ({ agent, proposed }: PublishPostCardProps) => {
   const draft = readDraft(proposed);
+
   if (!draft) {
     return <ProposalCard proposed={proposed} />;
   }
+
   const images = summaryImages(proposed);
 
   const platformLabel = hasText(draft.platform)
     ? (platformCopy.get(draft.platform) ?? draft.platform)
     : "Rede social";
+
   const platformAbbr = hasText(draft.platform)
     ? (platformAbbrByName.get(draft.platform) ?? "•")
     : "•";

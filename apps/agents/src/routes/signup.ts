@@ -10,6 +10,7 @@ signupRoutes.use("*", dbPerRequest);
 
 signupRoutes.get("/", async (c) => {
   const body: SignupState = { open: isSignupOpen(await countOperators(c.var.db)) };
+
   return c.json(body);
 });
 

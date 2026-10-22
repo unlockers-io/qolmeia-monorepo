@@ -33,6 +33,7 @@ const statusOf = async (cookie: string, route: CustomerRoute): Promise<number> =
     body: route.body,
     method: route.method,
   });
+
   return res.status;
 };
 

@@ -11,6 +11,7 @@ import { SITE_URL } from "@/lib/urls";
 
 const hanken = Hanken_Grotesk({ display: "swap", subsets: ["latin"], variable: "--font-hanken" });
 const sora = Sora({ display: "swap", subsets: ["latin"], variable: "--font-sora" });
+
 const jetbrainsMono = JetBrains_Mono({
   display: "swap",
   subsets: ["latin"],

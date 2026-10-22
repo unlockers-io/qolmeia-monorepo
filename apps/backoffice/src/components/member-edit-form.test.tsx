@@ -32,6 +32,7 @@ describe("member prompt capability", () => {
         templateName: null,
         workerKind: null,
       };
+
       render(<MemberEditForm companyId="company" initialMember={member} memberId="agent" />);
       expect(screen.queryByRole("region", { name: "Prompt do agente" })).not.toBeInTheDocument();
       expect(screen.getByLabelText("Nome de exibição")).toBeInTheDocument();
@@ -47,6 +48,7 @@ describe("member prompt capability", () => {
       templateName: "Designer",
       workerKind: "designer",
     };
+
     render(<MemberEditForm companyId="company" initialMember={member} memberId="agent" />);
     expect(screen.getByRole("region", { name: "Prompt do agente" })).toBeInTheDocument();
   });

@@ -89,6 +89,7 @@ describe("backoffice listing endpoints", () => {
   it("lists tickets across all tenants (camelCase shape + company label)", async () => {
     cookie = await signInAs(meStaff);
     const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/tickets");
+
     const body = await res.json<{
       items: Array<{
         agentInstanceId: string;
@@ -100,6 +101,7 @@ describe("backoffice listing endpoints", () => {
         title: string;
       }>;
     }>();
+
     const ticket = body.items.find((t) => t.id === "tkt-bo-test");
     expect(ticket).toBeTruthy();
     expect(ticket?.agentInstanceId).toBe("agent-bo-test");
@@ -115,13 +117,16 @@ describe("backoffice listing endpoints", () => {
   it("lists pending actions sorted by age (oldest first)", async () => {
     await propose(COMPANY_ID, "tkt-bo-test", "x");
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       "https://agents.test/api/backoffice/actions?status=pending&sort=age",
     );
+
     const body = await res.json<{
       items: Array<{ actionType: string; ageSeconds: number }>;
     }>();
+
     expect(body.items.length).toBeGreaterThan(0);
     expect(body.items[0]).toHaveProperty("ageSeconds");
     expect(body.items[0]?.actionType).toBe("worker_deliverable");
@@ -131,6 +136,7 @@ describe("backoffice listing endpoints", () => {
     await propose(COMPANY_ID, "tkt-bo-test", "y");
     cookie = await signInAs(meStaff);
     const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/actions");
+
     const body = await res.json<{
       items: Array<{
         actionType: string;
@@ -140,6 +146,7 @@ describe("backoffice listing endpoints", () => {
         ticketId: string;
       }>;
     }>();
+
     expect(body.items.length).toBeGreaterThan(0);
     const item = body.items[0];
     expect(item?.actionType).toBeTruthy();
@@ -154,14 +161,18 @@ describe("backoffice listing endpoints", () => {
 describe("backoffice list routes span tenants and honor the ?companyId= filter", () => {
   it("GET /tickets?companyId= narrows to that company; unfiltered spans all", async () => {
     cookie = await signInAs(meStaff);
+
     const filtered = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/tickets?companyId=${OTHER_COMPANY_ID}`,
     );
+
     expect(filtered.status).toBe(200);
+
     const filteredBody = await filtered.json<{
       items: Array<{ companyId: string; id: string }>;
     }>();
+
     expect(filteredBody.items.find((t) => t.id === "tkt-bo-other")).toBeTruthy();
     expect(filteredBody.items.every((t) => t.companyId === OTHER_COMPANY_ID)).toBe(true);
 
@@ -175,10 +186,12 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
     await propose(COMPANY_ID, "tkt-bo-test", "mine");
     await propose(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
     cookie = await signInAs(meStaff);
+
     const filtered = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/actions?companyId=${OTHER_COMPANY_ID}`,
     );
+
     expect(filtered.status).toBe(200);
     const filteredBody = await filtered.json<{ items: Array<{ companyId: string }> }>();
     expect(filteredBody.items.length).toBeGreaterThan(0);
@@ -194,10 +207,12 @@ describe("backoffice list routes span tenants and honor the ?companyId= filter",
     await logExecuted(COMPANY_ID, "tkt-bo-test", "mine");
     await logExecuted(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
     cookie = await signInAs(meStaff);
+
     const filtered = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/activity?companyId=${OTHER_COMPANY_ID}`,
     );
+
     expect(filtered.status).toBe(200);
     const filteredBody = await filtered.json<{ items: Array<{ companyId: string }> }>();
     expect(filteredBody.items.length).toBeGreaterThan(0);
@@ -230,6 +245,7 @@ describe("backoffice list query-param hardening", () => {
       cookie,
       "https://agents.test/api/backoffice/tickets?limit=abc",
     );
+
     expect(nonNumeric.status).toBe(200);
     const nonNumericBody = await nonNumeric.json<{ items: Array<{ id: string }> }>();
     expect(nonNumericBody.items.find((t) => t.id === "tkt-bo-test")).toBeTruthy();
@@ -238,6 +254,7 @@ describe("backoffice list query-param hardening", () => {
       cookie,
       "https://agents.test/api/backoffice/tickets?limit=999999",
     );
+
     expect(oversized.status).toBe(200);
     const oversizedBody = await oversized.json<{ items: Array<{ id: string }> }>();
     expect(oversizedBody.items.find((t) => t.id === "tkt-bo-test")).toBeTruthy();
@@ -251,6 +268,7 @@ describe("backoffice list query-param hardening", () => {
       cookie,
       "https://agents.test/api/backoffice/activity?limit=abc",
     );
+
     expect(badLimit.status).toBe(200);
     const badLimitBody = await badLimit.json<{ items: Array<{ summary: string }> }>();
     expect(badLimitBody.items.some((a) => a.summary === "hardening")).toBe(true);
@@ -259,6 +277,7 @@ describe("backoffice list query-param hardening", () => {
       cookie,
       "https://agents.test/api/backoffice/activity?since=abc&before=xyz",
     );
+
     expect(badWindow.status).toBe(200);
     const badWindowBody = await badWindow.json<{ items: Array<{ summary: string }> }>();
     expect(badWindowBody.items.some((a) => a.summary === "hardening")).toBe(true);
@@ -268,6 +287,7 @@ describe("backoffice list query-param hardening", () => {
 describe("operator override decide", () => {
   it("returns 404 for an unknown action id", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       "https://agents.test/api/backoffice/actions/does-not-exist/decide",
@@ -277,11 +297,13 @@ describe("operator override decide", () => {
         method: "POST",
       },
     );
+
     expect(res.status).toBe(404);
   });
 
   it("returns 400 for an invalid body", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       "https://agents.test/api/backoffice/actions/whatever/decide",
@@ -291,6 +313,7 @@ describe("operator override decide", () => {
         method: "POST",
       },
     );
+
     expect(res.status).toBe(400);
   });
 });
@@ -333,6 +356,7 @@ describe("POST /api/backoffice/companies", () => {
         }),
       ]),
     );
+
     expect(organization).toMatchObject({ name: "Padaria Nova", slug: "padaria-nova" });
     expect(membership).toBeNull();
     expect(stored).toMatchObject({ name: "Padaria Nova", slug: "padaria-nova" });

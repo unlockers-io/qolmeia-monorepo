@@ -37,9 +37,11 @@ const captureFetch = (respond: (requestCount: number) => Response) => {
         body: bodySchema.parse(await request.json()),
         url: request.url,
       });
+
       return respond(requests.length);
     }),
   );
+
   return requests;
 };
 
@@ -48,6 +50,7 @@ const conversationModelId = CONVERSATION_MODEL.replace(/^openrouter\//v, "");
 const conversationModels = () => {
   const models = createModels();
   models.setProvider(conversationProvider(env));
+
   return models;
 };
 
@@ -71,6 +74,7 @@ describe("conversation provider (Flue)", () => {
   it("keeps the bundled OpenRouter models and never duplicates the conversation model", () => {
     const models = conversationProvider(env).getModels();
     expect(models.filter((model) => model.id === conversationModelId)).toHaveLength(1);
+
     for (const model of openrouterProvider().getModels()) {
       expect(models.some((candidate) => candidate.id === model.id)).toBe(true);
     }
@@ -87,16 +91,20 @@ describe("conversation provider (Flue)", () => {
         },
       ]),
     );
+
     const models = conversationModels();
     const model = models.getModel("openrouter", conversationModelId);
+
     if (!model) {
       throw new Error("conversation model not registered");
     }
+
     const reply = await models.completeSimple(
       model,
       { messages: [{ content: "Olá", role: "user", timestamp: 0 }] },
       { reasoning: "low" },
     );
+
     expect(reply.content).toEqual([expect.objectContaining({ text: "Oi", type: "text" })]);
     expect(requests).toEqual([
       {
@@ -149,17 +157,21 @@ describe("specialist language model (AI SDK)", () => {
           usage: { input_tokens: 10, output_tokens: 5, total_tokens: 15 },
         }),
       );
+
       const lookup = vi.fn(({ topic }: { topic: string }) => `Contexto: ${topic}`);
       const inputSchema = z.object({ topic: z.string() });
+
       const result = await generateText({
         model: languageModel(env, model),
         prompt: "Consulte a marca.",
         stopWhen: isStepCount(3),
         tools: { lookup: tool({ execute: lookup, inputSchema }) },
       });
+
       expect(result.text).toBe("Feito.");
       expect(lookup).toHaveBeenCalledOnce();
       expect(requests).toHaveLength(2);
+
       for (const request of requests) {
         expect(request.url).toBe(`${GATEWAY_URL}/responses`);
         expect(request.authorization).toBe(`Bearer ${env.OPENROUTER_API_KEY}`);
@@ -168,6 +180,7 @@ describe("specialist language model (AI SDK)", () => {
         expect(request.body.include).toContain("reasoning.encrypted_content");
         expect(request.body.temperature).toBeUndefined();
       }
+
       expect(requests[1]?.body.input).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ call_id: "call_1", name: "lookup", type: "function_call" }),
@@ -194,6 +207,7 @@ describe("specialist language model (AI SDK)", () => {
         usage: { completion_tokens: 1, prompt_tokens: 1, total_tokens: 2 },
       }),
     );
+
     await generateText({ model: languageModel(env, "custom/model"), prompt: "Oi" });
     expect(requests).toEqual([
       {
@@ -212,6 +226,7 @@ describe("image generation", () => {
         choices: [{ message: { images: [{ image_url: { url: "data:image/png;base64,AA==" } }] } }],
       }),
     );
+
     await expect(generateImage(env, "uma onça")).resolves.toBe("data:image/png;base64,AA==");
     expect(requests).toEqual([
       {

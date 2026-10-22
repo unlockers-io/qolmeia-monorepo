@@ -16,6 +16,7 @@ const STATUS_LABEL = {
 
 const fetchTeam = async (): Promise<Array<TeamMemberView>> => {
   const body = await apiGet<{ members: Array<TeamMemberView> }>("/api/me/team");
+
   return body.members;
 };
 
@@ -50,6 +51,7 @@ const closeSharedSource = (): void => {
     clearTimeout(sharedTeamEvents.reconnectTimer);
     sharedTeamEvents.reconnectTimer = null;
   }
+
   if (sharedTeamEvents.source) {
     sharedTeamEvents.source.close();
     sharedTeamEvents.source = null;
@@ -60,6 +62,7 @@ const openSharedSource = (): void => {
   if (typeof EventSource === "undefined" || sharedTeamEvents.source) {
     return;
   }
+
   const source = new EventSource("/api/me/team/events", { withCredentials: true });
   sharedTeamEvents.source = source;
   source.addEventListener("open", () => {
@@ -69,12 +72,15 @@ const openSharedSource = (): void => {
   source.addEventListener("team:status", notifyTeamEventListeners);
   source.addEventListener("error", () => {
     source.close();
+
     if (sharedTeamEvents.source === source) {
       sharedTeamEvents.source = null;
     }
+
     if (sharedTeamEvents.listeners.size === 0 || sharedTeamEvents.reconnectTimer !== null) {
       return;
     }
+
     const delay = reconnectDelay(sharedTeamEvents.failedAttempts);
     sharedTeamEvents.failedAttempts += 1;
     sharedTeamEvents.reconnectTimer = setTimeout(() => {
@@ -88,10 +94,13 @@ const subscribeTeamEvents = (onEvent: () => void): (() => void) | null => {
   if (typeof EventSource === "undefined") {
     return null;
   }
+
   sharedTeamEvents.listeners.add(onEvent);
   openSharedSource();
+
   return () => {
     sharedTeamEvents.listeners.delete(onEvent);
+
     if (sharedTeamEvents.listeners.size === 0) {
       closeSharedSource();
     }
@@ -100,6 +109,7 @@ const subscribeTeamEvents = (onEvent: () => void): (() => void) | null => {
 
 const fetchCatalogue = async (): Promise<Array<HireableTemplate>> => {
   const body = await apiGet<{ templates: Array<HireableTemplate> }>("/api/me/catalogue");
+
   return body.templates;
 };
 
@@ -108,6 +118,7 @@ const hireMember = async (input: {
   templateId: string;
 }): Promise<TeamMemberView> => {
   const body = await apiSend<{ member: TeamMemberView }>("POST", "/api/me/team/hire", input);
+
   return body.member;
 };
 
@@ -120,11 +131,13 @@ const patchMember = async (
     `/api/me/team/members/${id}`,
     patch,
   );
+
   return body.member;
 };
 
 const fetchMemberDetail = async (id: string): Promise<TeamMemberDetailView> => {
   const body = await apiGet<{ member: TeamMemberDetailView }>(`/api/me/team/members/${id}`);
+
   return body.member;
 };
 
@@ -133,6 +146,7 @@ const setPaused = async (id: string, paused: boolean): Promise<TeamMemberView> =
     "POST",
     `/api/me/team/members/${id}/${paused ? "pause" : "resume"}`,
   );
+
   return body.member;
 };
 
@@ -146,6 +160,7 @@ export {
   STATUS_LABEL,
   subscribeTeamEvents,
 };
+
 export type {
   AgentDisplayStatus,
   HireableTemplate,

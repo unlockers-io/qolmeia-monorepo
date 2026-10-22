@@ -22,9 +22,11 @@ let team: typeof TeamModule;
 const respondWith = (responses: Record<string, Response>): void => {
   fetchMock.mockImplementation((url: string) => {
     const response = responses[url];
+
     if (response === undefined) {
       throw new Error(`unexpected fetch: ${url}`);
     }
+
     return Promise.resolve(response);
   });
 };
@@ -32,6 +34,7 @@ const respondWith = (responses: Record<string, Response>): void => {
 const lastCall = () => {
   const [url, init] = fetchMock.mock.lastCall ?? [];
   const headers = new Headers(init?.headers);
+
   return {
     body: init?.body,
     contentType: headers.get("content-type"),

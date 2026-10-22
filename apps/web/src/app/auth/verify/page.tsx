@@ -23,6 +23,7 @@ type VerifyPageProps = {
 
 const VerifyContent = async ({ searchParams }: VerifyPageProps) => {
   const { error, from } = await searchParams;
+
   if (error === undefined || error === "") {
     redirect(safeRedirectPath(from));
   }

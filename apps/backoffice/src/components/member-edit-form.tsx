@@ -53,17 +53,20 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
     status?: "active" | "paused";
   }) => {
     setBusy(true);
+
     try {
       const data = await apiSend<{ member: TeamMemberDetailView }>(
         "PATCH",
         `/teams/${companyId}/members/${memberId}`,
         body,
       );
+
       setMember(data.member);
     } catch (error) {
       setBusy(false);
       throw error;
     }
+
     setBusy(false);
   };
 
@@ -81,6 +84,7 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
     const next = member.status === "paused" ? "active" : "paused";
     startPauseToggle(async () => {
       applyOptimisticStatus(next === "paused" ? "paused" : "available");
+
       try {
         await patch({ status: next });
         toast.success(next === "paused" ? "Agente pausado." : "Agente retomado.");

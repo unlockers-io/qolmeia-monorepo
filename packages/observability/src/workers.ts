@@ -14,4 +14,5 @@ const initWorkersLogger = (opts: { service: string }): void => {
 };
 
 export { initWorkersLogger };
+
 export { log } from "evlog";

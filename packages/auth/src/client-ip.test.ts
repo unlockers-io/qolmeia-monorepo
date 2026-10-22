@@ -15,6 +15,7 @@ describe("withClientIp", () => {
       clientIp: "203.0.113.7",
       secret: SECRET,
     });
+
     const resolved = withClientIp(new Request("https://agents.test/", { headers }), SECRET);
     expect(clientIpOf(resolved)).toBe("203.0.113.7");
   });
@@ -24,6 +25,7 @@ describe("withClientIp", () => {
       request({ "cf-connecting-ip": "198.51.100.9", [CLIENT_IP_HEADER]: "203.0.113.7" }),
       SECRET,
     );
+
     expect(clientIpOf(resolved)).toBe("198.51.100.9");
   });
 
@@ -36,6 +38,7 @@ describe("withClientIp", () => {
       }),
       SECRET,
     );
+
     expect(clientIpOf(resolved)).toBe("198.51.100.9");
   });
 
@@ -48,6 +51,7 @@ describe("withClientIp", () => {
       }),
       undefined,
     );
+
     expect(clientIpOf(resolved)).toBe("198.51.100.9");
   });
 
@@ -67,6 +71,7 @@ describe("withClientIp", () => {
       body: JSON.stringify({ email: "a@b.c" }),
       method: "POST",
     });
+
     expect(await withClientIp(original, SECRET).json()).toEqual({ email: "a@b.c" });
   });
 });

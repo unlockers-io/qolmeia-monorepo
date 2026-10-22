@@ -26,6 +26,7 @@ const recordActivity = async (db: Db, entry: ActivityRecord): Promise<void> => {
 };
 
 const ACTIVITY_CATEGORIES = ["ACTION", "TICKET", "WORKER", "TEAM", "MEMBER", "CUSTOMER"] as const;
+
 type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
 
 type ListActivityOptions = {
@@ -53,6 +54,7 @@ const listActivity = async (
       type: options.category === undefined ? undefined : { startsWith: `${options.category}_` },
     },
   });
+
   return rows.map((row) => ({
     actorId: row.actorId,
     companyId: row.companyId,
@@ -68,4 +70,5 @@ const listActivity = async (
 };
 
 export { ACTIVITY_CATEGORIES, listActivity, recordActivity };
+
 export type { ActivityRecord };

@@ -22,6 +22,7 @@ test.describe("Password reset", () => {
     const signUp = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
       data: { email, name: "Reset Me", password: originalPassword, username },
     });
+
     expect([200, 201]).toContain(signUp.status());
     const verify = await verification.forVerifyEmail(email);
     await request.get(verify.url, { failOnStatusCode: false, maxRedirects: 0 });
@@ -31,6 +32,7 @@ test.describe("Password reset", () => {
     const reset = await request.post(`${backofficeUrl}/api/auth/request-password-reset`, {
       data: { email, redirectTo: "/reset-password" },
     });
+
     expect(reset.status()).toBe(200);
 
     const mail = await waitForEmail({
@@ -38,6 +40,7 @@ test.describe("Password reset", () => {
       subject: /redefina sua senha/iu,
       to: email,
     });
+
     expect(mail.last_event).not.toBe("bounced");
 
     const resetUrl = extractLink(mail, /\/api\/auth\/reset-password\/[^"?]+\?callbackURL=/u);
@@ -48,17 +51,20 @@ test.describe("Password reset", () => {
       `${backofficeUrl}/api/auth/reset-password?token=${encodeURIComponent(token)}`,
       { data: { newPassword } },
     );
+
     expect(resetResponse.status()).toBe(200);
 
     const oldSignIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email, password: originalPassword },
       failOnStatusCode: false,
     });
+
     expect(oldSignIn.status()).not.toBe(200);
 
     const newSignIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email, password: newPassword },
     });
+
     expect(newSignIn.status()).toBe(200);
   });
 });

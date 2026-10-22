@@ -18,6 +18,7 @@ const post = (cookie: string, path: string, body: Record<string, string>) =>
 
 const statusOf = async (pending: Promise<Response>): Promise<number> => {
   const res = await pending;
+
   return res.status;
 };
 
@@ -30,6 +31,7 @@ const accept = (cookie: string, invitationId: string) =>
 const invitedId = async (pending: Promise<Response>): Promise<string> => {
   const res = await pending;
   const body = await res.json<CustomerInvitationResponse>();
+
   return body.invitation.id;
 };
 
@@ -48,6 +50,7 @@ beforeEach(async () => {
     await db((client) => client.organization.create({ data: { id, name, slug: id } }));
     await seedCompany({ id, name, status: "onboarding" });
   }
+
   operator = await signIn([{ orgId: QOLMEIA_ORG_ID, role: "OWNER" }], "operator-1");
 });
 
@@ -59,12 +62,14 @@ describe("POST /api/backoffice/companies/:companyId/invitations", () => {
     const { invitation } = await res.json<CustomerInvitationResponse>();
     expect(invitation.email).toBe("cliente@example.com");
     expect(invitation.expiresAt).toBeGreaterThan(Date.now());
+
     const [stored, activity] = await db((client) =>
       Promise.all([
         client.invitation.findUnique({ where: { id: invitation.id } }),
         client.activityLog.findFirst({ where: { type: "CUSTOMER_INVITED" } }),
       ]),
     );
+
     expect(stored).toMatchObject({
       email: "cliente@example.com",
       inviterId: "operator-1",
@@ -101,6 +106,7 @@ describe("POST /api/backoffice/companies/:companyId/invitations", () => {
     const rows = await db((client) =>
       client.invitation.findMany({ select: { id: true, status: true }, where: {} }),
     );
+
     expect(rows).toEqual(
       expect.arrayContaining([
         { id: first, status: "canceled" },
@@ -123,6 +129,7 @@ describe("accepting an invitation", () => {
         where: { userId_orgId: { orgId: COMPANY_ID, userId: "invited" } },
       }),
     );
+
     expect(membership?.role).toBe("CUSTOMER");
     const meRes = await fetchWithCookie(invited, "https://agents.test/api/me");
     const me = await meRes.json<MeResponse>();
@@ -151,6 +158,7 @@ describe("accepting an invitation", () => {
 describe("the organization plugin's own endpoints", () => {
   it("does not let a Customer invite members", async () => {
     const customer = await signInAs({ orgId: COMPANY_ID, role: "CUSTOMER" });
+
     const res = await post(customer, "/api/auth/organization/invite-member", {
       email: "friend@example.com",
       organizationId: COMPANY_ID,
@@ -163,6 +171,7 @@ describe("the organization plugin's own endpoints", () => {
 
   it("does not let a Customer create an organization", async () => {
     const customer = await signInAs({ orgId: COMPANY_ID, role: "CUSTOMER" });
+
     const res = await post(customer, "/api/auth/organization/create", {
       name: "Nova",
       slug: "nova",

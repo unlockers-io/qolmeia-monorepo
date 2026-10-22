@@ -14,6 +14,7 @@ const createOrganization = (
       data: { name: input.name, slug: input.slug },
       select: { id: true, name: true, slug: true },
     });
+
     await tx.company.create({ data: org });
     await tx.agentInstance.createMany({
       data: [
@@ -32,6 +33,7 @@ const createOrganization = (
       ],
     });
     await entitleToActiveTemplates(tx, org.id);
+
     return org;
   });
 

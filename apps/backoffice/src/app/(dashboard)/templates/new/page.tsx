@@ -12,6 +12,7 @@ export const instant = true;
 
 const NewTemplateContent = async () => {
   await requireOperator();
+
   return <TemplateForm />;
 };
 

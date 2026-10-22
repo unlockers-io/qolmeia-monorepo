@@ -9,6 +9,7 @@ const senderAddressSchema = z.string().refine(
   (val) => {
     const wrapped = /^.+<(?<address>[^<>\s]+)>$/v.exec(val);
     const email = wrapped?.groups?.address ?? val;
+
     return z.email().safeParse(email).success;
   },
   { message: "Must be a valid email or 'Display Name <email>' format" },
@@ -57,10 +58,12 @@ type PreparedEmailPayload = {
 };
 
 type ResendClient = ReturnType<typeof createResendClient>;
+
 type EmailClient = {
   batch: Pick<ResendClient["batch"], "send">;
   emails: Pick<ResendClient["emails"], "send">;
 };
+
 type EmailClientFactory = (apiKey: string) => EmailClient;
 
 const sendEmail = async (
@@ -136,6 +139,7 @@ const sendBatchEmails = async (
     const settledBatchData = await Promise.allSettled(
       emails.map(async ({ template, ...config }) => {
         const validatedConfig = emailConfigSchema.parse(config);
+
         const [html, text] = await Promise.all([
           render(template),
           render(template, { plainText: true }),
@@ -165,6 +169,7 @@ const sendBatchEmails = async (
     settledBatchData.forEach((result, index) => {
       if (result.status === "fulfilled") {
         batchData.push(result.value);
+
         return;
       }
 
@@ -214,4 +219,5 @@ const previewEmail = async (template: ReactElement) => {
 };
 
 export { sendEmail, sendBatchEmails, previewEmail };
+
 export type { EmailClient, EmailClientFactory };

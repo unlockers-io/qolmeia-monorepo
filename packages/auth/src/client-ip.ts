@@ -10,11 +10,13 @@ const forwardClientIp = (headers: Headers, { clientIp, secret }: ForwardedClient
   const forwarded = new Headers(headers);
   forwarded.set(CLIENT_IP_HEADER, clientIp);
   forwarded.set(PROXY_SECRET_HEADER, secret);
+
   return forwarded;
 };
 
 const isProxied = (headers: Headers, secret: string | undefined): boolean => {
   const presented = headers.get(PROXY_SECRET_HEADER);
+
   return (
     secret !== undefined &&
     secret !== "" &&
@@ -29,15 +31,19 @@ const isProxied = (headers: Headers, secret: string | undefined): boolean => {
  */
 const withClientIp = (request: Request, secret: string | undefined): Request => {
   const headers = new Headers(request.headers);
+
   const clientIp = isProxied(headers, secret)
     ? headers.get(CLIENT_IP_HEADER)
     : headers.get(EDGE_CLIENT_IP_HEADER);
+
   headers.delete(PROXY_SECRET_HEADER);
+
   if (clientIp === null || clientIp === "") {
     headers.delete(CLIENT_IP_HEADER);
   } else {
     headers.set(CLIENT_IP_HEADER, clientIp);
   }
+
   return new Request(request, { headers });
 };
 

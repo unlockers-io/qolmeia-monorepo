@@ -5,6 +5,7 @@ import { agentsServerUrl } from "./agents-url";
 
 const readCookieHeader = async (): Promise<string> => {
   const headersList = await headers();
+
   return headersList.get("cookie") ?? "";
 };
 

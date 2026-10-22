@@ -10,11 +10,13 @@ import type { TestInfo } from "@playwright/test";
 const makeTestEmail = (info: TestInfo): string => {
   const slug = info.title.replaceAll(/\W+/gu, "-").toLowerCase().slice(0, 28);
   const run = (process.env.GITHUB_RUN_ID ?? crypto.randomBytes(4).toString("hex")).slice(-8);
+
   return `delivered+${run}-${info.retry}-${slug}@resend.dev`;
 };
 
 const makeTestUsername = (email: string): string => {
   const hash = crypto.createHash("sha256").update(email).digest("hex").slice(0, 16);
+
   return `e2e_${hash}`;
 };
 

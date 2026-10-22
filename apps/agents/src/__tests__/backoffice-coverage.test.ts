@@ -62,7 +62,9 @@ const pendingCompanyIds = async (query = ""): Promise<Array<string>> => {
     cookie,
     `https://agents.test/api/backoffice/actions?status=pending${query}`,
   );
+
   const body = await res.json<{ items: Array<{ companyId: string }> }>();
+
   return body.items.map((a) => a.companyId);
 };
 
@@ -88,10 +90,12 @@ describe("operator coverage DB", () => {
 describe("GET/PUT /api/backoffice/assignments/me", () => {
   it("returns empty coverage + option lists, then reflects a PUT", async () => {
     cookie = await signInAs(meStaff);
+
     const before = await fetchWithCookie(
       cookie,
       "https://agents.test/api/backoffice/assignments/me",
     );
+
     const beforeBody = await before.json<{
       assigned: { companies: Array<string>; disciplines: Array<string> };
       options: {
@@ -100,6 +104,7 @@ describe("GET/PUT /api/backoffice/assignments/me", () => {
         disciplines: Array<string>;
       };
     }>();
+
     expect(beforeBody.assigned.companies).toEqual([]);
     expect(beforeBody.options.companies.some((co) => co.id === COMPANY_A)).toBe(true);
     expect(beforeBody.options.disciplines).toContain("designer");
@@ -110,11 +115,14 @@ describe("GET/PUT /api/backoffice/assignments/me", () => {
       headers: { "content-type": "application/json" },
       method: "PUT",
     });
+
     expect(put.status).toBe(200);
+
     const after = await fetchWithCookie(
       cookie,
       "https://agents.test/api/backoffice/assignments/me",
     );
+
     const afterBody = await after.json<{ assigned: { companies: Array<string> } }>();
     expect(afterBody.assigned.companies).toEqual([COMPANY_A]);
   });

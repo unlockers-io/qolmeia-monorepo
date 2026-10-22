@@ -27,9 +27,11 @@ const rosterStatus = (query: { isError: boolean; isPending: boolean }): RosterSt
   if (query.isPending) {
     return "loading";
   }
+
   if (query.isError) {
     return "error";
   }
+
   return "ready";
 };
 
@@ -39,6 +41,7 @@ const createUseTeamRoster = ({ fetchRoster, subscribeToTeamEvents }: TeamRosterD
     initialData?: Array<TeamMemberView>,
   ): UseTeamRosterResult => {
     const queryClient = useQueryClient();
+
     const {
       data,
       error,
@@ -60,6 +63,7 @@ const createUseTeamRoster = ({ fetchRoster, subscribeToTeamEvents }: TeamRosterD
       const unsubscribe = subscribeToTeamEvents(() => {
         void queryClient.invalidateQueries({ queryKey: teamQueryKey(companyId) });
       });
+
       return () => {
         unsubscribe?.();
       };
@@ -86,4 +90,5 @@ const useTeamRoster = createUseTeamRoster({
 });
 
 export { createUseTeamRoster, teamQueryKey, useTeamRoster };
+
 export type { TeamRosterDependencies };

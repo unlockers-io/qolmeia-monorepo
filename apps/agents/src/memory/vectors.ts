@@ -5,6 +5,7 @@ const EMBEDDING_DIMENSIONS = 1024;
 const MEMORY_INDEX = "qolmeia-memory-qwen3";
 
 const vectorSchema = z.array(z.number()).length(EMBEDDING_DIMENSIONS);
+
 const embeddingsSchema = z
   .object({ data: z.tuple([vectorSchema]).rest(vectorSchema) })
   .transform(({ data }) => data);
@@ -27,4 +28,5 @@ const toVector = (fact: IndexedFact, values: ReadonlyArray<number>) => ({
 });
 
 export { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, embeddingsSchema, MEMORY_INDEX, toVector };
+
 export type { IndexedFact, VectorIndex, VectorMatch, VectorQuery };

@@ -45,6 +45,7 @@ const PlainLink = ({ children, className, href }: AnchorOverrideProps) => (
 );
 
 type StreamdownComponents = NonNullable<ComponentProps<typeof Streamdown>["components"]>;
+
 const LAZY_COMPONENTS: StreamdownComponents = { a: PlainLink, img: LazyImage };
 const EAGER_COMPONENTS: StreamdownComponents = { a: PlainLink, img: EagerImage };
 

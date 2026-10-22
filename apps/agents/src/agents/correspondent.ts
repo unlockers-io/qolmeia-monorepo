@@ -1,4 +1,5 @@
 "use agent";
+
 import {
   type AgentProps,
   useAgentStart,
@@ -40,6 +41,7 @@ export function CorrespondentV2({ id }: AgentProps): string {
     "disabledSkillIds",
     [],
   );
+
   useAgentStart(async () => {
     setDisabledSkillIds(await withDb(env, loadDisabledSkillIds));
   });
@@ -52,6 +54,7 @@ export function CorrespondentV2({ id }: AgentProps): string {
     deliverableFolder: "customer",
     env,
   };
+
   for (const skillTool of buildFlueTools(ctx, CORRESPONDENT_SKILLS, disabledSkillIds)) {
     useTool(skillTool);
   }

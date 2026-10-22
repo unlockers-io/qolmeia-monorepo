@@ -21,6 +21,7 @@ describe("resolvePolicy", () => {
     const template = {
       defaultPolicies: { publish_post: "notify_only", worker_deliverable: "require_approval" },
     };
+
     expect(resolvePolicy("worker_deliverable", template)).toBe("require_approval");
     expect(resolvePolicy("publish_post", template)).toBe("notify_only");
   });
@@ -48,6 +49,7 @@ describe("action type proposals", () => {
       ],
       summary: "Veja a [arte](https://x/1).",
     });
+
     expect(proposed).toEqual({
       assetIds: ["img-1", "img-2"],
       summary: "Veja a ![arte](https://x/1).\n\n![](https://x/2)",
@@ -62,6 +64,7 @@ describe("action type proposals", () => {
       ],
       summary: "Post pronto.",
     });
+
     expect(proposed).toMatchObject({
       assetIds: [],
       draft: { body: "final" },

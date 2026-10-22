@@ -27,6 +27,7 @@ const briefFacts = (brief: Partial<CompanyBrief>, agentInstanceId: string): Arra
     { kind: "brand_voice", label: "Tom da marca", value: brief.brand?.voice },
     { kind: "brand_palette", label: "Paleta", value: brief.brand?.palette },
   ];
+
   return [
     ...facts.flatMap(({ kind, label, value }) =>
       value === undefined || value === ""
@@ -50,22 +51,29 @@ const confirmTeam = async (
 
   await db.$transaction(async (tx) => {
     const company = await getCompany(tx, companyId);
+
     if (!company) {
       throw new CompanyNotFoundError();
     }
+
     const templates = await listEntitledTemplates(tx, companyId, templateIds);
     const missing = templateIds.find((id) => !templates.some((template) => template.id === id));
+
     if (missing !== undefined) {
       throw new TemplateNotFoundError(missing);
     }
+
     const existing = await tx.team.findUnique({
       select: { confirmedAt: true },
       where: { companyId },
     });
+
     const reconfirm = existing !== null && existing.confirmedAt !== null;
+
     const delegateTo = reconfirm
       ? [...new Set([...(await lockDelegationTargets(tx, companyId)), ...workerIds])]
       : workerIds;
+
     await tx.team.upsert({
       create: { companyId, confirmedAt: new Date(), id: teamId },
       update: reconfirm ? {} : { confirmedAt: new Date() },
@@ -102,9 +110,11 @@ const confirmTeam = async (
       skipDuplicates: true,
     });
     await tx.company.update({ data: { status: "active" }, where: { id: companyId } });
+
     if (reconfirm) {
       return;
     }
+
     await recordActivity(tx, {
       actorId: input.actorId,
       companyId,
@@ -117,6 +127,7 @@ const confirmTeam = async (
     await insertFacts(tx, companyId, briefFacts(company.brief, correspondentId));
   });
   await emitTeamEvent(env, { companyId, reason: "confirmed", type: "team:roster" });
+
   return { correspondentId, teamId, workerIds };
 };
 

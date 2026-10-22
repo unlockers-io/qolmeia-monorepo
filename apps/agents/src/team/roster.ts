@@ -36,12 +36,15 @@ const displayStatus = (
   if (row.status === "paused") {
     return "paused";
   }
+
   if (currentWork.some((ticket) => ticket.status === "in_progress")) {
     return "working";
   }
+
   if (currentWork.some((ticket) => ticket.status === "awaiting_approval")) {
     return "awaiting_approval";
   }
+
   return "available";
 };
 
@@ -51,6 +54,7 @@ const projectMember = (row: RosterRow): TeamMemberView => {
       ? [{ status: ticket.status, summary: ticket.title, ticketId: ticket.id }]
       : [],
   );
+
   const base = {
     currentWork,
     displayName: row.displayName,
@@ -59,13 +63,17 @@ const projectMember = (row: RosterRow): TeamMemberView => {
     lifetimeDone: row._count.tickets,
     status: displayStatus(row, currentWork),
   };
+
   if (row.role !== "worker") {
     return { ...base, role: row.role, templateId: null, templateName: null, workerKind: null };
   }
+
   const workerKind = row.template?.workerKind ?? "";
+
   if (row.templateId === null || row.templateId === "" || workerKind === "") {
     throw new Error(`worker ${row.id} missing template_id or worker_kind`);
   }
+
   return {
     ...base,
     role: "worker",
@@ -77,6 +85,7 @@ const projectMember = (row: RosterRow): TeamMemberView => {
 
 const sortRoster = (members: ReadonlyArray<TeamMemberView>): Array<TeamMemberView> => {
   const correspondents = members.filter((member) => member.role === "correspondent");
+
   const others = members
     .filter((member) => member.role !== "correspondent")
     .toSorted((a, b) =>
@@ -84,6 +93,7 @@ const sortRoster = (members: ReadonlyArray<TeamMemberView>): Array<TeamMemberVie
         ? a.displayName.localeCompare(b.displayName, "pt-BR")
         : b.currentWork.length - a.currentWork.length,
     );
+
   return [...correspondents, ...others];
 };
 
@@ -92,6 +102,7 @@ const listTeamRosters = async (
   companyIds: ReadonlyArray<string>,
 ): Promise<Map<string, Array<TeamMemberView>>> => {
   const ids = [...new Set(companyIds)].filter(Boolean);
+
   const rows =
     ids.length === 0
       ? []
@@ -100,15 +111,19 @@ const listTeamRosters = async (
           orderBy: { createdAt: "asc" },
           where: { companyId: { in: ids } },
         });
+
   const rosters = new Map<string, Array<TeamMemberView>>(ids.map((id) => [id, []]));
+
   for (const row of rows) {
     rosters.get(row.companyId)?.push(projectMember(row));
   }
+
   return new Map([...rosters].map(([companyId, members]) => [companyId, sortRoster(members)]));
 };
 
 const getTeamRoster = async (db: Db, companyId: string): Promise<Array<TeamMemberView>> => {
   const rosters = await listTeamRosters(db, [companyId]);
+
   return rosters.get(companyId) ?? [];
 };
 
@@ -121,6 +136,7 @@ const getTeamMember = async (
     include: rosterInclude,
     where: { companyId, id: agentInstanceId },
   });
+
   return row ? projectMember(row) : null;
 };
 
@@ -139,14 +155,17 @@ const getMemberDetail = async (
     },
     where: { companyId, id: agentInstanceId },
   });
+
   if (!row) {
     return null;
   }
+
   const edited = await db.activityLog.findFirst({
     orderBy: { createdAt: "desc" },
     select: { createdAt: true },
     where: { companyId, refId: agentInstanceId, type: "MEMBER_PROMPT_EDITED" },
   });
+
   return {
     ...projectMember(row),
     capabilities: row.template?.description ?? "",
@@ -167,7 +186,9 @@ const getCatalogue = async (db: Db, companyId: string): Promise<Array<HireableTe
       where: { companyId, role: "worker", templateId: { not: null } },
     }),
   ]);
+
   const hiredByTemplate = new Map(counts.map((row) => [row.templateId, row._count._all]));
+
   return templates.map((template) => ({
     description: template.description,
     displayName: template.displayName,
@@ -181,15 +202,19 @@ const normalizeDisplayName = (value: string): string => value.toLocaleLowerCase(
 
 const nextDisplayName = (base: string, existing: ReadonlyArray<string>): string => {
   const taken = new Set(existing.map(normalizeDisplayName));
+
   if (!taken.has(normalizeDisplayName(base))) {
     return base;
   }
+
   for (let index = 2; index < 1000; index++) {
     const candidate = `${base} #${index}`;
+
     if (!taken.has(normalizeDisplayName(candidate))) {
       return candidate;
     }
   }
+
   throw new Error(`nextDisplayName: exhausted candidates for "${base}"`);
 };
 

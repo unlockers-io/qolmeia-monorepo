@@ -17,6 +17,7 @@ const buildRevisionMessages = (
   feedback: string | null,
 ): Array<ChatMessage> => {
   const messages: Array<ChatMessage> = [{ content: brief, role: "user" }];
+
   if (priorSummary !== null && priorSummary !== "" && feedback !== null && feedback !== "") {
     messages.push(
       { content: priorSummary, role: "assistant" },
@@ -26,6 +27,7 @@ const buildRevisionMessages = (
       },
     );
   }
+
   return messages;
 };
 
@@ -38,6 +40,7 @@ const generateDeliverable = async (
 ): Promise<Generation> => {
   const { agentInstanceId, companyId, env, ticketId } = job;
   const stepStart = Date.now();
+
   const [ticket, { agentInstance, template }, disabledSkillIds] = await withDb(env, (db) =>
     Promise.all([
       loadTicket(db, ticketId),
@@ -45,9 +48,11 @@ const generateDeliverable = async (
       loadDisabledSkillIds(db),
     ]),
   );
+
   if (ticket === null) {
     throw new Error(`ticket ${ticketId} not properly seeded`);
   }
+
   log.info({
     agentInstanceId,
     brief: ticket.brief,
@@ -59,11 +64,13 @@ const generateDeliverable = async (
     templateId: template.id,
     ticketId,
   });
+
   const tools = buildSkillTools(
     { agentInstanceId: agentInstance.id, companyId, deliverableFolder: "agent", env },
     template.skillIds,
     disabledSkillIds,
   );
+
   const result = await generateText({
     instructions: resolveSystemPrompt(agentInstance, template),
     messages: buildRevisionMessages(
@@ -75,13 +82,16 @@ const generateDeliverable = async (
     stopWhen: isStepCount(5),
     tools,
   });
+
   const summary = result.text.trim();
+
   const outputs = result.steps.flatMap(({ toolResults }) =>
     toolResults.map(({ output, toolName }) => ({
       json: JSON.stringify(output ?? null),
       tool: toolName,
     })),
   );
+
   log.info({
     agentInstanceId,
     companyId,
@@ -94,8 +104,10 @@ const generateDeliverable = async (
     toolOutputNames: outputs.map(({ tool }) => tool),
     usage: result.usage,
   });
+
   return { outputs, summary };
 };
 
 export { buildRevisionMessages, generateDeliverable };
+
 export type { Revision };

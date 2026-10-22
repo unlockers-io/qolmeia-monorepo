@@ -36,11 +36,13 @@ const read = (companyId: string, assetId: string) =>
 
 const open = async (assetId: string, role: OrgRole, companyId: string) => {
   const asset = await db((client) => openAsset(env, client, assetId, { companyId, role }));
+
   return asset === null ? null : new Response(asset.body).text();
 };
 
 const storedKeys = async () => {
   const listed = await env.ASSETS.list({ prefix: `org_${COMPANY_ID}/` });
+
   return listed.objects.map(({ key }) => key);
 };
 

@@ -29,6 +29,7 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
   ): Promise<WorkerJobResult> {
     const job: JobContext = { ...event.payload, env: this.env };
     const workflowStart = Date.now();
+
     const finish = (result: WorkerJobResult): WorkerJobResult => {
       log.info({
         ...result,
@@ -37,17 +38,21 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
         message: "workflow.done",
         ticketId: job.ticketId,
       });
+
       return result;
     };
 
     log.info({ ...event.payload, message: "workflow.start" });
 
     let revision: Revision | null = null;
+
     for (let round = 0; ; round += 1) {
       const priorRevision = revision;
+
       const generation = await step.do(`generate-${round}`, (): Promise<Generation> =>
         generateDeliverable(job, round, priorRevision),
       );
+
       const proposal = await step.do(`propose-${round}`, (): Promise<Proposal> =>
         proposeDeliverable(job, round, priorRevision?.feedback ?? null, generation),
       );
@@ -60,21 +65,26 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
           revision: round,
           ticketId: job.ticketId,
         });
+
         const decision = await step.waitForEvent<DecisionEvent>(`wait-${round}`, {
           timeout: "60 days",
           type: decisionEventType(proposal.actionId),
         });
+
         const verdict = await step.do(`decide-${round}`, (): Promise<Verdict> =>
           applyDecision(job, proposal, round, decision.payload),
         );
+
         if (verdict !== "execute") {
           await step.do(`notify-decision-${round}`, () =>
             notifyCustomer(job, proposal.actionId, verdict),
           );
         }
+
         if (verdict === "end") {
           return finish({ actionId: proposal.actionId, outcome: "ended", revisions: round });
         }
+
         if (verdict === "revise") {
           revision = {
             feedback: decision.payload.feedback ?? null,
@@ -88,10 +98,12 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
       await step.do(`notify-executed-${round}`, () =>
         notifyCustomer(job, proposal.actionId, "execute"),
       );
+
       return finish({ actionId: proposal.actionId, outcome: "executed", revisions: round });
     }
   }
 }
 
 export { WorkerJobWorkflow };
+
 export type { WorkerJobParams, WorkerJobResult };

@@ -19,9 +19,11 @@ export const instant = true;
 const loadAssets = async (): Promise<ReadonlyArray<WebChatAsset>> => {
   try {
     const result = await apiGetServer<ListResponse<WebChatAsset>>("/api/me/assets?limit=200");
+
     return result.items;
   } catch (error) {
     log.error({ error, message: "assets: failed to load" });
+
     return [];
   }
 };

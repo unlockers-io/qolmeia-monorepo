@@ -35,6 +35,7 @@ const authErrorMessage = (error: { code?: string; status?: number }, fallback: s
   if (error.status === TOO_MANY_REQUESTS) {
     return "Muitas tentativas. Aguarde um instante e tente de novo.";
   }
+
   return (error.code === undefined ? undefined : authErrorMessages.get(error.code)) ?? fallback;
 };
 

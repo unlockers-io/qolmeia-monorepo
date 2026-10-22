@@ -40,11 +40,13 @@ const assetReference = (assetId: string): string => `/assets/${assetId}`;
 const assetName = (metadata: JsonRecord | null, id: string, kind: string): string => {
   const name = typeof metadata?.name === "string" ? metadata.name : "";
   const originalName = typeof metadata?.originalName === "string" ? metadata.originalName : "";
+
   return name || originalName || `${kind} ${id.slice(0, 6)}`;
 };
 
 const toAssetRecord = (row: Asset): AssetRecord => {
   const metadata = toRecordOrNull(row.metadata);
+
   return {
     bytes: row.bytes,
     createdAt: row.createdAt.getTime(),
@@ -59,6 +61,7 @@ const toAssetRecord = (row: Asset): AssetRecord => {
 
 const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
   const hash = await crypto.subtle.digest("SHA-256", bytes);
+
   return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 };
 
@@ -69,6 +72,7 @@ const promoteAssets = async (
 ): Promise<ReadonlyArray<{ id: string; mime: string }>> => {
   const where = { companyId, id: { in: [...assetIds] } };
   await db.asset.updateMany({ data: { visibility: "customer" }, where });
+
   return db.asset.findMany({ select: { id: true, mime: true }, where });
 };
 
@@ -88,9 +92,11 @@ const storeAsset = async (
 ): Promise<AssetRecord> => {
   const { companyId } = input;
   const sha256 = await sha256Hex(input.bytes);
+
   const existing = await db.asset.findUnique({
     where: { companyId_kind_sha256: { companyId, kind: input.kind, sha256 } },
   });
+
   if (existing) {
     if (existing.visibility === "agent" && input.visibility === "customer") {
       return toAssetRecord(
@@ -100,11 +106,14 @@ const storeAsset = async (
         }),
       );
     }
+
     return toAssetRecord(existing);
   }
+
   const id = crypto.randomUUID();
   const r2Key = `org_${companyId}/${id}.${EXTENSION_BY_MIME.get(input.mime) ?? "bin"}`;
   await env.ASSETS.put(r2Key, input.bytes, { httpMetadata: { contentType: input.mime } });
+
   try {
     const row = await db.asset.upsert({
       create: {
@@ -121,9 +130,11 @@ const storeAsset = async (
       update: input.visibility === "customer" ? { visibility: "customer" } : {},
       where: { companyId_kind_sha256: { companyId, kind: input.kind, sha256 } },
     });
+
     if (row.id !== id) {
       await env.ASSETS.delete(r2Key);
     }
+
     return toAssetRecord(row);
   } catch (error) {
     await env.ASSETS.delete(r2Key);
@@ -141,6 +152,7 @@ const listAssets = async (
     take: Math.min(filter.limit ?? 100, 200),
     where: { companyId, kind: filter.kind, visibility: filter.visibility },
   });
+
   return rows.map(toAssetRecord);
 };
 
@@ -160,7 +172,9 @@ const openAsset = async (
     select: { mime: true, r2Key: true },
     where: { id: assetId, ...readerScope(reader) },
   });
+
   const object = row ? await env.ASSETS.get(row.r2Key) : null;
+
   return row && object ? { body: object.body, mime: row.mime } : null;
 };
 
@@ -171,10 +185,13 @@ const readAssetText = async (
   assetId: string,
 ): Promise<{ content: string; name: string } | null> => {
   const row = await db.asset.findFirst({ where: { companyId, id: assetId } });
+
   if (!row || !TEXT_MIME_PREFIXES.some((prefix) => row.mime.startsWith(prefix))) {
     return null;
   }
+
   const object = await env.ASSETS.get(row.r2Key);
+
   return object ? { content: await object.text(), name: toAssetRecord(row).name } : null;
 };
 
@@ -190,12 +207,15 @@ const readBrandReferences = async (
     take: limit,
     where: { companyId, kind: "brand_asset", mime: { not: "image/svg+xml" } },
   });
+
   const settled = await Promise.allSettled(
     rows.map(async (row) => {
       const object = await env.ASSETS.get(row.r2Key);
+
       return object ? { bytes: new Uint8Array(await object.arrayBuffer()), mime: row.mime } : null;
     }),
   );
+
   return settled.flatMap((result) =>
     result.status === "fulfilled" && result.value !== null ? [result.value] : [],
   );
@@ -216,11 +236,14 @@ const deleteAssets = async (
       visibility: where.visibility,
     },
   });
+
   if (rows.length === 0) {
     return 0;
   }
+
   await env.ASSETS.delete(rows.map(({ r2Key }) => r2Key));
   await db.asset.deleteMany({ where: { companyId, id: { in: rows.map(({ id }) => id) } } });
+
   return rows.length;
 };
 
@@ -234,4 +257,5 @@ export {
   readBrandReferences,
   storeAsset,
 };
+
 export type { AssetRecord, AssetSummary };

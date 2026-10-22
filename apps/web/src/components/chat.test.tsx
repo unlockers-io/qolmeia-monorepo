@@ -16,6 +16,7 @@ class MockObserver {
 }
 
 globalThis.ResizeObserver = MockObserver;
+
 globalThis.IntersectionObserver = MockObserver as unknown as typeof IntersectionObserver;
 
 if (typeof Element.prototype.scrollTo !== "function") {
@@ -23,6 +24,7 @@ if (typeof Element.prototype.scrollTo !== "function") {
 }
 
 const sendMessage = vi.fn();
+
 type TestMessage = Omit<ChatMessage, "display" | "purpose"> &
   Partial<Pick<ChatMessage, "display" | "purpose">>;
 
@@ -30,9 +32,11 @@ const defaultPurpose = (role: ChatMessage["role"]): ChatMessage["purpose"] => {
   if (role === "assistant") {
     return "assistant";
   }
+
   if (role === "user") {
     return "user";
   }
+
   return "advisory";
 };
 
@@ -48,6 +52,7 @@ const chatState: UseFlueChatResult = {
   sendMessage,
   status: "ready",
 };
+
 const Chat = ({ agent }: ChatProps) => <ChatView agent={agent} chat={chatState} />;
 
 describe("Chat", () => {

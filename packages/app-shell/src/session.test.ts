@@ -39,6 +39,7 @@ describe("requireMembership", () => {
       "customer",
       answering([org("qolmeia", "OWNER"), org("co_a", "CUSTOMER")]),
     );
+
     await expect(helpers.requireMembership()).resolves.toEqual({
       org: org("co_a", "CUSTOMER"),
       user,

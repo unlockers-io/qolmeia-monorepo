@@ -26,6 +26,7 @@ const pickWorker = (
   const eligible = candidates.filter((candidate) => allowedIds.has(candidate.id));
   const idle = eligible.filter((candidate) => candidate.busyCount === 0);
   const pool = idle.length > 0 ? idle : eligible;
+
   return pool.at(Date.now() % Math.max(pool.length, 1));
 };
 
@@ -53,13 +54,16 @@ const findWorker = async (
       where: { agentInstanceId: input.delegatorId },
     }),
   ]);
+
   if (candidates.length === 0) {
     return { error: `Nenhum especialista do tipo "${input.workerKind}" no Time desta empresa.` };
   }
+
   const worker = pickWorker(
     candidates.map((candidate) => ({ busyCount: candidate._count.tickets, id: candidate.id })),
     delegationTargetsSchema.safeParse(delegator?.canDelegateTo).data ?? [],
   );
+
   return worker ?? { error: `Você não tem permissão para delegar para "${input.workerKind}".` };
 };
 
@@ -69,9 +73,11 @@ const delegateTicket = async (
   input: DelegationInput,
 ): Promise<DelegationResult> => {
   const worker = await findWorker(db, input);
+
   if ("error" in worker) {
     return worker;
   }
+
   const ticketId = crypto.randomUUID();
   await db.ticket.create({
     data: {
@@ -85,6 +91,7 @@ const delegateTicket = async (
       workflowId: ticketId,
     },
   });
+
   try {
     await env.WORKER_JOB.create({
       id: ticketId,
@@ -94,11 +101,13 @@ const delegateTicket = async (
     await db.ticket.delete({ where: { id: ticketId } });
     throw error;
   }
+
   await emitTeamEvent(env, {
     companyId: input.companyId,
     reason: "ticket_changed",
     type: "team:status",
   });
+
   return { status: "queued", ticketId, workflowId: ticketId };
 };
 

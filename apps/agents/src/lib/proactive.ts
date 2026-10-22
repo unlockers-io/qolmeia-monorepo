@@ -16,9 +16,11 @@ const proactiveGate = (input: {
   if (!input.isComplete) {
     return { ok: false, reason: "brief incomplete" };
   }
+
   if (input.lastSuggestedAt !== null && input.now - input.lastSuggestedAt < PROACTIVE_INTERVAL_MS) {
     return { ok: false, reason: "suggested recently" };
   }
+
   return { ok: true, reason: "" };
 };
 
@@ -28,6 +30,7 @@ const lastProactiveSuggestionAt = async (db: Db, companyId: string): Promise<num
     select: { createdAt: true },
     where: { companyId, type: "WORKER_PROACTIVE_SUGGESTION" },
   });
+
   return row?.createdAt.getTime() ?? null;
 };
 

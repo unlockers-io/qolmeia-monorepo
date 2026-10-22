@@ -92,20 +92,25 @@ const briefToForm = (brief: CompanyBrief): FormState => ({
 
 const buildPatch = (f: FormState): BriefPatch => {
   const patch: BriefPatch = {};
+
   if (f.industry.trim()) {
     patch.industry = f.industry.trim();
   }
+
   if (f.primaryGoal.trim()) {
     patch.primaryGoal = f.primaryGoal.trim();
   }
+
   if (f.audience.trim()) {
     patch.audience = f.audience.trim();
   }
+
   patch.brand = {
     palette: f.palette.trim() || undefined,
     references: f.references.trim() || undefined,
     voice: f.voice.trim() || undefined,
   };
+
   return patch;
 };
 

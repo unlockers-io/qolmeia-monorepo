@@ -29,14 +29,18 @@ const identityGate =
       c.req.raw.headers,
       surfaces,
     );
+
     if (result.kind !== "signed-in") {
       return c.body(null, UNRESOLVED_STATUS[result.kind]);
     }
+
     if (tenant !== undefined && tenant(c) !== result.identity.companyId) {
       return c.body(null, 403);
     }
+
     identifyUser(c.var.log, result.authSession);
     c.set("session", result.identity);
+
     return next();
   };
 
@@ -60,4 +64,5 @@ const requireCustomerOfPathTenant = identityGate({
 });
 
 export { requireCustomer, requireCustomerOfPathTenant, requireMember, requireOperator };
+
 export type { IdentityEnv };

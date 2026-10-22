@@ -40,8 +40,10 @@ const activityCategory = (type: string): ActivityCategory | null =>
 
 const activityStyle = (type: string): CategoryStyle => {
   const category = activityCategory(type);
+
   return category === null ? NEUTRAL_STYLE : CATEGORY_STYLE[category];
 };
 
 export { ACTIVITY_CATEGORIES, activityStyle, CATEGORY_STYLE };
+
 export type { ActivityCategory };

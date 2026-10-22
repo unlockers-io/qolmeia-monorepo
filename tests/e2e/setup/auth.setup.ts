@@ -23,7 +23,9 @@ setup("create and authenticate test user", async ({ page, request }) => {
     },
     headers: { Origin: backofficeUrl },
   });
+
   expect([200, 201, 409, 422]).toContain(signUpResponse.status());
+
   if (process.env.RESEND_API_KEY) {
     const { url } = await verification.forVerifyEmail(TEST_USER.email);
     const verified = await request.get(url, { failOnStatusCode: false, maxRedirects: 0 });
@@ -34,18 +36,24 @@ setup("create and authenticate test user", async ({ page, request }) => {
     data: { email: TEST_USER.email, password: TEST_USER.password },
     headers: { Origin: backofficeUrl },
   });
+
   expect(signIn.status()).toBe(200);
+
   const setCookieHeaders = signIn
     .headersArray()
     .filter((h) => h.name.toLowerCase() === "set-cookie")
     .map((h) => h.value);
+
   const browserCookies = [];
+
   for (const part of setCookieHeaders) {
     const [nameValue = ""] = part.split(";");
     const eq = nameValue.indexOf("=");
+
     if (eq === -1) {
       continue;
     }
+
     browserCookies.push({
       domain: new URL(backofficeUrl).hostname,
       httpOnly: true,
@@ -56,6 +64,7 @@ setup("create and authenticate test user", async ({ page, request }) => {
       value: nameValue.slice(eq + 1).trim(),
     });
   }
+
   await page.context().addCookies(browserCookies);
 
   await page.context().storageState({ path: "tests/e2e/.auth/user.json" });

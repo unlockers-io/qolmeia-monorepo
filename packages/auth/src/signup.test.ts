@@ -4,6 +4,7 @@ import { countOperators, createSignupGuard, isSignupOpen, SIGNUP_CLOSED_MESSAGE 
 
 const runGuard = (path: string, operatorCount: number) => {
   const guard = createSignupGuard(() => Promise.resolve(operatorCount));
+
   return guard({ path } as Parameters<typeof guard>[0]);
 };
 

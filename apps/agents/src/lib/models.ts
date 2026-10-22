@@ -37,6 +37,7 @@ const gateway = (env: GatewayEnv) => ({
 
 const conversationProvider = (env: GatewayEnv): Provider<"openai-completions"> => {
   const builtin = openrouterProvider();
+
   return {
     ...builtin,
     auth: {
@@ -44,6 +45,7 @@ const conversationProvider = (env: GatewayEnv): Provider<"openai-completions"> =
         name: "OpenRouter through Cloudflare AI Gateway",
         resolve: () => {
           const { apiKey, baseURL, headers } = gateway(env);
+
           return Promise.resolve({ auth: { apiKey, baseUrl: baseURL, headers } });
         },
       },
@@ -57,6 +59,7 @@ const conversationProvider = (env: GatewayEnv): Provider<"openai-completions"> =
 
 const languageModel = (env: GatewayEnv, id: string) => {
   const connection = gateway(env);
+
   if (RESPONSES_API_MODEL.test(id)) {
     // GPT-6 reasoning + tools requires Responses. OpenRouter is stateless:
     // replay tool results and encrypted reasoning instead of stored response IDs.
@@ -76,6 +79,7 @@ const languageModel = (env: GatewayEnv, id: string) => {
       model: createOpenAI(connection).responses(id),
     });
   }
+
   return createOpenAICompatible({ ...connection, name: "openrouter" })(id);
 };
 
@@ -92,6 +96,7 @@ const generateImage = async (
   prompt: string | ReadonlyArray<ImagePromptPart>,
 ): Promise<string> => {
   const { apiKey, baseURL, headers } = gateway(env);
+
   const response = await fetch(`${baseURL}/chat/completions`, {
     body: JSON.stringify({
       messages: [{ content: prompt, role: "user" }],
@@ -101,17 +106,22 @@ const generateImage = async (
     headers: { ...headers, Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     method: "POST",
   });
+
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`Image gen HTTP ${response.status}: ${body.slice(0, 200)}`);
   }
+
   const json = await response.json<ChatCompletionResponse>();
   const imageUrl = json.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
   if (imageUrl === undefined || imageUrl === "") {
     throw new Error("Image gen response missing choices[0].message.images[0].image_url.url");
   }
+
   return imageUrl;
 };
 
 export { CONVERSATION_MODEL, conversationProvider, generateImage, IMAGE_MODEL, languageModel };
+
 export type { ImagePromptPart };

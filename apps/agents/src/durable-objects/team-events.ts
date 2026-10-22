@@ -13,14 +13,18 @@ class TeamEvents extends DurableObject<Env> {
   // fallow-ignore-next-line unused-class-member -- invoked through the DurableObjectStub in team/events.ts
   override async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+
     if (request.method === "POST" && url.pathname === "/broadcast") {
       const event = await request.json<TeamEvent>();
       this.#broadcast(event);
+
       return new Response(null, { status: 204 });
     }
+
     if (request.method === "GET" && url.pathname === "/subscribe") {
       return this.#subscribe(request.signal);
     }
+
     return new Response("Not found", { status: 404 });
   }
 
@@ -45,11 +49,13 @@ class TeamEvents extends DurableObject<Env> {
   #subscribe(signal: AbortSignal): Response {
     const encoder = new TextEncoder();
     let subscriber: TeamEventSubscriber;
+
     const stream = new ReadableStream<Uint8Array>({
       start: (controller) => {
         const sendChunk = (chunk: string): void => {
           controller.enqueue(encoder.encode(chunk));
         };
+
         subscriber = {
           close: () => {
             try {

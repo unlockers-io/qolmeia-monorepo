@@ -21,6 +21,7 @@ describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
     const ids = listSkillCatalog().map((entry) => entry.id);
     const tools = buildFlueTools(ctx, ids, []);
     expect(tools.map((tool) => tool.name).toSorted()).toEqual(ids.toSorted());
+
     for (const tool of tools) {
       expect(tool.input).toBeDefined();
     }
@@ -29,9 +30,11 @@ describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
   it("keeps required fields and length limits enforceable", () => {
     const [delegate] = buildFlueTools(ctx, ["delegateToWorker"], []);
     const input = delegate?.input;
+
     if (!input) {
       throw new Error("delegateToWorker input schema missing");
     }
+
     expect(
       v.safeParse(input, { brief: "postar no instagram", workerKind: "designer" }).success,
     ).toBe(true);
@@ -42,9 +45,11 @@ describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
   it("keeps enums and optional fields enforceable", () => {
     const [listAssets] = buildFlueTools(ctx, ["listAssets"], []);
     const input = listAssets?.input;
+
     if (!input) {
       throw new Error("listAssets input schema missing");
     }
+
     expect(v.safeParse(input, {}).success).toBe(true);
     expect(v.safeParse(input, { folder: "customer" }).success).toBe(true);
     expect(v.safeParse(input, { folder: "not-a-folder" }).success).toBe(false);

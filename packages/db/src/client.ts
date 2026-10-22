@@ -10,12 +10,15 @@ const searchPathSchema = (databaseUrl: string | undefined): string | undefined =
   if (databaseUrl === undefined || !URL.canParse(databaseUrl)) {
     return undefined;
   }
+
   const schema = new URL(databaseUrl).searchParams.get("schema");
+
   return schema === null || schema === "" ? undefined : schema;
 };
 
 const assertDatabaseUrl = () => {
   const url = process.env.DATABASE_URL;
+
   if (url === undefined || url.trim() === "") {
     throw new Error(
       "DATABASE_URL is not set. Set it in the environment; packages/db/.env.example has the local value.",
@@ -26,6 +29,7 @@ const assertDatabaseUrl = () => {
 class PrismaPgRequiringUrl extends PrismaPg {
   override async connect() {
     assertDatabaseUrl();
+
     return super.connect();
   }
 }
@@ -33,6 +37,7 @@ class PrismaPgRequiringUrl extends PrismaPg {
 const createPrismaClient = (): PrismaClient => {
   const connectionString = process.env.DATABASE_URL;
   const schema = searchPathSchema(connectionString);
+
   const adapter = new PrismaPgRequiringUrl(
     {
       connectionString,
@@ -40,6 +45,7 @@ const createPrismaClient = (): PrismaClient => {
     },
     { schema },
   );
+
   return new PrismaClient({ adapter });
 };
 
