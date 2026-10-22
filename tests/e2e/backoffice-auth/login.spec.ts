@@ -29,11 +29,11 @@ test.describe("Backoffice login", () => {
     await page.waitForURL(new RegExp(`${backofficeUrl.replaceAll(".", String.raw`\.`)}/$`, "v"));
   });
 
-  test("shows error toast for wrong password", async ({ backofficeLoginPage, page }) => {
+  test("shows the form alert for a wrong password", async ({ backofficeLoginPage, page }) => {
     await backofficeLoginPage.goto();
     await backofficeLoginPage.login(TEST_USER.email, "WrongPassword!!");
 
-    await backofficeLoginPage.expectErrorVisible();
+    await backofficeLoginPage.expectFormAlert();
     expect(page.url()).toContain("/login");
   });
 });

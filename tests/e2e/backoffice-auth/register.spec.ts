@@ -25,7 +25,10 @@ test.describe("Backoffice register", () => {
     expect(page.url()).not.toContain("/register");
   });
 
-  test("shows error toast for mismatched passwords", async ({ backofficeRegisterPage, page }) => {
+  test("flags mismatched passwords on the confirmation field", async ({
+    backofficeRegisterPage,
+    page,
+  }) => {
     await page.context().clearCookies();
 
     await backofficeRegisterPage.goto();
@@ -36,7 +39,7 @@ test.describe("Backoffice register", () => {
       "DifferentPassword!",
     );
 
-    await backofficeRegisterPage.expectErrorVisible();
+    await backofficeRegisterPage.expectPasswordMismatch();
     expect(page.url()).toContain("/register");
   });
 

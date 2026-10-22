@@ -50,13 +50,32 @@ describe("chat submission acknowledgement", () => {
     expect(message).toHaveValue("meu pedido");
     expect(message).toBeEnabled();
     expect(screen.getByText("logo.png")).toBeInTheDocument();
-    expect(toast.error).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Não foi possível enviar. Tente novamente.",
+    );
+    expect(toast.error).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
     await waitFor(() => {
       expect(message).toHaveValue("");
     });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(onSend.mock.calls[1]).toEqual(onSend.mock.calls[0]);
     expect(screen.queryByText("logo.png")).not.toBeInTheDocument();
+  });
+
+  it("clears a failed send's alert on the next change", async () => {
+    const onSend = vi.fn().mockRejectedValueOnce(new Error("offline"));
+    render(<ChatComposer disabled={false} onSend={onSend} status="ready" />);
+    const message = screen.getByLabelText("Mensagem");
+    fireEvent.change(message, { target: { value: "pedido" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível enviar. Tente novamente.",
+    );
+    fireEvent.change(message, { target: { value: "pedido urgente" } });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("blocks duplicate submissions until acceptance, then allows the next draft", async () => {

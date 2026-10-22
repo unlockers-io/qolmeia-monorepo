@@ -5,13 +5,13 @@ export class BackofficeLoginPage {
   private readonly emailInput: Locator;
   private readonly passwordInput: Locator;
   private readonly submitButton: Locator;
-  private readonly rootError: Locator;
+  private readonly formAlert: Locator;
 
   constructor(private readonly page: Page) {
     this.emailInput = page.getByLabel(/e-?mail/iu);
     this.passwordInput = page.getByLabel(/senha|password/iu);
     this.submitButton = page.getByRole("button", { name: /entrar|sign in/iu });
-    this.rootError = page.locator('[data-sonner-toast][data-type="error"]');
+    this.formAlert = page.locator('[data-slot="form-alert"]');
   }
 
   goto = async () => {
@@ -30,7 +30,7 @@ export class BackofficeLoginPage {
     await expect(this.submitButton).toBeDisabled();
   };
 
-  expectErrorVisible = async () => {
-    await expect(this.rootError).toBeVisible();
+  expectFormAlert = async () => {
+    await expect(this.formAlert).toBeVisible();
   };
 }
