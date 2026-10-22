@@ -5,12 +5,13 @@ import { Field, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import type {
   CustomerInvitationInput,
   CustomerInvitationResponse,
 } from "@repo/worker-api/contracts";
-import { useForm } from "@tanstack/react-form";
-import { useId } from "react";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
+import { useId, useRef } from "react";
 import { toast } from "sonner";
 
 import { ApiError, apiSend, describeRequestError } from "@/lib/api-client";
@@ -20,6 +21,7 @@ const CONFLICT = 409;
 
 const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
   const emailId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm({
     defaultValues: { email: "" },
@@ -41,7 +43,11 @@ const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
         );
       }
     },
-    validators: { onSubmit: inviteCustomerSchema },
+    onSubmitInvalid: () => {
+      focusFirstInvalidField(formRef.current);
+    },
+    validationLogic: revalidateLogic(),
+    validators: { onDynamic: inviteCustomerSchema },
   });
 
   return (
@@ -53,10 +59,11 @@ const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
         event.stopPropagation();
         void form.handleSubmit();
       }}
+      ref={formRef}
     >
       <form.Field name="email">
         {(field) => {
-          const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+          const isInvalid = !field.state.meta.isValid;
           return (
             <Field data-invalid={isInvalid || undefined}>
               <FieldLabel htmlFor={emailId}>Convidar cliente</FieldLabel>

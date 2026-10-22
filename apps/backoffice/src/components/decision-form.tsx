@@ -76,21 +76,28 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
   const [decision, setDecision] = useState<DecisionOutcome | null>(defaultDecision);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [feedbackMissing, setFeedbackMissing] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const feedbackRef = useRef<HTMLTextAreaElement>(null);
 
   const feedbackRequired = decision !== null && decision !== "approved";
+  const decisionMissing = submitAttempted && decision === null;
+  const feedbackMissing = submitAttempted && feedbackRequired && feedback.trim().length === 0;
   const options = allowChanges
     ? OPTIONS
     : OPTIONS.filter((opt) => opt.value !== "changes_requested");
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (submitting || decision === null) {
+    if (submitting) {
+      return;
+    }
+    if (decision === null) {
+      setSubmitAttempted(true);
+      e.currentTarget.querySelector<HTMLInputElement>('input[name="decision"]')?.focus();
       return;
     }
     if (feedbackRequired && feedback.trim().length === 0) {
-      setFeedbackMissing(true);
+      setSubmitAttempted(true);
       feedbackRef.current?.focus();
       return;
     }
@@ -137,14 +144,15 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
               key={opt.value}
             >
               <input
-                aria-describedby={descriptionId}
+                aria-describedby={
+                  decisionMissing ? `${descriptionId} decision-error` : descriptionId
+                }
                 checked={selected}
                 className="sr-only"
                 id={inputId}
                 name="decision"
                 onChange={() => {
                   setDecision(opt.value);
-                  setFeedbackMissing(false);
                 }}
                 type="radio"
                 value={opt.value}
@@ -168,6 +176,11 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
           );
         })}
       </fieldset>
+      {decisionMissing && (
+        <p className="text-xs text-destructive" id="decision-error" role="alert">
+          Escolha uma decisão.
+        </p>
+      )}
       {!allowChanges && (
         <p className="text-xs text-muted-foreground">
           Esta é a última revisão permitida: aprove ou rejeite esta versão.
@@ -199,7 +212,6 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
           maxLength={MAX_FEEDBACK}
           onChange={(e) => {
             setFeedback(e.target.value);
-            setFeedbackMissing(false);
           }}
           placeholder={decision === null ? "Escolha uma decisão acima." : PLACEHOLDER[decision]}
           ref={feedbackRef}
@@ -214,7 +226,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
 
       <Button
         className="w-full"
-        disabled={submitting || decision === null}
+        disabled={submitting}
         size="lg"
         type="submit"
         variant={decision === "rejected" ? "destructive" : "default"}

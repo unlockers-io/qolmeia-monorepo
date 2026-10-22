@@ -14,13 +14,16 @@ import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
-import { useForm } from "@tanstack/react-form";
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
+import { useRef } from "react";
 import { toast } from "sonner";
 
 import { recoverSchema } from "@/lib/form-schemas";
 
 const RecoverForm = () => {
+  const formRef = useRef<HTMLFormElement>(null);
   const form = useForm({
     defaultValues: { email: "" },
     onSubmit: async ({ value }) => {
@@ -39,7 +42,11 @@ const RecoverForm = () => {
       }
       toast.success("Enviamos um link para seu e-mail.");
     },
-    validators: { onSubmit: recoverSchema },
+    onSubmitInvalid: () => {
+      focusFirstInvalidField(formRef.current);
+    },
+    validationLogic: revalidateLogic(),
+    validators: { onDynamic: recoverSchema },
   });
 
   const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
@@ -62,12 +69,13 @@ const RecoverForm = () => {
         className="flex flex-col gap-(--card-spacing)"
         noValidate
         onSubmit={handleSubmit}
+        ref={formRef}
       >
         <CardContent>
           <FieldGroup>
             <form.Field name="email">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid = !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
@@ -95,19 +103,9 @@ const RecoverForm = () => {
           </FieldGroup>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <form.Subscribe
-            selector={(state) => ({
-              canSubmit: state.canSubmit,
-              isSubmitting: state.isSubmitting,
-            })}
-          >
-            {({ canSubmit, isSubmitting }) => (
-              <Button
-                className="w-full"
-                disabled={!canSubmit || isSubmitting}
-                size="lg"
-                type="submit"
-              >
+          <form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
                 {isSubmitting ? "Enviando…" : "Enviar link"}
               </Button>
             )}

@@ -11,14 +11,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
-import { useForm } from "@tanstack/react-form";
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, use, useState } from "react";
+import { Suspense, use, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { registerSchema } from "@/lib/form-schemas";
@@ -50,14 +51,11 @@ const LoginLink = ({ searchParams }: Props) => {
 const RegisterForm = ({ searchParams }: Props) => {
   const { push, refresh } = useRouter();
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm({
     defaultValues: { confirmPassword: "", email: "", name: "", password: "" },
     onSubmit: async ({ value }) => {
-      if (value.password !== value.confirmPassword) {
-        toast.error("As senhas não conferem.");
-        return;
-      }
       const { from } = await searchParams;
       const redirectTo = safeRedirectPath(from);
       try {
@@ -84,7 +82,11 @@ const RegisterForm = ({ searchParams }: Props) => {
       push(redirectTo);
       refresh();
     },
-    validators: { onSubmit: registerSchema },
+    onSubmitInvalid: () => {
+      focusFirstInvalidField(formRef.current);
+    },
+    validationLogic: revalidateLogic(),
+    validators: { onDynamic: registerSchema },
   });
 
   const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
@@ -124,17 +126,22 @@ const RegisterForm = ({ searchParams }: Props) => {
         className="flex flex-col gap-(--card-spacing)"
         noValidate
         onSubmit={handleSubmit}
+        ref={formRef}
       >
         <CardContent>
           <FieldGroup>
             <form.Field name="name">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid = !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Nome</FieldLabel>
                     <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                      aria-describedby={
+                        isInvalid
+                          ? `${field.name}-description ${field.name}-error`
+                          : `${field.name}-description`
+                      }
                       aria-invalid={isInvalid}
                       autoComplete="name"
                       id={field.name}
@@ -146,6 +153,9 @@ const RegisterForm = ({ searchParams }: Props) => {
                       type="text"
                       value={field.state.value}
                     />
+                    <FieldDescription id={`${field.name}-description`}>
+                      De 3 a 32 caracteres.
+                    </FieldDescription>
                     {isInvalid && (
                       <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
                     )}
@@ -156,7 +166,7 @@ const RegisterForm = ({ searchParams }: Props) => {
 
             <form.Field name="email">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid = !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
@@ -184,12 +194,16 @@ const RegisterForm = ({ searchParams }: Props) => {
 
             <form.Field name="password">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid = !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
                     <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
+                      aria-describedby={
+                        isInvalid
+                          ? `${field.name}-description ${field.name}-error`
+                          : `${field.name}-description`
+                      }
                       aria-invalid={isInvalid}
                       autoComplete="new-password"
                       id={field.name}
@@ -201,6 +215,9 @@ const RegisterForm = ({ searchParams }: Props) => {
                       type="password"
                       value={field.state.value}
                     />
+                    <FieldDescription id={`${field.name}-description`}>
+                      Pelo menos 12 caracteres.
+                    </FieldDescription>
                     {isInvalid && (
                       <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
                     )}
@@ -211,7 +228,7 @@ const RegisterForm = ({ searchParams }: Props) => {
 
             <form.Field name="confirmPassword">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid = !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Confirmar senha</FieldLabel>
@@ -238,19 +255,9 @@ const RegisterForm = ({ searchParams }: Props) => {
           </FieldGroup>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <form.Subscribe
-            selector={(state) => ({
-              canSubmit: state.canSubmit,
-              isSubmitting: state.isSubmitting,
-            })}
-          >
-            {({ canSubmit, isSubmitting }) => (
-              <Button
-                className="w-full"
-                disabled={!canSubmit || isSubmitting}
-                size="lg"
-                type="submit"
-              >
+          <form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
                 {isSubmitting ? "Criando conta…" : "Criar conta"}
               </Button>
             )}

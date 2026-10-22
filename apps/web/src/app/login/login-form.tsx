@@ -7,9 +7,10 @@ import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
-import { useForm } from "@tanstack/react-form";
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { loginSchema, magicLinkSchema } from "@/lib/form-schemas";
@@ -60,6 +61,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
   const { push, refresh } = router;
   const [loginMethod, setLoginMethod] = useState<"magicLink" | "password">("password");
   const [sent, setSent] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const isMagicLink = loginMethod === "magicLink";
 
   const signIn = async (credentials: { email: string; password: string }) => {
@@ -107,7 +109,11 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
       }
       await signIn(value);
     },
-    validators: { onSubmit: isMagicLink ? magicLinkSchema : loginSchema },
+    onSubmitInvalid: () => {
+      focusFirstInvalidField(formRef.current);
+    },
+    validationLogic: revalidateLogic(),
+    validators: { onDynamic: isMagicLink ? magicLinkSchema : loginSchema },
   });
 
   const handleLoginMethodChange = () => {
@@ -149,11 +155,11 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
           ? "Digite seu e-mail para receber um link mágico de acesso."
           : "Digite seu e-mail e sua senha para entrar."}
       </p>
-      <ClientReadyForm className="mt-8" noValidate onSubmit={handleSubmit}>
+      <ClientReadyForm className="mt-8" noValidate onSubmit={handleSubmit} ref={formRef}>
         <FieldGroup>
           <form.Field name="email">
             {(field) => {
-              const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+              const isInvalid = !field.state.meta.isValid;
               return (
                 <Field data-invalid={isInvalid || undefined}>
                   <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
@@ -182,7 +188,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
           {!isMagicLink && (
             <form.Field name="password">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid = !field.state.meta.isValid;
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
@@ -208,17 +214,10 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
             </form.Field>
           )}
         </FieldGroup>
-        <form.Subscribe
-          selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-        >
-          {({ canSubmit, isSubmitting }) => (
+        <form.Subscribe selector={(state) => state.isSubmitting}>
+          {(isSubmitting) => (
             <div className="mt-6 flex flex-col gap-3">
-              <Button
-                className="w-full"
-                disabled={(!isMagicLink && !canSubmit) || isSubmitting}
-                size="lg"
-                type="submit"
-              >
+              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
                 {getSubmitLabel({ isMagicLink, isSubmitting })}
               </Button>
               <button

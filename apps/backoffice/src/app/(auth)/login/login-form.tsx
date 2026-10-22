@@ -15,11 +15,12 @@ import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
-import { useForm } from "@tanstack/react-form";
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { loginSchema } from "@/lib/form-schemas";
@@ -42,9 +43,15 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
   const Form = ({ registerPrompt, searchParams }: Props) => {
     const { push, refresh } = useAppRouter();
     const [showUnverifiedNotice, setShowUnverifiedNotice] = useState(false);
+    const formRef = useRef<HTMLFormElement>(null);
 
     const form = useForm({
       defaultValues: { email: "", password: "" },
+      listeners: {
+        onChange: () => {
+          setShowUnverifiedNotice(false);
+        },
+      },
       onSubmit: async ({ value }) => {
         setShowUnverifiedNotice(false);
         try {
@@ -68,7 +75,11 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
         push(safeRedirectPath(from));
         refresh();
       },
-      validators: { onSubmit: loginSchema },
+      onSubmitInvalid: () => {
+        focusFirstInvalidField(formRef.current);
+      },
+      validationLogic: revalidateLogic(),
+      validators: { onDynamic: loginSchema },
     });
 
     const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
@@ -89,12 +100,13 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
           className="flex flex-col gap-(--card-spacing)"
           noValidate
           onSubmit={handleSubmit}
+          ref={formRef}
         >
           <CardContent>
             <FieldGroup>
               <form.Field name="email">
                 {(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = !field.state.meta.isValid;
                   return (
                     <Field data-invalid={isInvalid || undefined}>
                       <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
@@ -125,7 +137,7 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
 
               <form.Field name="password">
                 {(field) => {
-                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  const isInvalid = !field.state.meta.isValid;
                   return (
                     <Field data-invalid={isInvalid || undefined}>
                       <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
@@ -161,19 +173,9 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
             )}
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <form.Subscribe
-              selector={(state) => ({
-                canSubmit: state.canSubmit,
-                isSubmitting: state.isSubmitting,
-              })}
-            >
-              {({ canSubmit, isSubmitting }) => (
-                <Button
-                  className="w-full"
-                  disabled={!canSubmit || isSubmitting}
-                  size="lg"
-                  type="submit"
-                >
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(isSubmitting) => (
+                <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
                   {isSubmitting ? "Entrando…" : "Entrar"}
                 </Button>
               )}

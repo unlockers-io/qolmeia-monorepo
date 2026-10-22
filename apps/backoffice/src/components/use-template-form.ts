@@ -1,3 +1,4 @@
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import {
   ACTION_TYPES,
   type ActionPolicy,
@@ -68,6 +69,17 @@ const formSchema = z.object({
 const isFieldKey = (key: PropertyKey | undefined): key is FieldKey =>
   typeof key === "string" && key in formSchema.shape;
 
+const fieldErrors = (values: Record<FieldKey, string>): Partial<Record<FieldKey, string>> => {
+  const errors: Partial<Record<FieldKey, string>> = {};
+  for (const issue of formSchema.safeParse(values).error?.issues ?? []) {
+    const key = issue.path[0];
+    if (isFieldKey(key) && errors[key] === undefined) {
+      errors[key] = issue.message;
+    }
+  }
+  return errors;
+};
+
 const parsePolicies = (raw: string): TemplateInput["defaultPolicies"] => {
   const trimmed = raw.trim();
   if (trimmed === "") {
@@ -93,7 +105,8 @@ const useTemplateForm = (initial: Template | undefined) => {
     workerKind: initial?.workerKind ?? "",
   });
   const [skillIds, setSkillIds] = useState<ReadonlyArray<string>>(initial?.skillIds ?? []);
-  const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const errors = submitAttempted ? fieldErrors(values) : {};
 
   const { data: skillsData, isLoading: skillsLoading } = useQuery({
     queryFn: fetchSkillCatalog,
@@ -136,30 +149,14 @@ const useTemplateForm = (initial: Template | undefined) => {
     setSkillIds((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
-  const focusFirstError = (firstKey: FieldKey) => {
-    const el = formRef.current?.querySelector<HTMLElement>(`[name="${firstKey}"]`);
-    el?.focus();
-  };
-
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setSubmitAttempted(true);
     const parsed = formSchema.safeParse(values);
     if (!parsed.success) {
-      const fieldErrors: Partial<Record<FieldKey, string>> = {};
-      for (const issue of parsed.error.issues) {
-        const key = issue.path[0];
-        if (isFieldKey(key) && fieldErrors[key] === undefined) {
-          fieldErrors[key] = issue.message;
-        }
-      }
-      setErrors(fieldErrors);
-      const firstKey = parsed.error.issues[0]?.path[0];
-      if (isFieldKey(firstKey)) {
-        focusFirstError(firstKey);
-      }
+      focusFirstInvalidField(formRef.current);
       return;
     }
-    setErrors({});
     saveMutation.mutate({
       defaultActionType: parsed.data.defaultActionType,
       defaultPolicies: parsePolicies(parsed.data.defaultPolicies),

@@ -161,6 +161,17 @@ The dev org is pinned to `cmpg10ke30000147uj4gpeadb` (slug `qolmeia-dev`). Both 
 - Agent paths at `/agents/<name>/<companyId>`, `/api/me/*` and `/api/teams/*` are gated to the CUSTOMER role; a company id in the path must be the session's. Operators don't open a connection to a DO; they call REST.
 - Turbo caches: be conscious that `apps/agents` reads `wrangler.jsonc` vars at build time.
 
+## Forms
+
+- `@tanstack/react-form` with the form's Zod schema from the app's `src/lib/form-schemas.ts`. `useTemplateForm` and `DecisionForm` hold their values in `useState`; they follow the same rules by hand.
+- Validation follows six rules:
+  1. Validate on submit, then on every change: `validationLogic: revalidateLogic()` with `validators: { onDynamic: schema }`. No error shows before the first submit attempt, and after a failed one an error clears on the keystroke that fixes it. Never validate on blur. Put every rule in the one form-level schema, cross-field checks such as `password === confirmPassword` included: TanStack runs form-level validators only after field-level ones pass. A `useState` form sets a `submitAttempted` flag on submit and derives its errors from the schema on every render once the flag is set.
+  2. Show a field's error whenever `!field.state.meta.isValid`. Don't add an `isTouched`, `isBlurred` or `submissionAttempts` check: rule 1 already holds errors back until submit.
+  3. On a failed submit, `onSubmitInvalid` calls `focusFirstInvalidField(formRef.current)` from `@repo/ui/lib/focus-first-invalid-field`, where `formRef` is a `useRef` on the `ClientReadyForm`. It focuses the first `[aria-invalid="true"]` control a frame later, because TanStack calls `onSubmitInvalid` before React renders the invalid state, so every control that can be invalid sets `aria-invalid`.
+  4. Explain any rule people can't guess (password length, name length, allowed values) with a pt-BR `FieldDescription` under the field from the start, linked through `aria-describedby` next to the error id. Live hints derived from the value are not validation errors.
+  5. Server-only failures (wrong password, e-mail taken, rate limits) arrive on submit. Attach each one to its field, or report it form-wide as a toast or a notice that clears on the next change through the form's `listeners: { onChange }`. Keep auth failures generic.
+  6. Keep the submit button enabled, and disable it only while submitting (`form.Subscribe` on `state.isSubmitting`, or the form's pending flag). Never disable it on `!canSubmit` or `!isValid`: a disabled button can't say which field is wrong. The one exception is a form with exactly one editable field, which may also disable submit while that field's trimmed value is empty or unchanged; use it only where empty is the obvious error, such as the chat composer or renaming an agent.
+
 ## Design-system linting
 
 Run `pnpm lint` after changes and fix every error. `oxlint.config.ts` registers `@shadcn/lint` and enforces all six rules as errors: component contracts, known Tailwind classes, static component class names, semantic colors, theme or scale values, and class-based styling. Use CSS custom properties for runtime geometry and named theme tokens for custom values. Use component variants for appearance and layout classes at call sites. All six rules also apply inside primitive directories. Shared styles belong to component variants or the owning stylesheet. Keep theme discovery local to each app. Exact class-merging fixture allowances apply only to the named test files.

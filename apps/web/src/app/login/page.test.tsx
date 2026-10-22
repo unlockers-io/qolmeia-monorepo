@@ -99,6 +99,35 @@ describe("LoginForm", () => {
     expect(screen.getByRole("heading", { name: "Verifique seu e-mail" })).toBeInTheDocument();
   });
 
+  it("validates on submit, then on every change, with submit enabled throughout", async () => {
+    const { signInEmail } = renderLoginForm();
+    const email = screen.getByLabelText(/E-mail/v);
+    const submit = screen.getByRole("button", { name: "Entrar" });
+    fireEvent.change(email, { target: { value: "voce@" } });
+    fireEvent.blur(email);
+    expect(screen.queryByText("E-mail inválido")).not.toBeInTheDocument();
+    expect(submit).toBeEnabled();
+
+    fireEvent.click(submit);
+
+    expect(await screen.findByText("E-mail inválido")).toBeInTheDocument();
+    expect(screen.getByText("Informe sua senha")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(email).toHaveFocus();
+    });
+    expect(submit).toBeEnabled();
+
+    fireEvent.change(email, { target: { value: "voce@empresa" } });
+    expect(screen.getByText("E-mail inválido")).toBeInTheDocument();
+
+    fireEvent.change(email, { target: { value: "voce@empresa.com" } });
+    await waitFor(() => {
+      expect(screen.queryByText("E-mail inválido")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Informe sua senha")).toBeInTheDocument();
+    expect(signInEmail).not.toHaveBeenCalled();
+  });
+
   it("validates the e-mail with the form schema before sending a magic link", async () => {
     const { sendMagicLink } = renderLoginForm();
 

@@ -7,7 +7,6 @@ export class BackofficeRegisterPage {
   private readonly passwordInput: Locator;
   private readonly confirmPasswordInput: Locator;
   private readonly submitButton: Locator;
-  private readonly rootError: Locator;
 
   constructor(private readonly page: Page) {
     this.nameInput = page.getByLabel(/^nome$|^name$/iu);
@@ -15,7 +14,6 @@ export class BackofficeRegisterPage {
     this.passwordInput = page.getByLabel(/^senha$|^password$/iu);
     this.confirmPasswordInput = page.getByLabel(/confirmar senha|confirm password/iu);
     this.submitButton = page.getByRole("button", { name: /criar conta|create account/iu });
-    this.rootError = page.locator('[data-sonner-toast][data-type="error"]');
   }
 
   goto = async () => {
@@ -30,7 +28,8 @@ export class BackofficeRegisterPage {
     await this.submitButton.click();
   };
 
-  expectErrorVisible = async () => {
-    await expect(this.rootError).toBeVisible();
+  expectPasswordMismatch = async () => {
+    await expect(this.page.getByText("As senhas não conferem.")).toBeVisible();
+    await expect(this.confirmPasswordInput).toBeFocused();
   };
 }
