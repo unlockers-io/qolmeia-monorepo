@@ -37,19 +37,24 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
     },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
+
       try {
         const { error } = await authClient.resetPassword({
           newPassword: value.password,
           token,
         });
+
         if (error) {
           setSubmitError(authErrorMessage(error, "Não foi possível redefinir a senha."));
+
           return;
         }
       } catch {
         setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
+
         return;
       }
+
       toast.success("Senha redefinida com sucesso.");
       push("/login");
     },
@@ -86,6 +91,7 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
             <form.Field name="password">
               {(field) => {
                 const isInvalid = !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Nova senha</FieldLabel>
@@ -120,6 +126,7 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
             <form.Field name="confirmPassword">
               {(field) => {
                 const isInvalid = !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Confirmar nova senha</FieldLabel>

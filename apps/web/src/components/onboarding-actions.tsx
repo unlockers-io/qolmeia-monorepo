@@ -37,6 +37,7 @@ const confirmTeam = async (companyId: string, templateIds: ReadonlyArray<string>
     headers: { "Content-Type": "application/json" },
     method: "POST",
   });
+
   if (!response.ok) {
     throw new ApiError(response.status, await response.text());
   }
@@ -51,6 +52,7 @@ type TemplateOptionProps = {
 
 const TemplateOption = ({ checked, invalid, onToggle, template }: TemplateOptionProps) => {
   const inputId = `template-${template.id}`;
+
   return (
     <li>
       <label
@@ -96,14 +98,17 @@ const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => 
     },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
+
       try {
         await confirmTeam(companyId, value.templateIds);
       } catch (error) {
         setSubmitError(
           describeRequestError(error, "Não foi possível confirmar o Time. Tente de novo."),
         );
+
         return;
       }
+
       toast.success("Time confirmado! Redirecionando…");
       globalThis.location.assign("/");
     },
@@ -138,6 +143,7 @@ const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => 
         <form.Field name="templateIds">
           {(field) => {
             const isInvalid = !field.state.meta.isValid;
+
             return (
               <>
                 <ul className="grid gap-2.5 sm:grid-cols-2">

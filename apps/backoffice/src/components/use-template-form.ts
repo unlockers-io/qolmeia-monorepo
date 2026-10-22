@@ -51,6 +51,7 @@ const formSchema = z.object({
         if (raw === "") {
           return true;
         }
+
         try {
           return policiesRecordSchema.safeParse(JSON.parse(raw)).success;
         } catch {
@@ -71,20 +72,25 @@ const isFieldKey = (key: PropertyKey | undefined): key is FieldKey =>
 
 const fieldErrors = (values: Record<FieldKey, string>): Partial<Record<FieldKey, string>> => {
   const errors: Partial<Record<FieldKey, string>> = {};
+
   for (const issue of formSchema.safeParse(values).error?.issues ?? []) {
     const key = issue.path[0];
+
     if (isFieldKey(key) && errors[key] === undefined) {
       errors[key] = issue.message;
     }
   }
+
   return errors;
 };
 
 const parsePolicies = (raw: string): TemplateInput["defaultPolicies"] => {
   const trimmed = raw.trim();
+
   if (trimmed === "") {
     return {};
   }
+
   return policiesRecordSchema.parse(JSON.parse(trimmed));
 };
 
@@ -167,10 +173,13 @@ const useTemplateForm = (initial: Template | undefined) => {
     e.preventDefault();
     setSubmitAttempted(true);
     const parsed = formSchema.safeParse(values);
+
     if (!parsed.success) {
       focusFirstInvalidField(formId);
+
       return;
     }
+
     saveMutation.mutate({
       defaultActionType: parsed.data.defaultActionType,
       defaultPolicies: parsePolicies(parsed.data.defaultPolicies),
@@ -187,14 +196,17 @@ const useTemplateForm = (initial: Template | undefined) => {
     if (!initial) {
       return;
     }
+
     statusMutation.mutate(initial.status === "retired" ? "active" : "retired");
   };
 
   const busy = saveMutation.isPending;
+
   const submitError =
     saveMutation.error === null
       ? null
       : describeRequestError(saveMutation.error, "Não foi possível salvar o modelo.");
+
   const skills = skillsData?.items ?? [];
   const editLabel = isEdit ? "Salvar alterações" : "Criar modelo";
   const submitLabel = busy ? "Salvando…" : editLabel;

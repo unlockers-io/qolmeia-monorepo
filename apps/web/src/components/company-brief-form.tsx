@@ -139,6 +139,7 @@ const BriefField = ({ field, name }: BriefFieldProps) => {
   const isInvalid = !field.state.meta.isValid;
   const { value } = field.state;
   const { id, label, multiline, placeholder } = FIELDS[name];
+
   const control = {
     "aria-describedby": isInvalid ? `${id}-description ${id}-error` : `${id}-description`,
     "aria-invalid": isInvalid,
@@ -147,6 +148,7 @@ const BriefField = ({ field, name }: BriefFieldProps) => {
     placeholder,
     value,
   };
+
   return (
     <Field data-invalid={isInvalid || undefined}>
       <FieldLabel htmlFor={id}>

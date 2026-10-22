@@ -17,8 +17,10 @@ const router: AppRouterInstance = {
   refresh: vi.fn<() => void>(),
   replace: vi.fn<() => void>(),
 };
+
 const listItems = (_url: string, _init?: RequestInit) =>
   Promise.resolve(Response.json({ items: [] }));
+
 const fetchMock = vi.fn(listItems);
 
 const renderForm = () =>

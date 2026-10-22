@@ -46,12 +46,15 @@ const HireForm = ({ onClose, onHired, template }: HireFormProps) => {
       if (!template) {
         return;
       }
+
       setSubmitError(null);
+
       try {
         const member = await hireMember({
           displayName: value.displayName.trim() || undefined,
           templateId: template.id,
         });
+
         toast.success(`${member.displayName} contratado(a).`);
         onHired();
         onClose();
@@ -80,6 +83,7 @@ const HireForm = ({ onClose, onHired, template }: HireFormProps) => {
       <form.Field name="displayName">
         {(field) => {
           const isInvalid = !field.state.meta.isValid;
+
           return (
             <Field data-invalid={isInvalid || undefined}>
               <FieldLabel htmlFor="hire-name">Nome (opcional)</FieldLabel>

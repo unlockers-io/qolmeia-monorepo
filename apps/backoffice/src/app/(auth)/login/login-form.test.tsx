@@ -7,6 +7,7 @@ import { createLoginForm, type LoginDependencies } from "./login-form";
 const push = vi.fn();
 const refresh = vi.fn();
 const signInEmail = vi.fn<LoginDependencies["signInEmail"]>(() => Promise.resolve({ error: null }));
+
 const LoginForm = createLoginForm({
   signInEmail,
   useAppRouter: () => ({

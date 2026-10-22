@@ -58,6 +58,7 @@ describe("HireDialog", () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(Response.json({ member: { displayName: "Lia" } }));
+
     renderDialog();
     const name = screen.getByLabelText("Nome (opcional)");
     fireEvent.change(name, { target: { value: " Lia " } });

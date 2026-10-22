@@ -53,6 +53,7 @@ describe("OnboardingActions", () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response("boom", { status: 500 }));
+
     render(<OnboardingActions companyId="company-1" templates={templates} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Confirmar Time" }));

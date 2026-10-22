@@ -46,6 +46,7 @@ const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
   if (event.nativeEvent.isComposing) {
     return;
   }
+
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     event.currentTarget.form?.requestSubmit();
@@ -76,12 +77,16 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
 
   const uploadFile = async (file: File) => {
     setSendError(null);
+
     if (!ALLOWED_UPLOAD_MIME.includes(file.type)) {
       toast.error("Formato não suportado. Use PNG, JPG, WEBP ou GIF.");
+
       return;
     }
+
     if (file.size > MAX_UPLOAD_BYTES) {
       toast.error("Imagem grande demais (máx 10 MB).");
+
       return;
     }
 
@@ -121,6 +126,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   const handleFileSelected = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
+
     if (file) {
       void uploadFile(file);
     }
@@ -128,10 +134,13 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const images = [...event.clipboardData.files].filter((file) => file.type.startsWith("image/"));
+
     if (images.length === 0) {
       return;
     }
+
     event.preventDefault();
+
     for (const file of images) {
       void uploadFile(file);
     }
@@ -144,9 +153,11 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
 
   const resizeTextarea = () => {
     const el = textareaRef.current;
+
     if (!el) {
       return;
     }
+
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   };
@@ -154,32 +165,39 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = input.trim();
+
     if (disabled || isUploading || submittingRef.current) {
       return;
     }
+
     if (!text && readyAttachments.length === 0) {
       return;
     }
+
     const files: Array<FileUIPart> = readyAttachments.map((attachment) => ({
       filename: attachment.name,
       mediaType: attachment.mediaType,
       type: "file",
       url: attachment.url,
     }));
+
     submittingRef.current = true;
     setSubmitting(true);
     setSendError(null);
+
     try {
       await onSend({ files, text: text || " " });
       setInput("");
       setAttachments([]);
       const el = textareaRef.current;
+
       if (el) {
         el.style.height = "auto";
       }
     } catch {
       setSendError("Não foi possível enviar. Tente novamente.");
     }
+
     submittingRef.current = false;
     setSubmitting(false);
   };
@@ -191,6 +209,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
     (input.trim().length > 0 || readyAttachments.length > 0);
 
   let submitIcon = <CornerDownLeft aria-hidden className="size-4" />;
+
   if (submitting || status === "submitted" || status === "streaming") {
     submitIcon = <LoadingSpinner className="size-4" />;
   } else if (status === "error") {

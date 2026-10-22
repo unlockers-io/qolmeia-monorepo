@@ -45,6 +45,7 @@ const PromptEditor = ({ busy, initialValue, onReset, onSave, updatedAt }: Prompt
     },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
+
       try {
         await onSave(value.prompt.trim());
       } catch (error) {
@@ -60,6 +61,7 @@ const PromptEditor = ({ busy, initialValue, onReset, onSave, updatedAt }: Prompt
 
   const handleReset = async () => {
     setSubmitError(null);
+
     try {
       await onReset();
       form.reset({ prompt: "" });
@@ -86,6 +88,7 @@ const PromptEditor = ({ busy, initialValue, onReset, onSave, updatedAt }: Prompt
             const prompt = field.state.value.trim();
             const isEmpty = prompt === "";
             const isUnchanged = prompt === saved;
+
             return (
               <>
                 <Field data-invalid={isInvalid || undefined}>

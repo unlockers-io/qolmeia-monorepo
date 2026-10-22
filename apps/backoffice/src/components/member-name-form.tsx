@@ -32,6 +32,7 @@ const MemberNameForm = ({ busy, displayName, onRename }: MemberNameFormProps) =>
     onSubmit: async ({ formApi, value }) => {
       setSubmitError(null);
       const next = value.displayName.trim();
+
       try {
         await onRename(next);
         formApi.reset({ displayName: next });
@@ -63,6 +64,7 @@ const MemberNameForm = ({ busy, displayName, onRename }: MemberNameFormProps) =>
           const name = field.state.value.trim();
           const isEmpty = name === "";
           const isUnchanged = name === displayName;
+
           return (
             <Field data-invalid={isInvalid || undefined}>
               <FieldLabel htmlFor="member-name">Nome de exibição</FieldLabel>

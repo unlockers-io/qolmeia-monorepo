@@ -25,6 +25,7 @@ import { recoverSchema } from "@/lib/form-schemas";
 
 const RecoverForm = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
+
   const form = useForm({
     defaultValues: { email: "" },
     listeners: {
@@ -34,19 +35,24 @@ const RecoverForm = () => {
     },
     onSubmit: async ({ value }) => {
       setSubmitError(null);
+
       try {
         const { error } = await authClient.requestPasswordReset({
           email: value.email,
           redirectTo: "/reset-password",
         });
+
         if (error) {
           setSubmitError(authErrorMessage(error, "Não foi possível enviar o link."));
+
           return;
         }
       } catch {
         setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
+
         return;
       }
+
       toast.success("Enviamos um link para seu e-mail.");
     },
     onSubmitInvalid: ({ formApi }) => {
@@ -84,6 +90,7 @@ const RecoverForm = () => {
             <form.Field name="email">
               {(field) => {
                 const isInvalid = !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>

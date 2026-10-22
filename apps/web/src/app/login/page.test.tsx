@@ -6,12 +6,15 @@ import { LoginFormView as LoginForm, type LoginFormDependencies } from "./login-
 const renderLoginForm = (redirectTo = "/") => {
   const push = vi.fn();
   const refresh = vi.fn();
+
   const sendMagicLink = vi.fn<LoginFormDependencies["sendMagicLink"]>(() =>
     Promise.resolve({ error: null }),
   );
+
   const signInEmail = vi.fn<LoginFormDependencies["signInEmail"]>(() =>
     Promise.resolve({ error: null }),
   );
+
   const dependencies: LoginFormDependencies = {
     redirectTo: () => redirectTo,
     router: {
@@ -34,14 +37,18 @@ const renderLoginForm = (redirectTo = "/") => {
 describe("LoginForm", () => {
   it.each(["password", "magicLink"])("cancels native navigation for %s submission", (method) => {
     renderLoginForm();
+
     if (method === "magicLink") {
       fireEvent.click(screen.getByRole("button", { name: "Entrar com link mágico" }));
     }
+
     const label = method === "magicLink" ? "Enviar link mágico" : "Entrar";
     const form = screen.getByRole("button", { name: label }).closest("form");
+
     if (form === null) {
       throw new Error("The login submit button must belong to its form");
     }
+
     const event = createEvent.submit(form);
     fireEvent(form, event);
     expect(event.defaultPrevented).toBe(true);

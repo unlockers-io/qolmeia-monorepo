@@ -16,6 +16,7 @@ const renderEditor = ({
   render(
     <PromptEditor initialValue={initialValue} onReset={onReset} onSave={onSave} updatedAt={null} />,
   );
+
   return {
     prompt: screen.getByLabelText("Instruções para este agente"),
     save: screen.getByRole("button", { name: "Salvar" }),
@@ -63,6 +64,7 @@ describe("PromptEditor", () => {
     const onSave = vi
       .fn<(value: string) => Promise<void>>()
       .mockRejectedValue(new ApiError(500, "boom"));
+
     const { prompt, save } = renderEditor({ onSave });
     fireEvent.change(prompt, { target: { value: "Seja breve." } });
 

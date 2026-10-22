@@ -66,18 +66,22 @@ const submitLabel = (decision: DecisionOutcome | null): string =>
 
 const feedbackError = (feedback: string, required: boolean): string | null => {
   const length = feedback.trim().length;
+
   if (length > MAX_FEEDBACK) {
     return `Use no máximo ${MAX_FEEDBACK} caracteres.`;
   }
+
   if (required && length === 0) {
     return "Escreva o motivo: o especialista usa isso para entender a decisão.";
   }
+
   return null;
 };
 
 const nextPendingId = async (currentId: string): Promise<string | null> => {
   try {
     const { items } = await apiGet<ActionsResponse>("/actions?status=pending");
+
     return items.find((item) => item.id !== currentId)?.id ?? null;
   } catch {
     return null;
@@ -93,6 +97,7 @@ type DecisionOptionProps = {
 const DecisionOption = ({ onSelect, option, selected }: DecisionOptionProps) => {
   const inputId = `decision-${option.value}`;
   const descriptionId = `${inputId}-description`;
+
   return (
     <label
       className={cn(
@@ -143,6 +148,7 @@ const DecisionGroup = ({ allowChanges, decision, missing, onSelect }: DecisionGr
   const options = allowChanges
     ? OPTIONS
     : OPTIONS.filter((opt) => opt.value !== "changes_requested");
+
   return (
     <>
       <fieldset
@@ -237,16 +243,22 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (submitting) {
       return;
     }
+
     setSubmitAttempted(true);
+
     if (decision === null || invalidFeedback !== null) {
       focusFirstInvalidField(formId);
+
       return;
     }
+
     setSubmitting(true);
     setSubmitError(null);
+
     try {
       await apiSend("POST", `/actions/${actionId}/decide`, {
         decision,
@@ -261,6 +273,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
     } catch (error) {
       setSubmitError(describeRequestError(error, "Não foi possível enviar a decisão."));
     }
+
     setSubmitting(false);
   };
 
