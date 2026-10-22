@@ -179,7 +179,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
     setSubmitting(false);
   };
 
-  const canSubmit =
+  const canSend =
     !disabled &&
     !isUploading &&
     !submitting &&
@@ -279,7 +279,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
               <Paperclip aria-hidden className="size-4" />
             )}
           </Button>
-          <Button aria-label="Enviar" disabled={!canSubmit} size="icon" type="submit">
+          <Button aria-label="Enviar" disabled={!canSend} size="icon" type="submit">
             {submitIcon}
           </Button>
         </div>
