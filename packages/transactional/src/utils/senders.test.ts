@@ -12,10 +12,12 @@ import { previewEmail, sendEmail, type EmailClientFactory } from "./send-email";
 import { createTransactionalEmailSender } from "./senders";
 
 const sendMock = vi.fn();
+
 const createClient: EmailClientFactory = () => ({
   batch: { send: vi.fn() },
   emails: { send: sendMock },
 });
+
 const sendTransactionalEmail = createTransactionalEmailSender((options) =>
   sendEmail(options, createClient),
 );
@@ -29,6 +31,7 @@ describe("WelcomeEmail render", () => {
         verificationUrl: "https://app.qolmeia.com/verify?token=abc",
       }),
     );
+
     expect(html).toContain("https://app.qolmeia.com/verify?token=abc");
     expect(html).toContain("Boas-vindas à Qolmeia");
     expect(text).toMatch(/boas-vindas à qolmeia/iv);
@@ -44,6 +47,7 @@ describe("PasswordResetEmail render", () => {
         userEmail: "user@example.com",
       }),
     );
+
     expect(html).toContain("https://app.qolmeia.com/reset?token=xyz");
     expect(html).toContain("Redefina sua senha");
     expect(html).not.toContain("Acme");
@@ -59,6 +63,7 @@ describe("SignUpAttemptEmail render", () => {
         userEmail: "user@example.com",
       }),
     );
+
     expect(html).toContain("https://app.qolmeia.com/login");
     expect(html).toContain("https://app.qolmeia.com/recover");
     expect(html).toContain("Qolmeia");
@@ -74,6 +79,7 @@ describe("ChangeEmail render", () => {
         newEmail: "new@example.com",
       }),
     );
+
     expect(html).toContain("old@example.com");
     expect(html).toContain("new@example.com");
     expect(html).toContain("https://app.qolmeia.com/change?token=abc");
@@ -89,6 +95,7 @@ describe("MagicLinkEmail render", () => {
         username: "Pedro",
       }),
     );
+
     expect(html).toContain("https://app.qolmeia.com/auth/magic?token=mlk-123");
     expect(html).toContain("Entre na Qolmeia");
     expect(html).not.toContain('lang="en"');
@@ -103,6 +110,7 @@ describe("MagicLinkEmail render", () => {
         userEmail: "user@example.com",
       }),
     );
+
     expect(html).toContain("https://app.qolmeia.com/auth/magic?token=mlk-456");
     expect(text).toContain("Olá,");
   });
@@ -117,6 +125,7 @@ describe("InvitationEmail render", () => {
         userEmail: "cliente@example.com",
       }),
     );
+
     expect(html).toContain("https://app.qolmeia.com/convite/inv-123");
     expect(html).toContain("Padaria Nova");
     expect(html).toContain("cliente@example.com");

@@ -26,6 +26,7 @@ test.describe("Client magic-link login", () => {
       subject: /link|acesso|magic|sign.?in/iu,
       to: email,
     });
+
     expect(mail.last_event).not.toBe("bounced");
 
     const verifyUrl = extractLink(mail, /\/api\/auth\/magic-link\/verify/u);

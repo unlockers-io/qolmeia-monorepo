@@ -35,6 +35,7 @@ meAssetsRoutes.get("/assets", async (c) => {
 });
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 const ALLOWED_UPLOAD_MIME = new Set([
   "image/gif",
   "image/jpeg",
@@ -55,6 +56,7 @@ const persistImageAsset = async (
 ): Promise<AssetRecord> => {
   const { companyId, extraMeta, file, kind } = opts;
   const bytes = new Uint8Array(await file.arrayBuffer());
+
   return storeAsset(env, db, {
     bytes,
     companyId,
@@ -69,19 +71,24 @@ const readUploadedImage = (
   form: FormData,
 ): { error: string; status: 400 | 413 | 415 } | { file: File } => {
   const file = form.get("file");
+
   if (!(file instanceof File)) {
     return { error: "Missing 'file' field", status: 400 };
   }
+
   if (!ALLOWED_UPLOAD_MIME.has(file.type)) {
     return { error: `Unsupported mime '${file.type}'`, status: 415 };
   }
+
   if (file.size > MAX_UPLOAD_BYTES) {
     return { error: `File too large (max ${MAX_UPLOAD_BYTES} bytes)`, status: 413 };
   }
+
   return { file };
 };
 
 const BRAND_CATEGORIES = new Set(["logo", "post", "reference", "other"]);
+
 const brandAssetMetadataSchema = z.object({
   category: z.string().optional(),
   originalName: z.string().optional(),
@@ -89,6 +96,7 @@ const brandAssetMetadataSchema = z.object({
 
 const toBrandAsset = (row: AssetRecord) => {
   const metadata = brandAssetMetadataSchema.safeParse(row.metadata);
+
   return {
     category: metadata.success ? (metadata.data.category ?? "other") : "other",
     createdAt: new Date(row.createdAt).toISOString(),
@@ -104,6 +112,7 @@ meAssetsRoutes.post("/uploads", async (c) => {
   const { companyId } = c.get("session");
 
   let form: FormData;
+
   try {
     form = await c.req.formData();
   } catch {
@@ -111,6 +120,7 @@ meAssetsRoutes.post("/uploads", async (c) => {
   }
 
   const validated = readUploadedImage(form);
+
   if ("error" in validated) {
     return c.json({ error: validated.error }, validated.status);
   }
@@ -142,6 +152,7 @@ meAssetsRoutes.post("/brand-assets", async (c) => {
   const session = c.get("session");
 
   let form: FormData;
+
   try {
     form = await c.req.formData();
   } catch {
@@ -149,10 +160,13 @@ meAssetsRoutes.post("/brand-assets", async (c) => {
   }
 
   const validated = readUploadedImage(form);
+
   if ("error" in validated) {
     return c.json({ error: validated.error }, validated.status);
   }
+
   const rawCategory = form.get("category");
+
   const category =
     typeof rawCategory === "string" && BRAND_CATEGORIES.has(rawCategory) ? rawCategory : "other";
 
@@ -169,13 +183,16 @@ meAssetsRoutes.post("/brand-assets", async (c) => {
 meAssetsRoutes.delete("/brand-assets/:id", async (c) => {
   const session = c.get("session");
   const id = c.req.param("id");
+
   const deleted = await deleteAssets(c.env, c.var.db, session.companyId, {
     ids: [id],
     kind: "brand_asset",
   });
+
   if (deleted === 0) {
     return c.json({ error: "not found" }, 404);
   }
+
   return c.json({ ok: true });
 });
 
@@ -186,14 +203,18 @@ const deleteAssetsInputSchema = z.object({
 meAssetsRoutes.post("/assets/delete", async (c) => {
   const session = c.get("session");
   const parsed = deleteAssetsInputSchema.safeParse(await c.req.json().catch(() => null));
+
   if (!parsed.success) {
     return c.json({ error: "invalid body" }, 400);
   }
+
   const { ids } = parsed.data;
+
   const deleted = await deleteAssets(c.env, c.var.db, session.companyId, {
     ids,
     visibility: "customer",
   });
+
   return c.json({ deleted });
 });
 

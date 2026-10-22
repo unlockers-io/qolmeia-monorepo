@@ -33,12 +33,15 @@ const HireDialog = ({ onClose, onHired, open, template }: HireDialogProps) => {
     if (!template) {
       return;
     }
+
     setBusy(true);
+
     try {
       const member = await hireMember({
         displayName: name.trim() || undefined,
         templateId: template.id,
       });
+
       toast.success(`${member.displayName} contratado(a).`);
       onHired();
       onClose();
@@ -46,6 +49,7 @@ const HireDialog = ({ onClose, onHired, open, template }: HireDialogProps) => {
     } catch (error) {
       toast.error(describeRequestError(error, "Não foi possível contratar. Tente de novo."));
     }
+
     setBusy(false);
   };
 

@@ -11,6 +11,7 @@ type TeamSidebarProps = {
 
 const TeamSidebar = ({ companyId }: TeamSidebarProps) => {
   const { error, members, status } = useTeamRoster(companyId);
+
   return (
     <aside
       aria-label="Seu time"

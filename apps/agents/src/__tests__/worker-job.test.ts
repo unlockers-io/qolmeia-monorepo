@@ -60,22 +60,28 @@ const callTools = (body: z.infer<typeof completionSchema>): Response => {
   prompts.push(JSON.stringify(body.messages));
   const round = prompts.length - 1;
   const inputs = toolInputs(round);
+
   const toolCalls = body.tools.flatMap(({ function: { name } }): Array<ToolCall> => {
     const input = inputs[name];
     const args = JSON.stringify(input);
+
     return input === undefined
       ? []
       : [{ function: { arguments: args, name }, id: `${name}-${round}`, type: "function" }];
   });
+
   return chatCompletion({ content: null, role: "assistant", tool_calls: toolCalls }, "tool_calls");
 };
 
 const fakeFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const request = new Request(input, init);
+
   if (!request.url.endsWith("/chat/completions")) {
     return new Response("unexpected request", { status: 500 });
   }
+
   const body = completionSchema.parse(await request.json());
+
   return body.messages.some(({ role }) => role === "tool")
     ? chatCompletion({ content: "Entrega pronta.", role: "assistant" }, "stop")
     : callTools(body);
@@ -94,9 +100,11 @@ const startJob = async (ticketId: string, agentInstanceId = DESIGNER_ID, failing
   const instance = await introspectWorkflowInstance(env.WORKER_JOB, ticketId);
   await instance.modify(async (modifier) => {
     await modifier.disableRetryDelays();
+
     if (failingStep !== undefined) {
       await modifier.mockStepError({ name: failingStep }, new Error("admission failed"), 1);
     }
+
     for (let round = 0; round <= MAX_REVISIONS; round += 1) {
       await modifier.mockStepResult({ name: `notify-executed-${round}` }, { accepted: true });
       await modifier.mockStepResult({ name: `notify-decision-${round}` }, { accepted: true });
@@ -106,6 +114,7 @@ const startJob = async (ticketId: string, agentInstanceId = DESIGNER_ID, failing
     id: ticketId,
     params: { agentInstanceId, companyId: COMPANY_ID, ticketId },
   });
+
   return instance;
 };
 
@@ -134,11 +143,13 @@ const actionRows = (ticketId: string) =>
 
 const assetsByName = async () => {
   const assets = await db((client) => listAssets(client, COMPANY_ID));
+
   return new Map(assets.map((asset) => [asset.name, asset]));
 };
 
 const customerFolder = async () => {
   const assets = await db((client) => listAssets(client, COMPANY_ID, { visibility: "customer" }));
+
   return assets.map(({ id }) => id);
 };
 
@@ -150,6 +161,7 @@ const activityTypes = async (ticketId: string) => {
       where: { refId: { startsWith: ticketId } },
     }),
   );
+
   return rows.map(({ type }) => type);
 };
 
@@ -301,10 +313,12 @@ describe("WorkerJobWorkflow", () => {
     for (let round = 0; round <= MAX_REVISIONS; round += 1) {
       await instance.waitForStepResult({ name: `propose-${round}` });
       const actionId = actionIdFor("tkt-cap", round);
+
       if (round === MAX_REVISIONS) {
         const refused = await decide(actionId, "changes_requested", "mais um ajuste");
         expect(refused.status).toBe(409);
       }
+
       await workflow.sendEvent({
         payload: {
           decidedByUserId: "operator-1",
@@ -314,6 +328,7 @@ describe("WorkerJobWorkflow", () => {
         type: decisionEventType(actionId),
       });
     }
+
     await instance.waitForStatus("complete");
 
     expect(await instance.getOutput()).toEqual({
@@ -334,6 +349,7 @@ describe("WorkerJobWorkflow", () => {
     const pending = await db((client) =>
       client.action.findUniqueOrThrow({ select: { proposed: true }, where: { id: actionId } }),
     );
+
     expect(pending.proposed).toMatchObject({
       draft: { body: "Post da rodada 0", platform: "instagram" },
       summary: "Entrega pronta.",
@@ -392,11 +408,13 @@ describe("required customer delivery", () => {
       await instance.waitForStepResult({ name: "propose-0" });
       const response = await decide(actionIdFor(ticketId, 0), decision, "ajuste");
       expect(response.status).toBe(200);
+
       if (decision === "changes_requested") {
         await instance.waitForStepResult({ name: "propose-1" });
         const approved = await decide(actionIdFor(ticketId, 1), "approved");
         expect(approved.status).toBe(200);
       }
+
       await instance.waitForStatus("complete");
       const activities = await activityTypes(ticketId);
       expect(
@@ -415,19 +433,23 @@ describe("required customer delivery", () => {
       await using instance = await startJob(ticketId);
       await instance.waitForStatus("complete");
       const accepted = Promise.withResolvers<Awaited<ReturnType<typeof dispatch>>>();
+
       const send = vi
         .fn<typeof dispatch>()
         .mockRejectedValueOnce(new Error("receipt lost"))
         .mockReturnValueOnce(accepted.promise);
+
       const notify = createNotifyCustomer(send);
       const job = { agentInstanceId: DESIGNER_ID, companyId: COMPANY_ID, env, ticketId };
       const actionId = actionIdFor(ticketId, 0);
       await expect(notify(job, actionId, verdict)).rejects.toThrow("receipt lost");
       let settled = false;
+
       const observeAdmission = async () => {
         await notify(job, actionId, verdict);
         settled = true;
       };
+
       const retried = observeAdmission();
       await vi.waitFor(() => {
         expect(send).toHaveBeenCalledTimes(2);

@@ -65,11 +65,13 @@ const ticket = () => db((client) => loadTicket(client, TICKET_ID));
 
 const activityTypes = async () => {
   const entries = await db((client) => listActivity(client, { companyId: COMPANY_ID }));
+
   return entries.map(({ type }) => type);
 };
 
 const pendingIds = async () => {
   const entries = await pending();
+
   return entries.map(({ id }) => id);
 };
 

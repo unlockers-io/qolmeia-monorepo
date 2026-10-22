@@ -45,9 +45,11 @@ const proposeAction = (
   db.$transaction(async (tx) => {
     const id = actionIdFor(input.ticketId, input.round);
     const existing = await tx.action.findUnique({ select: { id: true }, where: { id } });
+
     if (existing) {
       return existing;
     }
+
     const gated = input.policy === "require_approval";
     await tx.action.create({
       data: {
@@ -60,6 +62,7 @@ const proposeAction = (
         ticketId: input.ticketId,
       },
     });
+
     if (gated) {
       await transitionTicket(tx, {
         activity:
@@ -84,6 +87,7 @@ const proposeAction = (
         ticketId: input.ticketId,
       });
     }
+
     return { id };
   });
 
@@ -107,6 +111,7 @@ const verdictOf = (decision: DecisionOutcome, round: number): Verdict => {
   if (decision === "approved") {
     return "execute";
   }
+
   return decision === "changes_requested" && canRevise(round) ? "revise" : "end";
 };
 
@@ -118,12 +123,15 @@ const decisionActivity = (input: DecisionInput, verdict: Verdict): ActivityRecor
     refId: input.actionId,
     refType: "action" as const,
   };
+
   if (input.decision === "approved") {
     return { ...ref, summary: "Ação aprovada.", type: "ACTION_APPROVED" };
   }
+
   if (input.decision === "rejected") {
     return { ...ref, summary: "Ação rejeitada.", type: "ACTION_REJECTED" };
   }
+
   return {
     ...ref,
     summary:
@@ -137,6 +145,7 @@ const decisionActivity = (input: DecisionInput, verdict: Verdict): ActivityRecor
 const recordDecision = (db: PrismaClient, input: DecisionInput): Promise<Verdict> =>
   db.$transaction(async (tx) => {
     const verdict = verdictOf(input.decision, input.round);
+
     const decided = await tx.action.updateMany({
       data: {
         decidedAt: new Date(),
@@ -146,6 +155,7 @@ const recordDecision = (db: PrismaClient, input: DecisionInput): Promise<Verdict
       },
       where: { id: input.actionId, status: "pending" },
     });
+
     if (decided.count > 0) {
       await transitionTicket(tx, {
         activity: decisionActivity(input, verdict),
@@ -153,6 +163,7 @@ const recordDecision = (db: PrismaClient, input: DecisionInput): Promise<Verdict
         ticketId: input.ticketId,
       });
     }
+
     return verdict;
   });
 
@@ -166,6 +177,7 @@ type ExecutionInput = {
 
 const executionActivity = (input: ExecutionInput): ActivityRecord => {
   const ref = { companyId: input.companyId, refId: input.actionId, refType: "action" as const };
+
   if (input.policy === "notify_only") {
     return {
       ...ref,
@@ -174,6 +186,7 @@ const executionActivity = (input: ExecutionInput): ActivityRecord => {
       type: "ACTION_NOTIFY",
     };
   }
+
   return {
     ...ref,
     summary:
@@ -190,6 +203,7 @@ const markExecuted = (db: PrismaClient, input: ExecutionInput): Promise<void> =>
       data: { status: "executed" },
       where: { id: input.actionId, status: "approved" },
     });
+
     if (executed.count > 0) {
       await transitionTicket(tx, {
         activity: executionActivity(input),
@@ -201,4 +215,5 @@ const markExecuted = (db: PrismaClient, input: ExecutionInput): Promise<void> =>
   });
 
 export { markExecuted, proposeAction, recordDecision };
+
 export type { Verdict };

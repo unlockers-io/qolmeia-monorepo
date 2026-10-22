@@ -30,6 +30,7 @@ const listAssetsSkill = defineSkill({
     const assets = await withDb(ctx.env, (db) =>
       listAssets(db, ctx.companyId, { kind, visibility: folder }),
     );
+
     return { assets: assets.map(({ metadata: _metadata, ...summary }) => summary) };
   },
   id: "listAssets",
@@ -46,9 +47,11 @@ const readAssetSkill = defineSkill({
   displayName: "Ler arquivo",
   async execute({ assetId }, ctx): Promise<{ content: string; name: string } | { error: string }> {
     const asset = await withDb(ctx.env, (db) => readAssetText(ctx.env, db, ctx.companyId, assetId));
+
     if (!asset) {
       return { error: "Asset não encontrado ou não é um documento de texto legível." };
     }
+
     return { content: asset.content, name: asset.name };
   },
   id: "readAsset",
@@ -79,6 +82,7 @@ const saveAssetSkill = defineSkill({
     ctx,
   ): Promise<{ assetId: string; deliverable: boolean }> {
     const deliverable = (folder ?? "customer") === "customer";
+
     const { id: assetId } = await withDb(ctx.env, (db) =>
       storeAsset(ctx.env, db, {
         bytes: new TextEncoder().encode(content),
@@ -89,6 +93,7 @@ const saveAssetSkill = defineSkill({
         visibility: deliverable ? ctx.deliverableFolder : "agent",
       }),
     );
+
     return { assetId, deliverable };
   },
   id: "saveAsset",

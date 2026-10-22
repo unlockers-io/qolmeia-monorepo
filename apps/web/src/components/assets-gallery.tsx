@@ -31,6 +31,7 @@ const KIND_LABEL = {
   knowledge_doc: "Documentos",
   user_upload: "Uploads",
 } satisfies Record<string, string>;
+
 const kindLabelById = new Map<string, string>(Object.entries(KIND_LABEL));
 
 const kindLabel = (kind: string): string => kindLabelById.get(kind) ?? "Outros";
@@ -39,9 +40,11 @@ const formatBytes = (bytes: number): string => {
   if (bytes < 1024) {
     return `${bytes} B`;
   }
+
   if (bytes < 1024 * 1024) {
     return `${Math.round(bytes / 1024)} KB`;
   }
+
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
@@ -76,17 +79,22 @@ const galleryReducer = (state: GalleryState, action: GalleryAction): GalleryStat
     case "setFilter": {
       return { ...state, active: action.key };
     }
+
     case "toggleSelect": {
       const selected = new Set(state.selected);
+
       if (selected.has(action.id)) {
         selected.delete(action.id);
       } else {
         selected.add(action.id);
       }
+
       return { ...state, selected };
     }
+
     case "toggleSelectAll": {
       const selected = new Set(state.selected);
+
       for (const id of action.ids) {
         if (action.selectAll) {
           selected.add(id);
@@ -94,29 +102,38 @@ const galleryReducer = (state: GalleryState, action: GalleryAction): GalleryStat
           selected.delete(id);
         }
       }
+
       return { ...state, selected };
     }
+
     case "requestDelete": {
       return { ...state, confirmIds: action.ids };
     }
+
     case "cancelDelete": {
       return { ...state, confirmIds: null };
     }
+
     case "deleteStart": {
       return { ...state, deleting: true };
     }
+
     case "deleteSuccess": {
       const removedIds = new Set(state.removedIds);
       const selected = new Set(state.selected);
+
       for (const id of action.ids) {
         removedIds.add(id);
         selected.delete(id);
       }
+
       return { ...state, confirmIds: null, deleting: false, removedIds, selected };
     }
+
     case "deleteError": {
       return { ...state, deleting: false };
     }
+
     default: {
       return state;
     }
@@ -135,7 +152,9 @@ const AssetPreview = ({ asset }: { asset: WebChatAsset }) => {
       />
     );
   }
+
   const Icon = asset.mimeType.startsWith("audio/") ? Music : FileText;
+
   return (
     <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 bg-muted text-muted-foreground">
       <Icon aria-hidden className="size-9" />
@@ -168,7 +187,9 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
     if (!confirmIds) {
       return;
     }
+
     dispatch({ type: "deleteStart" });
+
     try {
       await deleteAssets(confirmIds);
       dispatch({ ids: confirmIds, type: "deleteSuccess" });
@@ -203,6 +224,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
             ...kinds.map((k) => ({ key: k, label: kindLabel(k) })),
           ].map((chip) => {
             const isActive = active === chip.key;
+
             return (
               <button
                 aria-pressed={isActive}
@@ -263,6 +285,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
         {filtered.map((asset) => {
           const isSelected = selected.has(asset.id);
+
           return (
             <li className="relative" key={asset.id}>
               <div

@@ -13,9 +13,11 @@ const cleanup = async () => {
         OR: [{ email: E2E_USER_EMAIL }, { email: { endsWith: "@resend.dev" } }],
       },
     });
+
     const verifications = await prisma.verification.deleteMany({
       where: { identifier: { contains: "@resend.dev" } },
     });
+
     console.log(
       `[E2E Cleanup] Deleted ${users.count} user(s), ${verifications.count} verification(s)`,
     );

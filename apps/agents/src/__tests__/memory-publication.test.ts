@@ -13,6 +13,7 @@ const vector = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.1);
 const run = vi.fn();
 const upsert = vi.fn();
 const query = vi.fn();
+
 const production = {
   ...env,
   AI: { run } as unknown as Ai,
@@ -28,6 +29,7 @@ const confirm = () =>
       templateIds: ["tpl-designer"],
     }),
   );
+
 const facts = () => db((client) => client.memoryFact.findMany({ orderBy: { id: "asc" } }));
 const publish = () => db((client) => publishPendingFacts(production, client));
 
@@ -60,6 +62,7 @@ describe("committed memory publication", () => {
     const started = Promise.withResolvers<undefined>();
     run.mockImplementationOnce(() => {
       started.resolve(undefined);
+
       return embedding.promise;
     });
     const publication = publish();
@@ -114,17 +117,20 @@ describe("committed memory publication", () => {
     async (failure) => {
       await confirm();
       const committed = await facts();
+
       if (failure === "embedding") {
         run.mockRejectedValueOnce(new Error("AI unavailable"));
       } else {
         upsert.mockRejectedValueOnce(new Error("Vectorize unavailable"));
       }
+
       await expect(publish()).rejects.toThrow("unavailable");
       expect(await facts()).toEqual(committed);
       await cloudflare.scheduled({ cron: "* * * * *" } as ScheduledController, production);
       const published = upsert.mock.calls.at(-1)?.[0] as Array<{ id: string }>;
       expect(published.map(({ id }) => id).toSorted()).toEqual(committed.map(({ id }) => id));
       query.mockResolvedValue({ matches: published.map(({ id }) => ({ id, score: 1 })) });
+
       const recalled = await db((client) =>
         recall(production, client, COMPANY_ID, {
           agentInstanceId: CORR_ID,
@@ -132,6 +138,7 @@ describe("committed memory publication", () => {
           topK: 4,
         }),
       );
+
       expect(recalled.map(({ id }) => id).toSorted()).toEqual(committed.map(({ id }) => id));
       expect(await facts()).toHaveLength(3);
       const calls = upsert.mock.calls.length;
@@ -149,6 +156,7 @@ describe("committed memory publication", () => {
       await client.$executeRawUnsafe(`CREATE TRIGGER reject_memory_ack BEFORE UPDATE OF indexed_at ON memory_fact
         FOR EACH ROW EXECUTE FUNCTION reject_memory_ack()`);
     });
+
     try {
       await expect(publish()).rejects.toThrow("acknowledgement failed");
       expect(await facts()).toEqual(committed);
@@ -157,6 +165,7 @@ describe("committed memory publication", () => {
         client.$executeRawUnsafe("DROP TRIGGER reject_memory_ack ON memory_fact"),
       );
     }
+
     await expect(publish()).resolves.toBe(3);
     expect(upsert).toHaveBeenCalledTimes(2);
     expect(upsert.mock.calls[1]).toEqual(upsert.mock.calls[0]);
@@ -168,6 +177,7 @@ describe("committed memory publication", () => {
     const stored = await facts();
     await Promise.all([publish(), publish()]);
     expect(await facts()).toHaveLength(stored.length);
+
     for (const [batch] of upsert.mock.calls) {
       expect(batch.map(({ id }: { id: string }) => id).toSorted()).toEqual(
         stored.map(({ id }) => id),

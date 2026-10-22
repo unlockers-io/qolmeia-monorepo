@@ -24,15 +24,19 @@ const inviteCustomer = async (
     db.company.findUnique({ select: { name: true }, where: { id: companyId } }),
     db.orgMembership.findFirst({ select: { id: true }, where: { user: { email } } }),
   ]);
+
   if (company === null) {
     return { kind: "company_not_found" };
   }
+
   if (membership !== null) {
     return { kind: "already_member" };
   }
+
   const invitation = await auth.api.createCustomerInvitation({
     body: { email, inviterId, organizationId: companyId },
   });
+
   await recordActivity(db, {
     actorId: inviterId,
     companyId,
@@ -42,6 +46,7 @@ const inviteCustomer = async (
     summary: `Convite enviado para ${email}.`,
     type: "CUSTOMER_INVITED",
   });
+
   return {
     companyName: company.name,
     invitation: { email, expiresAt: new Date(invitation.expiresAt).getTime(), id: invitation.id },

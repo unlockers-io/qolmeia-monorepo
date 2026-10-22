@@ -20,6 +20,7 @@ const storedBrief = async () => {
   const row = await db((client) =>
     client.company.findUnique({ select: { brief: true }, where: { id: COMPANY_ID } }),
   );
+
   return row?.brief;
 };
 

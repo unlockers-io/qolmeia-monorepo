@@ -10,6 +10,7 @@ const vectorizeIndex = ({ AI, VECTORIZE }: Bindings): VectorIndex => {
     async query({ agentInstanceId, text, topK }) {
       const [vector] = await embed([text]);
       const { matches } = await VECTORIZE.query(vector, { filter: { agentInstanceId }, topK });
+
       return matches.map(({ id, score }) => ({ id, score }));
     },
     async upsert(facts) {
@@ -17,9 +18,11 @@ const vectorizeIndex = ({ AI, VECTORIZE }: Bindings): VectorIndex => {
       await VECTORIZE.upsert(
         facts.map((fact, index) => {
           const values = vectors[index];
+
           if (values === undefined) {
             throw new Error(`no embedding returned for memory fact ${fact.id}`);
           }
+
           return toVector(fact, values);
         }),
       );

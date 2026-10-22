@@ -50,6 +50,7 @@ const formSchema = z.object({
         if (raw === "") {
           return true;
         }
+
         try {
           return policiesRecordSchema.safeParse(JSON.parse(raw)).success;
         } catch {
@@ -70,9 +71,11 @@ const isFieldKey = (key: PropertyKey | undefined): key is FieldKey =>
 
 const parsePolicies = (raw: string): TemplateInput["defaultPolicies"] => {
   const trimmed = raw.trim();
+
   if (trimmed === "") {
     return {};
   }
+
   return policiesRecordSchema.parse(JSON.parse(trimmed));
 };
 
@@ -92,6 +95,7 @@ const useTemplateForm = (initial: Template | undefined) => {
     systemPrompt: initial?.systemPrompt ?? "",
     workerKind: initial?.workerKind ?? "",
   });
+
   const [skillIds, setSkillIds] = useState<ReadonlyArray<string>>(initial?.skillIds ?? []);
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
 
@@ -144,21 +148,28 @@ const useTemplateForm = (initial: Template | undefined) => {
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const parsed = formSchema.safeParse(values);
+
     if (!parsed.success) {
       const fieldErrors: Partial<Record<FieldKey, string>> = {};
+
       for (const issue of parsed.error.issues) {
         const key = issue.path[0];
+
         if (isFieldKey(key) && fieldErrors[key] === undefined) {
           fieldErrors[key] = issue.message;
         }
       }
+
       setErrors(fieldErrors);
       const firstKey = parsed.error.issues[0]?.path[0];
+
       if (isFieldKey(firstKey)) {
         focusFirstError(firstKey);
       }
+
       return;
     }
+
     setErrors({});
     saveMutation.mutate({
       defaultActionType: parsed.data.defaultActionType,
@@ -176,6 +187,7 @@ const useTemplateForm = (initial: Template | undefined) => {
     if (!initial) {
       return;
     }
+
     statusMutation.mutate(initial.status === "retired" ? "active" : "retired");
   };
 

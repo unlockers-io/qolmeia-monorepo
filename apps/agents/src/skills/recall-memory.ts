@@ -31,6 +31,7 @@ const recallMemorySkill = defineSkill({
         topK: topK ?? 4,
       }),
     );
+
     return {
       matches: facts.map((fact) => ({
         content: fact.content,

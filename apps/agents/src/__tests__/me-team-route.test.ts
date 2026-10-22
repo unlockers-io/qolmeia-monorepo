@@ -24,9 +24,11 @@ describe("GET /api/me/team", () => {
     cookie = await signInAs(meCustomer);
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/team");
     expect(res.status).toBe(200);
+
     const body = await res.json<{
       members: Array<{ displayName: string; id: string; status: string }>;
     }>();
+
     expect(body.members.some((m) => m.id === WORKER_ID)).toBe(true);
   });
 
@@ -48,9 +50,11 @@ describe("GET /api/me/catalogue", () => {
     cookie = await signInAs(meCustomer);
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/catalogue");
     expect(res.status).toBe(200);
+
     const body = await res.json<{
       templates: Array<{ hiredCount: number; id: string }>;
     }>();
+
     const designer = body.templates.find((t) => t.id === "tpl-designer");
     expect(designer?.hiredCount).toBe(1);
   });
@@ -59,11 +63,13 @@ describe("GET /api/me/catalogue", () => {
 describe("POST /api/me/team/hire", () => {
   it("creates a new instance and emits team:roster", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/team/hire", {
       body: JSON.stringify({ templateId: "tpl-designer" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
+
     expect(res.status).toBe(200);
     const body = await res.json<{ member: { id: string; templateId: string } }>();
     expect(body.member.templateId).toBe("tpl-designer");
@@ -71,11 +77,13 @@ describe("POST /api/me/team/hire", () => {
 
   it("400 when templateId missing", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/team/hire", {
       body: JSON.stringify({}),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
+
     expect(res.status).toBe(400);
   });
 });
@@ -83,21 +91,25 @@ describe("POST /api/me/team/hire", () => {
 describe("/api/me/team mutations: CUSTOMER role gate", () => {
   it("403 when STAFF tries to hire", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/team/hire", {
       body: JSON.stringify({ templateId: "tpl-designer" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
+
     expect(res.status).toBe(403);
   });
 
   it("403 when STAFF tries to pause", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/me/team/members/${WORKER_ID}/pause`,
       { method: "POST" },
     );
+
     expect(res.status).toBe(403);
   });
 });
@@ -105,11 +117,13 @@ describe("/api/me/team mutations: CUSTOMER role gate", () => {
 describe("POST /api/me/team/hire: error mapping", () => {
   it("404 when template doesn't exist", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/team/hire", {
       body: JSON.stringify({ templateId: "tpl-does-not-exist" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
+
     expect(res.status).toBe(404);
   });
 });
@@ -117,26 +131,32 @@ describe("POST /api/me/team/hire: error mapping", () => {
 describe("PATCH /api/me/team/members/:id", () => {
   it("renames + sets prompt override", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/team/members/ai_mt_d", {
       body: JSON.stringify({ displayName: "Marina", promptOverride: "minimalista" }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
     });
+
     expect(res.status).toBe(200);
+
     const body = await res.json<{
       member: { displayName: string; hasPromptOverride: boolean };
     }>();
+
     expect(body.member.displayName).toBe("Marina");
     expect(body.member.hasPromptOverride).toBe(true);
   });
 
   it("clears prompt override when promptOverride: null", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/team/members/ai_mt_d", {
       body: JSON.stringify({ promptOverride: null }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
     });
+
     expect(res.status).toBe(200);
     const body = await res.json<{ member: { hasPromptOverride: boolean } }>();
     expect(body.member.hasPromptOverride).toBe(false);
@@ -144,6 +164,7 @@ describe("PATCH /api/me/team/members/:id", () => {
 
   it("404 when the member doesn't belong to the company", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(
       cookie,
       "https://agents.test/api/me/team/members/ai_does_not_exist",
@@ -153,6 +174,7 @@ describe("PATCH /api/me/team/members/:id", () => {
         method: "PATCH",
       },
     );
+
     expect(res.status).toBe(404);
   });
 });
@@ -160,23 +182,29 @@ describe("PATCH /api/me/team/members/:id", () => {
 describe("GET /api/me/team/members/:id", () => {
   it("returns the detail view for a member of the customer's company", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/me/team/members/${WORKER_ID}`,
     );
+
     expect(res.status).toBe(200);
+
     const body = await res.json<{
       member: { id: string; promptOverride: string | null; templateSystemPrompt: string };
     }>();
+
     expect(body.member.id).toBe(WORKER_ID);
   });
 
   it("404 when the member doesn't belong to the company", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/me/team/members/ai_does_not_exist`,
     );
+
     expect(res.status).toBe(404);
   });
 });
@@ -184,11 +212,13 @@ describe("GET /api/me/team/members/:id", () => {
 describe("POST /api/me/team/members/:id/pause + /resume", () => {
   it("pauses then resumes the worker", async () => {
     cookie = await signInAs(meCustomer);
+
     const paused = await fetchWithCookie(
       cookie,
       "https://agents.test/api/me/team/members/ai_mt_d/pause",
       { method: "POST" },
     );
+
     expect(paused.status).toBe(200);
     const pausedBody = await paused.json<{ member: { status: string } }>();
     expect(pausedBody.member.status).toBe("paused");
@@ -198,28 +228,33 @@ describe("POST /api/me/team/members/:id/pause + /resume", () => {
       "https://agents.test/api/me/team/members/ai_mt_d/resume",
       { method: "POST" },
     );
+
     const resumedBody = await resumed.json<{ member: { status: string } }>();
     expect(resumedBody.member.status).toBe("available");
   });
 
   it("rejects pausing the correspondent with the same 409 the operator surface returns", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/me/team/members/corr-${COMPANY_ID}/pause`,
       { method: "POST" },
     );
+
     expect(res.status).toBe(409);
     await expect(res.json()).resolves.toEqual({ error: "cannot pause/resume a correspondent" });
   });
 
   it("returns 404 when pausing a member outside the company", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(
       cookie,
       "https://agents.test/api/me/team/members/ai_does_not_exist/pause",
       { method: "POST" },
     );
+
     expect(res.status).toBe(404);
   });
 });

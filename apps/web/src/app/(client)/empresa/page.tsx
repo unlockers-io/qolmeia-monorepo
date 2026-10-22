@@ -18,6 +18,7 @@ export const instant = true;
 
 const EmpresaContent = async () => {
   const me = await requireCustomer();
+
   const [company, brandAssets, members, catalogue] = await Promise.allSettled([
     apiGetServer<CompanyResponse>("/api/me/company"),
     apiGetServer<{ items: Array<BrandAsset> }>("/api/me/brand-assets"),

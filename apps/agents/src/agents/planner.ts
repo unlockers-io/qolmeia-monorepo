@@ -1,4 +1,5 @@
 "use agent";
+
 import {
   type AgentProps,
   useAgentStart,
@@ -32,6 +33,7 @@ export function PlannerV2({ id }: AgentProps): string {
     "disabledSkillIds",
     [],
   );
+
   useAgentStart(async () => {
     setDisabledSkillIds(await withDb(env, loadDisabledSkillIds));
   });
@@ -44,6 +46,7 @@ export function PlannerV2({ id }: AgentProps): string {
     deliverableFolder: "customer",
     env,
   };
+
   for (const skillTool of buildFlueTools(ctx, PLANNER_SKILLS, disabledSkillIds)) {
     useTool(skillTool);
   }

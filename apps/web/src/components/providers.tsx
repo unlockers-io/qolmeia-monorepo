@@ -8,6 +8,7 @@ import { toast } from "sonner";
 const Providers = ({ children }: { children: ReactNode }) => {
   const [client] = useState(() => {
     const lastToastedByQuery = new Map<string, string>();
+
     return new QueryClient({
       defaultOptions: {
         queries: {
@@ -18,13 +19,17 @@ const Providers = ({ children }: { children: ReactNode }) => {
       queryCache: new QueryCache({
         onError: (error, query) => {
           const prefix = query.meta?.errorToast;
+
           if (typeof prefix !== "string") {
             return;
           }
+
           const message = describeRequestError(error, `${prefix}. Tente de novo.`);
+
           if (lastToastedByQuery.get(query.queryHash) === message) {
             return;
           }
+
           lastToastedByQuery.set(query.queryHash, message);
           toast.error(message);
         },

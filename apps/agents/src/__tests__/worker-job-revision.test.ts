@@ -15,6 +15,7 @@ describe("buildRevisionMessages", () => {
       "Aqui estão 3 posts...",
       "Deixe o tom mais informal e cite o preço.",
     );
+
     expect(messages).toHaveLength(3);
     expect(messages[0]?.role).toBe("user");
     expect(messages[1]).toEqual({ content: "Aqui estão 3 posts...", role: "assistant" });

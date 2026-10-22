@@ -29,25 +29,32 @@ const ActivityList = ({ category, initial, pageSize = 50 }: ActivityListProps) =
     if (exhausted || loading) {
       return;
     }
+
     setLoading(true);
+
     try {
       const earliest = rows.at(-1)?.createdAt;
       const params = new URLSearchParams({ limit: String(pageSize) });
+
       if (earliest !== undefined) {
         params.set("before", String(earliest));
       }
+
       if (category !== undefined && category !== "") {
         params.set("category", category);
       }
+
       const next = await apiGet<ActivityResponse>(`/activity?${params.toString()}`);
       const fresh = next.items.filter((item) => !rows.some((existing) => existing.id === item.id));
       setFetched((prev) => [...prev, ...fresh]);
+
       if (fresh.length < pageSize) {
         setFetchExhausted(true);
       }
     } catch (error) {
       toast.error(describeRequestError(error, "Não foi possível carregar mais eventos."));
     }
+
     setLoading(false);
   };
 

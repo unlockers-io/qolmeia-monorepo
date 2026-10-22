@@ -55,9 +55,11 @@ describe("backoffice skill catalog", () => {
   it("returns the full 12-skill code registry with id + label", async () => {
     const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/skills");
     expect(res.status).toBe(200);
+
     const body = await res.json<{
       items: Array<{ description: string; displayName: string; id: string }>;
     }>();
+
     expect(body.items.length).toBe(12);
     const webSearch = body.items.find((s) => s.id === "webSearch");
     expect(webSearch?.displayName).toBeTruthy();
@@ -89,10 +91,12 @@ describe("backoffice template CRUD", () => {
   it("rejects an unknown action type or policy key with 400", async () => {
     const unknownType = await post({ ...validBody, defaultActionType: "publish_asset" });
     expect(unknownType.status).toBe(400);
+
     const unknownKey = await post({
       ...validBody,
       defaultPolicies: { publish_asset: "require_approval" },
     });
+
     expect(unknownKey.status).toBe(400);
   });
 
@@ -110,6 +114,7 @@ describe("backoffice template CRUD", () => {
       displayName: "Auditor SEO v2",
       skillIds: ["webSearch"],
     });
+
     expect(updated.status).toBe(200);
     const updatedBody = await updated.json<{ template: Template }>();
     expect(updatedBody.template.version).toBe(2);

@@ -25,12 +25,14 @@ const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
     defaultValues: { email: "" },
     onSubmit: async ({ formApi, value }) => {
       const body: CustomerInvitationInput = { email: value.email };
+
       try {
         const { invitation } = await apiSend<CustomerInvitationResponse>(
           "POST",
           `/companies/${companyId}/invitations`,
           body,
         );
+
         toast.success(`Convite enviado para ${invitation.email}.`);
         formApi.reset();
       } catch (error) {
@@ -57,6 +59,7 @@ const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
       <form.Field name="email">
         {(field) => {
           const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
           return (
             <Field data-invalid={isInvalid || undefined}>
               <FieldLabel htmlFor={emailId}>Convidar cliente</FieldLabel>

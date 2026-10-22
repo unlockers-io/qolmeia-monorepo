@@ -23,6 +23,7 @@ const isActive = (pathname: string, href: string): boolean => {
   if (href === "/") {
     return pathname === "/";
   }
+
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
@@ -63,6 +64,7 @@ const NavView = ({ dependencies, orgName }: NavProps & { dependencies: NavDepend
         <ul className="flex min-w-max items-center gap-1">
           {NAV_ITEMS.map((item) => {
             const active = isActive(pathname, item.href);
+
             return (
               <li key={item.href}>
                 <Link
@@ -102,8 +104,10 @@ const NavView = ({ dependencies, orgName }: NavProps & { dependencies: NavDepend
 
 const Nav = (props: NavProps) => {
   const pathname = usePathname();
+
   return <NavView {...props} dependencies={{ pathname, SignOutControl: SignOutButton }} />;
 };
 
 export { Nav, NavView };
+
 export type { NavDependencies };

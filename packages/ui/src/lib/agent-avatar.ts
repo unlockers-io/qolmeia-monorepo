@@ -11,10 +11,13 @@ const agentAvatarClass = (role: AgentRole, workerKind: string | null): string =>
   if (role === "correspondent") {
     return "bg-avatar-1";
   }
+
   if (role === "planner") {
     return "bg-avatar-6";
   }
+
   const hit = WORKER_KIND_AVATAR.find((w) => w.match.test(workerKind ?? ""));
+
   return hit?.cls ?? "bg-avatar-8";
 };
 
@@ -31,11 +34,14 @@ const agentRoleLabel = (role: AgentRole, templateName: string | null): string =>
   if (role === "correspondent") {
     return "Correspondente";
   }
+
   if (role === "planner") {
     return "Planejador";
   }
+
   return templateName ?? "Especialista";
 };
 
 export { agentAvatarClass, agentInitials, agentRoleLabel };
+
 export type { AgentRole };

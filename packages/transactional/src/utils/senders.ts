@@ -152,6 +152,7 @@ const buildEmail = <Type extends EmailType>(type: Type, payload: PayloadByType[T
 const createTransactionalEmailSender =
   (send: SendEmail) => (email: TransactionalEmail, config: MailerConfig) => {
     const { subject, template, to } = buildEmail(email.type, email);
+
     return send({
       apiKey: config.apiKey,
       defaultReplyTo: config.defaultReplyTo,
@@ -171,4 +172,5 @@ const createTransactionalEmailSender =
 const sendTransactionalEmail = createTransactionalEmailSender(sendEmail);
 
 export type { MailerConfig, TransactionalEmail };
+
 export { createTransactionalEmailSender, sendTransactionalEmail };

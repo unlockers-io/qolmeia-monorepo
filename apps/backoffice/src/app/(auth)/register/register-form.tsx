@@ -56,10 +56,13 @@ const RegisterForm = ({ searchParams }: Props) => {
     onSubmit: async ({ value }) => {
       if (value.password !== value.confirmPassword) {
         toast.error("As senhas não conferem.");
+
         return;
       }
+
       const { from } = await searchParams;
       const redirectTo = safeRedirectPath(from);
+
       try {
         const result = await authClient.signUp.email({
           callbackURL: redirectTo,
@@ -67,19 +70,26 @@ const RegisterForm = ({ searchParams }: Props) => {
           name: value.name,
           password: value.password,
         });
+
         if (result.error) {
           toast.error(authErrorMessage(result.error, "Não foi possível criar a conta."));
+
           return;
         }
+
         const { token } = result.data;
+
         if (token === null || token === "") {
           setSentToEmail(value.email);
+
           return;
         }
       } catch {
         toast.error("Não foi possível conectar ao servidor. Tente novamente.");
+
         return;
       }
+
       toast.success("Conta criada. Bem-vindo à Qolmeia!");
       push(redirectTo);
       refresh();
@@ -130,6 +140,7 @@ const RegisterForm = ({ searchParams }: Props) => {
             <form.Field name="name">
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Nome</FieldLabel>
@@ -157,6 +168,7 @@ const RegisterForm = ({ searchParams }: Props) => {
             <form.Field name="email">
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
@@ -185,6 +197,7 @@ const RegisterForm = ({ searchParams }: Props) => {
             <form.Field name="password">
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
@@ -212,6 +225,7 @@ const RegisterForm = ({ searchParams }: Props) => {
             <form.Field name="confirmPassword">
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Confirmar senha</FieldLabel>

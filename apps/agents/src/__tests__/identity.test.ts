@@ -31,6 +31,7 @@ describe("resolveIdentity", () => {
     const result = await resolve(await signInAs({ orgId: COMPANY_ID, role: "CUSTOMER" }), [
       "customer",
     ]);
+
     expect(result).toMatchObject({
       identity: { companyId: COMPANY_ID, role: "CUSTOMER" },
       kind: "signed-in",
@@ -41,6 +42,7 @@ describe("resolveIdentity", () => {
     const result = await resolve(await signInAs({ orgId: QOLMEIA_ORG_ID, role: "STAFF" }), [
       "operator",
     ]);
+
     expect(result).toMatchObject({
       identity: { companyId: QOLMEIA_ORG_ID, role: "STAFF" },
       kind: "signed-in",
@@ -68,6 +70,7 @@ describe("resolveIdentity", () => {
       { orgId: QOLMEIA_ORG_ID, role: "OWNER" },
       { orgId: COMPANY_ID, role: "CUSTOMER" },
     ]);
+
     expect(await resolve(cookie, ["customer"])).toMatchObject({
       identity: { companyId: COMPANY_ID, role: "CUSTOMER" },
     });
@@ -81,6 +84,7 @@ describe("resolveIdentity", () => {
       { orgId: COMPANY_ID, role: "CUSTOMER" },
       { orgId: QOLMEIA_ORG_ID, role: "STAFF" },
     ]);
+
     const customer = await signInAs({ orgId: COMPANY_ID, role: "CUSTOMER" });
     expect(await resolve(both, ["operator", "customer"])).toMatchObject({
       identity: { companyId: QOLMEIA_ORG_ID, role: "STAFF" },
@@ -95,6 +99,7 @@ describe("resolveIdentity", () => {
       { orgId: COMPANY_ID, role: "CUSTOMER" },
       { orgId: OTHER_COMPANY_ID, role: "CUSTOMER" },
     ]);
+
     expect(await resolve(cookie, ["customer"])).toMatchObject({
       identity: { companyId: COMPANY_ID },
     });

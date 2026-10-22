@@ -6,6 +6,7 @@ import { proposalSummary } from "./proposal-summary";
 
 const ProposalCard = ({ proposed }: { proposed: Action["proposed"] }) => {
   const summary = proposalSummary(proposed);
+
   return (
     <Card className="gap-4 p-5">
       <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">Proposta</h2>

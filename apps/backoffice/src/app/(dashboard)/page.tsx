@@ -34,6 +34,7 @@ const loadRecentEvents = async (): Promise<ActivityResponse | null> => {
     return await apiGetServer<ActivityResponse>("/activity?limit=8");
   } catch (error) {
     log.error({ error, message: "home: failed to load recent activity" });
+
     return null;
   }
 };
@@ -48,9 +49,11 @@ const LoadError = ({ what }: { what: string }) => (
 
 const RecentEvents = async ({ activity }: { activity: Promise<ActivityResponse | null> }) => {
   const response = await activity;
+
   if (response === null) {
     return <LoadError what="os eventos" />;
   }
+
   if (response.items.length === 0) {
     return (
       <EmptyState
@@ -65,6 +68,7 @@ const RecentEvents = async ({ activity }: { activity: Promise<ActivityResponse |
     <ul className="flex flex-col px-4.5 py-1.5">
       {response.items.slice(0, 6).map((row) => {
         const style = activityStyle(row.type);
+
         return (
           <li className="flex gap-2.75 border-b border-border py-2.5 last:border-b-0" key={row.id}>
             <span aria-hidden className={cn("mt-1.5 size-1.75 shrink-0 rounded-full", style.dot)} />

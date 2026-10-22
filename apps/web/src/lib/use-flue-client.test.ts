@@ -33,15 +33,19 @@ describe("useFlueClient", () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (input, init) => {
       requests.push(new Request(input, init));
+
       return Promise.resolve(Response.json({ messages: [] }));
     };
+
     try {
       const { result } = renderHook(useFlueClient, { initialProps: url });
       await result.current.history().catch(() => null);
     } finally {
       globalThis.fetch = originalFetch;
     }
+
     expect(requests.length).toBeGreaterThan(0);
+
     for (const request of requests) {
       expect(request.headers.has("Authorization")).toBe(false);
       expect(request.credentials).toBe("include");

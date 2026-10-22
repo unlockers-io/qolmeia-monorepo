@@ -2,6 +2,7 @@ import { createPrismaClient, type Prisma, type PrismaClient } from "@repo/db/wor
 import { createMiddleware } from "hono/factory";
 
 type Db = PrismaClient | Prisma.TransactionClient;
+
 type DbVariables = { db: PrismaClient };
 
 const withDb = async <Result>(
@@ -9,6 +10,7 @@ const withDb = async <Result>(
   run: (db: PrismaClient) => Promise<Result>,
 ): Promise<Result> => {
   const db = createPrismaClient(env.HYPERDRIVE.connectionString);
+
   try {
     return await run(db);
   } finally {
@@ -19,10 +21,13 @@ const withDb = async <Result>(
 const dbPerRequest = createMiddleware<{ Bindings: Env; Variables: DbVariables }>((c, next) =>
   withDb(c.env, (db) => {
     c.set("db", db);
+
     return next();
   }),
 );
 
 export { dbPerRequest, withDb };
+
 export type { Db, DbVariables };
+
 export type { PrismaClient } from "@repo/db/worker";

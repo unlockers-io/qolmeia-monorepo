@@ -90,6 +90,7 @@ const isActive = (pathname: string, href: string): boolean => {
   if (href === "/") {
     return pathname === "/";
   }
+
   return pathname === href || pathname.startsWith(`${href}/`);
 };
 
@@ -125,6 +126,7 @@ const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps)
     {NAV_ITEMS.map((item) => {
       const active = isActive(pathname, item.href);
       const isQueue = item.href === "/approvals";
+
       return (
         <Link
           aria-current={active ? "page" : undefined}
@@ -234,8 +236,10 @@ const SidebarView = ({
 
 const Sidebar = (props: SidebarProps) => {
   const pathname = usePathname();
+
   return <SidebarView {...props} dependencies={{ pathname, SignOutControl: SignOutButton }} />;
 };
 
 export { Sidebar, SidebarView };
+
 export type { SidebarDependencies };

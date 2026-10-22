@@ -5,8 +5,10 @@ import { createUseFlueChat } from "./use-flue-chat";
 
 const hookSendMessage = vi.fn();
 let capturedUrl: string | undefined;
+
 const useFlueChat = createUseFlueChat((url) => {
   capturedUrl = url;
+
   return {
     error: undefined,
     historyReady: true,

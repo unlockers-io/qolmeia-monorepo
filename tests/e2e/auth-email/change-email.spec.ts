@@ -25,6 +25,7 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
     const signUp = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
       data: { email: currentEmail, name: "Change Me", password, username },
     });
+
     expect([200, 201]).toContain(signUp.status());
     const verify = await verification.forVerifyEmail(currentEmail);
     await request.get(verify.url, { failOnStatusCode: false, maxRedirects: 0 });
@@ -32,15 +33,18 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
     const signIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email: currentEmail, password },
     });
+
     expect(signIn.status()).toBe(200);
 
     const setCookieHeaders = signIn
       .headersArray()
       .filter((h) => h.name.toLowerCase() === "set-cookie")
       .map((h) => h.value);
+
     const cookieHeader = setCookieHeaders
       .map((c) => {
         const [nameValue = ""] = c.split(";");
+
         return nameValue.trim();
       })
       .filter(Boolean)
@@ -55,6 +59,7 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
         Referer: `${backofficeUrl}/`,
       },
     });
+
     expect(change.status()).toBe(200);
 
     const stage1Mail = await waitForEmail({
@@ -62,6 +67,7 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
       subject: /troca de e-mail/iu,
       to: currentEmail,
     });
+
     expect(stage1Mail.last_event).not.toBe("bounced");
     const stage1Url = extractLink(stage1Mail, /\/api\/auth\/verify-email\?token=/u);
 
@@ -69,12 +75,14 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
       failOnStatusCode: false,
       maxRedirects: 0,
     });
+
     expect([200, 302]).toContain(stage1Response.status());
 
     const stage2Mail = await waitForEmail({
       sinceMs: since,
       to: newEmail,
     });
+
     expect(stage2Mail.last_event).not.toBe("bounced");
     const stage2Url = extractLink(stage2Mail, /\/api\/auth\/verify-email\?token=/u);
 
@@ -82,6 +90,7 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
       failOnStatusCode: false,
       maxRedirects: 0,
     });
+
     expect([200, 302]).toContain(stage2Response.status());
 
     const updated = await prisma.user.findUnique({ where: { email: newEmail } });
@@ -93,11 +102,13 @@ test.describe("Change email (two-stage confirmation + verification)", () => {
       data: { email: currentEmail, password },
       failOnStatusCode: false,
     });
+
     expect(oldLogin.status()).toBeGreaterThanOrEqual(400);
 
     const newLogin = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email: newEmail, password },
     });
+
     expect(newLogin.status()).toBe(200);
   });
 });

@@ -6,6 +6,7 @@ const workerDeliverable: ActionTypeModule = {
   async execute(ctx, proposed) {
     const { assetIds, summary } = deliverableSchema.parse(proposed);
     await releaseDeliverable(ctx, assetIds);
+
     return summary;
   },
   propose: readDeliverable,

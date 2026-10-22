@@ -76,12 +76,16 @@ const changeRoster = async (
   const member = await db.$transaction(async (tx) => {
     const agentInstanceId = await change(tx);
     const view = await getTeamMember(tx, companyId, agentInstanceId);
+
     if (!view) {
       throw new MemberNotFoundError();
     }
+
     return view;
   });
+
   await emitTeamEvent(env, { companyId, reason, type: "team:roster" });
+
   return member;
 };
 
@@ -93,10 +97,13 @@ const lockDelegationTargets = async (
     SELECT can_delegate_to FROM team_member
     WHERE team_id = ${teamIdFor(companyId)} AND agent_instance_id = ${correspondentIdFor(companyId)}
     FOR UPDATE`;
+
   const row = rows.at(0);
+
   if (row === undefined) {
     throw new CorrespondentMissingError();
   }
+
   return delegationTargetsSchema.safeParse(row.can_delegate_to).data ?? [];
 };
 
@@ -109,18 +116,24 @@ const hireMember = (env: Env, db: PrismaClient, input: HireInput): Promise<TeamM
           id: input.templateId,
         },
       });
+
       if (!template) {
         throw new TemplateNotFoundError(input.templateId);
       }
+
       if (template.status !== "active") {
         throw new TemplateRetiredError(input.templateId);
       }
+
       const targets = await lockDelegationTargets(tx, input.companyId);
+
       const existing = await tx.agentInstance.findMany({
         select: { displayName: true },
         where: { companyId: input.companyId },
       });
+
       const requestedName = input.displayName?.trim() ?? "";
+
       const displayName =
         requestedName === ""
           ? nextDisplayName(
@@ -128,6 +141,7 @@ const hireMember = (env: Env, db: PrismaClient, input: HireInput): Promise<TeamM
               existing.map((member) => member.displayName),
             )
           : requestedName;
+
       const agentInstanceId = `wkr_${crypto.randomUUID()}`;
       const teamId = teamIdFor(input.companyId);
       await tx.agentInstance.create({
@@ -156,6 +170,7 @@ const hireMember = (env: Env, db: PrismaClient, input: HireInput): Promise<TeamM
         summary: `Agente "${displayName}" contratado.`,
         type: "MEMBER_HIRED",
       });
+
       return agentInstanceId;
     },
     companyId: input.companyId,
@@ -170,9 +185,11 @@ const findMember = async (
     select: { displayName: true, role: true },
     where: { companyId: input.companyId, id: input.agentInstanceId },
   });
+
   if (!member) {
     throw new MemberNotFoundError();
   }
+
   return member;
 };
 
@@ -186,9 +203,11 @@ const setMemberStatus = (
   changeRoster(env, db, {
     change: async (tx) => {
       const member = await findMember(tx, input);
+
       if (member.role !== "worker") {
         throw new MemberNotPausableError(member.role);
       }
+
       await tx.agentInstance.update({
         data: { status: input.status },
         where: { id: input.agentInstanceId },
@@ -204,6 +223,7 @@ const setMemberStatus = (
             : `${member.displayName} foi pausado.`,
         type: input.status === "active" ? "MEMBER_RESUMED" : "MEMBER_PAUSED",
       });
+
       return input.agentInstanceId;
     },
     companyId: input.companyId,
@@ -216,12 +236,15 @@ const renameMember = async (
   oldName: string,
 ): Promise<void> => {
   const displayName = input.displayName.trim();
+
   if (displayName === "") {
     throw new InvalidDisplayNameError();
   }
+
   if (displayName === oldName) {
     return;
   }
+
   await tx.agentInstance.update({ data: { displayName }, where: { id: input.agentInstanceId } });
   await recordActivity(tx, {
     actorId: input.operatorId,
@@ -274,15 +297,19 @@ const updateMember = (
   changeRoster(env, db, {
     change: async (tx) => {
       const member = await findMember(tx, input);
+
       if (input.promptOverride !== undefined && member.role !== "worker") {
         throw new MemberPromptNotEditableError(member.role);
       }
+
       if (input.displayName !== undefined) {
         await renameMember(tx, { ...input, displayName: input.displayName }, member.displayName);
       }
+
       if (input.promptOverride !== undefined) {
         await overridePrompt(tx, input, member.displayName);
       }
+
       return input.agentInstanceId;
     },
     companyId: input.companyId,

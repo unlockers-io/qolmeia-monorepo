@@ -24,6 +24,7 @@ type InvitationPageProps = {
 
 const InvitationAction = async ({ params }: InvitationPageProps) => {
   const { id } = await params;
+
   return <AcceptInvitation invitationId={id} />;
 };
 

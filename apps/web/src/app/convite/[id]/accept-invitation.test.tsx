@@ -8,6 +8,7 @@ const renderAccept = (error: { code?: string; status?: number } | null) => {
   const replace = vi.fn();
   const acceptInvitation = vi.fn<AcceptInvitationDependencies["acceptInvitation"]>();
   acceptInvitation.mockResolvedValue({ error });
+
   const dependencies: AcceptInvitationDependencies = {
     acceptInvitation,
     router: {
@@ -20,8 +21,10 @@ const renderAccept = (error: { code?: string; status?: number } | null) => {
       },
     },
   };
+
   render(<AcceptInvitationView dependencies={dependencies} invitationId="inv-1" />);
   fireEvent.click(screen.getByRole("button", { name: "Aceitar convite" }));
+
   return { acceptInvitation, push, replace };
 };
 

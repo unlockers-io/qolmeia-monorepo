@@ -84,6 +84,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(queryKey, context.previous);
       }
+
       toast.error("Falha no upload. Tente de novo.");
     },
     onMutate: async (file) => {
@@ -91,6 +92,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
       const previous = queryClient.getQueryData<Array<BrandAsset>>(queryKey);
       const previewUrl = await fileToDataUrl(file);
       const optimisticId = `optimistic-${crypto.randomUUID()}`;
+
       const optimisticAsset: BrandAsset = {
         category,
         createdAt: new Date().toISOString(),
@@ -99,10 +101,12 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
         name: file.name || null,
         url: previewUrl,
       };
+
       queryClient.setQueryData<Array<BrandAsset>>(queryKey, (current = []) => [
         optimisticAsset,
         ...current,
       ]);
+
       return { optimisticId, previous };
     },
     onSuccess: (asset, _file, context) => {
@@ -119,6 +123,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(queryKey, context.previous);
       }
+
       toast.error("Não foi possível remover.");
     },
     onMutate: async (id) => {
@@ -127,6 +132,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
       queryClient.setQueryData<Array<BrandAsset>>(queryKey, (current = []) =>
         current.filter((asset) => asset.id !== id),
       );
+
       return { previous };
     },
   });
@@ -134,17 +140,23 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
   const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
+
     if (!file) {
       return;
     }
+
     if (!ALLOWED_MIME.includes(file.type)) {
       toast.error("Formato não suportado. Use PNG, JPG, WEBP, GIF ou SVG.");
+
       return;
     }
+
     if (file.size > MAX_BYTES) {
       toast.error("Imagem grande demais (máx 10 MB).");
+
       return;
     }
+
     uploadMutation.mutate(file);
   };
 
@@ -168,6 +180,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
               disabled={!ready}
               onChange={(e) => {
                 const { value } = e.currentTarget;
+
                 if (isBrandCategory(value)) {
                   setCategory(value);
                 }

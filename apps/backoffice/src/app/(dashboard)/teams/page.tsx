@@ -42,6 +42,7 @@ const TeamsContent = async () => {
     <div className="grid gap-4 md:grid-cols-2">
       {companies.map((company) => {
         const companyStatus = COMPANY_STATUS[company.status];
+
         return (
           <Card className="gap-0 overflow-hidden p-0" key={company.id}>
             <div className="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -66,6 +67,7 @@ const TeamsContent = async () => {
             <div className="flex flex-col px-3 py-3">
               {company.members.map((m) => {
                 const memberStatus = MEMBER_STATUS[m.status];
+
                 return (
                   <Link
                     className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors outline-none hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"

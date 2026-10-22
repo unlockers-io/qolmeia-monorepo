@@ -29,6 +29,7 @@ const SummaryItem = ({ emphasis = false, href, label, sub, value }: SummaryItemP
       <dd className="mt-0.5 text-xs text-muted-foreground">{value === null ? UNAVAILABLE : sub}</dd>
     </>
   );
+
   return href === undefined ? (
     <div className="px-5 py-4">{content}</div>
   ) : (
@@ -49,6 +50,7 @@ const startOfMonth = (now: Date): number =>
 const PendingSummary = ({ pending }: { pending: ActionsResponse["items"] | null }) => {
   const pendingCount = pending?.length ?? null;
   const oldestPendingAge = pending?.[0]?.ageSeconds;
+
   return (
     <SummaryItem
       emphasis={pendingCount !== null && pendingCount > 0}
@@ -67,9 +69,11 @@ const PendingSummary = ({ pending }: { pending: ActionsResponse["items"] | null 
 const TicketSummary = ({ tickets }: { tickets: TicketsResponse["items"] | null }) => {
   const monthStart = startOfMonth(new Date());
   const openTickets = tickets?.filter((ticket) => OPEN_STATUSES.has(ticket.status)).length ?? null;
+
   const doneThisMonth =
     tickets?.filter((ticket) => ticket.status === "done" && ticket.updatedAt >= monthStart)
       .length ?? null;
+
   return (
     <>
       <SummaryItem
@@ -86,8 +90,10 @@ const TicketSummary = ({ tickets }: { tickets: TicketsResponse["items"] | null }
 const CompanySummary = ({ companies }: { companies: Array<CompanyRoster> | null }) => {
   const activeCompanies =
     companies?.filter((company) => company.status === "active").length ?? null;
+
   const onboardingCompanies =
     companies?.filter((company) => company.status === "onboarding").length ?? 0;
+
   return (
     <SummaryItem
       href="/teams"
