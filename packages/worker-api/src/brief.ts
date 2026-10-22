@@ -53,6 +53,7 @@ const companyBriefSchema = z.object({
 });
 
 type CompanyBrief = z.infer<typeof companyBriefSchema>;
+
 type CompanyBriefPartial = z.infer<typeof companyBriefSchema>;
 
 const mergeBrief = (
@@ -64,7 +65,9 @@ const mergeBrief = (
       ([, value]) => value !== undefined,
     ),
   );
+
   const parsed = companyBriefSchema.partial().parse({ ...existing, ...definedUpdates });
+
   return {
     ...parsed,
     locale: parsed.locale ?? "pt-BR",
@@ -75,15 +78,18 @@ const mergeBrief = (
 const hasText = (value: string | undefined): boolean => value !== undefined && value !== "";
 
 const jsonValueSchema = z.json();
+
 type BriefInput = Parameters<typeof jsonValueSchema.safeParse>[0];
 
 const parseBrief = (raw: BriefInput): Partial<CompanyBrief> => {
   if (raw === null || raw === undefined || raw === "") {
     return {};
   }
+
   try {
     const parsed = typeof raw === "string" ? jsonValueSchema.parse(JSON.parse(raw)) : raw;
     const result = companyBriefSchema.partial().safeParse(parsed);
+
     return result.success ? result.data : {};
   } catch {
     return {};
@@ -94,10 +100,13 @@ const isBriefEmpty = (brief: Partial<CompanyBrief> | null | undefined): boolean 
   if (!brief) {
     return true;
   }
+
   const brand = brief.brand;
+
   const hasBrand =
     brand !== undefined &&
     (hasText(brand.palette) || hasText(brand.voice) || hasText(brand.references));
+
   return (
     !hasText(brief.industry) && !hasText(brief.primaryGoal) && !hasText(brief.audience) && !hasBrand
   );
@@ -137,6 +146,7 @@ const briefCompleteness = (brief: Partial<CompanyBrief> | null | undefined): Bri
   const safe = brief ?? {};
   const filled: Array<BriefFieldId> = [];
   const missing: Array<BriefFieldId> = [];
+
   for (const field of BRIEF_REQUIRED_FIELDS) {
     if (isBriefFieldFilled(safe, field)) {
       filled.push(field);
@@ -144,6 +154,7 @@ const briefCompleteness = (brief: Partial<CompanyBrief> | null | undefined): Bri
       missing.push(field);
     }
   }
+
   return {
     filled,
     isComplete: missing.length === 0,
@@ -160,4 +171,5 @@ export {
   mergeBrief,
   parseBrief,
 };
+
 export type { BriefCompleteness, BriefFieldId, CompanyBrief, CompanyBriefPartial };

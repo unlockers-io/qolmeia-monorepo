@@ -48,6 +48,7 @@ describe("a failed activity write inside a use-case transaction", () => {
     const [storedAction, ticket] = await db((client) =>
       Promise.all([getAction(client, action.id), loadTicket(client, TICKET_ID)]),
     );
+
     expect(storedAction?.status).toBe("approved");
     expect(ticket?.status).toBe("in_progress");
     expect(ticket?.result).toBeNull();
@@ -87,6 +88,7 @@ describe("a failed activity write inside a use-case transaction", () => {
         listActivity(client, { companyId: COMPANY_ID }),
       ]),
     );
+
     expect(storedAction?.status).toBe("pending");
     expect(storedAction?.decidedByUserId).toBeNull();
     expect(ticket?.status).toBe("awaiting_approval");

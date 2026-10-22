@@ -19,13 +19,16 @@ let localIndex: VectorIndex | undefined;
 const memoryIndex = (env: MemoryEnv): VectorIndex => {
   if (env.MEMORY_BACKEND === "in-memory") {
     localIndex ??= inMemoryIndex();
+
     return localIndex;
   }
+
   if (env.AI === undefined || env.VECTORIZE === undefined) {
     throw new Error(
       "Memory needs the AI and VECTORIZE bindings; MEMORY_BACKEND=in-memory is only for local dev and tests",
     );
   }
+
   return vectorizeIndex({ AI: env.AI, VECTORIZE: env.VECTORIZE });
 };
 
@@ -46,6 +49,7 @@ const publishFacts = async (
   if (facts.length === 0) {
     return;
   }
+
   await index.upsert(facts);
   await db.memoryFact.updateMany({
     data: { indexedAt: new Date() },
@@ -59,7 +63,9 @@ const publishPendingFacts = async (env: MemoryEnv, db: PrismaClient): Promise<nu
     take: 50,
     where: { indexedAt: null },
   });
+
   await publishFacts(memoryIndex(env), db, facts);
+
   return facts.length;
 };
 
@@ -71,6 +77,7 @@ const remember = async (
 ): Promise<ReadonlyArray<MemoryFact>> => {
   const index = memoryIndex(env);
   const rows = await insertFacts(db, companyId, facts);
+
   try {
     await publishFacts(index, db, rows);
   } catch (error) {
@@ -80,6 +87,7 @@ const remember = async (
       message: "memory.publication.pending",
     });
   }
+
   return rows;
 };
 
@@ -91,6 +99,7 @@ const recall = async (
 ): Promise<ReadonlyArray<RecalledFact>> => {
   const matches = await memoryIndex(env).query(query);
   const relevant = matches.filter(({ score }) => score >= MIN_SCORE);
+
   const facts = await db.memoryFact.findMany({
     where: {
       agentInstanceId: query.agentInstanceId,
@@ -98,12 +107,16 @@ const recall = async (
       id: { in: relevant.map(({ id }) => id) },
     },
   });
+
   const byId = new Map(facts.map((fact) => [fact.id, fact]));
+
   return relevant.flatMap(({ id, score }) => {
     const fact = byId.get(id);
+
     return fact === undefined ? [] : [{ ...fact, score }];
   });
 };
 
 export { insertFacts, publishPendingFacts, recall, remember };
+
 export type { NewFact, RecalledFact };

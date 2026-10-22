@@ -47,23 +47,30 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
       defaultValues: { email: "", password: "" },
       onSubmit: async ({ value }) => {
         setShowUnverifiedNotice(false);
+
         try {
           const { error } = await signInEmail({
             email: value.email,
             password: value.password,
           });
+
           if (error) {
             if (error.code === "EMAIL_NOT_VERIFIED") {
               setShowUnverifiedNotice(true);
+
               return;
             }
+
             showError(authErrorMessage(error, "Não foi possível entrar. Verifique seus dados."));
+
             return;
           }
         } catch {
           showError("Não foi possível conectar ao servidor. Tente novamente.");
+
           return;
         }
+
         const { from } = await searchParams;
         push(safeRedirectPath(from));
         refresh();
@@ -95,6 +102,7 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
               <form.Field name="email">
                 {(field) => {
                   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
                   return (
                     <Field data-invalid={isInvalid || undefined}>
                       <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
@@ -126,6 +134,7 @@ const createLoginForm = ({ showError, signInEmail, useAppRouter }: LoginDependen
               <form.Field name="password">
                 {(field) => {
                   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
                   return (
                     <Field data-invalid={isInvalid || undefined}>
                       <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
@@ -200,10 +209,12 @@ const LoginForm = createLoginForm({
   },
   signInEmail: async (credentials) => {
     const { error } = await authClient.signIn.email(credentials);
+
     return { error };
   },
   useAppRouter: useRouter,
 });
 
 export { createLoginForm, LoginForm };
+
 export type { LoginDependencies };

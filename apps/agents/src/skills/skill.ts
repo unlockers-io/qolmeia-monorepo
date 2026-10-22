@@ -42,4 +42,5 @@ const defineSkill = <Schema extends z.ZodObject, Result extends SkillResult>({
 });
 
 export { defineSkill };
+
 export type { Skill, SkillContext, SkillInput, SkillResult };

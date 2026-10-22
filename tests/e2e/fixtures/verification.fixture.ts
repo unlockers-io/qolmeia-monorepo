@@ -10,11 +10,13 @@ const sleep = (ms: number) =>
 
 const requireSecret = (): string => {
   const secret = process.env.BETTER_AUTH_SECRET;
+
   if (!secret) {
     throw new Error(
       "BETTER_AUTH_SECRET is required for verification.fixture (it signs the same JWT Better Auth would).",
     );
   }
+
   return secret;
 };
 
@@ -22,6 +24,7 @@ const forVerifyEmail = async (email: string): Promise<{ token: string; url: stri
   const token = await signJWT({ email: email.toLowerCase() }, requireSecret(), 3600);
   const callbackURL = encodeURIComponent("/");
   const url = `${backofficeUrl}/api/auth/verify-email?token=${token}&callbackURL=${callbackURL}`;
+
   return { token, url };
 };
 
@@ -45,9 +48,11 @@ const forMagicLink = async (
 
     if (row) {
       const token = row.identifier;
+
       const url = `${backofficeUrl}/api/auth/magic-link/verify?token=${token}&callbackURL=${encodeURIComponent(
         callbackURL,
       )}`;
+
       return { token, url };
     }
 
@@ -69,6 +74,7 @@ const forResetPassword = async (
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
   });
+
   if (!user) {
     throw new Error(`forResetPassword: no user with email ${email}`);
   }
@@ -89,6 +95,7 @@ const forResetPassword = async (
     if (row) {
       const token = row.identifier.replace(/^reset-password:/u, "");
       const url = `${backofficeUrl}/reset-password?token=${token}`;
+
       return { token, url };
     }
 

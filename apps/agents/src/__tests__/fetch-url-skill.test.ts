@@ -28,10 +28,12 @@ describe("fetchUrl skill", () => {
         }),
       ),
     );
+
     const out = await fetchUrlSkill.execute(
       { url: "https://localcine.com.br" },
       ctx({ FIRECRAWL_API_KEY: "fc-x" }),
     );
+
     expect(out.title).toBe("Localcine");
     expect(out.markdown).toContain("Produtora audiovisual");
     expect(out.url).toBe("https://localcine.com.br");
@@ -47,6 +49,7 @@ describe("fetchUrl skill", () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(Response.json({ data: { markdown: "ok" }, success: true })),
     );
+
     globalThis.fetch = fetchMock;
     await fetchUrlSkill.execute(
       { url: "https://x.com" },

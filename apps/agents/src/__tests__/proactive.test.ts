@@ -27,6 +27,7 @@ describe("proactiveGate", () => {
       lastSuggestedAt: now - (PROACTIVE_INTERVAL_MS - 1000),
       now,
     });
+
     expect(gate.ok).toBe(false);
     expect(gate.reason).toBe("suggested recently");
   });
@@ -41,6 +42,7 @@ describe("proactiveGate", () => {
       lastSuggestedAt: now - (PROACTIVE_INTERVAL_MS + 1000),
       now,
     });
+
     expect(gate.ok).toBe(true);
   });
 });
@@ -58,6 +60,7 @@ describe("recordProactiveSuggestion", () => {
         where: { companyId: COMPANY_ID, type: "WORKER_PROACTIVE_SUGGESTION" },
       }),
     );
+
     expect(row?.type).toBe("WORKER_PROACTIVE_SUGGESTION");
     expect(row?.refId).toBe(`corr-${COMPANY_ID}`);
     await expect(db((client) => lastProactiveSuggestionAt(client, COMPANY_ID))).resolves.toBe(

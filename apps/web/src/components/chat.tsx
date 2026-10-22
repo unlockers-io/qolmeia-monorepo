@@ -31,6 +31,7 @@ type ChatProps = {
 
 const PLANNER_KICKOFF =
   "O cliente acabou de abrir o chat de onboarding. Cumprimente-o de forma calorosa e breve, diga em uma frase que você vai fazer algumas perguntas para entender o negócio dele, e já faça a primeira pergunta da entrevista.";
+
 const PLANNER_GREETING =
   "Oi! Vou fazer algumas perguntas para conhecer seu negócio e montar o time certo para você. Para começar: o que sua empresa faz e quem ela atende?";
 
@@ -46,6 +47,7 @@ const TOOL_ACTIVITY_LABELS = {
   saveAsset: "Salvando na biblioteca…",
   webSearch: "Pesquisando na web…",
 } satisfies Record<string, string>;
+
 const toolActivityLabelByName = new Map<string, string>(Object.entries(TOOL_ACTIVITY_LABELS));
 
 const toolActivityLabel = (toolName: string): string =>
@@ -63,15 +65,19 @@ const hasVisibleContent = (message: ChatMessage): boolean =>
       case "dynamic-tool": {
         return part.state === "input-available";
       }
+
       case "file": {
         return true;
       }
+
       case "text": {
         return part.text.length > 0;
       }
+
       case "reasoning": {
         return false;
       }
+
       default: {
         return false;
       }
@@ -80,6 +86,7 @@ const hasVisibleContent = (message: ChatMessage): boolean =>
 
 const MessageBubble = ({ message }: { message: ChatMessage }) => {
   const isUser = message.role === "user";
+
   return (
     <div
       className={cn(
@@ -91,13 +98,16 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
     >
       {message.parts.map((part, index) => {
         const partKey = `${message.id}-${index}`;
+
         if (part.type === "text") {
           return <MarkdownResponse key={partKey}>{part.text}</MarkdownResponse>;
         }
+
         if (part.type === "dynamic-tool") {
           if (part.state !== "input-available") {
             return null;
           }
+
           return (
             <span
               className="flex items-center gap-1.5 py-0.5 text-xs text-muted-foreground"
@@ -108,6 +118,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
             </span>
           );
         }
+
         if (part.type === "file" && part.mediaType.startsWith("image/")) {
           if (part.url === undefined || part.url === "") {
             return (
@@ -123,6 +134,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
               </span>
             );
           }
+
           if (isUser) {
             return (
               <AssetImage
@@ -135,6 +147,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
               />
             );
           }
+
           return (
             <figure className="flex flex-col gap-1.5" key={partKey}>
               <a
@@ -158,6 +171,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
             </figure>
           );
         }
+
         return null;
       })}
     </div>
@@ -227,8 +241,10 @@ const ChatView = ({
   const visibleMessages = messages.filter(
     (message) => !isKickoffMessage(message) && isChatMessage(message) && hasVisibleContent(message),
   );
+
   const showPlannerGreeting =
     agentName === "planner" && !messages.some((message) => isKickoffMessage(message));
+
   const hasConversation = showPlannerGreeting || visibleMessages.length > 0;
 
   const isThinking = status === "submitted" || status === "streaming";
@@ -350,4 +366,5 @@ const Chat = (props: ChatProps) => {
 };
 
 export { Chat, ChatView, PLANNER_GREETING, PLANNER_KICKOFF };
+
 export type { ChatProps, ChatViewProps };

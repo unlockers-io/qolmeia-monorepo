@@ -54,12 +54,14 @@ const customerInvitations = () =>
         async (ctx) => {
           const { email, inviterId, organizationId } = ctx.body;
           const inviter = await ctx.context.internalAdapter.findUserById(inviterId);
+
           if (inviter === null) {
             throw APIError.from("BAD_REQUEST", {
               code: "INVITER_NOT_FOUND",
               message: "Inviter not found",
             });
           }
+
           const orgAdapter = getOrgAdapter(ctx.context, organizationOptions);
           const pending = await orgAdapter.findPendingInvitation({ email, organizationId });
           await Promise.all(
@@ -67,10 +69,12 @@ const customerInvitations = () =>
               orgAdapter.updateInvitation({ invitationId: id, status: "canceled" }),
             ),
           );
+
           const invitation = await orgAdapter.createInvitation({
             invitation: { email, organizationId, role: "CUSTOMER", teamIds: [] },
             user: inviter,
           });
+
           return ctx.json({ expiresAt: invitation.expiresAt, id: invitation.id });
         },
       ),

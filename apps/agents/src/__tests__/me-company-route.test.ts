@@ -34,11 +34,13 @@ describe("GET /api/me/company", () => {
 describe("PATCH /api/me/company", () => {
   it("merges a partial brief and recomputes completeness", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ industry: "alimentação" }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
     });
+
     expect(res.status).toBe(200);
     const body = await res.json<CompanyBody>();
     expect(body.company.brief.industry).toBe("alimentação");
@@ -53,11 +55,13 @@ describe("PATCH /api/me/company", () => {
       headers: { "content-type": "application/json" },
       method: "PATCH",
     });
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ primaryGoal: "vender mais" }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
     });
+
     const body = await res.json<CompanyBody>();
     expect(body.company.brief.industry).toBe("alimentação");
     expect(body.company.brief.primaryGoal).toBe("vender mais");
@@ -65,21 +69,25 @@ describe("PATCH /api/me/company", () => {
 
   it("403 when STAFF tries to edit the brief", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ industry: "x" }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
     });
+
     expect(res.status).toBe(403);
   });
 
   it("400 on an invalid body", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
       body: JSON.stringify({ channels: ["not-a-channel"] }),
       headers: { "content-type": "application/json" },
       method: "PATCH",
     });
+
     expect(res.status).toBe(400);
   });
 });

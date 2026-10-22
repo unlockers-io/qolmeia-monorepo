@@ -23,12 +23,14 @@ test.describe("Sign-up email verification", () => {
     const signUp = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
       data: { email, name: "Verify Me", password, username },
     });
+
     expect([200, 201]).toContain(signUp.status());
 
     const preSignIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email, password },
       failOnStatusCode: false,
     });
+
     expect(preSignIn.status()).not.toBe(200);
 
     const mail = await waitForEmail({
@@ -36,29 +38,36 @@ test.describe("Sign-up email verification", () => {
       subject: /boas-vindas/iu,
       to: email,
     });
+
     expect(mail.last_event).not.toBe("bounced");
 
     const verifyUrl = extractLink(mail, /\/api\/auth\/verify-email\?token=/u);
+
     const verifyResponse = await request.get(verifyUrl, {
       failOnStatusCode: false,
       maxRedirects: 0,
     });
+
     expect(verifyResponse.status()).toBe(302);
 
     const setCookies = verifyResponse
       .headersArray()
       .filter((header) => header.name.toLowerCase() === "set-cookie")
       .map((header) => header.value);
+
     expect(setCookies.some((cookie) => cookie.includes("qolmeia.session_token="))).toBe(true);
     const { location } = verifyResponse.headers();
+
     if (location === undefined) {
       throw new Error("verification response has no Location header");
     }
+
     expect(new URL(location, backofficeUrl).pathname).toBe("/");
 
     const postSignIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
       data: { email, password },
     });
+
     expect(postSignIn.status()).toBe(200);
   });
 });

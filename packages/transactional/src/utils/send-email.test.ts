@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sendEmail, type EmailClientFactory } from "./send-email";
 
 const sendMock = vi.fn();
+
 const createClient: EmailClientFactory = () => ({
   batch: { send: vi.fn() },
   emails: { send: sendMock },

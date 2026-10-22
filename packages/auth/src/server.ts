@@ -22,6 +22,7 @@ export const safeCallbackPath = (value: string | null): string => {
   if (value === null || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
     return CALLBACK_FALLBACK_PATH;
   }
+
   try {
     if (new URL(value, CALLBACK_ANCHOR_ORIGIN).origin !== CALLBACK_ANCHOR_ORIGIN) {
       return CALLBACK_FALLBACK_PATH;
@@ -29,6 +30,7 @@ export const safeCallbackPath = (value: string | null): string => {
   } catch {
     return CALLBACK_FALLBACK_PATH;
   }
+
   return value;
 };
 
@@ -41,14 +43,19 @@ export const linkOnRequestOrigin = (
   trustedOrigins: ReadonlyArray<string>,
 ): string => {
   const origin = headers?.get("origin");
+
   if (origin === undefined || origin === null || !URL.canParse(origin) || !URL.canParse(url)) {
     return url;
   }
+
   const requestOrigin = new URL(origin);
+
   if (!isLinkOrigin(requestOrigin, trustedOrigins)) {
     return url;
   }
+
   const link = new URL(url);
+
   return new URL(`${link.pathname}${link.search}`, requestOrigin.origin).toString();
 };
 
@@ -71,21 +78,26 @@ const sendCustomerInvitation = async ({
   resendApiKey,
 }: CustomerInvitationEmail): Promise<boolean> => {
   const mailer = mailerFor(resendApiKey);
+
   if (!mailer) {
     log.info({
       message: "auth: invitation link (no Resend key)",
       url: acceptUrl,
       userEmail: email,
     });
+
     return true;
   }
+
   const result = await sendTransactionalEmail(
     { acceptUrl, companyName, type: "invitation", userEmail: email },
     mailer,
   );
+
   if (!result.success) {
     log.error({ error: result.error, message: "auth: failed to send invitation email" });
   }
+
   return result.success;
 };
 
@@ -155,6 +167,7 @@ export const createAuth = (config: AuthConfig) => {
       onExistingUserSignUp: mailer
         ? async ({ user }, request) => {
             const origin = request?.headers.get("origin") ?? "";
+
             const result = await sendTransactionalEmail(
               {
                 resetPasswordUrl: `${origin}/recover`,
@@ -166,6 +179,7 @@ export const createAuth = (config: AuthConfig) => {
               },
               mailer,
             );
+
             if (!result.success) {
               log.error({
                 error: result.error,
@@ -177,14 +191,17 @@ export const createAuth = (config: AuthConfig) => {
       requireEmailVerification: Boolean(mailer),
       sendResetPassword: async ({ url, user }, request) => {
         const resetUrl = linkOnRequestOrigin(url, request?.headers, trustedOrigins);
+
         if (!mailer) {
           log.info({
             message: "auth: password-reset link (no Resend key)",
             url: resetUrl,
             userEmail: user.email,
           });
+
           return;
         }
+
         const result = await sendTransactionalEmail(
           {
             resetUrl,
@@ -195,6 +212,7 @@ export const createAuth = (config: AuthConfig) => {
           },
           mailer,
         );
+
         if (!result.success) {
           throw new Error(`Failed to send password reset email: ${result.error}`);
         }
@@ -206,15 +224,18 @@ export const createAuth = (config: AuthConfig) => {
       sendOnSignIn: true,
       sendVerificationEmail: async ({ url, user }, request) => {
         const origin = request?.headers.get("origin");
+
         const verificationUrl = linkOnRequestOrigin(
           (() => {
             if (origin === undefined || origin === null || origin === "") {
               return url;
             }
+
             try {
               const target = new URL(url);
               const callbackPath = safeCallbackPath(target.searchParams.get("callbackURL"));
               target.searchParams.set("callbackURL", `${origin}${callbackPath}`);
+
               return target.toString();
             } catch {
               return url;
@@ -223,14 +244,17 @@ export const createAuth = (config: AuthConfig) => {
           request?.headers,
           trustedOrigins,
         );
+
         if (!mailer) {
           log.info({
             message: "auth: verification link (no Resend key)",
             url: verificationUrl,
             userEmail: user.email,
           });
+
           return;
         }
+
         const result = await sendTransactionalEmail(
           {
             type: "welcome",
@@ -241,6 +265,7 @@ export const createAuth = (config: AuthConfig) => {
           },
           mailer,
         );
+
         if (!result.success) {
           throw new Error(`Failed to send verification email: ${result.error}`);
         }
@@ -256,10 +281,13 @@ export const createAuth = (config: AuthConfig) => {
       magicLink({
         sendMagicLink: async ({ email, url }, ctx) => {
           const link = linkOnRequestOrigin(url, ctx?.headers, trustedOrigins);
+
           if (!mailer) {
             log.info({ message: "auth: magic-link (no Resend key)", url: link, userEmail: email });
+
             return;
           }
+
           const result = await sendTransactionalEmail(
             {
               type: "magic-link",
@@ -268,6 +296,7 @@ export const createAuth = (config: AuthConfig) => {
             },
             mailer,
           );
+
           if (!result.success) {
             throw new Error(`Failed to send magic-link email: ${result.error}`);
           }
@@ -311,6 +340,7 @@ export const createAuth = (config: AuthConfig) => {
           if (!mailer) {
             return;
           }
+
           const result = await sendTransactionalEmail(
             {
               changeUrl: linkOnRequestOrigin(url, request?.headers, trustedOrigins),
@@ -322,6 +352,7 @@ export const createAuth = (config: AuthConfig) => {
             },
             mailer,
           );
+
           if (!result.success) {
             throw new Error(`Failed to send change-email confirmation: ${result.error}`);
           }
@@ -332,5 +363,7 @@ export const createAuth = (config: AuthConfig) => {
 };
 
 export { sendCustomerInvitation };
+
 export type Auth = ReturnType<typeof createAuth>;
+
 export type { AuthConfig };

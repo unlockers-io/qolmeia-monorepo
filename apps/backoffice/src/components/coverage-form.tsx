@@ -24,30 +24,37 @@ const disciplineLabel = (kind: string): string =>
 
 const toggle = (set: ReadonlySet<string>, value: string): Set<string> => {
   const next = new Set(set);
+
   if (next.has(value)) {
     next.delete(value);
   } else {
     next.add(value);
   }
+
   return next;
 };
 
 const CoverageForm = ({ initial, options }: CoverageFormProps) => {
   const { refresh } = useRouter();
   const [companies, setCompanies] = useState<ReadonlySet<string>>(() => new Set(initial.companies));
+
   const [disciplines, setDisciplines] = useState<ReadonlySet<string>>(
     () => new Set(initial.disciplines),
   );
+
   const [submitting, setSubmitting] = useState(false);
 
   const seesEverything = companies.size === 0 && disciplines.size === 0;
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (submitting) {
       return;
     }
+
     setSubmitting(true);
+
     try {
       await apiSend("PUT", "/assignments/me", {
         companies: [...companies],
@@ -58,6 +65,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
     } catch (error) {
       toast.error(describeRequestError(error, "Não foi possível salvar a cobertura."));
     }
+
     setSubmitting(false);
   };
 
@@ -79,6 +87,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
           <div className="flex flex-col gap-1.5">
             {options.companies.map((company) => {
               const checked = companies.has(company.id);
+
               return (
                 <label
                   className={cn(
@@ -119,6 +128,7 @@ const CoverageForm = ({ initial, options }: CoverageFormProps) => {
           <div className="flex flex-wrap gap-2">
             {options.disciplines.map((discipline) => {
               const checked = disciplines.has(discipline);
+
               return (
                 <label
                   className={cn(

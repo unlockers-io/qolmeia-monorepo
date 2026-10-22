@@ -59,4 +59,5 @@ const InvitationEmail = ({ acceptUrl, companyName, userEmail }: InvitationEmailP
 };
 
 export { InvitationEmail };
+
 export default InvitationEmail;

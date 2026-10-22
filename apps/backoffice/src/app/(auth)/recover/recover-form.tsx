@@ -29,14 +29,18 @@ const RecoverForm = () => {
           email: value.email,
           redirectTo: "/reset-password",
         });
+
         if (error) {
           toast.error(authErrorMessage(error, "Não foi possível enviar o link."));
+
           return;
         }
       } catch {
         toast.error("Não foi possível conectar ao servidor. Tente novamente.");
+
         return;
       }
+
       toast.success("Enviamos um link para seu e-mail.");
     },
     validators: { onSubmit: recoverSchema },
@@ -68,6 +72,7 @@ const RecoverForm = () => {
             <form.Field name="email">
               {(field) => {
                 const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>

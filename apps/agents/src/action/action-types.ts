@@ -26,9 +26,11 @@ const resolvePolicy = (
   template: { defaultPolicies: Record<string, string> },
 ): ActionPolicy => {
   const raw = template.defaultPolicies[actionType];
+
   if (raw === undefined) {
     return ACTION_TYPE_MODULES[actionType].defaultPolicy;
   }
+
   return actionPolicySchema.safeParse(raw).data ?? "require_approval";
 };
 

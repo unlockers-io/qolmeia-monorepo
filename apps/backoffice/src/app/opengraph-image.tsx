@@ -5,6 +5,7 @@ const alt = "Qolmeia · Backoffice";
 const size = { height: 630, width: 1200 };
 const contentType = "image/png";
 const COLORS = { background: "#f9f8f5", foreground: "#1f1c1a", mutedForeground: "#746d68" };
+
 const OpengraphImage = () =>
   new ImageResponse(
     <svg height={630} viewBox="0 0 1200 630" width={1200}>
@@ -28,5 +29,7 @@ const OpengraphImage = () =>
     </svg>,
     size,
   );
+
 export { alt, contentType, size };
+
 export default OpengraphImage;

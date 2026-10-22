@@ -7,11 +7,14 @@ const getCoverage = async (db: Db, operatorUserId: string): Promise<OperatorCove
     select: { kind: true, value: true },
     where: { operatorUserId },
   });
+
   const companies: Array<string> = [];
   const disciplines: Array<string> = [];
+
   for (const row of rows) {
     (row.kind === "company" ? companies : disciplines).push(row.value);
   }
+
   return { companies, disciplines };
 };
 
@@ -22,12 +25,14 @@ const setCoverage = (
 ): Promise<void> =>
   db.$transaction(async (tx) => {
     await tx.operatorAssignment.deleteMany({ where: { operatorUserId } });
+
     const assignment = (kind: "company" | "discipline", value: string) => ({
       id: crypto.randomUUID(),
       kind,
       operatorUserId,
       value,
     });
+
     await tx.operatorAssignment.createMany({
       data: [
         ...coverage.companies.map((value) => assignment("company", value)),
@@ -46,6 +51,7 @@ const getCoverageOptions = async (db: Db): Promise<CoverageResponse["options"]> 
       select: { displayName: true, workerKind: true },
     }),
   ]);
+
   return {
     companies,
     disciplineNames: Object.fromEntries(

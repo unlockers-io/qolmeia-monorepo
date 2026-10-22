@@ -28,6 +28,7 @@ const proposeTeamSkill = defineSkill({
     const [templates, company] = await withDb(ctx.env, (db) =>
       Promise.all([listEntitledTemplates(db, ctx.companyId), getCompany(db, ctx.companyId)]),
     );
+
     const brief = company?.brief ?? {};
     const industry = typeof brief.industry === "string" ? brief.industry : "";
 

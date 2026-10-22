@@ -41,6 +41,7 @@ const proposeDeliverable = async (
   const actionType = template.defaultActionType;
   const policy = resolvePolicy(actionType, template);
   const proposed = ACTION_TYPE_MODULES[actionType].propose(generation);
+
   const { id: actionId } = await withDb(env, (db) =>
     proposeAction(db, {
       actionType,
@@ -53,9 +54,11 @@ const proposeDeliverable = async (
       ticketId,
     }),
   );
+
   if (policy === "require_approval") {
     await announceTicketChange(job);
   }
+
   log.info({
     actionId,
     actionType,
@@ -65,6 +68,7 @@ const proposeDeliverable = async (
     policy,
     ticketId,
   });
+
   return { actionId, actionType, policy };
 };
 
@@ -86,6 +90,7 @@ const applyDecision = async (
     message: "workflow.decision.received",
     ticketId,
   });
+
   const verdict = await withDb(env, (db) =>
     recordDecision(db, {
       actionId: proposal.actionId,
@@ -97,26 +102,33 @@ const applyDecision = async (
       ticketId,
     }),
   );
+
   await announceTicketChange(job);
+
   return verdict;
 };
 
 const executeAction = async (job: JobContext, proposal: Proposal): Promise<void> => {
   const { companyId, env, ticketId } = job;
+
   const action = await withDb(env, (db) =>
     db.action.findUniqueOrThrow({
       select: { status: true },
       where: { id: proposal.actionId },
     }),
   );
+
   if (action.status === "executed") {
     return;
   }
+
   const proposed = await withDb(env, (db) => getProposedPayload(db, proposal.actionId));
+
   const result = await ACTION_TYPE_MODULES[proposal.actionType].execute(
     { companyId, env },
     proposed,
   );
+
   await withDb(env, (db) =>
     markExecuted(db, {
       actionId: proposal.actionId,
@@ -130,4 +142,5 @@ const executeAction = async (job: JobContext, proposal: Proposal): Promise<void>
 };
 
 export { applyDecision, executeAction, proposeDeliverable };
+
 export type { JobContext, Proposal };

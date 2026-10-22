@@ -65,6 +65,7 @@ const submitLabel = (decision: DecisionOutcome | null): string =>
 const nextPendingId = async (currentId: string): Promise<string | null> => {
   try {
     const { items } = await apiGet<ActionsResponse>("/actions?status=pending");
+
     return items.find((item) => item.id !== currentId)?.id ?? null;
   } catch {
     return null;
@@ -80,21 +81,27 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
   const feedbackRef = useRef<HTMLTextAreaElement>(null);
 
   const feedbackRequired = decision !== null && decision !== "approved";
+
   const options = allowChanges
     ? OPTIONS
     : OPTIONS.filter((opt) => opt.value !== "changes_requested");
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     if (submitting || decision === null) {
       return;
     }
+
     if (feedbackRequired && feedback.trim().length === 0) {
       setFeedbackMissing(true);
       feedbackRef.current?.focus();
+
       return;
     }
+
     setSubmitting(true);
+
     try {
       await apiSend("POST", `/actions/${actionId}/decide`, {
         decision,
@@ -109,6 +116,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
     } catch (error) {
       toast.error(describeRequestError(error, "Não foi possível enviar a decisão."));
     }
+
     setSubmitting(false);
   };
 
@@ -125,6 +133,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
           const inputId = `decision-${opt.value}`;
           const descriptionId = `${inputId}-description`;
           const selected = decision === opt.value;
+
           return (
             <label
               className={cn(

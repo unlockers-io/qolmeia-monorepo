@@ -43,6 +43,7 @@ const toTicket = (row: Prisma.TicketGetPayload<{ include: typeof ticketInclude }
 
 const loadTicket = async (db: Db, id: string): Promise<Ticket | null> => {
   const row = await db.ticket.findUnique({ include: ticketInclude, where: { id } });
+
   return row ? toTicket(row) : null;
 };
 
@@ -56,6 +57,7 @@ const listTickets = async (
     take: Math.min(options.limit ?? 50, 200),
     where: { companyId: options.companyId, status: options.status },
   });
+
   return rows.map((row) =>
     Object.assign(toTicket(row), {
       createdAt: row.createdAt.getTime(),
@@ -74,16 +76,22 @@ const loadInstanceWithTemplate = async (
     select: { id: true, promptOverride: true, templateId: true },
     where: { id: agentInstanceId },
   });
+
   const templateId = agentInstance?.templateId ?? "";
+
   if (!agentInstance || templateId === "") {
     throw new Error(`agent_instance ${agentInstanceId} is not linked to a template`);
   }
+
   const template = await getTemplate(db, templateId);
+
   if (!template) {
     throw new Error(`template ${templateId} not found`);
   }
+
   return { agentInstance, template };
 };
 
 export { agentSummarySelect, listTickets, loadInstanceWithTemplate, loadTicket, toAgentSummary };
+
 export type { InstanceWithTemplate };

@@ -38,4 +38,5 @@ const subscribeTeamEvents = (env: Env, companyId: string, signal: AbortSignal): 
   stubFor(env, companyId).fetch(new Request("https://team-events/subscribe", { signal }));
 
 export { emitTeamEvent, subscribeTeamEvents };
+
 export type { TeamEvent };

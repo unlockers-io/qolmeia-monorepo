@@ -27,6 +27,7 @@ type StatusPillProps = ComponentProps<"span"> & {
 
 const StatusPill = ({ className, dotless, label, pulse, tone, ...props }: StatusPillProps) => {
   const t = TONE[tone];
+
   return (
     <span className={cn(badgeVariants({ variant: "secondary" }), t.pill, className)} {...props}>
       {dotless === true ? null : (
@@ -45,4 +46,5 @@ const StatusPill = ({ className, dotless, label, pulse, tone, ...props }: Status
 };
 
 export { StatusPill };
+
 export type { StatusTone };

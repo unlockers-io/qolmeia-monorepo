@@ -24,31 +24,38 @@ const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => 
   const [selected, setSelected] = useState<ReadonlySet<string>>(
     () => new Set(templates.map((t) => t.id)),
   );
+
   const [submitting, setSubmitting] = useState(false);
   const ready = useClientReady();
 
   const toggle = (id: string) => {
     const next = new Set(selected);
+
     if (next.has(id)) {
       next.delete(id);
     } else {
       next.add(id);
     }
+
     setSelected(next);
   };
 
   const handleConfirm = async () => {
     if (selected.size === 0) {
       toast.error("Escolha pelo menos um especialista.");
+
       return;
     }
+
     setSubmitting(true);
+
     try {
       const response = await fetch(`/api/teams/${companyId}/confirm`, {
         body: JSON.stringify({ templateIds: [...selected] }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       });
+
       if (response.ok) {
         toast.success("Time confirmado! Redirecionando…");
         globalThis.location.assign("/");
@@ -61,6 +68,7 @@ const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => 
     } catch {
       toast.error("Erro ao confirmar o Time. Tente novamente.");
     }
+
     setSubmitting(false);
   };
 
@@ -80,6 +88,7 @@ const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => 
           {templates.map((t) => {
             const checked = selected.has(t.id);
             const inputId = `template-${t.id}`;
+
             return (
               <li key={t.id}>
                 <label

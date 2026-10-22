@@ -29,9 +29,11 @@ type ActivityRow = {
 const loadActivity = async (): Promise<ReadonlyArray<ActivityRow> | null> => {
   try {
     const result = await apiGetServer<ListResponse<ActivityRow>>("/api/me/activity?limit=50");
+
     return result.items;
   } catch (error) {
     log.error({ error, message: "activity: failed to load" });
+
     return null;
   }
 };
@@ -53,6 +55,7 @@ const categoryOf = (type: string): Category =>
 
 const DAY = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric" });
 const TIME = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
 const DAY_KEY = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
   month: "2-digit",
@@ -61,11 +64,14 @@ const DAY_KEY = new Intl.DateTimeFormat("en-CA", {
 
 const dayLabel = (date: Date, now: Date): string => {
   const key = DAY_KEY.format(date);
+
   if (key === DAY_KEY.format(now)) {
     return "Hoje";
   }
+
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
+
   return key === DAY_KEY.format(yesterday) ? "Ontem" : DAY.format(date);
 };
 
@@ -74,10 +80,12 @@ const groupByDay = (
 ): ReadonlyArray<{ label: string; rows: ReadonlyArray<ActivityRow> }> => {
   const now = new Date();
   const groups = new Map<string, Array<ActivityRow>>();
+
   for (const row of rows) {
     const label = dayLabel(new Date(row.createdAt), now);
     groups.set(label, [...(groups.get(label) ?? []), row]);
   }
+
   return [...groups].map(([label, items]) => ({ label, rows: items }));
 };
 
@@ -122,6 +130,7 @@ const ActivityContent = async () => {
               <ul className="flex flex-col">
                 {group.rows.map((row) => {
                   const category = categoryOf(row.type);
+
                   return (
                     <li
                       className="flex gap-3 border-b border-border px-6 py-3.5 last:border-b-0"

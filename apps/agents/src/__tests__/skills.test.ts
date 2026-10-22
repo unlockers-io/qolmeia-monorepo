@@ -48,6 +48,7 @@ describe("rememberFact", () => {
         where: { id: result.id },
       }),
     );
+
     expect(row).toEqual({ content: "minha cor preferida é azul", kind: "preference" });
   });
 });
@@ -58,9 +59,11 @@ describe("recallMemory", () => {
       { content: "minha cor preferida é azul marinho", kind: "preference" },
       ctx,
     );
+
     const result = (await recallMemorySkill.execute({ query: "minha cor preferida" }, ctx)) as {
       matches: ReadonlyArray<{ content: string }>;
     };
+
     expect(result.matches.length).toBeGreaterThan(0);
     expect(result.matches.some((m) => m.content.includes("azul marinho"))).toBe(true);
   });

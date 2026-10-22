@@ -119,6 +119,7 @@ describe("hire", () => {
         client.teamMember.findFirst({ where: { agentInstanceId: CORR_ID } }),
       ]),
     );
+
     expect(instances).toBe(0);
     expect(correspondent?.canDelegateTo).toEqual([]);
   });

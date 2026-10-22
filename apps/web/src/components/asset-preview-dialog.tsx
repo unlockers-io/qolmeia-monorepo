@@ -36,10 +36,13 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
       if (!asset) {
         throw new Error("no asset");
       }
+
       const res = await fetch(asset.url);
+
       if (!res.ok) {
         throw new Error(`asset fetch failed (${res.status})`);
       }
+
       return res.text();
     },
     queryKey: ["asset-text", asset?.id],
@@ -55,6 +58,7 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
         </div>
       );
     }
+
     if (isError) {
       return (
         <p className="py-12 text-center text-sm text-muted-foreground">
@@ -62,6 +66,7 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
         </p>
       );
     }
+
     if (asset?.mimeType === "text/markdown") {
       return (
         <div className="text-sm leading-relaxed text-foreground">
@@ -69,6 +74,7 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
         </div>
       );
     }
+
     return (
       <pre className="overflow-auto rounded-lg bg-muted p-4 font-mono text-xs whitespace-pre-wrap text-foreground">
         {data}

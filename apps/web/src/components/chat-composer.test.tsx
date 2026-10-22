@@ -7,6 +7,7 @@ import { ChatComposer } from "./chat-composer";
 beforeEach(() => {
   vi.spyOn(toast, "error");
 });
+
 afterEach(() => {
   vi.restoreAllMocks();
 });

@@ -21,6 +21,7 @@ const TemplateFormSkillPicker = ({
   if (loading) {
     return <p className="text-sm text-muted-foreground">Carregando habilidades…</p>;
   }
+
   if (skills.length === 0) {
     return <p className="text-sm text-muted-foreground">Nenhuma habilidade disponível.</p>;
   }
@@ -29,6 +30,7 @@ const TemplateFormSkillPicker = ({
     <div className="grid gap-1.5 sm:grid-cols-2">
       {skills.map((skill) => {
         const checked = selectedIds.has(skill.id);
+
         return (
           <label
             className={cn(

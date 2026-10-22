@@ -25,6 +25,7 @@ const signIn = (
       update: {},
       where: { id: userId },
     });
+
     for (const [index, { orgId, role }] of memberships.entries()) {
       await db.organization.upsert({
         create: { id: orgId, name: `Org ${orgId}`, slug: orgId },
@@ -37,11 +38,13 @@ const signIn = (
         where: { userId_orgId: { orgId, userId } },
       });
     }
+
     const token = crypto.randomUUID();
     await db.session.create({
       data: { expiresAt: new Date(Date.now() + HOUR_MS), token, userId },
     });
     const { authCookies, secret } = await createWorkerAuth(env, db).$context;
+
     return `${authCookies.sessionToken.name}=${token}.${await makeSignature(token, secret)}`;
   });
 
@@ -50,11 +53,14 @@ const signInAs = ({ orgId, role, userId }: Persona): Promise<string> =>
 
 const fetchWithCookie = (cookie: string, url: string, init: RequestInit = {}) => {
   const headers = new Headers(init.headers);
+
   if (cookie !== "") {
     headers.set("cookie", cookie);
   }
+
   return exports.default.fetch(url, { ...init, headers });
 };
 
 export { fetchWithCookie, signIn, signInAs };
+
 export type { Persona };

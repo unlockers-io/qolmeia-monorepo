@@ -76,13 +76,16 @@ describe("persisted asset references", () => {
       { prompt: "arte da padaria" },
       { agentInstanceId: "agent-ref", companyId: COMPANY_ID, deliverableFolder: "agent", env },
     );
+
     if ("error" in generated) {
       throw new Error(generated.error);
     }
+
     const reference = assetReference(generated.assetId);
     expect(generated.url).toBe(`/assets/${generated.assetId}`);
 
     const output = { json: JSON.stringify(generated), tool: generateBrandImageSkill.id };
+
     const delivered = await ACTION_TYPE_MODULES.worker_deliverable.execute(
       { companyId: COMPANY_ID, env },
       ACTION_TYPE_MODULES.worker_deliverable.propose({
@@ -90,6 +93,7 @@ describe("persisted asset references", () => {
         summary: "Arte pronta.",
       }),
     );
+
     const posted = await ACTION_TYPE_MODULES.publish_post.execute(
       { companyId: COMPANY_ID, env },
       {
@@ -117,6 +121,7 @@ describe("persisted asset references", () => {
       text: "png",
       visibility: "customer",
     });
+
     vi.useFakeTimers({ now: Date.now() + 8 * DAY_MS, toFake: ["Date"] });
     const cookie = await customer();
 
@@ -135,6 +140,7 @@ describe("GET /assets/:id", () => {
       text: "png",
       visibility: "customer",
     });
+
     const res = await get(assetReference(assetId));
     expect(res.status).toBe(401);
   });
@@ -146,6 +152,7 @@ describe("GET /assets/:id", () => {
       text: "entrega",
       visibility: "customer",
     });
+
     const scratch = await store({
       kind: "knowledge_doc",
       mime: "text/markdown",
@@ -183,6 +190,7 @@ describe("GET /assets/:id", () => {
       text: "rascunho",
       visibility: "agent",
     });
+
     const cookie = await signIn([
       { orgId: COMPANY_ID, role: "CUSTOMER" },
       { orgId: QOLMEIA_ORG_ID, role: "STAFF" },
@@ -213,6 +221,7 @@ describe("GET /assets/:id", () => {
       text: "<svg xmlns='http://www.w3.org/2000/svg'/>",
       visibility: "customer",
     });
+
     const png = await store({
       kind: "brand_asset",
       mime: "image/png",

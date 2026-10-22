@@ -47,9 +47,11 @@ const BASE64_CHUNK = 0x80_00;
 const toBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
   let binary = "";
+
   for (let index = 0; index < bytes.length; index += BASE64_CHUNK) {
     binary += String.fromCodePoint(...bytes.subarray(index, index + BASE64_CHUNK));
   }
+
   return btoa(binary);
 };
 
@@ -57,10 +59,13 @@ const toPromptImage = async (url: string, mimeType: string): Promise<DeliveredAt
   if (url.startsWith("data:")) {
     return { data: url.slice(url.indexOf(",") + 1), mimeType, type: "image" };
   }
+
   const response = await fetch(url, { credentials: "include" });
+
   if (!response.ok) {
     throw new Error(`failed to read attachment (${response.status})`);
   }
+
   return { data: toBase64(await response.arrayBuffer()), mimeType, type: "image" };
 };
 
@@ -68,16 +73,21 @@ const toPromptImages = async (files: Array<FileUIPart>): Promise<Array<Delivered
   const imageFiles = files.flatMap((file) =>
     file.mediaType.startsWith("image/") ? [{ mimeType: file.mediaType, url: file.url }] : [],
   );
+
   const settled = await Promise.allSettled(
     imageFiles.map((file) => toPromptImage(file.url, file.mimeType)),
   );
+
   const images: Array<DeliveredAttachment> = [];
+
   for (const result of settled) {
     if (result.status === "rejected") {
       throw result.reason instanceof Error ? result.reason : new Error(String(result.reason));
     }
+
     images.push(result.value);
   }
+
   return images;
 };
 
@@ -96,9 +106,11 @@ const createUseFlueChat = (useAgentConversation: UseConversation) => {
 
     const sendMessage = async (input: SendInput) => {
       const text = input.text.trim();
+
       if (!text && input.files.length === 0) {
         return;
       }
+
       await conversation.sendMessage(text, { images: await toPromptImages(input.files) });
     };
 
@@ -116,6 +128,7 @@ const createUseFlueChat = (useAgentConversation: UseConversation) => {
 const useFlueChat = createUseFlueChat(useConversation);
 
 export { createUseFlueChat, useFlueChat };
+
 export type {
   ChatMessage,
   Conversation,

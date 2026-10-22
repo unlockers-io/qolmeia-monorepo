@@ -39,6 +39,7 @@ const InvalidLink = () => (
 
 const ResetPassword = async ({ searchParams }: Props) => {
   const { token } = await searchParams;
+
   return token === undefined || token === "" ? (
     <InvalidLink />
   ) : (

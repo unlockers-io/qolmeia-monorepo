@@ -45,6 +45,7 @@ const assignees = async () => {
       where: { brief: "fazer logo", companyId: COMPANY_ID },
     }),
   );
+
   return tickets.map(({ agentInstanceId }) => agentInstanceId);
 };
 

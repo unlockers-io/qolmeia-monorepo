@@ -71,6 +71,7 @@ const seedTeam = async (companyId: string, workers: ReadonlyArray<WorkerSeed> = 
       ],
     });
   });
+
   return { correspondentId, teamId };
 };
 

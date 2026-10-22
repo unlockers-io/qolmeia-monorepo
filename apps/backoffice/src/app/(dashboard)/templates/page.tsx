@@ -17,6 +17,7 @@ export const instant = true;
 
 const TemplatesContent = async () => {
   await requireOperator();
+
   return <TemplatesList />;
 };
 

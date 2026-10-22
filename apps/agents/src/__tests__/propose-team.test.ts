@@ -28,6 +28,7 @@ describe("proposeTeam", () => {
       brief: Record<string, unknown>;
       candidates: ReadonlyArray<{ id: string; workerKind: string }>;
     };
+
     expect(result.candidates.some((c) => c.id === "tpl-designer")).toBe(true);
     expect(result.candidates.every((c) => c.workerKind.length > 0)).toBe(true);
   });
@@ -39,9 +40,11 @@ describe("proposeTeam", () => {
         where: { id: COMPANY_ID },
       }),
     );
+
     const result = (await proposeTeamSkill.execute({}, ctx)) as {
       brief: { industry?: string };
     };
+
     expect(result.brief.industry).toBe("alimentação");
   });
 });

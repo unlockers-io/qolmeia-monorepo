@@ -49,6 +49,7 @@ const SignOutButtonView = ({
     if (pending) {
       return;
     }
+
     setPending(true);
     await runWithCleanup(
       async () => {
@@ -84,8 +85,10 @@ const SignOutButtonView = ({
 
 const SignOutButton = (props: SignOutButtonProps) => {
   const router = useRouter();
+
   return <SignOutButtonView {...props} dependencies={{ ...DEFAULT_DEPENDENCIES, router }} />;
 };
 
 export { SignOutButton, SignOutButtonView };
+
 export type { SignOutButtonDependencies, SignOutButtonProps };

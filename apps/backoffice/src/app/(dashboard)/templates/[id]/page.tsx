@@ -23,6 +23,7 @@ const EditTemplateContent = async ({ params }: EditTemplatePageProps) => {
   const { id } = await params;
 
   let detail: TemplateResponse | null = null;
+
   try {
     detail = await apiGetServer<TemplateResponse>(`/templates/${id}`);
   } catch (error) {
@@ -30,6 +31,7 @@ const EditTemplateContent = async ({ params }: EditTemplatePageProps) => {
       throw error;
     }
   }
+
   if (!detail) {
     notFound();
   }

@@ -33,6 +33,7 @@ const AGE_TIER_CLASS = {
 
 const proposedSummary = (proposed: ActionsResponse["items"][number]["proposed"]): string => {
   const summary = typeof proposed.summary === "string" ? proposed.summary : "";
+
   return summary.split("\n")[0]?.trim() ?? "";
 };
 
@@ -41,7 +42,9 @@ const ApprovalsContent = async () => {
     apiGetServer<ActionsResponse>("/actions?status=pending&sort=age"),
     apiGetServer<CoverageResponse>("/assignments/me").catch(() => null),
   ]);
+
   const pendingCount = res.items.length;
+
   const filtered =
     coverage !== null &&
     (coverage.assigned.companies.length > 0 || coverage.assigned.disciplines.length > 0);
@@ -97,6 +100,7 @@ const ApprovalsContent = async () => {
             <ul className="flex flex-col">
               {res.items.map((action) => {
                 const preview = proposedSummary(action.proposed);
+
                 return (
                   <li className="border-b border-border/60 last:border-b-0" key={action.id}>
                     <Link

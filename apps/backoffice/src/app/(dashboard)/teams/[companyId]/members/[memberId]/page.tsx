@@ -20,17 +20,21 @@ const MemberEditContent = async ({ params }: Props) => {
   const { companyId, memberId } = await params;
 
   let member: TeamMemberDetailView | null;
+
   try {
     const body = await apiGetServer<{ member: TeamMemberDetailView }>(
       `/teams/${companyId}/members/${memberId}`,
     );
+
     member = body.member;
   } catch (error) {
     if (!(error instanceof ApiError) || error.status !== 404) {
       throw error;
     }
+
     member = null;
   }
+
   if (!member) {
     notFound();
   }

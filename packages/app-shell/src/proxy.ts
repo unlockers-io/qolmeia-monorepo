@@ -15,9 +15,11 @@ const matchesRoute = (pathname: string, route: string): boolean =>
 const forwardAuthRequest = (request: NextRequest): NextResponse => {
   const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
   const secret = process.env.TRUSTED_PROXY_SECRET ?? "";
+
   if (clientIp === "" || secret === "") {
     return NextResponse.next();
   }
+
   return NextResponse.next({
     request: { headers: forwardClientIp(request.headers, { clientIp, secret }) },
   });
@@ -31,15 +33,20 @@ const createProxy =
   ({ protectedRoutes }: ProxyConfig) =>
   (request: NextRequest): NextResponse => {
     const { pathname } = request.nextUrl;
+
     if (pathname.startsWith("/api/auth/")) {
       return forwardAuthRequest(request);
     }
+
     const isProtected = protectedRoutes.some((route) => matchesRoute(pathname, route));
+
     if (isProtected && !hasSessionCookie(request.headers)) {
       const url = new URL("/login", request.url);
       url.searchParams.set("from", pathname);
+
       return NextResponse.redirect(url);
     }
+
     return NextResponse.next();
   };
 

@@ -42,9 +42,11 @@ const flueFields = (input: ToolDefinition["input"]): Fields =>
     Object.entries((input as v.ObjectSchema<v.ObjectEntries, undefined>).entries).map(
       ([key, entry]) => {
         const required = entry.type !== "optional";
+
         const field = required
           ? entry
           : (entry as v.OptionalSchema<v.GenericSchema, undefined>).wrapped;
+
         return [key, { description: v.getDescription(field), required }];
       },
     ),
@@ -69,9 +71,11 @@ describe("skill definitions", () => {
     for (const entry of catalog) {
       const flueTool = flueTools.find(({ name }) => name === entry.id);
       const aiTool = aiTools[entry.id];
+
       if (!flueTool || !aiTool?.inputSchema) {
         throw new Error(`${entry.id} is missing an adapter`);
       }
+
       expect(entry.displayName).not.toBe("");
       expect(flueTool.description).toBe(entry.description);
       expect(aiTool.description).toBe(entry.description);

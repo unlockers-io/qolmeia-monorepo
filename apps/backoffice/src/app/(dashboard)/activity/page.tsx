@@ -60,9 +60,11 @@ type ActivitySearchParams = Promise<Record<string, string | Array<string> | unde
 
 const ActivityFeed = async ({ category }: { category?: Category }) => {
   const query = new URLSearchParams({ limit: "50" });
+
   if (category) {
     query.set("category", category);
   }
+
   const res = await apiGetServer<ActivityResponse>(`/activity?${query.toString()}`);
 
   return (

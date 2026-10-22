@@ -41,6 +41,7 @@ const listSkillCatalog = (): ReadonlyArray<SkillCatalogEntry> =>
 
 const loadDisabledSkillIds = async (db: Db): Promise<Array<string>> => {
   const rows = await db.skill.findMany({ select: { id: true }, where: { enabled: false } });
+
   return rows.map(({ id }) => id);
 };
 
@@ -49,11 +50,14 @@ const enabledSkills = (
   disabledSkillIds: ReadonlyArray<string>,
 ): ReadonlyArray<Skill> => {
   const disabled = new Set(disabledSkillIds);
+
   return skillIds.flatMap((id) => {
     const skill = skillsById.get(id);
+
     if (!skill) {
       throw new Error(`References unknown skill id: ${id}`);
     }
+
     return disabled.has(id) ? [] : [skill];
   });
 };
@@ -62,9 +66,11 @@ const previewResult = <Result extends SkillResult>(result: Result): Result | str
   if (typeof result === "string") {
     return result.slice(0, 200);
   }
+
   if (typeof result === "number" || typeof result === "boolean") {
     return String(result).slice(0, 200);
   }
+
   return result;
 };
 
@@ -74,13 +80,16 @@ const runSkill = async (
   input: SkillInput,
 ): Promise<SkillResult> => {
   const start = Date.now();
+
   const baseFields = {
     agentInstanceId: ctx.agentInstanceId,
     companyId: ctx.companyId,
     input: JSON.stringify(input),
     skillId: skill.id,
   };
+
   log.info({ ...baseFields, message: "agent.tool.start" });
+
   try {
     const result = await skill.execute(input, ctx);
     log.info({
@@ -89,6 +98,7 @@ const runSkill = async (
       message: "agent.tool.ok",
       result: JSON.stringify(previewResult(result)),
     });
+
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

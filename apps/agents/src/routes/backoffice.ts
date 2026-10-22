@@ -52,6 +52,7 @@ import { listTickets, loadTicket } from "#/ticket/ticket";
 const backofficeRoutes = new Hono<IdentityEnv>();
 
 backofficeRoutes.use("*", dbPerRequest);
+
 backofficeRoutes.use("*", requireOperator);
 
 const TICKET_STATUSES: ReadonlyArray<TicketStatus> = [
@@ -70,12 +71,15 @@ const isTicketStatus = (value: string): value is TicketStatus =>
 backofficeRoutes.get("/tickets", async (c) => {
   const companyId = c.req.query("companyId");
   const status = c.req.query("status");
+
   if (status !== undefined && !isTicketStatus(status)) {
     return c.json({ error: "invalid status" }, 400);
   }
+
   const limit = parsePositiveInt(c.req.query("limit"), 50, 200);
   const items = await listTickets(c.var.db, { companyId, limit, status });
   const body: TicketsResponse = { items };
+
   return c.json(body);
 });
 
@@ -85,6 +89,7 @@ backofficeRoutes.get("/actions", async (c) => {
   const companyId = c.req.query("companyId");
 
   const { db } = c.var;
+
   if (status === "pending") {
     const items = await listPendingActions(
       db,
@@ -92,7 +97,9 @@ backofficeRoutes.get("/actions", async (c) => {
         ? { companyId }
         : await getCoverage(db, c.get("session").userId),
     );
+
     const now = Date.now();
+
     const enriched = items.map((a) => ({
       actionType: a.actionType,
       agent: a.agent,
@@ -109,14 +116,18 @@ backofficeRoutes.get("/actions", async (c) => {
       status: a.status,
       ticketId: a.ticketId,
     }));
+
     const sorted =
       sort === "age" ? enriched.toSorted((x, y) => y.ageSeconds - x.ageSeconds) : enriched;
+
     const pendingBody: ActionsResponse = { items: sorted };
+
     return c.json(pendingBody);
   }
 
   const items = await listActions(db, companyId);
   const body: ActionsResponse = { items };
+
   return c.json(body);
 });
 
@@ -127,12 +138,15 @@ const decideBodySchema = z.object({
 
 backofficeRoutes.post("/actions/:id/decide", async (c) => {
   let body: unknown;
+
   try {
     body = await c.req.json();
   } catch {
     return c.json({ error: "invalid JSON" }, 400);
   }
+
   const parsed = decideBodySchema.safeParse(body);
+
   if (!parsed.success) {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
@@ -141,18 +155,23 @@ backofficeRoutes.post("/actions/:id/decide", async (c) => {
     ...parsed.data,
     decidedByUserId: c.get("session").userId,
   });
+
   if (receipt.ok) {
     return c.json({ ok: true });
   }
+
   if (receipt.reason === "not_found") {
     return c.text("Not found", 404);
   }
+
   if (receipt.reason === "not_pending") {
     return c.json({ error: `action already ${receipt.status}` }, 409);
   }
+
   if (receipt.reason === "revision_limit") {
     return c.json({ error: "revision limit reached" }, 409);
   }
+
   return c.json({ error: "no workflow for this action" }, 500);
 });
 
@@ -165,6 +184,7 @@ backofficeRoutes.get("/activity", async (c) => {
   const category = ACTIVITY_CATEGORIES.find((value) => value === rawCategory);
   const items = await listActivity(c.var.db, { before, category, companyId, limit, since });
   const body: ActivityResponse = { items };
+
   return c.json(body);
 });
 
@@ -172,11 +192,14 @@ backofficeRoutes.get("/tickets/:id", async (c) => {
   const id = c.req.param("id");
   const { db } = c.var;
   const ticket = await loadTicket(db, id);
+
   if (!ticket) {
     return c.text("Not found", 404);
   }
+
   const actions = await listTicketActions(db, id);
   const body: TicketDetailResponse = { actions, ticket };
+
   return c.json(body);
 });
 
@@ -184,30 +207,37 @@ backofficeRoutes.get("/actions/:id", async (c) => {
   const id = c.req.param("id");
   const { db } = c.var;
   const action = await getAction(db, id);
+
   if (!action) {
     return c.text("Not found", 404);
   }
+
   const [ticket, changesAllowed] = await Promise.all([
     loadTicket(db, action.ticketId),
     canRequestChanges(db, action.ticketId),
   ]);
+
   const ageSeconds = Math.floor((Date.now() - action.createdAt) / 1000);
+
   const body: ActionDetailResponse = {
     action,
     ageSeconds,
     canRequestChanges: changesAllowed,
     ticket,
   };
+
   return c.json(body);
 });
 
 backofficeRoutes.get("/companies", async (c) => {
   const { db } = c.var;
   const companies = await listCompaniesOverview(db);
+
   const rosters = await listTeamRosters(
     db,
     companies.map((company) => company.id),
   );
+
   const withRosters = companies.map((company): CompanyRoster => ({
     briefPercent: company.briefPercent,
     id: company.id,
@@ -215,6 +245,7 @@ backofficeRoutes.get("/companies", async (c) => {
     name: company.name,
     status: company.status,
   }));
+
   return c.json({ companies: withRosters });
 });
 
@@ -231,16 +262,20 @@ const companyBodySchema = z.object({
 
 backofficeRoutes.post("/companies", async (c) => {
   const parsed = companyBodySchema.safeParse(await c.req.json().catch(() => null));
+
   if (!parsed.success) {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
+
   try {
     const company = await createOrganization(c.var.db, parsed.data);
+
     return c.json({ company }, 201);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return c.json({ error: "slug already in use" }, 409);
     }
+
     throw error;
   }
 });
@@ -249,41 +284,53 @@ const invitationBodySchema = z.object({ email: z.email().max(254) });
 
 backofficeRoutes.post("/companies/:companyId/invitations", async (c) => {
   const parsed = invitationBodySchema.safeParse(await c.req.json().catch(() => null));
+
   if (!parsed.success) {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
+
   const email = parsed.data.email.toLowerCase();
+
   const result = await inviteCustomer(createWorkerAuth(c.env, c.var.db), c.var.db, {
     companyId: c.req.param("companyId"),
     email,
     inviterId: c.get("session").userId,
   });
+
   if (result.kind === "company_not_found") {
     return c.json({ error: "not found" }, 404);
   }
+
   if (result.kind === "already_member") {
     return c.json({ error: "email already belongs to a member" }, 409);
   }
+
   const sent = await sendCustomerInvitation({
     acceptUrl: `${c.env.WEB_APP_URL}/convite/${result.invitation.id}`,
     companyName: result.companyName,
     email,
     resendApiKey: c.env.RESEND_API_KEY,
   });
+
   if (!sent) {
     return c.json({ error: "invitation email failed" }, 502);
   }
+
   const body: CustomerInvitationResponse = { invitation: result.invitation };
+
   return c.json(body, 201);
 });
 
 backofficeRoutes.get("/assignments/me", async (c) => {
   const { db } = c.var;
+
   const [assigned, options] = await Promise.all([
     getCoverage(db, c.get("session").userId),
     getCoverageOptions(db),
   ]);
+
   const body: CoverageResponse = { assigned, options };
+
   return c.json(body);
 });
 
@@ -294,24 +341,30 @@ const coverageBodySchema = z.object({
 
 backofficeRoutes.put("/assignments/me", async (c) => {
   const parsed = coverageBodySchema.safeParse(await c.req.json().catch(() => null));
+
   if (!parsed.success) {
     return c.json({ error: "invalid body" }, 400);
   }
+
   await setCoverage(c.var.db, c.get("session").userId, parsed.data);
+
   return c.json({ assigned: parsed.data });
 });
 
 backofficeRoutes.get("/teams/:companyId/members", async (c) => {
   const companyId = c.req.param("companyId");
   const members = await getTeamRoster(c.var.db, companyId);
+
   return c.json({ members });
 });
 
 backofficeRoutes.get("/teams/:companyId/members/:id", async (c) => {
   const member = await getMemberDetail(c.var.db, c.req.param("companyId"), c.req.param("id"));
+
   if (!member) {
     return c.json({ error: "not found" }, 404);
   }
+
   return c.json({ member });
 });
 
@@ -319,10 +372,13 @@ backofficeRoutes.patch("/teams/:companyId/members/:id", async (c) => {
   const companyId = c.req.param("companyId");
   const id = c.req.param("id");
   const parsed = backofficeTeamMemberPatchSchema.safeParse(await c.req.json().catch(() => null));
+
   if (!parsed.success) {
     return c.json({ error: "invalid body" }, 400);
   }
+
   const { db } = c.var;
+
   try {
     await (parsed.data.status === undefined
       ? updateMember(c.env, db, {
@@ -340,14 +396,17 @@ backofficeRoutes.patch("/teams/:companyId/members/:id", async (c) => {
           status: parsed.data.status,
         }));
     const member = await getMemberDetail(db, companyId, id);
+
     if (!member) {
       return c.json({ error: "not found" }, 404);
     }
+
     return c.json({ member });
   } catch (error) {
     if (error instanceof TeamError) {
       return c.json({ error: error.message }, error.status);
     }
+
     throw error;
   }
 });
@@ -373,59 +432,77 @@ const templateStatusSchema = z.object({
 
 backofficeRoutes.get("/skills", (c) => {
   const body: SkillCatalogResponse = { items: listSkillCatalog() };
+
   return c.json(body);
 });
 
 backofficeRoutes.get("/templates", async (c) => {
   const items = await listAllTemplates(c.var.db);
   const body: TemplatesResponse = { items };
+
   return c.json(body);
 });
 
 backofficeRoutes.get("/templates/:id", async (c) => {
   const template = await getTemplate(c.var.db, c.req.param("id"));
+
   if (!template) {
     return c.json({ error: "not found" }, 404);
   }
+
   const body: TemplateResponse = { template };
+
   return c.json(body);
 });
 
 backofficeRoutes.post("/templates", async (c) => {
   const parsed = templateBodySchema.safeParse(await c.req.json().catch(() => null));
+
   if (!parsed.success) {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
+
   const input: TemplateInput = parsed.data;
   const template = await createTemplate(c.var.db, input);
   const body: TemplateResponse = { template };
+
   return c.json(body, 201);
 });
 
 backofficeRoutes.patch("/templates/:id", async (c) => {
   const parsed = templateBodySchema.safeParse(await c.req.json().catch(() => null));
+
   if (!parsed.success) {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
+
   const input: TemplateInput = parsed.data;
   const template = await updateTemplate(c.var.db, c.req.param("id"), input);
+
   if (!template) {
     return c.json({ error: "not found" }, 404);
   }
+
   const body: TemplateResponse = { template };
+
   return c.json(body);
 });
 
 backofficeRoutes.patch("/templates/:id/status", async (c) => {
   const parsed = templateStatusSchema.safeParse(await c.req.json().catch(() => null));
+
   if (!parsed.success) {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
+
   const template = await setTemplateStatus(c.var.db, c.req.param("id"), parsed.data.status);
+
   if (!template) {
     return c.json({ error: "not found" }, 404);
   }
+
   const body: TemplateResponse = { template };
+
   return c.json(body);
 });
 

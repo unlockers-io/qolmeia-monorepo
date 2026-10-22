@@ -37,21 +37,26 @@ const deciderName = async (db: Db, decidedById: string | null): Promise<string |
   if (decidedById === null || decidedById === "") {
     return null;
   }
+
   const [user, agent] = await Promise.all([
     db.user.findUnique({ select: { displayName: true, name: true }, where: { id: decidedById } }),
     db.agentInstance.findUnique({ select: { displayName: true }, where: { id: decidedById } }),
   ]);
+
   if (user) {
     return user.displayName ?? user.name;
   }
+
   return agent ? `Cliente, pelo ${agent.displayName}` : null;
 };
 
 const getAction = async (db: Db, actionId: string): Promise<ActionDetail | null> => {
   const row = await db.action.findUnique({ include: actionInclude, where: { id: actionId } });
+
   if (!row) {
     return null;
   }
+
   return { ...toAction(row), decidedByName: await deciderName(db, row.decidedByUserId) };
 };
 
@@ -69,12 +74,14 @@ const listPendingActions = async (
               ? { agentInstance: { template: { workerKind: { in: [...scope.disciplines] } } } }
               : undefined,
         };
+
   const rows = await db.action.findMany({
     include: actionInclude,
     orderBy: { createdAt: "asc" },
     take: 100,
     where: { ...where, status: "pending" },
   });
+
   return rows.map(toAction);
 };
 
@@ -85,6 +92,7 @@ const listActions = async (db: Db, companyId?: string): Promise<ReadonlyArray<Ac
     take: 200,
     where: { companyId },
   });
+
   return rows.map(toAction);
 };
 
@@ -94,6 +102,7 @@ const listTicketActions = async (db: Db, ticketId: string): Promise<ReadonlyArra
     orderBy: { createdAt: "asc" },
     where: { ticketId },
   });
+
   return rows.map(toAction);
 };
 
@@ -102,6 +111,7 @@ const getProposedPayload = async (db: Db, actionId: string): Promise<JsonRecord>
     select: { proposed: true },
     where: { id: actionId },
   });
+
   return toRecord(proposed);
 };
 

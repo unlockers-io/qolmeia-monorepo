@@ -26,6 +26,7 @@ const fieldError = (message: string | undefined): [string] | undefined =>
 const TemplateForm = ({ initial }: TemplateFormProps) => {
   const policiesFieldId = useId();
   const ready = useClientReady();
+
   const {
     busy,
     errors,

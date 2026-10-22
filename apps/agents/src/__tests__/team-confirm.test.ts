@@ -47,6 +47,7 @@ describe("confirmTeam", () => {
         where: { companyId: COMPANY_ID },
       }),
     );
+
     expect(instances).toEqual([
       { id: CORR_ID, role: "correspondent", templateId: null },
       { id: WORKER_ID, role: "worker", templateId: "tpl-designer" },
@@ -55,6 +56,7 @@ describe("confirmTeam", () => {
 
   it("populates canDelegateTo so Correspondent → Designer is allowed", async () => {
     await confirm();
+
     const members = await db((client) =>
       client.teamMember.findMany({
         orderBy: { agentInstanceId: "asc" },
@@ -62,6 +64,7 @@ describe("confirmTeam", () => {
         where: { teamId: TEAM_ID },
       }),
     );
+
     expect(members).toEqual([
       { agentInstanceId: CORR_ID, canDelegateTo: [WORKER_ID] },
       { agentInstanceId: WORKER_ID, canDelegateTo: [] },
@@ -70,9 +73,11 @@ describe("confirmTeam", () => {
 
   it("flips the company status to active", async () => {
     await confirm();
+
     const company = await db((client) =>
       client.company.findUnique({ select: { status: true }, where: { id: COMPANY_ID } }),
     );
+
     expect(company?.status).toBe("active");
   });
 
@@ -87,9 +92,11 @@ describe("confirmTeam", () => {
       /template tpl-redator not found/v,
     );
     await expect(counts()).resolves.toEqual({ instances: 0, members: 0, teams: 0 });
+
     const company = await db((client) =>
       client.company.findUnique({ select: { status: true }, where: { id: COMPANY_ID } }),
     );
+
     expect(company?.status).toBe("onboarding");
   });
 
@@ -99,12 +106,14 @@ describe("confirmTeam", () => {
 
   it("records exactly one TEAM_CONFIRMED activity row", async () => {
     await confirm();
+
     const rows = await db((client) =>
       client.activityLog.findMany({
         select: { actorId: true, payload: true, refId: true, refType: true },
         where: { companyId: COMPANY_ID, type: "TEAM_CONFIRMED" },
       }),
     );
+
     expect(rows).toEqual([
       {
         actorId: "cust-1",
@@ -122,6 +131,7 @@ describe("confirmTeam", () => {
 
   it("seeds the correspondent's memory with facts derived from the company brief", async () => {
     await confirm();
+
     const facts = await db((client) =>
       client.memoryFact.findMany({
         orderBy: { kind: "asc" },
@@ -129,6 +139,7 @@ describe("confirmTeam", () => {
         where: { companyId: COMPANY_ID },
       }),
     );
+
     expect(facts).toEqual([
       { agentInstanceId: CORR_ID, content: "Público: Vizinhos", kind: "audience" },
       { agentInstanceId: CORR_ID, content: "Setor: Padaria", kind: "industry" },
@@ -142,6 +153,7 @@ describe("confirmTeam", () => {
 
   it("keeps later hires and leaves memory and activity alone on re-confirm", async () => {
     await confirm();
+
     const hired = await db((client) =>
       hireMember(env, client, {
         actorId: "cust-1",
@@ -150,6 +162,7 @@ describe("confirmTeam", () => {
         templateId: "tpl-designer",
       }),
     );
+
     await confirm();
 
     const correspondent = await db((client) =>
@@ -158,6 +171,7 @@ describe("confirmTeam", () => {
         where: { teamId_agentInstanceId: { agentInstanceId: CORR_ID, teamId: TEAM_ID } },
       }),
     );
+
     expect(correspondent?.canDelegateTo).toEqual([WORKER_ID, hired.id]);
     await expect(
       db((client) => client.memoryFact.count({ where: { companyId: COMPANY_ID } })),

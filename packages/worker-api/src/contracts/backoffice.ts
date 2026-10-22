@@ -15,6 +15,7 @@ type WireValue =
   | null
   | ReadonlyArray<WireValue>
   | { readonly [key: string]: WireValue };
+
 type WireObject = Readonly<Record<string, WireValue>>;
 
 /**
@@ -82,10 +83,15 @@ type ActivityEntry = {
 };
 
 type TicketsResponse = { items: ReadonlyArray<TicketListRow> };
+
 type ActionsResponse = { items: ReadonlyArray<ActionListRow> };
+
 type ActivityResponse = { items: ReadonlyArray<ActivityEntry> };
+
 type TicketDetailResponse = { actions: ReadonlyArray<Action>; ticket: Ticket };
+
 type ActionDetail = Action & { decidedByName: string | null };
+
 type ActionDetailResponse = {
   action: ActionDetail;
   ageSeconds: number;
@@ -150,10 +156,13 @@ type CustomerInvitation = {
 };
 
 type CustomerInvitationInput = { email: string };
+
 type CustomerInvitationResponse = { invitation: CustomerInvitation };
 
 type TemplatesResponse = { items: ReadonlyArray<Template> };
+
 type TemplateResponse = { template: Template };
+
 type SkillCatalogResponse = { items: ReadonlyArray<SkillCatalogEntry> };
 
 export type {
@@ -184,6 +193,7 @@ export type {
   WireObject,
   WireValue,
 };
+
 export type {
   ActionPolicy,
   ActionStatus,

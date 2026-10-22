@@ -11,6 +11,7 @@ describe("createBrowserApi", () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(Response.json({ ok: true })),
     );
+
     vi.stubGlobal("fetch", fetchMock);
 
     const api = createBrowserApi("/api/backoffice");
@@ -48,6 +49,7 @@ describe("createBrowserApi", () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(Response.json({ id: 1 })),
     );
+
     vi.stubGlobal("fetch", fetchMock);
 
     const api = createBrowserApi("/api/backoffice");
@@ -62,6 +64,7 @@ describe("createBrowserApi", () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(Response.json({ ok: true })),
     );
+
     vi.stubGlobal("fetch", fetchMock);
 
     const api = createBrowserApi();
@@ -77,6 +80,7 @@ describe("createServerApi", () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(Response.json({ items: [] })),
     );
+
     vi.stubGlobal("fetch", fetchMock);
 
     const { apiGetServer } = createServerApi({
@@ -84,6 +88,7 @@ describe("createServerApi", () => {
       baseUrl: "https://w.example",
       readCookieHeader: () => Promise.resolve("session=abc"),
     });
+
     const out = await apiGetServer<{ items: ReadonlyArray<string> }>("/tickets");
 
     expect(out).toEqual({ items: [] });
@@ -97,12 +102,14 @@ describe("createServerApi", () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(Response.json({ ok: true })),
     );
+
     vi.stubGlobal("fetch", fetchMock);
 
     const { apiGetServer } = createServerApi({
       baseUrl: "https://w.example",
       readCookieHeader: () => Promise.resolve("session=abc"),
     });
+
     await apiGetServer("/api/me/company");
 
     const init = fetchMock.mock.calls[0]?.[1];
@@ -113,12 +120,14 @@ describe("createServerApi", () => {
     const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
       Promise.resolve(Response.json({ ok: true })),
     );
+
     vi.stubGlobal("fetch", fetchMock);
 
     const { apiGetServer } = createServerApi({
       baseUrl: "",
       readCookieHeader: () => Promise.resolve(""),
     });
+
     await apiGetServer("/me");
 
     const init = fetchMock.mock.calls[0]?.[1];

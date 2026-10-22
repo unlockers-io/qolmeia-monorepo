@@ -19,6 +19,7 @@ beforeEach(async () => {
 describe("POST /api/teams/:companyId/confirm", () => {
   it("rejects unauthenticated with 401", async () => {
     cookie = "";
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/teams/${COMPANY_ID}/confirm`,
@@ -28,11 +29,13 @@ describe("POST /api/teams/:companyId/confirm", () => {
         method: "POST",
       },
     );
+
     expect(res.status).toBe(401);
   });
 
   it("rejects a confirm for a different org with 403", async () => {
     cookie = await signInAs(meOtherOrg);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/teams/${COMPANY_ID}/confirm`,
@@ -42,11 +45,13 @@ describe("POST /api/teams/:companyId/confirm", () => {
         method: "POST",
       },
     );
+
     expect(res.status).toBe(403);
   });
 
   it("returns 400 for an invalid body (empty templateIds)", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/teams/${COMPANY_ID}/confirm`,
@@ -56,11 +61,13 @@ describe("POST /api/teams/:companyId/confirm", () => {
         method: "POST",
       },
     );
+
     expect(res.status).toBe(400);
   });
 
   it("materializes the team and flips company status to active", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/teams/${COMPANY_ID}/confirm`,
@@ -70,6 +77,7 @@ describe("POST /api/teams/:companyId/confirm", () => {
         method: "POST",
       },
     );
+
     expect(res.status).toBe(200);
     const body = await res.json<{ team: { correspondentId: string; teamId: string } }>();
     expect(body.team.correspondentId).toBe(`corr-${COMPANY_ID}`);
@@ -77,6 +85,7 @@ describe("POST /api/teams/:companyId/confirm", () => {
     const company = await db((client) =>
       client.company.findUnique({ select: { status: true }, where: { id: COMPANY_ID } }),
     );
+
     expect(company?.status).toBe("active");
   });
 });
