@@ -84,12 +84,14 @@ const EmpresaClient = ({
     setBusyId(id);
     try {
       await patchMember(id, { promptOverride });
-      toast.success(promptOverride === null ? "Prompt restaurado." : "Prompt atualizado.");
-      await handleOpenDetail(id);
-      await refetch();
-    } finally {
+    } catch (error) {
       setBusyId(null);
+      throw error;
     }
+    toast.success(promptOverride === null ? "Prompt restaurado." : "Prompt atualizado.");
+    await handleOpenDetail(id);
+    await refetch();
+    setBusyId(null);
   };
 
   const handleTogglePause = async (id: string, paused: boolean) => {
