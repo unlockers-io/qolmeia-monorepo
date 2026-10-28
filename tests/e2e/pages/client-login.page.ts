@@ -10,7 +10,7 @@ export class ClientLoginPage {
   private readonly magicLinkToggle: Locator;
   private readonly submitButton: Locator;
   private readonly sentHeading: Locator;
-  private readonly errorToast: Locator;
+  private readonly formAlert: Locator;
 
   constructor(private readonly page: Page) {
     this.emailInput = page.getByLabel(/e-?mail/iu);
@@ -19,7 +19,7 @@ export class ClientLoginPage {
     this.magicLinkToggle = page.getByRole("button", { name: "Entrar com link mágico" });
     this.submitButton = page.getByRole("button", { name: /enviar link mágico|send magic link/iu });
     this.sentHeading = page.getByText(/verifique seu e-mail|check your email/iu);
-    this.errorToast = page.locator('[data-sonner-toast][data-type="error"]');
+    this.formAlert = page.locator('[data-slot="form-alert"]');
   }
 
   goto = async () => {
@@ -48,7 +48,7 @@ export class ClientLoginPage {
     await expect(this.sentHeading).toBeVisible();
   };
 
-  expectErrorToast = async () => {
-    await expect(this.errorToast).toBeVisible();
+  expectFormAlert = async () => {
+    await expect(this.formAlert).toBeVisible();
   };
 }

@@ -2,8 +2,6 @@
 
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
-import { Field, FieldLabel } from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
 import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/ui/lib/agent-avatar";
@@ -12,6 +10,7 @@ import type { TeamMemberDetailView } from "@repo/worker-api/contracts";
 import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { MemberNameForm } from "@/components/member-name-form";
 import { PromptEditor } from "@/components/prompt-editor";
 import { apiSend, describeRequestError } from "@/lib/api-client";
 
@@ -42,14 +41,11 @@ const applyStatus = (
 
 const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormProps) => {
   const [member, setMember] = useState(initialMember);
-  const [nameDraft, setNameDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [isTogglingPause, startPauseToggle] = useTransition();
   const [optimisticMember, applyOptimisticStatus] = useOptimistic(member, applyStatus);
   const ready = useClientReady();
   const disabled = !ready || busy;
-
-  const name = nameDraft ?? member.displayName;
 
   const patch = async (body: {
     displayName?: string;
@@ -74,32 +70,14 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
     setBusy(false);
   };
 
-  const handleSaveName = async () => {
-    try {
-      await patch({ displayName: name });
-      setNameDraft(null);
-      toast.success("Nome atualizado.");
-    } catch (error) {
-      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
-    }
+  const handleRename = async (displayName: string) => {
+    await patch({ displayName });
+    toast.success("Nome atualizado.");
   };
 
-  const handleSavePrompt = async (value: string) => {
-    try {
-      await patch({ promptOverride: value });
-      toast.success("Prompt atualizado.");
-    } catch (error) {
-      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
-    }
-  };
-
-  const handleResetPrompt = async () => {
-    try {
-      await patch({ promptOverride: null });
-      toast.success("Prompt restaurado.");
-    } catch (error) {
-      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
-    }
+  const handleSavePrompt = async (promptOverride: string | null) => {
+    await patch({ promptOverride });
+    toast.success(promptOverride === null ? "Prompt restaurado." : "Prompt atualizado.");
   };
 
   const handleTogglePause = () => {
@@ -185,34 +163,13 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
 
       <Card>
         <CardContent className="flex flex-col gap-5">
-          <Field>
-            <FieldLabel htmlFor="member-name">Nome de exibição</FieldLabel>
-            <div className="flex gap-2">
-              <Input
-                disabled={disabled}
-                id="member-name"
-                onChange={(e) => {
-                  setNameDraft(e.target.value);
-                }}
-                value={name}
-              />
-              <Button
-                disabled={disabled || name === member.displayName}
-                onClick={() => {
-                  void handleSaveName();
-                }}
-                variant="outline"
-              >
-                Renomear
-              </Button>
-            </div>
-          </Field>
+          <MemberNameForm busy={busy} displayName={member.displayName} onRename={handleRename} />
 
           {member.role === "worker" ? (
             <PromptEditor
               busy={busy}
               initialValue={member.promptOverride}
-              onReset={handleResetPrompt}
+              onReset={() => handleSavePrompt(null)}
               onSave={handleSavePrompt}
               templatePrompt={member.templateSystemPrompt}
               updatedAt={member.promptOverrideUpdatedAt}

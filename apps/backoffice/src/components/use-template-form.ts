@@ -1,3 +1,4 @@
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import {
   ACTION_TYPES,
   type ActionPolicy,
@@ -6,7 +7,7 @@ import {
 } from "@repo/worker-api/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -69,6 +70,20 @@ const formSchema = z.object({
 const isFieldKey = (key: PropertyKey | undefined): key is FieldKey =>
   typeof key === "string" && key in formSchema.shape;
 
+const fieldErrors = (values: Record<FieldKey, string>): Partial<Record<FieldKey, string>> => {
+  const errors: Partial<Record<FieldKey, string>> = {};
+
+  for (const issue of formSchema.safeParse(values).error?.issues ?? []) {
+    const key = issue.path[0];
+
+    if (isFieldKey(key) && errors[key] === undefined) {
+      errors[key] = issue.message;
+    }
+  }
+
+  return errors;
+};
+
 const parsePolicies = (raw: string): TemplateInput["defaultPolicies"] => {
   const trimmed = raw.trim();
 
@@ -79,25 +94,40 @@ const parsePolicies = (raw: string): TemplateInput["defaultPolicies"] => {
   return policiesRecordSchema.parse(JSON.parse(trimmed));
 };
 
+const EMPTY_FORM_VALUES: Record<FieldKey, string> = {
+  defaultActionType: "worker_deliverable",
+  defaultPolicies: "{}",
+  description: "",
+  displayName: "",
+  model: "",
+  systemPrompt: "",
+  workerKind: "",
+};
+
+const toFormValues = (initial: Template | undefined): Record<FieldKey, string> =>
+  initial === undefined
+    ? EMPTY_FORM_VALUES
+    : {
+        defaultActionType: initial.defaultActionType,
+        defaultPolicies: JSON.stringify(initial.defaultPolicies, null, 2),
+        description: initial.description,
+        displayName: initial.displayName,
+        model: initial.model,
+        systemPrompt: initial.systemPrompt,
+        workerKind: initial.workerKind,
+      };
+
 const useTemplateForm = (initial: Template | undefined) => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const formRef = useRef<HTMLFormElement>(null);
+  const formId = useId();
 
   const isEdit = initial !== undefined;
 
-  const [values, setValues] = useState({
-    defaultActionType: initial?.defaultActionType ?? "worker_deliverable",
-    defaultPolicies: initial ? JSON.stringify(initial.defaultPolicies, null, 2) : "{}",
-    description: initial?.description ?? "",
-    displayName: initial?.displayName ?? "",
-    model: initial?.model ?? "",
-    systemPrompt: initial?.systemPrompt ?? "",
-    workerKind: initial?.workerKind ?? "",
-  });
-
+  const [values, setValues] = useState(() => toFormValues(initial));
   const [skillIds, setSkillIds] = useState<ReadonlyArray<string>>(initial?.skillIds ?? []);
-  const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const errors = submitAttempted ? fieldErrors(values) : {};
 
   const { data: skillsData, isLoading: skillsLoading } = useQuery({
     queryFn: fetchSkillCatalog,
@@ -108,9 +138,6 @@ const useTemplateForm = (initial: Template | undefined) => {
   const saveMutation = useMutation({
     mutationFn: (input: TemplateInput) =>
       isEdit ? updateTemplate(initial.id, input) : createTemplate(input),
-    onError: (error) => {
-      toast.error(describeRequestError(error, "Não foi possível salvar o modelo."));
-    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: templateKeys.all });
       toast.success(isEdit ? "Modelo atualizado." : "Modelo criado.");
@@ -133,44 +160,26 @@ const useTemplateForm = (initial: Template | undefined) => {
   });
 
   const setField = (key: FieldKey, value: string) => {
+    saveMutation.reset();
     setValues((prev) => ({ ...prev, [key]: value }));
   };
 
   const toggleSkill = (id: string) => {
+    saveMutation.reset();
     setSkillIds((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
-  };
-
-  const focusFirstError = (firstKey: FieldKey) => {
-    const el = formRef.current?.querySelector<HTMLElement>(`[name="${firstKey}"]`);
-    el?.focus();
   };
 
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setSubmitAttempted(true);
     const parsed = formSchema.safeParse(values);
 
     if (!parsed.success) {
-      const fieldErrors: Partial<Record<FieldKey, string>> = {};
-
-      for (const issue of parsed.error.issues) {
-        const key = issue.path[0];
-
-        if (isFieldKey(key) && fieldErrors[key] === undefined) {
-          fieldErrors[key] = issue.message;
-        }
-      }
-
-      setErrors(fieldErrors);
-      const firstKey = parsed.error.issues[0]?.path[0];
-
-      if (isFieldKey(firstKey)) {
-        focusFirstError(firstKey);
-      }
+      focusFirstInvalidField(formId);
 
       return;
     }
 
-    setErrors({});
     saveMutation.mutate({
       defaultActionType: parsed.data.defaultActionType,
       defaultPolicies: parsePolicies(parsed.data.defaultPolicies),
@@ -192,6 +201,12 @@ const useTemplateForm = (initial: Template | undefined) => {
   };
 
   const busy = saveMutation.isPending;
+
+  const submitError =
+    saveMutation.error === null
+      ? null
+      : describeRequestError(saveMutation.error, "Não foi possível salvar o modelo.");
+
   const skills = skillsData?.items ?? [];
   const editLabel = isEdit ? "Salvar alterações" : "Criar modelo";
   const submitLabel = busy ? "Salvando…" : editLabel;
@@ -199,7 +214,7 @@ const useTemplateForm = (initial: Template | undefined) => {
   return {
     busy,
     errors,
-    formRef,
+    formId,
     handleSubmit,
     handleToggleStatus,
     setField,
@@ -207,6 +222,7 @@ const useTemplateForm = (initial: Template | undefined) => {
     skills,
     skillsLoading,
     statusPending: statusMutation.isPending,
+    submitError,
     submitLabel,
     toggleSkill,
     values,
