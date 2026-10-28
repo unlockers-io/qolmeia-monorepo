@@ -29,7 +29,7 @@ test.describe("Backoffice reset-password form", () => {
     await backofficeResetPasswordPage.goto("definitely-not-a-real-token");
     await backofficeResetPasswordPage.submit("ValidPassword123!", "ValidPassword123!");
 
-    await backofficeResetPasswordPage.expectErrorToast();
+    await backofficeResetPasswordPage.expectFormAlert();
     expect(page.url()).toContain("/reset-password");
   });
 });

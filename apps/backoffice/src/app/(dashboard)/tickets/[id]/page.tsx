@@ -63,6 +63,7 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
   const { id } = await params;
 
   let detail: TicketDetailResponse | null = null;
+
   try {
     detail = await apiGetServer<TicketDetailResponse>(`/tickets/${id}`);
   } catch (error) {
@@ -70,6 +71,7 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
       throw error;
     }
   }
+
   if (!detail) {
     notFound();
   }
@@ -109,6 +111,7 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
                   {actions.map((action, index) => {
                     const tone = STEP_TONE[action.status];
                     const isLast = index === actions.length - 1;
+
                     return (
                       <li className="flex gap-3.5" key={action.id}>
                         <div className="flex flex-col items-center">

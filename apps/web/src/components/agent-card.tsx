@@ -29,6 +29,7 @@ const AgentCard = ({ member, variant }: AgentCardProps) => {
   const detailed = variant === "detailed";
   const tone = STATUS_TONE[member.status];
   const deliveries = member.role === "worker" ? deliveriesLabel(member.lifetimeDone) : null;
+
   const statusPill = (
     <StatusPill
       className="shrink-0"
@@ -37,6 +38,7 @@ const AgentCard = ({ member, variant }: AgentCardProps) => {
       tone={tone}
     />
   );
+
   return (
     <article className="flex items-center gap-3">
       <span
@@ -80,4 +82,5 @@ const AgentCard = ({ member, variant }: AgentCardProps) => {
 };
 
 export { AgentCard };
+
 export type { AgentCardProps };

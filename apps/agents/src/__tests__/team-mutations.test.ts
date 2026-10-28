@@ -66,6 +66,7 @@ describe("hireMember", () => {
     const correspondent = await db((client) =>
       client.teamMember.findFirst({ where: { agentInstanceId: CORR_ID } }),
     );
+
     expect(correspondent?.canDelegateTo).toContain(member.id);
   });
 
@@ -79,9 +80,11 @@ describe("hireMember", () => {
 
   it("keeps every concurrent hire on the correspondent's delegation list", async () => {
     const members = await Promise.all([hire("Ana"), hire("Bia"), hire("Caio")]);
+
     const correspondent = await db((client) =>
       client.teamMember.findFirst({ where: { agentInstanceId: CORR_ID } }),
     );
+
     expect(correspondent?.canDelegateTo).toEqual(
       expect.arrayContaining(members.map(({ id }) => id)),
     );
@@ -150,11 +153,13 @@ describe("updateMember", () => {
 
   it("sets the prompt override and logs MEMBER_PROMPT_EDITED", async () => {
     const member = await hire();
+
     const updated = await update(member.id, {
       editedBy: "operator",
       operatorId: "user-staff-1",
       promptOverride: "Seja minimalista, monocromático.",
     });
+
     expect(updated.hasPromptOverride).toBe(true);
     await expect(activity(member.id, "MEMBER_PROMPT_EDITED")).resolves.toMatchObject({
       actorId: "user-staff-1",

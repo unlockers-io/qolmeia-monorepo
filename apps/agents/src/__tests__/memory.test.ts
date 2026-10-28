@@ -73,6 +73,7 @@ describe("Memory", () => {
 
   it("keeps a committed fact pending when the vector index rejects it", async () => {
     const vector = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.1);
+
     const unavailable = {
       AI: { run: () => Promise.resolve({ data: [vector] }) } as unknown as Ai,
       MEMORY_BACKEND: "vectorize",
@@ -86,6 +87,7 @@ describe("Memory", () => {
         { agentInstanceId: correspondentId, content: "fato", kind: "fact" },
       ]),
     );
+
     await expect(factCount()).resolves.toBe(1);
     expect(saved[0]?.indexedAt).toBeNull();
     await db((client) => publishPendingFacts(env, client));

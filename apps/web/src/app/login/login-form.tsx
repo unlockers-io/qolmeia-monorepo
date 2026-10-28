@@ -6,11 +6,12 @@ import { Button } from "@repo/ui/components/button";
 import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
-import { useForm } from "@tanstack/react-form";
+import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
+import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { loginSchema, magicLinkSchema } from "@/lib/form-schemas";
 
@@ -21,7 +22,6 @@ type LoginFormDependencies = {
     callbackURL: string;
     email: string;
   }) => Promise<{ error: { code?: string; status?: number } | null }>;
-  showError: (message: string) => void;
   signInEmail: (credentials: {
     email: string;
     password: string;
@@ -37,6 +37,7 @@ const getSubmitLabel = ({ isMagicLink, isSubmitting }: SubmitLabelState) => {
   if (isMagicLink) {
     return isSubmitting ? "Enviando…" : "Enviar link mágico";
   }
+
   return isSubmitting ? "Entrando…" : "Entrar";
 };
 
@@ -44,37 +45,41 @@ const DEFAULT_DEPENDENCIES: Omit<LoginFormDependencies, "router"> = {
   redirectTo: () => safeRedirectPath(new URLSearchParams(window.location.search).get("from")),
   sendMagicLink: async (input) => {
     const { error } = await authClient.signIn.magicLink(input);
+
     return { error };
-  },
-  showError: (message) => {
-    toast.error(message);
   },
   signInEmail: async (credentials) => {
     const { error } = await authClient.signIn.email(credentials);
+
     return { error };
   },
 };
 
 const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }) => {
-  const { redirectTo, router, sendMagicLink, showError, signInEmail } = dependencies;
+  const { redirectTo, router, sendMagicLink, signInEmail } = dependencies;
   const { push, refresh } = router;
   const [loginMethod, setLoginMethod] = useState<"magicLink" | "password">("password");
   const [sent, setSent] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const isMagicLink = loginMethod === "magicLink";
 
   const signIn = async (credentials: { email: string; password: string }) => {
     try {
       const { error } = await signInEmail(credentials);
+
       if (error) {
-        showError(
+        setSubmitError(
           authErrorMessage(error, "Não foi possível entrar. Verifique seu e-mail e sua senha."),
         );
+
         return;
       }
     } catch {
-      showError("Não foi possível conectar ao servidor. Tente novamente.");
+      setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
+
       return;
     }
+
     push(redirectTo());
     refresh();
   };
@@ -82,35 +87,55 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
   const requestMagicLink = async (email: string) => {
     const verifyUrl = new URL("/auth/verify", window.location.origin);
     const target = redirectTo();
+
     if (target !== "/") {
       verifyUrl.searchParams.set("from", target);
     }
+
     const callbackURL = verifyUrl.toString();
+
     try {
       const { error } = await sendMagicLink({ callbackURL, email });
+
       if (error) {
-        showError(authErrorMessage(error, "Não foi possível enviar o link. Tente novamente."));
+        setSubmitError(authErrorMessage(error, "Não foi possível enviar o link. Tente novamente."));
+
         return;
       }
+
       setSent(true);
     } catch {
-      showError("Não foi possível conectar ao servidor. Tente novamente.");
+      setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
     }
   };
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
+    listeners: {
+      onChange: () => {
+        setSubmitError(null);
+      },
+    },
     onSubmit: async ({ value }) => {
+      setSubmitError(null);
+
       if (isMagicLink) {
         await requestMagicLink(value.email);
+
         return;
       }
+
       await signIn(value);
     },
-    validators: { onSubmit: isMagicLink ? magicLinkSchema : loginSchema },
+    onSubmitInvalid: ({ formApi }) => {
+      focusFirstInvalidField(formApi.formId);
+    },
+    validationLogic: revalidateLogic(),
+    validators: { onDynamic: isMagicLink ? magicLinkSchema : loginSchema },
   });
 
   const handleLoginMethodChange = () => {
+    setSubmitError(null);
     setLoginMethod(isMagicLink ? "password" : "magicLink");
   };
 
@@ -149,11 +174,13 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
           ? "Digite seu e-mail para receber um link mágico de acesso."
           : "Digite seu e-mail e sua senha para entrar."}
       </p>
-      <ClientReadyForm className="mt-8" noValidate onSubmit={handleSubmit}>
+      <ClientReadyForm className="mt-8" id={form.formId} noValidate onSubmit={handleSubmit}>
         <FieldGroup>
+          <FormAlert message={submitError} />
           <form.Field name="email">
             {(field) => {
-              const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+              const isInvalid = !field.state.meta.isValid;
+
               return (
                 <Field data-invalid={isInvalid || undefined}>
                   <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
@@ -182,7 +209,8 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
           {!isMagicLink && (
             <form.Field name="password">
               {(field) => {
-                const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                const isInvalid = !field.state.meta.isValid;
+
                 return (
                   <Field data-invalid={isInvalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
@@ -208,17 +236,10 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
             </form.Field>
           )}
         </FieldGroup>
-        <form.Subscribe
-          selector={(state) => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting })}
-        >
-          {({ canSubmit, isSubmitting }) => (
+        <form.Subscribe selector={(state) => state.isSubmitting}>
+          {(isSubmitting) => (
             <div className="mt-6 flex flex-col gap-3">
-              <Button
-                className="w-full"
-                disabled={(!isMagicLink && !canSubmit) || isSubmitting}
-                size="lg"
-                type="submit"
-              >
+              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
                 {getSubmitLabel({ isMagicLink, isSubmitting })}
               </Button>
               <button
@@ -239,8 +260,10 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
 
 const LoginForm = () => {
   const router = useRouter();
+
   return <LoginFormView dependencies={{ ...DEFAULT_DEPENDENCIES, router }} />;
 };
 
 export { LoginForm, LoginFormView };
+
 export type { LoginFormDependencies };

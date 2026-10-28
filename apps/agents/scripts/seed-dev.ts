@@ -29,9 +29,11 @@ const auth = createAuth({
 
 const upsertOrg = async () => {
   const existing = await prisma.organization.findUnique({ where: { id: ORG_ID } });
+
   if (existing) {
     return existing;
   }
+
   return prisma.organization.create({
     data: {
       id: ORG_ID,
@@ -50,13 +52,17 @@ const upsertUser = async (
     select: { id: true },
     where: { email },
   });
+
   if (existing) {
     return { created: false, userId: existing.id };
   }
+
   const result = await auth.api.signUpEmail({ body: { email, name, password } });
+
   if (!result.user.id) {
     throw new Error(`Better Auth signUpEmail returned no user id for ${email}`);
   }
+
   return { created: true, userId: result.user.id };
 };
 
@@ -128,6 +134,7 @@ const main = async () => {
     upsertUser(OWNER_EMAIL, OWNER_NAME, OWNER_PASSWORD),
     upsertUser(CUSTOMER_EMAIL, CUSTOMER_NAME, CUSTOMER_PASSWORD),
   ]);
+
   await upsertMembership(owner.userId, "OWNER");
   await upsertMembership(customer.userId, "CUSTOMER");
   console.log(
@@ -139,4 +146,5 @@ const main = async () => {
 };
 
 await main();
+
 await prisma.$disconnect();

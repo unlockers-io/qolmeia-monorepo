@@ -64,6 +64,7 @@ describe("generateBrandImage", () => {
         where: { id: result.assetId },
       }),
     );
+
     expect(row?.kind).toBe("generated_image");
     expect(row?.mime).toBe("image/png");
     expect(row?.bytes).toBeGreaterThan(0);
@@ -76,9 +77,11 @@ describe("generateBrandImage", () => {
 
   it("surfaces OpenRouter HTTP errors without throwing", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(new Response("rate limit", { status: 429 })));
+
     const result = (await generateBrandImageSkill.execute({ prompt: "x" }, ctx)) as {
       error: string;
     };
+
     expect(result.error).toContain("429");
   });
 
@@ -90,37 +93,45 @@ describe("generateBrandImage", () => {
         }),
       ),
     );
+
     const result = (await generateBrandImageSkill.execute({ prompt: "x" }, ctx)) as {
       error: string;
     };
+
     expect(result.error).toContain("image_url");
   });
 
   it("dedups on (company_id, sha256) — same bytes return the same asset id", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(buildChatImageResponse(RED_PIXEL_B64)));
+
     const first = (await generateBrandImageSkill.execute({ prompt: "a" }, ctx)) as {
       assetId: string;
     };
+
     const second = (await generateBrandImageSkill.execute({ prompt: "b" }, ctx)) as {
       assetId: string;
     };
+
     expect(second.assetId).toBe(first.assetId);
   });
 
   it("keeps a Worker job's image in the agent folder until its Action executes", async () => {
     globalThis.fetch = vi.fn(() => Promise.resolve(buildChatImageResponse(RED_PIXEL_B64)));
+
     const result = (await generateBrandImageSkill.execute(
       { prompt: "rascunho" },
       { ...ctx, deliverableFolder: "agent" },
     )) as { assetId: string; deliverable: boolean };
 
     expect(result.deliverable).toBe(true);
+
     const row = await db((client) =>
       client.asset.findUniqueOrThrow({
         select: { visibility: true },
         where: { id: result.assetId },
       }),
     );
+
     expect(row.visibility).toBe("agent");
   });
 });

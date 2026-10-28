@@ -6,9 +6,10 @@ import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import type { Template } from "@repo/worker-api/contracts";
+import { ACTION_TYPES, type Template } from "@repo/worker-api/contracts";
 import { useId } from "react";
 
 import { BackLink } from "@/components/back-link";
@@ -26,10 +27,11 @@ const fieldError = (message: string | undefined): [string] | undefined =>
 const TemplateForm = ({ initial }: TemplateFormProps) => {
   const policiesFieldId = useId();
   const ready = useClientReady();
+
   const {
     busy,
     errors,
-    formRef,
+    formId,
     handleSubmit,
     handleToggleStatus,
     setField,
@@ -37,6 +39,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
     skills,
     skillsLoading,
     statusPending,
+    submitError,
     submitLabel,
     toggleSkill,
     values,
@@ -64,10 +67,11 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
 
       <ClientReadyForm
         className="flex flex-col gap-5"
+        id={formId}
         noValidate
         onSubmit={handleSubmit}
-        ref={formRef}
       >
+        <FormAlert message={submitError} />
         <Card>
           <CardContent className="flex flex-col gap-5">
             <div className="grid gap-5 sm:grid-cols-2">
@@ -77,6 +81,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   aria-describedby={
                     errors.displayName === undefined ? undefined : "displayName-error"
                   }
+                  aria-invalid={errors.displayName !== undefined}
                   disabled={busy}
                   id="displayName"
                   name="displayName"
@@ -94,6 +99,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   aria-describedby={
                     errors.workerKind === undefined ? undefined : "workerKind-error"
                   }
+                  aria-invalid={errors.workerKind !== undefined}
                   autoComplete="off"
                   disabled={busy}
                   id="workerKind"
@@ -114,6 +120,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                 aria-describedby={
                   errors.description === undefined ? undefined : "description-error"
                 }
+                aria-invalid={errors.description !== undefined}
                 disabled={busy}
                 id="description"
                 name="description"
@@ -132,6 +139,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   aria-describedby={
                     errors.systemPrompt === undefined ? undefined : "systemPrompt-error"
                   }
+                  aria-invalid={errors.systemPrompt !== undefined}
                   disabled={busy}
                   id="systemPrompt"
                   name="systemPrompt"
@@ -149,6 +157,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                 <FieldLabel htmlFor="model">Modelo (LLM)</FieldLabel>
                 <Input
                   aria-describedby={errors.model === undefined ? undefined : "model-error"}
+                  aria-invalid={errors.model !== undefined}
                   autoComplete="off"
                   disabled={busy}
                   id="model"
@@ -166,8 +175,11 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                 <FieldLabel htmlFor="defaultActionType">Tipo de ação padrão</FieldLabel>
                 <Input
                   aria-describedby={
-                    errors.defaultActionType === undefined ? undefined : "defaultActionType-error"
+                    errors.defaultActionType === undefined
+                      ? "defaultActionType-description"
+                      : "defaultActionType-description defaultActionType-error"
                   }
+                  aria-invalid={errors.defaultActionType !== undefined}
                   autoComplete="off"
                   disabled={busy}
                   id="defaultActionType"
@@ -177,6 +189,9 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
                   }}
                   value={values.defaultActionType}
                 />
+                <FieldDescription id="defaultActionType-description">
+                  Um destes: {ACTION_TYPES.join(", ")}.
+                </FieldDescription>
                 <FormFieldError
                   errors={fieldError(errors.defaultActionType)}
                   id="defaultActionType-error"
@@ -208,14 +223,18 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
           <CardContent>
             <Field>
               <FieldLabel htmlFor={policiesFieldId}>Políticas padrão (JSON)</FieldLabel>
-              <FieldDescription>
-                Objeto {`{ tipoDeAção: política }`}. Vazio = nenhuma política.
+              <FieldDescription id={`${policiesFieldId}-description`}>
+                Objeto {`{ tipoDeAção: política }`}, com política require_approval, notify_only ou
+                auto_execute. Vazio = nenhuma política.
               </FieldDescription>
               <div className="font-mono">
                 <Textarea
                   aria-describedby={
-                    errors.defaultPolicies === undefined ? undefined : `${policiesFieldId}-error`
+                    errors.defaultPolicies === undefined
+                      ? `${policiesFieldId}-description`
+                      : `${policiesFieldId}-description ${policiesFieldId}-error`
                   }
+                  aria-invalid={errors.defaultPolicies !== undefined}
                   disabled={busy}
                   id={policiesFieldId}
                   name="defaultPolicies"

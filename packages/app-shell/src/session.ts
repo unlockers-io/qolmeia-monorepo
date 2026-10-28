@@ -15,6 +15,7 @@ type AppLogFields = {
   error?: unknown;
   message: string;
 };
+
 type AppLogger = { error: (fields: AppLogFields) => void };
 
 type Membership = { org: MeOrg; user: MeUser };
@@ -41,9 +42,11 @@ const createSessionHelpers = ({
       return await readMe();
     } catch (error) {
       unstable_rethrow(error);
+
       if (error instanceof ApiError && error.status === UNAUTHORIZED) {
         redirect("/login");
       }
+
       log.error({ error, message: "app-shell: /api/me failed" });
       throw error;
     }
@@ -52,9 +55,11 @@ const createSessionHelpers = ({
   const requireMembership = async (): Promise<Membership> => {
     const me = await fetchMe();
     const org = activeMembership(me.orgs, surface);
+
     if (org === null) {
       redirect("/no-access");
     }
+
     return { org, user: me.user };
   };
 
@@ -62,4 +67,5 @@ const createSessionHelpers = ({
 };
 
 export { createSessionHelpers };
+
 export type { AppLogger, Membership };

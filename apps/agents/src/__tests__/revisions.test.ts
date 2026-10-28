@@ -27,6 +27,7 @@ const proposeRound = async (round: number): Promise<string> => {
       ticketId: TICKET_ID,
     }),
   );
+
   return id;
 };
 
@@ -52,6 +53,7 @@ describe("revision cap", () => {
       expect(await changesAllowed()).toBe(true);
       await expect(requestChanges(id, round)).resolves.toBe("revise");
     }
+
     await proposeRound(MAX_REVISIONS);
     expect(await changesAllowed()).toBe(false);
   });
@@ -59,9 +61,11 @@ describe("revision cap", () => {
   it("ends the ticket when changes are requested past the cap", async () => {
     const id = await proposeRound(MAX_REVISIONS);
     await expect(requestChanges(id, MAX_REVISIONS)).resolves.toBe("end");
+
     const ticket = await db((client) =>
       client.ticket.findUniqueOrThrow({ where: { id: TICKET_ID } }),
     );
+
     expect(ticket.status).toBe("rejected");
   });
 });

@@ -30,6 +30,7 @@ type TemplateRowProps = {
 const TemplateRow = ({ busy, onToggle, template }: TemplateRowProps) => {
   const status = STATUS_LABEL[template.status];
   const toggleLabel = template.status === "retired" ? "Reativar" : "Desativar";
+
   return (
     <tr className="border-b border-border last:border-0 hover:bg-accent/40">
       <td className="px-5 py-3">
@@ -94,6 +95,7 @@ const TemplatesTableBody = ({
       <p className="px-5 py-8 text-center text-sm text-muted-foreground">Carregando modelos…</p>
     );
   }
+
   if (isError) {
     return (
       <p className="px-5 py-8 text-center text-sm text-destructive">
@@ -101,6 +103,7 @@ const TemplatesTableBody = ({
       </p>
     );
   }
+
   if (templates.length === 0) {
     return (
       <EmptyState
@@ -109,6 +112,7 @@ const TemplatesTableBody = ({
       />
     );
   }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -145,6 +149,7 @@ const applyStatus = (
 
 const TemplatesList = () => {
   const queryClient = useQueryClient();
+
   const { data, isError, isLoading } = useQuery({
     queryFn: fetchTemplates,
     queryKey: templateKeys.all,
@@ -157,6 +162,7 @@ const TemplatesList = () => {
     const status: TemplateStatus = template.status === "retired" ? "active" : "retired";
     startToggle(async () => {
       applyOptimisticStatus({ id: template.id, status });
+
       try {
         await setTemplateStatus(template.id, status);
         await queryClient.invalidateQueries({ queryKey: templateKeys.all });

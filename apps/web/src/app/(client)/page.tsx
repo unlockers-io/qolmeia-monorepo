@@ -36,6 +36,7 @@ const getUnlessMissing = async <T,>(path: string): Promise<T | null> => {
     if (error instanceof ApiError && error.status === 404) {
       return null;
     }
+
     throw error;
   }
 };
@@ -49,6 +50,7 @@ const ChatContent = async () => {
 
   if (status === "onboarding") {
     const templatesRes = await getUnlessMissing<TemplatesResponse>("/api/me/templates");
+
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-background" data-chat>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

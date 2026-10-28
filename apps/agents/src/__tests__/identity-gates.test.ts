@@ -13,12 +13,14 @@ const call = (path: string, cookie = "", init: RequestInit = {}) =>
 
 const statusOf = async (path: string, cookie = "", init: RequestInit = {}) => {
   const res = await call(path, cookie, init);
+
   return res.status;
 };
 
 const signupIsOpen = async () => {
   const res = await call("/api/signup");
   const body = await res.json<SignupState>();
+
   return body.open;
 };
 
@@ -32,6 +34,7 @@ describe("GET /api/me", () => {
       { orgId: QOLMEIA_ORG_ID, role: "OWNER" },
       { orgId: COMPANY_ID, role: "CUSTOMER" },
     ]);
+
     const res = await call("/api/me", cookie);
     expect(res.status).toBe(200);
     const body = await res.json<MeResponse>();
@@ -65,6 +68,7 @@ describe("operator REST", () => {
       { orgId: COMPANY_ID, role: "CUSTOMER" },
       { orgId: QOLMEIA_ORG_ID, role: "STAFF" },
     ]);
+
     expect(await statusOf("/api/backoffice/companies", cookie)).toBe(200);
   });
 });
@@ -89,20 +93,24 @@ describe("customer REST", () => {
 
   it("serves an account on both surfaces its Customer Company", async () => {
     await seedCompany({ id: COMPANY_ID, status: "onboarding" });
+
     const cookie = await signIn([
       { orgId: QOLMEIA_ORG_ID, role: "OWNER" },
       { orgId: COMPANY_ID, role: "CUSTOMER" },
     ]);
+
     const res = await call("/api/me/company", cookie);
     expect(await res.json()).toMatchObject({ company: { id: COMPANY_ID } });
   });
 
   it("refuses a team confirm for another tenant's path", async () => {
     const cookie = await signInAs({ orgId: COMPANY_ID, role: "CUSTOMER" });
+
     const status = await statusOf(`/api/teams/${OTHER_COMPANY_ID}/confirm`, cookie, {
       body: JSON.stringify({ templateIds: ["tpl-designer"] }),
       method: "POST",
     });
+
     expect(status).toBe(403);
   });
 });

@@ -35,6 +35,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
 
     it("round-trips a User with Session, Account, and Verification rows", async () => {
       const email = `${PREFIX}-user1@example.com`;
+
       const user = await prisma.user.create({
         data: {
           email,
@@ -43,6 +44,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
           username: tag("user1"),
         },
       });
+
       expect(user.email).toBe(email);
       expect(user.emailVerified).toBe(false);
 
@@ -53,6 +55,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
           userId: user.id,
         },
       });
+
       expect(session.userId).toBe(user.id);
       expect(session.impersonatedBy).toBeNull();
 
@@ -65,6 +68,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
           userId: user.id,
         },
       });
+
       expect(account.providerId).toBe("credential");
       expect(account.issuer).toBe("local:credential");
       expect(account.password).toContain("$2b$10$");
@@ -76,6 +80,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
           value: "secret-otp-value",
         },
       });
+
       expect(verification.identifier).toBe(`${PREFIX}-magic-link-1`);
 
       await prisma.user.delete({ where: { id: user.id } });
@@ -99,6 +104,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
       const u = await prisma.user.create({
         data: { email: `${PREFIX}-tok@example.com`, name: "Token User" },
       });
+
       const token = tag("token-dup");
       await prisma.session.create({
         data: {
@@ -123,6 +129,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
       const user = await prisma.user.create({
         data: { email: `${PREFIX}-member@example.com`, name: "Owner User" },
       });
+
       const org = await prisma.organization.create({
         data: { name: "Member Org", slug: tag("org-member") },
       });
@@ -130,6 +137,7 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
       const membership = await prisma.orgMembership.create({
         data: { orgId: org.id, role: "OWNER", userId: user.id },
       });
+
       expect(membership.role).toBe("OWNER");
 
       await expect(
@@ -142,18 +150,22 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
         include: { memberships: { select: { orgId: true, role: true } } },
         where: { id: user.id },
       });
+
       expect(reloadedUser?.memberships).toEqual([{ orgId: org.id, role: "OWNER" }]);
 
       const reloadedOrg = await prisma.organization.findUnique({
         include: { memberships: { select: { role: true, userId: true } } },
         where: { id: org.id },
       });
+
       expect(reloadedOrg?.memberships).toEqual([{ role: "OWNER", userId: user.id }]);
 
       await prisma.organization.delete({ where: { id: org.id } });
+
       const remaining = await prisma.orgMembership.findMany({
         where: { id: membership.id },
       });
+
       expect(remaining).toEqual([]);
     });
   },

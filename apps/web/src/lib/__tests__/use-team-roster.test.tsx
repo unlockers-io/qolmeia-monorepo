@@ -8,6 +8,7 @@ import { createUseTeamRoster } from "@/lib/use-team-roster";
 
 const mockFetchTeam = vi.fn();
 const mockSubscribeTeamEvents = vi.fn();
+
 const useTeamRoster = createUseTeamRoster({
   fetchRoster: mockFetchTeam,
   subscribeToTeamEvents: mockSubscribeTeamEvents,
@@ -17,9 +18,11 @@ const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+
   return Wrapper;
 };
 
@@ -53,10 +56,12 @@ describe("useTeamRoster", () => {
   it("keeps one subscription per company and cleans up when the company changes", () => {
     const unsubscribe = vi.fn();
     mockSubscribeTeamEvents.mockReturnValue(unsubscribe);
+
     const { rerender, unmount } = renderHook((companyId: string) => useTeamRoster(companyId, []), {
       initialProps: "co1",
       wrapper: createWrapper(),
     });
+
     rerender("co1");
     expect(mockSubscribeTeamEvents).toHaveBeenCalledOnce();
     expect(unsubscribe).not.toHaveBeenCalled();
@@ -129,6 +134,7 @@ describe("useTeamRoster", () => {
     let notify: (() => void) | undefined;
     mockSubscribeTeamEvents.mockImplementation((onEvent: () => void) => {
       notify = onEvent;
+
       return null;
     });
 

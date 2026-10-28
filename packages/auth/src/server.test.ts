@@ -72,9 +72,11 @@ describe("Auth Server Configuration", () => {
 
   it("should configure dynamic baseURL with allowedHosts + protocol auto", () => {
     const baseURL = auth.options.baseURL;
+
     if (typeof baseURL !== "object" || baseURL === null) {
       throw new Error("expected dynamic baseURL object");
     }
+
     expect(baseURL.protocol).toBe("auto");
     expect(baseURL.allowedHosts).toEqual(
       expect.arrayContaining(["**.localhost", "localhost:*", "127.0.0.1:*"]),
@@ -87,10 +89,13 @@ describe("Auth Server Configuration", () => {
       ...baseConfig,
       allowedHosts: [...baseConfig.allowedHosts, "qolmeia.com", "*.qolmeia.com", "*.vercel.app"],
     });
+
     const baseURL = envAuth.options.baseURL;
+
     if (typeof baseURL !== "object" || baseURL === null) {
       throw new Error("expected dynamic baseURL object");
     }
+
     expect(baseURL.allowedHosts).toEqual(
       expect.arrayContaining(["qolmeia.com", "*.qolmeia.com", "*.vercel.app"]),
     );
@@ -158,6 +163,7 @@ describe("Auth Server Configuration", () => {
         "https://admin.qolmeia.com",
       ],
     });
+
     const trusted = envAuth.options.trustedOrigins;
     expect(trusted).toContain("https://app.qolmeia.com");
     expect(trusted).toContain("https://admin.qolmeia.com");

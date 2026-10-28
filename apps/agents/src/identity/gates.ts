@@ -1,4 +1,4 @@
-import { createIdentify } from "@repo/observability/auth";
+import { identifyUser } from "@repo/observability/auth";
 import type { EvlogVariables } from "@repo/observability/hono";
 import type { Surface } from "@repo/worker-api/contracts";
 import type { Context, MiddlewareHandler } from "hono";
@@ -19,8 +19,6 @@ type GateOptions = {
 
 const UNRESOLVED_STATUS = { forbidden: 403, "signed-out": 401, unavailable: 503 } as const;
 
-const identify = createIdentify();
-
 /** The only writer of the `session` variable, so IdentityEnv can declare it non-optional. */
 const identityGate =
   ({ surfaces, tenant }: GateOptions): MiddlewareHandler<IdentityEnv> =>
@@ -31,14 +29,18 @@ const identityGate =
       c.req.raw.headers,
       surfaces,
     );
+
     if (result.kind !== "signed-in") {
       return c.body(null, UNRESOLVED_STATUS[result.kind]);
     }
+
     if (tenant !== undefined && tenant(c) !== result.identity.companyId) {
       return c.body(null, 403);
     }
-    identify(c.var.log, result.authSession);
+
+    identifyUser(c.var.log, result.authSession);
     c.set("session", result.identity);
+
     return next();
   };
 
@@ -62,4 +64,5 @@ const requireCustomerOfPathTenant = identityGate({
 });
 
 export { requireCustomer, requireCustomerOfPathTenant, requireMember, requireOperator };
+
 export type { IdentityEnv };

@@ -59,6 +59,7 @@ const EmpresaClient = ({
   const rosterQueryKey = teamQueryKey(companyId);
   const catalogueKey = catalogueQueryKey(companyId);
   const { members, refetch } = useTeamRoster(companyId, initialMembers);
+
   const { data: catalogue = [] } = useQuery({
     initialData: initialCatalogue,
     meta: { errorToast: "Falha ao carregar catálogo" },
@@ -80,29 +81,19 @@ const EmpresaClient = ({
     }
   };
 
-  const handleSavePrompt = async (id: string, value: string) => {
+  const savePrompt = async (id: string, promptOverride: string | null) => {
     setBusyId(id);
-    try {
-      await patchMember(id, { promptOverride: value });
-      toast.success("Prompt atualizado.");
-      await handleOpenDetail(id);
-      await refetch();
-    } catch (error) {
-      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
-    }
-    setBusyId(null);
-  };
 
-  const handleResetPrompt = async (id: string) => {
-    setBusyId(id);
     try {
-      await patchMember(id, { promptOverride: null });
-      toast.success("Prompt restaurado.");
-      await handleOpenDetail(id);
-      await refetch();
+      await patchMember(id, { promptOverride });
     } catch (error) {
-      toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
+      setBusyId(null);
+      throw error;
     }
+
+    toast.success(promptOverride === null ? "Prompt restaurado." : "Prompt atualizado.");
+    await handleOpenDetail(id);
+    await refetch();
     setBusyId(null);
   };
 
@@ -115,6 +106,7 @@ const EmpresaClient = ({
         member.id === id ? { ...member, status: paused ? "paused" : "available" } : member,
       ),
     );
+
     try {
       const updated = await setPaused(id, paused);
       queryClient.setQueryData<Array<TeamMemberView>>(rosterQueryKey, (current) =>
@@ -124,8 +116,10 @@ const EmpresaClient = ({
       if (previousMembers !== undefined) {
         queryClient.setQueryData(rosterQueryKey, previousMembers);
       }
+
       toast.error(describeRequestError(error, "Não foi possível salvar. Tente de novo."));
     }
+
     setBusyId(null);
   };
 
@@ -195,8 +189,8 @@ const EmpresaClient = ({
                   <PromptEditor
                     busy={busyId === m.id}
                     initialValue={detail.promptOverride}
-                    onReset={() => handleResetPrompt(m.id)}
-                    onSave={(v) => handleSavePrompt(m.id, v)}
+                    onReset={() => savePrompt(m.id, null)}
+                    onSave={(v) => savePrompt(m.id, v)}
                     updatedAt={detail.promptOverrideUpdatedAt}
                   />
                 )}

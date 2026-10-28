@@ -19,10 +19,12 @@ const createSignupGuard = (countOperatorsFn: () => Promise<number>) =>
     if (ctx.path !== "/sign-up/email") {
       return;
     }
+
     if (!isSignupOpen(await countOperatorsFn())) {
       throw new APIError("FORBIDDEN", { message: SIGNUP_CLOSED_MESSAGE });
     }
   });
 
 export { countOperators, createSignupGuard, isSignupOpen, SIGNUP_CLOSED_MESSAGE };
+
 export type { OperatorCounter };

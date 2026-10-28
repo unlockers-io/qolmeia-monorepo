@@ -20,6 +20,7 @@ describe("companyBriefSchema", () => {
       primaryGoal: "aumentar vendas no fim de semana",
       schemaVersion: 1,
     });
+
     expect(ok.success).toBe(true);
   });
 
@@ -32,6 +33,7 @@ describe("companyBriefSchema", () => {
     const result = companyBriefSchema.safeParse({
       channels: ["not-a-real-channel"],
     });
+
     expect(result.success).toBe(false);
   });
 });
@@ -107,6 +109,7 @@ describe("briefCompleteness", () => {
       brand: { voice: "acolhedora" },
       industry: "alimentação",
     });
+
     expect(c.filled).toEqual(expect.arrayContaining(["industry", "brand.voice"]));
     expect(c.filled).toHaveLength(2);
     expect(c.percent).toBe(33);
@@ -126,6 +129,7 @@ describe("briefCompleteness", () => {
       industry: "alimentação",
       primaryGoal: "vender mais",
     });
+
     expect(c.isComplete).toBe(true);
     expect(c.percent).toBe(100);
     expect(c.missing).toHaveLength(0);

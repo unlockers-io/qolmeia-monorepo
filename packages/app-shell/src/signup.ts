@@ -8,4 +8,5 @@ const getSignupState = cache((): Promise<SignupState> =>
 );
 
 export { getSignupState };
+
 export { SIGNUP_CLOSED_MESSAGE } from "@repo/auth/signup";

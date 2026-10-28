@@ -26,14 +26,17 @@ const sweep = async (db: PrismaClient): Promise<SweepResult> => {
         lastSuggestedAt: await lastProactiveSuggestionAt(db, company.id),
         now: Date.now(),
       });
+
       if (!gate.ok) {
         return "skipped";
       }
+
       await dispatch(CorrespondentV2, {
         id: company.id,
         message: { body: PROACTIVE_PROMPT, kind: "signal", type: "proactive.nudge" },
       });
       await recordProactiveSuggestion(db, company.id);
+
       return "suggested";
     }),
   );
@@ -41,6 +44,7 @@ const sweep = async (db: PrismaClient): Promise<SweepResult> => {
   let suggested = 0;
   let skipped = 0;
   let errored = 0;
+
   for (const outcome of outcomes) {
     if (outcome.status === "rejected") {
       errored += 1;
@@ -59,6 +63,7 @@ const sweep = async (db: PrismaClient): Promise<SweepResult> => {
     skipped,
     suggested,
   });
+
   return { errored, skipped, suggested };
 };
 

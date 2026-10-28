@@ -25,4 +25,5 @@ authRoutes.on(["GET", "POST"], "/*", (c) =>
 );
 
 export { authRoutes, createWorkerAuth };
+
 export type { WorkerAuth };

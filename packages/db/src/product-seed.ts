@@ -111,10 +111,12 @@ const seedProductDefaults = async (db: SeedDb): Promise<void> => {
       });
     }),
   );
+
   const [companies, templates] = await Promise.all([
     db.company.findMany({ select: { id: true } }),
     db.agentTemplate.findMany({ select: { id: true }, where: { status: "active" } }),
   ]);
+
   await db.companyTemplateEntitlement.createMany({
     data: companies.flatMap(({ id: companyId }) =>
       templates.map(({ id: templateId }) => ({ companyId, templateId })),

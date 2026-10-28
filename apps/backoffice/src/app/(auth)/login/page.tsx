@@ -17,9 +17,11 @@ type Props = {
 
 const RegisterPrompt = async ({ searchParams }: Props) => {
   const { open } = await getSignupState();
+
   if (!open) {
     return null;
   }
+
   const { from } = await searchParams;
   const redirectTo = safeRedirectPath(from);
 

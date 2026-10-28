@@ -26,11 +26,13 @@ const toTemplate = (row: AgentTemplate): Template => ({
 
 const getTemplate = async (db: Db, id: string): Promise<Template | null> => {
   const row = await db.agentTemplate.findUnique({ where: { id } });
+
   return row ? toTemplate(row) : null;
 };
 
 const listAllTemplates = async (db: Db): Promise<ReadonlyArray<Template>> => {
   const rows = await db.agentTemplate.findMany({ orderBy: { createdAt: "desc" } });
+
   return rows.map(toTemplate);
 };
 
@@ -47,6 +49,7 @@ const listEntitledTemplates = async (
       status: "active",
     },
   });
+
   return rows.map(toTemplate);
 };
 
@@ -66,6 +69,7 @@ const updateTemplate = async (
     data: { ...input, skillIds: [...input.skillIds], version: { increment: 1 } },
     where: { id },
   });
+
   return result.count > 0 ? getTemplate(db, id) : null;
 };
 
@@ -75,6 +79,7 @@ const setTemplateStatus = async (
   status: TemplateStatus,
 ): Promise<Template | null> => {
   const result = await db.agentTemplate.updateMany({ data: { status }, where: { id } });
+
   return result.count > 0 ? getTemplate(db, id) : null;
 };
 
@@ -83,6 +88,7 @@ const entitleToActiveTemplates = async (db: Db, companyId: string): Promise<void
     select: { id: true },
     where: { status: "active" },
   });
+
   await db.companyTemplateEntitlement.createMany({
     data: templates.map(({ id: templateId }) => ({ companyId, templateId })),
     skipDuplicates: true,

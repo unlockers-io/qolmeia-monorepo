@@ -9,6 +9,7 @@ import { TeamError } from "#/team/errors";
 const teamsRoutes = new Hono<IdentityEnv>();
 
 teamsRoutes.use("*", dbPerRequest);
+
 teamsRoutes.use("*", requireCustomerOfPathTenant);
 
 const confirmBodySchema = z.object({
@@ -19,12 +20,15 @@ teamsRoutes.post("/:companyId/confirm", async (c) => {
   const session = c.get("session");
 
   let raw: unknown;
+
   try {
     raw = await c.req.json();
   } catch {
     return c.json({ error: "invalid JSON" }, 400);
   }
+
   const parsed = confirmBodySchema.safeParse(raw);
+
   if (!parsed.success) {
     return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
   }
@@ -35,11 +39,13 @@ teamsRoutes.post("/:companyId/confirm", async (c) => {
       companyId: session.companyId,
       templateIds: parsed.data.templateIds,
     });
+
     return c.json({ team });
   } catch (error) {
     if (error instanceof TeamError) {
       return c.json({ error: error.message }, error.status);
     }
+
     throw error;
   }
 });

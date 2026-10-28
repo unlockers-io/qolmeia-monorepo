@@ -23,16 +23,21 @@ const createNotifyCustomer =
   (send: typeof dispatch) =>
   async (job: JobContext, actionId: string, verdict: Verdict): Promise<void> => {
     const ticket = await withDb(job.env, (db) => loadTicket(db, job.ticketId));
+
     if (!ticket) {
       throw new Error(`ticket ${job.ticketId} not found`);
     }
+
     let body: string;
     let type: string;
+
     if (verdict === "execute") {
       const result = ticket.result?.summary;
+
       if (typeof result !== "string") {
         throw new TypeError(`ticket ${job.ticketId} has no executed result`);
       }
+
       type = "worker.deliverable_ready";
       body = `Um especialista do Time concluiu uma tarefa. Apresente este material ao cliente, em pt-BR, de forma calorosa e direta; mantenha as imagens em markdown e não altere o conteúdo:\n\n${result}`;
     } else {
@@ -40,6 +45,7 @@ const createNotifyCustomer =
       type = update.type;
       body = `${update.instruction}\n\nPedido: ${ticket.brief}`;
     }
+
     await send(CorrespondentV2, {
       id: job.companyId,
       idempotencyKey: `${actionId}:${type}`,

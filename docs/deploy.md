@@ -169,8 +169,12 @@ Connect it once on the `worker-bees` Worker, under **Settings → Build**:
 | Build watch paths       | `apps/agents/*`, `packages/*`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`     |
 | Build variables         | `PNPM_VERSION=11.13.1` (the build image defaults to pnpm 10, which this workspace rejects) |
 
-Each build deploys the commit it built, and `wrangler deployments list` shows
-that commit. Runtime secrets (§4c) stay on the Worker; the build needs none.
+Each build deploys the commit it built. `wrangler deployments list --json` and
+`wrangler versions view <version-id> --json` may omit the source commit, so
+cross-check the Workers Builds record when the deployment message has none.
+Record the commit in manual deployment messages as shown below. A successful
+Worker deploy does not apply or verify the database schema (§4d).
+Runtime secrets (§4c) stay on the Worker; the build needs none.
 
 To deploy without a merge, for example a PR head that must be live before its
 merge (§7), run from `apps/agents`:

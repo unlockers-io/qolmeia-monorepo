@@ -39,14 +39,17 @@ const publishPost: ActionTypeModule = {
   async execute(ctx, proposed) {
     const { assetIds, draft, summary } = publishPostSchema.parse(proposed);
     const assets = await releaseDeliverable(ctx, assetIds);
+
     return draft === undefined ? summary : renderPost(draft, imageReferences(assets));
   },
   propose(generation) {
     const deliverable = readDeliverable(generation);
     const output = generation.outputs.findLast(({ tool }) => tool === draftSocialPostSkill.id);
+
     const draft = draftSocialPostInputSchema.safeParse(
       output === undefined ? null : JSON.parse(output.json),
     );
+
     return draft.success ? { ...deliverable, draft: draft.data } : deliverable;
   },
 };

@@ -39,6 +39,7 @@ const webSearchSkill = defineSkill({
   displayName: "Buscar na web",
   async execute({ numResults, query }, ctx): Promise<WebSearchResult> {
     const apiKey = ctx.env.EXA_API_KEY;
+
     if (apiKey === undefined || apiKey === "") {
       throw new Error("EXA_API_KEY não configurada; busca na web indisponível.");
     }
@@ -53,11 +54,13 @@ const webSearchSkill = defineSkill({
       headers: { "content-type": "application/json", "x-api-key": apiKey },
       method: "POST",
     });
+
     if (!res.ok) {
       throw new Error(`Exa respondeu ${res.status}`);
     }
 
     const data = await res.json<{ results?: ReadonlyArray<ExaResult> }>();
+
     return {
       results: (data.results ?? []).map((r) => ({
         publishedDate: r.publishedDate ?? null,

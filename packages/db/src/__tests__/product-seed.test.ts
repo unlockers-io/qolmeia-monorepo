@@ -25,13 +25,17 @@ describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_U
           });
           await seedProductDefaults(db);
           await seedProductDefaults(db);
+
           const designer = await db.agentTemplate.findUniqueOrThrow({
             where: { id: "tpl-designer" },
           });
+
           const writer = await db.agentTemplate.findUniqueOrThrow({ where: { id: "tpl-redator" } });
+
           const researcher = await db.agentTemplate.findUniqueOrThrow({
             where: { id: "tpl-seo-researcher" },
           });
+
           expect(designer).toMatchObject({
             displayName: "Meu designer",
             model: DEFAULT_TEMPLATES[0].model,

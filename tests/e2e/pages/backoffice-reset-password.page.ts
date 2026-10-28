@@ -6,7 +6,7 @@ export class BackofficeResetPasswordPage {
   private readonly passwordInput: Locator;
   private readonly confirmPasswordInput: Locator;
   private readonly submitButton: Locator;
-  private readonly errorToast: Locator;
+  private readonly formAlert: Locator;
   private readonly successToast: Locator;
   private readonly invalidLinkHeading: Locator;
   private readonly requestNewLink: Locator;
@@ -18,7 +18,7 @@ export class BackofficeResetPasswordPage {
     this.passwordInput = page.getByLabel(/^nova senha$|^new password$/iu);
     this.confirmPasswordInput = page.getByLabel(/confirmar nova senha|confirm.*password/iu);
     this.submitButton = page.getByRole("button", { name: /redefinir senha|reset password/iu });
-    this.errorToast = page.locator('[data-sonner-toast][data-type="error"]');
+    this.formAlert = page.locator('[data-slot="form-alert"]');
     this.successToast = page.locator('[data-sonner-toast][data-type="success"]');
     this.invalidLinkHeading = page.getByRole("heading", { name: /link inválido ou expirado/iu });
     this.requestNewLink = page.getByRole("link", { name: /solicitar novo link/iu });
@@ -39,8 +39,8 @@ export class BackofficeResetPasswordPage {
     await expect(this.heading).toBeVisible();
   };
 
-  expectErrorToast = async () => {
-    await expect(this.errorToast).toBeVisible();
+  expectFormAlert = async () => {
+    await expect(this.formAlert).toBeVisible();
   };
 
   expectInvalidLinkVisible = async () => {

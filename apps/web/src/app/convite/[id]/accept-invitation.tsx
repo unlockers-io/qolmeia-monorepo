@@ -21,6 +21,7 @@ const acceptWithBetterAuth: AcceptInvitationDependencies["acceptInvitation"] = a
   invitationId,
 ) => {
   const { error } = await authClient.organization.acceptInvitation({ invitationId });
+
   return { error };
 };
 
@@ -39,20 +40,26 @@ const AcceptInvitationView = ({
     startAccepting(async () => {
       try {
         const { error } = await acceptInvitation(invitationId);
+
         if (error?.status === UNAUTHORIZED) {
           replace(`/login?from=${encodeURIComponent(`/convite/${invitationId}`)}`);
+
           return;
         }
+
         if (error) {
           setErrorMessage(
             authErrorMessage(error, "Não foi possível aceitar o convite. Tente novamente."),
           );
+
           return;
         }
       } catch {
         setErrorMessage("Não foi possível conectar ao servidor. Tente novamente.");
+
         return;
       }
+
       push("/");
       refresh();
     });
@@ -80,6 +87,7 @@ const AcceptInvitationView = ({
 
 const AcceptInvitation = ({ invitationId }: AcceptInvitationProps) => {
   const router = useRouter();
+
   return (
     <AcceptInvitationView
       dependencies={{ acceptInvitation: acceptWithBetterAuth, router }}
@@ -89,4 +97,5 @@ const AcceptInvitation = ({ invitationId }: AcceptInvitationProps) => {
 };
 
 export { AcceptInvitation, AcceptInvitationView };
+
 export type { AcceptInvitationDependencies };

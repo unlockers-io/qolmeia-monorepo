@@ -11,6 +11,7 @@ import {
 } from "@repo/ui/components/attachment";
 import { Button } from "@repo/ui/components/button";
 import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { cn } from "@repo/ui/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
@@ -45,6 +46,7 @@ const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
   if (event.nativeEvent.isComposing) {
     return;
   }
+
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
     event.currentTarget.form?.requestSubmit();
@@ -62,6 +64,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<ReadonlyArray<Attachment>>([]);
+  const [sendError, setSendError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -73,12 +76,17 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   };
 
   const uploadFile = async (file: File) => {
+    setSendError(null);
+
     if (!ALLOWED_UPLOAD_MIME.includes(file.type)) {
       toast.error("Formato não suportado. Use PNG, JPG, WEBP ou GIF.");
+
       return;
     }
+
     if (file.size > MAX_UPLOAD_BYTES) {
       toast.error("Imagem grande demais (máx 10 MB).");
+
       return;
     }
 
@@ -118,6 +126,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   const handleFileSelected = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
+
     if (file) {
       void uploadFile(file);
     }
@@ -125,24 +134,30 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const images = [...event.clipboardData.files].filter((file) => file.type.startsWith("image/"));
+
     if (images.length === 0) {
       return;
     }
+
     event.preventDefault();
+
     for (const file of images) {
       void uploadFile(file);
     }
   };
 
   const handleRemoveAttachment = (target: Attachment) => {
+    setSendError(null);
     setAttachments((current) => current.filter((attachment) => attachment.id !== target.id));
   };
 
   const resizeTextarea = () => {
     const el = textareaRef.current;
+
     if (!el) {
       return;
     }
+
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   };
@@ -150,42 +165,51 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const text = input.trim();
+
     if (disabled || isUploading || submittingRef.current) {
       return;
     }
+
     if (!text && readyAttachments.length === 0) {
       return;
     }
+
     const files: Array<FileUIPart> = readyAttachments.map((attachment) => ({
       filename: attachment.name,
       mediaType: attachment.mediaType,
       type: "file",
       url: attachment.url,
     }));
+
     submittingRef.current = true;
     setSubmitting(true);
+    setSendError(null);
+
     try {
       await onSend({ files, text: text || " " });
       setInput("");
       setAttachments([]);
       const el = textareaRef.current;
+
       if (el) {
         el.style.height = "auto";
       }
     } catch {
-      toast.error("Não foi possível enviar. Tente novamente.");
+      setSendError("Não foi possível enviar. Tente novamente.");
     }
+
     submittingRef.current = false;
     setSubmitting(false);
   };
 
-  const canSubmit =
+  const canSend =
     !disabled &&
     !isUploading &&
     !submitting &&
     (input.trim().length > 0 || readyAttachments.length > 0);
 
   let submitIcon = <CornerDownLeft aria-hidden className="size-4" />;
+
   if (submitting || status === "submitted" || status === "streaming") {
     submitIcon = <LoadingSpinner className="size-4" />;
   } else if (status === "error") {
@@ -200,6 +224,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
           void handleSubmit(event);
         }}
       >
+        <FormAlert message={sendError} />
         <input
           accept={ALLOWED_UPLOAD_MIME.join(",")}
           aria-label="Anexar imagem"
@@ -254,6 +279,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
           name="message"
           onChange={(event) => {
             setInput(event.currentTarget.value);
+            setSendError(null);
           }}
           onInput={resizeTextarea}
           onKeyDown={handleKeyDown}
@@ -279,7 +305,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
               <Paperclip aria-hidden className="size-4" />
             )}
           </Button>
-          <Button aria-label="Enviar" disabled={!canSubmit} size="icon" type="submit">
+          <Button aria-label="Enviar" disabled={!canSend} size="icon" type="submit">
             {submitIcon}
           </Button>
         </div>

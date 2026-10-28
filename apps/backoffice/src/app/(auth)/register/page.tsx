@@ -36,6 +36,7 @@ const RegistrationClosed = () => (
 
 const Registration = async ({ searchParams }: Props) => {
   const { open } = await getSignupState();
+
   return open ? <RegisterForm searchParams={searchParams} /> : <RegistrationClosed />;
 };
 

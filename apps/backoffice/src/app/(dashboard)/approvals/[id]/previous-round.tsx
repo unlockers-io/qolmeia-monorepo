@@ -12,10 +12,13 @@ const PreviousRound = ({
   roundIndex: number;
 }) => {
   const feedback = round?.feedback;
+
   if (round === undefined || feedback === undefined || feedback === null || feedback === "") {
     return null;
   }
+
   const previousSummary = proposalSummary(round.proposed);
+
   return (
     <Card className="gap-3 p-5">
       <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">

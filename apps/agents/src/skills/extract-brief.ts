@@ -12,9 +12,11 @@ const extractBriefSkill = defineSkill({
   displayName: "Atualizar brief",
   async execute(updates, ctx): Promise<{ brief: Partial<CompanyBrief> }> {
     const row = await withDb(ctx.env, (db) => updateBrief(db, ctx.companyId, updates));
+
     if (!row) {
       throw new Error(`company ${ctx.companyId} not found`);
     }
+
     return { brief: row.brief };
   },
   id: "extractBrief",

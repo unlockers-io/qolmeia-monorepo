@@ -86,6 +86,7 @@ type BrandAsset = {
 
 const fetchBrandAssets = async (): Promise<Array<BrandAsset>> => {
   const body = await apiGet<{ items: Array<BrandAsset> }>("/api/me/brand-assets");
+
   return body.items;
 };
 
@@ -94,11 +95,13 @@ const uploadBrandAsset = async (file: File, category: BrandCategory): Promise<Br
   form.append("file", file);
   form.append("category", category);
   const { asset } = await apiSendForm<{ asset: BrandAsset }>("/api/me/brand-assets", form);
+
   return asset;
 };
 
 const deleteBrandAsset = async (id: string): Promise<boolean> => {
   await apiSend("DELETE", `/api/me/brand-assets/${id}`);
+
   return true;
 };
 
@@ -111,6 +114,7 @@ export {
   patchCompanyBrief,
   uploadBrandAsset,
 };
+
 export type {
   BrandAsset,
   BrandCategory,

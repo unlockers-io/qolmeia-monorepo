@@ -25,6 +25,7 @@ const Marker = ({
   ...props
 }: useRender.ComponentProps<"div"> & VariantProps<typeof markerVariants>) => {
   const classes = cn(markerVariants({ className, variant }));
+
   return useRender({
     defaultTagName: "div",
     props: mergeProps<"div">(

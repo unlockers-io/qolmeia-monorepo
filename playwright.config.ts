@@ -8,6 +8,7 @@ const getPortlessUrl = (name: string) => {
   if (process.env.CI) {
     return undefined;
   }
+
   try {
     return execFileSync("portless", ["get", name], {
       encoding: "utf8",
@@ -20,7 +21,9 @@ const getPortlessUrl = (name: string) => {
 
 const backofficeUrl =
   process.env.E2E_BACKOFFICE_URL ?? getPortlessUrl("qolmeia.backoffice") ?? "http://127.0.0.1:3000";
+
 const webUrl = process.env.E2E_WEB_URL ?? getPortlessUrl("qolmeia.web") ?? "http://127.0.0.1:3001";
+
 const landingUrl =
   process.env.E2E_LANDING_URL ?? getPortlessUrl("qolmeia.landing") ?? "http://127.0.0.1:3002";
 

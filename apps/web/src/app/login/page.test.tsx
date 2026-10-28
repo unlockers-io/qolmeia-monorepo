@@ -6,9 +6,15 @@ import { LoginFormView as LoginForm, type LoginFormDependencies } from "./login-
 const renderLoginForm = (redirectTo = "/") => {
   const push = vi.fn();
   const refresh = vi.fn();
-  const sendMagicLink = vi.fn(() => Promise.resolve({ error: null }));
-  const showError = vi.fn();
-  const signInEmail = vi.fn(() => Promise.resolve({ error: null }));
+
+  const sendMagicLink = vi.fn<LoginFormDependencies["sendMagicLink"]>(() =>
+    Promise.resolve({ error: null }),
+  );
+
+  const signInEmail = vi.fn<LoginFormDependencies["signInEmail"]>(() =>
+    Promise.resolve({ error: null }),
+  );
+
   const dependencies: LoginFormDependencies = {
     redirectTo: () => redirectTo,
     router: {
@@ -20,28 +26,29 @@ const renderLoginForm = (redirectTo = "/") => {
       },
     },
     sendMagicLink,
-    showError: (message) => {
-      showError(message);
-    },
     signInEmail,
   };
 
   render(<LoginForm dependencies={dependencies} />);
 
-  return { push, refresh, sendMagicLink, showError, signInEmail };
+  return { push, refresh, sendMagicLink, signInEmail };
 };
 
 describe("LoginForm", () => {
   it.each(["password", "magicLink"])("cancels native navigation for %s submission", (method) => {
     renderLoginForm();
+
     if (method === "magicLink") {
       fireEvent.click(screen.getByRole("button", { name: "Entrar com link mágico" }));
     }
+
     const label = method === "magicLink" ? "Enviar link mágico" : "Entrar";
     const form = screen.getByRole("button", { name: label }).closest("form");
+
     if (form === null) {
       throw new Error("The login submit button must belong to its form");
     }
+
     const event = createEvent.submit(form);
     fireEvent(form, event);
     expect(event.defaultPrevented).toBe(true);
@@ -97,6 +104,50 @@ describe("LoginForm", () => {
       });
     });
     expect(screen.getByRole("heading", { name: "Verifique seu e-mail" })).toBeInTheDocument();
+  });
+
+  it("validates on submit, then on every change, with submit enabled throughout", async () => {
+    const { signInEmail } = renderLoginForm();
+    const email = screen.getByLabelText(/E-mail/v);
+    const submit = screen.getByRole("button", { name: "Entrar" });
+    fireEvent.change(email, { target: { value: "voce@" } });
+    fireEvent.blur(email);
+    expect(screen.queryByText("E-mail inválido")).not.toBeInTheDocument();
+    expect(submit).toBeEnabled();
+
+    fireEvent.click(submit);
+
+    expect(await screen.findByText("E-mail inválido")).toBeInTheDocument();
+    expect(screen.getByText("Informe sua senha")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(email).toHaveFocus();
+    });
+    expect(submit).toBeEnabled();
+
+    fireEvent.change(email, { target: { value: "voce@empresa" } });
+    expect(screen.getByText("E-mail inválido")).toBeInTheDocument();
+
+    fireEvent.change(email, { target: { value: "voce@empresa.com" } });
+    await waitFor(() => {
+      expect(screen.queryByText("E-mail inválido")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Informe sua senha")).toBeInTheDocument();
+    expect(signInEmail).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed sign-in in the form alert and clears it on the next change", async () => {
+    const { signInEmail } = renderLoginForm();
+    signInEmail.mockResolvedValueOnce({ error: { code: "INVALID_EMAIL_OR_PASSWORD" } });
+    fireEvent.change(screen.getByLabelText(/E-mail/v), {
+      target: { value: "pedro+customer@filho.me" },
+    });
+    fireEvent.change(screen.getByLabelText(/Senha/v), { target: { value: "Senha123!" } });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("E-mail ou senha incorretos.");
+    fireEvent.change(screen.getByLabelText(/Senha/v), { target: { value: "Senha1234!" } });
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("validates the e-mail with the form schema before sending a magic link", async () => {

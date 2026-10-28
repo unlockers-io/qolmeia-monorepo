@@ -6,5 +6,7 @@ const createPrismaClient = (connectionString: string): PrismaClient =>
   new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 export * from "./generated/prisma-worker/client";
+
 export { DEFAULT_TEMPLATES } from "./product-seed";
+
 export { createPrismaClient };

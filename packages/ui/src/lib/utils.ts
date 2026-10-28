@@ -6,4 +6,5 @@ import type { ReactNode } from "react";
 const isRenderable: (node: ReactNode) => boolean = Boolean;
 
 export { isRenderable };
+
 export { cn } from "cn";

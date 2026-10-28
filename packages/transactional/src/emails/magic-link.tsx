@@ -63,4 +63,5 @@ const MagicLinkEmail = ({ url, userEmail, username }: MagicLinkEmailProps) => {
 };
 
 export { MagicLinkEmail };
+
 export default MagicLinkEmail;

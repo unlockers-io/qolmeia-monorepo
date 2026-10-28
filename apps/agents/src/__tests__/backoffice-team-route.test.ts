@@ -27,10 +27,12 @@ beforeEach(async () => {
 describe("/api/backoffice/teams/:companyId/members", () => {
   it("lists members for STAFF", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members`,
     );
+
     expect(res.status).toBe(200);
     const body = await res.json<{ members: Array<{ id: string }> }>();
     expect(body.members.some((m) => m.id === WORKER_ID)).toBe(true);
@@ -38,29 +40,36 @@ describe("/api/backoffice/teams/:companyId/members", () => {
 
   it("403 for CUSTOMER", async () => {
     cookie = await signInAs(meCustomer);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members`,
     );
+
     expect(res.status).toBe(403);
   });
 
   it("GET member detail returns templateSystemPrompt and promptOverride", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}`,
     );
+
     expect(res.status).toBe(200);
+
     const body = await res.json<{
       member: { promptOverride: string | null; templateSystemPrompt: string };
     }>();
+
     expect(body.member.templateSystemPrompt).toBe("TPL_PROMPT");
     expect(body.member.promptOverride).toBeNull();
   });
 
   it("PATCH member updates promptOverride and writes operator-tagged activity", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}`,
@@ -70,7 +79,9 @@ describe("/api/backoffice/teams/:companyId/members", () => {
         method: "PATCH",
       },
     );
+
     expect(res.status).toBe(200);
+
     const body = await res.json<{
       member: {
         companyName: string;
@@ -79,16 +90,19 @@ describe("/api/backoffice/teams/:companyId/members", () => {
         templateSystemPrompt: string;
       };
     }>();
+
     expect(body.member.companyName).toBe("BT");
     expect(typeof body.member.createdAt).toBe("number");
     expect(body.member.promptOverride).toBe("novo prompt");
     expect(body.member.templateSystemPrompt).toBe("TPL_PROMPT");
+
     const log = await db((client) =>
       client.activityLog.findFirst({
         select: { actorId: true, payload: true },
         where: { refId: WORKER_ID, type: "MEMBER_PROMPT_EDITED" },
       }),
     );
+
     expect(log?.actorId).toBe("staff-1");
     expect(log?.payload).toMatchObject({ editedBy: "operator" });
   });
@@ -97,10 +111,12 @@ describe("/api/backoffice/teams/:companyId/members", () => {
 describe("backoffice team routes: cross-tenant", () => {
   it("STAFF queries another company's members list (empty when it has none)", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/co_other_company/members`,
     );
+
     expect(res.status).toBe(200);
     const body = await res.json<{ members: Array<{ id: string }> }>();
     expect(body.members).toEqual([]);
@@ -108,15 +124,18 @@ describe("backoffice team routes: cross-tenant", () => {
 
   it("404 (not 403) when STAFF reads a member that doesn't exist in that company", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/co_other_company/members/${WORKER_ID}`,
     );
+
     expect(res.status).toBe(404);
   });
 
   it("404 (not 403) when STAFF PATCHes a member that doesn't exist in that company", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/co_other_company/members/${WORKER_ID}`,
@@ -126,6 +145,7 @@ describe("backoffice team routes: cross-tenant", () => {
         method: "PATCH",
       },
     );
+
     expect(res.status).toBe(404);
   });
 });
@@ -135,9 +155,11 @@ describe("/api/backoffice/companies", () => {
     cookie = await signInAs(meStaff);
     const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/companies");
     expect(res.status).toBe(200);
+
     const body = await res.json<{
       companies: Array<{ briefPercent: number; id: string; members: Array<{ id: string }> }>;
     }>();
+
     const co = body.companies.find((c) => c.id === COMPANY_ID);
     expect(co).toBeDefined();
     expect(typeof co?.briefPercent).toBe("number");
@@ -154,10 +176,12 @@ describe("/api/backoffice/companies", () => {
 describe("backoffice member detail extras + pause/resume", () => {
   it("member detail exposes companyName and createdAt", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}`,
     );
+
     const body = await res.json<{ member: { companyName: string; createdAt: number } }>();
     expect(body.member.companyName).toBe("BT");
     expect(typeof body.member.createdAt).toBe("number");
@@ -173,12 +197,15 @@ describe("backoffice member detail extras + pause/resume", () => {
       headers,
       method: "PATCH",
     });
+
     expect(pause.status).toBe(200);
     const pauseBody = await pause.json<{ member: { status: string } }>();
     expect(pauseBody.member.status).toBe("paused");
+
     const row = await db((client) =>
       client.agentInstance.findUnique({ select: { status: true }, where: { id: WORKER_ID } }),
     );
+
     expect(row?.status).toBe("paused");
 
     const resume = await fetchWithCookie(cookie, url, {
@@ -186,6 +213,7 @@ describe("backoffice member detail extras + pause/resume", () => {
       headers,
       method: "PATCH",
     });
+
     expect(resume.status).toBe(200);
     const resumeBody = await resume.json<{ member: { status: string } }>();
     expect(resumeBody.member.status).toBe("available");
@@ -193,6 +221,7 @@ describe("backoffice member detail extras + pause/resume", () => {
 
   it("returns 409 when pausing the correspondent", async () => {
     cookie = await signInAs(meStaff);
+
     const res = await fetchWithCookie(
       cookie,
       `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${CORR_ID}`,
@@ -202,6 +231,7 @@ describe("backoffice member detail extras + pause/resume", () => {
         method: "PATCH",
       },
     );
+
     expect(res.status).toBe(409);
     await expect(res.json()).resolves.toEqual({ error: "cannot pause/resume a correspondent" });
   });
@@ -216,8 +246,10 @@ describe("conversational member prompts", () => {
           client.agentInstance.update({ data: { role }, where: { id: CORR_ID } }),
         );
       }
+
       cookie = await signInAs(meStaff);
       const before = await db((client) => client.activityLog.count());
+
       for (const promptOverride of ["ignored override", null]) {
         const response = await fetchWithCookie(
           cookie,
@@ -228,8 +260,10 @@ describe("conversational member prompts", () => {
             method: "PATCH",
           },
         );
+
         expect(response.status).toBe(409);
       }
+
       expect(await db((client) => client.activityLog.count())).toBe(before);
       expect(
         await db((client) => client.agentInstance.findUniqueOrThrow({ where: { id: CORR_ID } })),
@@ -240,6 +274,7 @@ describe("conversational member prompts", () => {
 
 it("refuses combined status and prompt patches instead of silently dropping the prompt", async () => {
   cookie = await signInAs(meStaff);
+
   const response = await fetchWithCookie(
     cookie,
     `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members/${WORKER_ID}`,
@@ -249,6 +284,7 @@ it("refuses combined status and prompt patches instead of silently dropping the 
       method: "PATCH",
     },
   );
+
   expect(response.status).toBe(400);
   expect(
     await db((client) => client.agentInstance.findUniqueOrThrow({ where: { id: WORKER_ID } })),

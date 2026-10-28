@@ -21,12 +21,15 @@ const aspectHint = (aspect: string): string => {
   if (aspect === "16:9") {
     return " (proporção 16:9, formato horizontal)";
   }
+
   if (aspect === "9:16") {
     return " (proporção 9:16, formato vertical)";
   }
+
   if (aspect === "4:3") {
     return " (proporção 4:3)";
   }
+
   return " (proporção 1:1, quadrado)";
 };
 
@@ -34,13 +37,17 @@ const MAX_BRAND_REFS = 3;
 
 const parseDataUrl = (url: string): { bytes: Uint8Array; mime: string } | null => {
   const match = /^data:(?<mime>[^;]+);base64,(?<b64>.+)$/v.exec(url);
+
   if (!match) {
     return null;
   }
+
   const { b64, mime } = match.groups ?? {};
+
   if (mime === undefined || b64 === undefined) {
     return null;
   }
+
   return { bytes: Uint8Array.fromBase64(b64), mime };
 };
 
@@ -56,6 +63,7 @@ const generateBrandImageSkill = defineSkill({
     const brandRefs = await withDb(ctx.env, (db) =>
       readBrandReferences(ctx.env, db, ctx.companyId, MAX_BRAND_REFS),
     );
+
     const userContent: string | Array<ImagePromptPart> =
       brandRefs.length > 0
         ? [
@@ -71,6 +79,7 @@ const generateBrandImageSkill = defineSkill({
         : fullPrompt;
 
     let imageUrl: string;
+
     try {
       imageUrl = await generateImage(ctx.env, userContent);
     } catch (error) {
@@ -78,10 +87,13 @@ const generateBrandImageSkill = defineSkill({
     }
 
     const decoded = parseDataUrl(imageUrl);
+
     if (!decoded) {
       return { error: `Image gen returned non-data URL we can't ingest: ${imageUrl.slice(0, 60)}` };
     }
+
     const { bytes, mime } = decoded;
+
     const { id: assetId } = await withDb(ctx.env, (db) =>
       storeAsset(ctx.env, db, {
         bytes,

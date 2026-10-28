@@ -12,9 +12,11 @@ describe("team events DO fan-out", () => {
     expect(response.headers.get("content-type")).toMatch(/text\/event-stream/v);
 
     const reader = response.body?.getReader();
+
     if (!reader) {
       throw new Error("SSE body missing");
     }
+
     const decoder = new TextDecoder();
     let buffer = "";
 
@@ -23,13 +25,18 @@ describe("team events DO fan-out", () => {
         if (buffer.includes(needle)) {
           return buffer;
         }
+
         const { done, value } = await reader.read();
+
         if (done) {
           throw new Error(`SSE closed before "${needle}"; got: ${buffer}`);
         }
+
         buffer += decoder.decode(value, { stream: true });
+
         return step();
       };
+
       return step();
     };
 
@@ -59,6 +66,7 @@ describe("team events DO fan-out", () => {
 
     const deadReader = deadResponse.body?.getReader();
     const liveReader = liveResponse.body?.getReader();
+
     if (!deadReader || !liveReader) {
       throw new Error("SSE body missing");
     }
@@ -73,17 +81,23 @@ describe("team events DO fan-out", () => {
 
     const readUntilEvent = (): Promise<string> => {
       let buffer = "";
+
       const step = async (): Promise<string> => {
         if (buffer.includes("event: team:roster")) {
           return buffer;
         }
+
         const { done, value } = await liveReader.read();
+
         if (done) {
           throw new Error(`SSE closed before the event; got: ${buffer}`);
         }
+
         buffer += decoder.decode(value, { stream: true });
+
         return step();
       };
+
       return step();
     };
 

@@ -22,9 +22,11 @@ const rememberFactSkill = defineSkill({
         { agentInstanceId: ctx.agentInstanceId, content, kind: kind ?? "fact" },
       ]),
     );
+
     if (fact === undefined) {
       throw new Error("rememberFact: no fact recorded");
     }
+
     return { id: fact.id, savedAt: fact.createdAt.getTime() };
   },
   id: "rememberFact",

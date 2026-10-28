@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CoverageForm } from "./coverage-form";
 
 const refresh = vi.fn<() => void>();
+
 const router: AppRouterInstance = {
   back: vi.fn<() => void>(),
   bfcacheId: "coverage-test",
@@ -18,6 +19,7 @@ const router: AppRouterInstance = {
   refresh,
   replace: vi.fn<() => void>(),
 };
+
 const fetchMock = vi.fn(() => Promise.resolve(Response.json({})));
 
 const options: CoverageResponse["options"] = {
@@ -69,5 +71,23 @@ describe("coverage response compatibility", () => {
       );
       expect(refresh).toHaveBeenCalledOnce();
     });
+  });
+
+  it("reports a failed save in the form alert and clears it on the next change", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("boom", { status: 500 }));
+    render(
+      <AppRouterContext value={router}>
+        <CoverageForm initial={{ companies: [], disciplines: [] }} options={options} />
+      </AppRouterContext>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Salvar cobertura" }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Algo falhou do nosso lado. Tente de novo em instantes.");
+    expect(refresh).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Designer" }));
+    expect(alert).not.toBeInTheDocument();
   });
 });

@@ -37,6 +37,7 @@ test.describe("Sign-up with redirect context", () => {
       subject: /boas-vindas/iu,
       to: email,
     });
+
     expect(mail.last_event).not.toBe("bounced");
 
     const verifyUrl = extractLink(mail, /\/api\/auth\/verify-email\?token=/u);
@@ -46,18 +47,22 @@ test.describe("Sign-up with redirect context", () => {
       failOnStatusCode: false,
       maxRedirects: 0,
     });
+
     expect(verifyResponse.status()).toBe(302);
 
     const setCookies = verifyResponse
       .headersArray()
       .filter((header) => header.name.toLowerCase() === "set-cookie")
       .map((header) => header.value);
+
     expect(setCookies.some((cookie) => cookie.includes("qolmeia.session_token="))).toBe(true);
 
     const { location } = verifyResponse.headers();
+
     if (location === undefined) {
       throw new Error("verification response has no Location header");
     }
+
     expect(new URL(location, backofficeUrl).toString()).toBe(`${backofficeUrl}${fromPath}`);
   });
 });

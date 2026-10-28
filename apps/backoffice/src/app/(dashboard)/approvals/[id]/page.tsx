@@ -46,6 +46,7 @@ const TITLE = {
 const loadTicketActions = async (ticketId: string): Promise<ReadonlyArray<Action>> => {
   try {
     const detail = await apiGetServer<TicketDetailResponse>(`/tickets/${ticketId}`);
+
     return detail.actions;
   } catch {
     return [];
@@ -56,6 +57,7 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
   const { id } = await params;
 
   let detail: ActionDetailResponse | null = null;
+
   try {
     detail = await apiGetServer<ActionDetailResponse>(`/actions/${id}`);
   } catch (error) {
@@ -63,6 +65,7 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
       throw error;
     }
   }
+
   if (!detail) {
     notFound();
   }
