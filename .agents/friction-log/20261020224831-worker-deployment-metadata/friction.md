@@ -1,6 +1,7 @@
 ---
 title: 'Worker deployment metadata does not guarantee the source commit'
 severity: 'minor'
+issue: 'unlockers-io/qolmeia-monorepo#259'
 ---
 
 ### Expected Behavior
