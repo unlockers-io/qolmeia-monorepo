@@ -1,6 +1,7 @@
 ---
 title: 'Husky is configured without an authored pre-commit hook'
 severity: 'minor'
+issue: 'unlockers-io/qolmeia-monorepo#255'
 ---
 
 ### Expected Behavior
