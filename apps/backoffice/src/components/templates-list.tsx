@@ -9,6 +9,7 @@ import type { Template, TemplateStatus } from "@repo/worker-api/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
+import { Skeleton } from "skullet/react";
 import { toast } from "sonner";
 
 import { describeRequestError } from "@/lib/api-client";
@@ -21,10 +22,42 @@ const STATUS_LABEL = {
   retired: { label: "Desativado", tone: "neutral" },
 } satisfies StatusLabelContract;
 
+type TemplateListItem = Pick<
+  Template,
+  "displayName" | "id" | "model" | "skillIds" | "status" | "workerKind"
+>;
+
+const SAMPLE_TEMPLATES: ReadonlyArray<TemplateListItem> = [
+  {
+    displayName: "Designer",
+    id: "sample-designer",
+    model: "openai/gpt-6-luna",
+    skillIds: ["sample-1", "sample-2", "sample-3"],
+    status: "active",
+    workerKind: "designer",
+  },
+  {
+    displayName: "Estrategista de marketing",
+    id: "sample-strategist",
+    model: "openai/gpt-6.1-sol",
+    skillIds: ["sample-1", "sample-2"],
+    status: "active",
+    workerKind: "marketing-strategist",
+  },
+  {
+    displayName: "Redator",
+    id: "sample-redator",
+    model: "openai/gpt-6.1-sol",
+    skillIds: ["sample-1", "sample-2"],
+    status: "retired",
+    workerKind: "redator",
+  },
+];
+
 type TemplateRowProps = {
   busy: boolean;
-  onToggle: (template: Template) => void;
-  template: Template;
+  onToggle: (template: TemplateListItem) => void;
+  template: TemplateListItem;
 };
 
 const TemplateRow = ({ busy, onToggle, template }: TemplateRowProps) => {
@@ -77,33 +110,11 @@ const TemplateRow = ({ busy, onToggle, template }: TemplateRowProps) => {
 
 type TemplatesTableBodyProps = {
   busy: boolean;
-  isError: boolean;
-  isLoading: boolean;
-  onToggle: (template: Template) => void;
-  templates: ReadonlyArray<Template>;
+  onToggle: (template: TemplateListItem) => void;
+  templates: ReadonlyArray<TemplateListItem>;
 };
 
-const TemplatesTableBody = ({
-  busy,
-  isError,
-  isLoading,
-  onToggle,
-  templates,
-}: TemplatesTableBodyProps) => {
-  if (isLoading) {
-    return (
-      <p className="px-5 py-8 text-center text-sm text-muted-foreground">Carregando modelos…</p>
-    );
-  }
-
-  if (isError) {
-    return (
-      <p className="px-5 py-8 text-center text-sm text-destructive">
-        Não foi possível carregar os modelos.
-      </p>
-    );
-  }
-
+const TemplatesTableBody = ({ busy, onToggle, templates }: TemplatesTableBodyProps) => {
   if (templates.length === 0) {
     return (
       <EmptyState
@@ -137,6 +148,34 @@ const TemplatesTableBody = ({
   );
 };
 
+type TemplatesCardProps = Omit<TemplatesTableBodyProps, "templates"> & {
+  isError: boolean;
+  templates: ReadonlyArray<TemplateListItem> | null;
+};
+
+const TemplatesCard = ({ busy, isError, onToggle, templates }: TemplatesCardProps) => (
+  <Card className="overflow-hidden p-0">
+    <Skeleton
+      data={templates}
+      error={
+        isError ? (
+          <p className="px-5 py-8 text-center text-sm text-destructive">
+            Não foi possível carregar os modelos.
+          </p>
+        ) : undefined
+      }
+      label="Carregando modelos"
+      sample={SAMPLE_TEMPLATES}
+    >
+      {(rows) => <TemplatesTableBody busy={busy} onToggle={onToggle} templates={rows} />}
+    </Skeleton>
+  </Card>
+);
+
+const TemplatesListSkeleton = () => (
+  <TemplatesCard busy isError={false} onToggle={() => undefined} templates={null} />
+);
+
 type StatusPatch = { id: string; status: TemplateStatus };
 
 const applyStatus = (
@@ -150,7 +189,7 @@ const applyStatus = (
 const TemplatesList = () => {
   const queryClient = useQueryClient();
 
-  const { data, isError, isLoading } = useQuery({
+  const { data, isError } = useQuery({
     queryFn: fetchTemplates,
     queryKey: templateKeys.all,
   });
@@ -158,7 +197,7 @@ const TemplatesList = () => {
   const [isToggling, startToggle] = useTransition();
   const [templates, applyOptimisticStatus] = useOptimistic(data?.items ?? [], applyStatus);
 
-  const handleToggle = (template: Template) => {
+  const handleToggle = (template: TemplateListItem) => {
     const status: TemplateStatus = template.status === "retired" ? "active" : "retired";
     startToggle(async () => {
       applyOptimisticStatus({ id: template.id, status });
@@ -174,16 +213,13 @@ const TemplatesList = () => {
   };
 
   return (
-    <Card className="overflow-hidden p-0">
-      <TemplatesTableBody
-        busy={isToggling}
-        isError={isError}
-        isLoading={isLoading}
-        onToggle={handleToggle}
-        templates={templates}
-      />
-    </Card>
+    <TemplatesCard
+      busy={isToggling}
+      isError={isError}
+      onToggle={handleToggle}
+      templates={data ? templates : null}
+    />
   );
 };
 
-export { TemplatesList };
+export { TemplatesList, TemplatesListSkeleton };

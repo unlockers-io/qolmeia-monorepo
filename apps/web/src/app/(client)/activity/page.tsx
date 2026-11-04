@@ -1,12 +1,11 @@
 import { Card, CardContent } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageContainer } from "@repo/ui/compositions/page-container";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { cn } from "@repo/ui/lib/utils";
 import { Activity, CircleAlert } from "lucide-react";
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
 import { apiGetServer } from "@/lib/api-server";
 import type { ListResponse } from "@/lib/api-types";
@@ -75,9 +74,9 @@ const dayLabel = (date: Date, now: Date): string => {
   return key === DAY_KEY.format(yesterday) ? "Ontem" : DAY.format(date);
 };
 
-const groupByDay = (
-  rows: ReadonlyArray<ActivityRow>,
-): ReadonlyArray<{ label: string; rows: ReadonlyArray<ActivityRow> }> => {
+type DayGroup = { label: string; rows: ReadonlyArray<ActivityRow> };
+
+const groupByDay = (rows: ReadonlyArray<ActivityRow>): ReadonlyArray<DayGroup> => {
   const now = new Date();
   const groups = new Map<string, Array<ActivityRow>>();
 
@@ -88,6 +87,44 @@ const groupByDay = (
 
   return [...groups].map(([label, items]) => ({ label, rows: items }));
 };
+
+const ActivityFeed = ({ groups }: { groups: ReadonlyArray<DayGroup> }) => (
+  <div className="flex flex-col gap-6">
+    {groups.map((group) => (
+      <section aria-label={group.label} className="flex flex-col gap-2" key={group.label}>
+        <h2 className="text-sm font-semibold text-muted-foreground">{group.label}</h2>
+        <Card>
+          <CardContent className="px-0">
+            <ul className="flex flex-col">
+              {group.rows.map((row) => {
+                const category = categoryOf(row.type);
+
+                return (
+                  <li
+                    className="flex gap-3 border-b border-border px-6 py-3.5 last:border-b-0"
+                    key={row.id}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn("mt-1.5 size-2 shrink-0 rounded-full", category.dot)}
+                    />
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <p className="text-sm leading-relaxed text-foreground">{row.summary}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {category.label} ·{" "}
+                        <time dateTime={row.createdAt}>{TIME.format(new Date(row.createdAt))}</time>
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
+    ))}
+  </div>
+);
 
 const ActivityContent = async () => {
   const rows = await loadActivity();
@@ -120,56 +157,34 @@ const ActivityContent = async () => {
     );
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      {groupByDay(rows).map((group) => (
-        <section aria-label={group.label} className="flex flex-col gap-2" key={group.label}>
-          <h2 className="text-sm font-semibold text-muted-foreground">{group.label}</h2>
-          <Card>
-            <CardContent className="px-0">
-              <ul className="flex flex-col">
-                {group.rows.map((row) => {
-                  const category = categoryOf(row.type);
-
-                  return (
-                    <li
-                      className="flex gap-3 border-b border-border px-6 py-3.5 last:border-b-0"
-                      key={row.id}
-                    >
-                      <span
-                        aria-hidden
-                        className={cn("mt-1.5 size-2 shrink-0 rounded-full", category.dot)}
-                      />
-                      <div className="flex min-w-0 flex-col gap-0.5">
-                        <p className="text-sm leading-relaxed text-foreground">{row.summary}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {category.label} ·{" "}
-                          <time dateTime={row.createdAt}>
-                            {TIME.format(new Date(row.createdAt))}
-                          </time>
-                        </p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </CardContent>
-          </Card>
-        </section>
-      ))}
-    </div>
-  );
+  return <ActivityFeed groups={groupByDay(rows)} />;
 };
 
-const ActivitySkeleton = () => (
-  <Card aria-hidden>
-    <CardContent className="flex flex-col gap-4">
-      <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-12 w-full" />
-      <Skeleton className="h-12 w-full" />
-    </CardContent>
-  </Card>
-);
+const SAMPLE_GROUPS: ReadonlyArray<DayGroup> = [
+  {
+    label: "Hoje",
+    rows: [
+      {
+        createdAt: "2026-01-01T14:32:00.000Z",
+        id: "sample-1",
+        summary: "Designer entregou 3 opções de post para o lançamento da coleção de verão",
+        type: "WORKER_DELIVERABLE_READY",
+      },
+      {
+        createdAt: "2026-01-01T13:05:00.000Z",
+        id: "sample-2",
+        summary: "Pedido aberto: carrossel para o Instagram",
+        type: "TICKET_CREATED",
+      },
+      {
+        createdAt: "2026-01-01T11:48:00.000Z",
+        id: "sample-3",
+        summary: "Entrega aprovada pela equipe Qolmeia",
+        type: "ACTION_APPROVED",
+      },
+    ],
+  },
+];
 
 const ActivityPage = () => (
   <PageContainer>
@@ -177,9 +192,12 @@ const ActivityPage = () => (
       description="O que o seu Time fez: pedidos, entregas, aprovações e mudanças na equipe."
       title="Atividade"
     />
-    <Suspense fallback={<ActivitySkeleton />}>
+    <SkeletonSuspense
+      label="Carregando atividade"
+      skeleton={<ActivityFeed groups={SAMPLE_GROUPS} />}
+    >
       <ActivityContent />
-    </Suspense>
+    </SkeletonSuspense>
   </PageContainer>
 );
 
