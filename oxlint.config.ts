@@ -76,10 +76,6 @@ export default defineConfig({
               "^(Card|EmptyState|CardFooter|CardHeader|AttachmentGroup|MessageScrollerContent|Marker)$",
           },
           {
-            allow: ["layout", "shape"],
-            pattern: "^Skeleton$",
-          },
-          {
             allow: ["layout", "gap-*"],
             pattern: "^DialogContent$",
           },
