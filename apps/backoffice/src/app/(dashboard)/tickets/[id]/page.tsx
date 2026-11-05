@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
@@ -8,7 +7,7 @@ import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
 import { BackLink } from "@/components/back-link";
 import { StatusPill } from "@/components/status-pill";
@@ -59,24 +58,21 @@ const PENDING_DELIVERABLE = {
 const deliverableSummary = (result: WireObject | null): string | null =>
   typeof result?.summary === "string" && result.summary !== "" ? result.summary : null;
 
-const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
-  const { id } = await params;
+type TicketDetailProps = {
+  actions: ReadonlyArray<
+    Pick<
+      TicketDetailResponse["actions"][number],
+      "actionType" | "createdAt" | "feedback" | "id" | "status"
+    >
+  >;
+  now: Date;
+  ticket: Pick<
+    TicketDetailResponse["ticket"],
+    "agent" | "brief" | "companyName" | "id" | "result" | "status" | "workflowId"
+  >;
+};
 
-  let detail: TicketDetailResponse | null = null;
-
-  try {
-    detail = await apiGetServer<TicketDetailResponse>(`/tickets/${id}`);
-  } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 404) {
-      throw error;
-    }
-  }
-
-  if (!detail) {
-    notFound();
-  }
-
-  const { actions, ticket } = detail;
+const TicketDetail = ({ actions, now, ticket }: TicketDetailProps) => {
   const relatedAction = actions.at(-1) ?? null;
   const summary = deliverableSummary(ticket.result);
 
@@ -137,7 +133,7 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
                             <p className="text-sm text-muted-foreground">“{action.feedback}”</p>
                           )}
                           <div className="font-mono text-xs text-muted-foreground">
-                            {formatRelative(action.createdAt)}
+                            {formatRelative(action.createdAt, now)}
                           </div>
                         </div>
                       </li>
@@ -244,20 +240,60 @@ const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
   );
 };
 
-const TicketDetailSkeleton = () => (
-  <div aria-hidden className="flex flex-col gap-6">
-    <Skeleton className="h-8 w-72" />
-    <Skeleton className="h-48 w-full" />
-    <Skeleton className="h-48 w-full" />
-  </div>
-);
+const TicketDetailContent = async ({ params }: TicketDetailPageProps) => {
+  const { id } = await params;
+
+  let detail: TicketDetailResponse | null = null;
+
+  try {
+    detail = await apiGetServer<TicketDetailResponse>(`/tickets/${id}`);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) {
+      throw error;
+    }
+  }
+
+  if (!detail) {
+    notFound();
+  }
+
+  const now = new Date();
+
+  return <TicketDetail actions={detail.actions} now={now} ticket={detail.ticket} />;
+};
+
+const SAMPLE_NOW = new Date("2026-01-01T12:00:00.000Z");
+
+const SAMPLE_TICKET: TicketDetailProps["ticket"] = {
+  agent: { name: "Designer", role: "worker", workerKind: "designer" },
+  brief:
+    "Criar um carrossel de cinco imagens para o lançamento da coleção de verão, no tom da marca.",
+  companyName: "Empresa Exemplo",
+  id: "00000000-0000-4000-8000-000000000001",
+  result: null,
+  status: "awaiting_approval",
+  workflowId: "00000000-0000-4000-8000-000000000001",
+};
+
+const SAMPLE_ACTIONS: TicketDetailProps["actions"] = [
+  {
+    actionType: "worker_deliverable",
+    createdAt: SAMPLE_NOW.getTime() - 5 * 60_000,
+    feedback: null,
+    id: "00000000-0000-4000-8000-000000000002",
+    status: "pending",
+  },
+];
 
 const TicketDetailPage = (props: TicketDetailPageProps) => (
   <div className="flex flex-col gap-6">
     <BackLink href="/tickets">Tickets</BackLink>
-    <Suspense fallback={<TicketDetailSkeleton />}>
+    <SkeletonSuspense
+      label="Carregando ticket"
+      skeleton={<TicketDetail actions={SAMPLE_ACTIONS} now={SAMPLE_NOW} ticket={SAMPLE_TICKET} />}
+    >
       <TicketDetailContent {...props} />
-    </Suspense>
+    </SkeletonSuspense>
   </div>
 );
 

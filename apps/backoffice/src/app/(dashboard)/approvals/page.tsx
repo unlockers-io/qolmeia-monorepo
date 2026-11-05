@@ -1,15 +1,14 @@
 import { buttonVariants } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
-import type { ActionsResponse, CoverageResponse } from "@repo/worker-api/contracts";
+import type { ActionListRow, ActionsResponse, CoverageResponse } from "@repo/worker-api/contracts";
 import { Inbox } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
 import { apiGetServer } from "@/lib/api-server";
 import {
@@ -31,23 +30,24 @@ const AGE_TIER_CLASS = {
   warning: "font-semibold text-warning-surface-foreground",
 } satisfies Record<AgeTier, string>;
 
-const proposedSummary = (proposed: ActionsResponse["items"][number]["proposed"]): string => {
+const proposedSummary = (proposed: ActionListRow["proposed"]): string => {
   const summary = typeof proposed.summary === "string" ? proposed.summary : "";
 
   return summary.split("\n")[0]?.trim() ?? "";
 };
 
-const ApprovalsContent = async () => {
-  const [res, coverage] = await Promise.all([
-    apiGetServer<ActionsResponse>("/actions?status=pending&sort=age"),
-    apiGetServer<CoverageResponse>("/assignments/me").catch(() => null),
-  ]);
+type ApprovalItem = Pick<
+  ActionListRow,
+  "actionType" | "ageSeconds" | "agent" | "companyName" | "id" | "proposed"
+>;
 
-  const pendingCount = res.items.length;
+type ApprovalsViewProps = {
+  filtered: boolean;
+  items: ReadonlyArray<ApprovalItem>;
+};
 
-  const filtered =
-    coverage !== null &&
-    (coverage.assigned.companies.length > 0 || coverage.assigned.disciplines.length > 0);
+const ApprovalsView = ({ filtered, items }: ApprovalsViewProps) => {
+  const pendingCount = items.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -98,7 +98,7 @@ const ApprovalsContent = async () => {
               <span />
             </div>
             <ul className="flex flex-col">
-              {res.items.map((action) => {
+              {items.map((action) => {
                 const preview = proposedSummary(action.proposed);
 
                 return (
@@ -166,24 +166,53 @@ const ApprovalsContent = async () => {
   );
 };
 
-const ApprovalsSkeleton = () => (
-  <div aria-hidden className="flex flex-col gap-6">
-    <PageHeader
-      description="Ações propostas pelos especialistas aguardando uma decisão, mais antigas primeiro."
-      title="Aprovações"
-    />
-    <Card className="flex flex-col gap-4 p-6">
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
-    </Card>
-  </div>
-);
+const ApprovalsContent = async () => {
+  const [res, coverage] = await Promise.all([
+    apiGetServer<ActionsResponse>("/actions?status=pending&sort=age"),
+    apiGetServer<CoverageResponse>("/assignments/me").catch(() => null),
+  ]);
+
+  const filtered =
+    coverage !== null &&
+    (coverage.assigned.companies.length > 0 || coverage.assigned.disciplines.length > 0);
+
+  return <ApprovalsView filtered={filtered} items={res.items} />;
+};
+
+const SAMPLE_APPROVALS: ReadonlyArray<ApprovalItem> = [
+  {
+    actionType: "worker_deliverable",
+    agent: { name: "Designer", role: "worker", workerKind: "designer" },
+    ageSeconds: 5 * 60 * 60,
+    companyName: "Empresa Exemplo",
+    id: "00000000-0000-4000-8000-000000000001",
+    proposed: { summary: "Carrossel com cinco imagens para o lançamento da coleção de verão" },
+  },
+  {
+    actionType: "publish_post",
+    agent: { name: "Redator", role: "worker", workerKind: "copywriter" },
+    ageSeconds: 90 * 60,
+    companyName: "Outra Empresa",
+    id: "00000000-0000-4000-8000-000000000002",
+    proposed: { summary: "Legenda e hashtags para o post de quinta-feira" },
+  },
+  {
+    actionType: "worker_deliverable",
+    agent: { name: "Designer", role: "worker", workerKind: "designer" },
+    ageSeconds: 12 * 60,
+    companyName: "Loja Nova",
+    id: "00000000-0000-4000-8000-000000000003",
+    proposed: { summary: "Banner da promoção de fim de semana" },
+  },
+];
 
 const ApprovalsPage = () => (
-  <Suspense fallback={<ApprovalsSkeleton />}>
+  <SkeletonSuspense
+    label="Carregando aprovações"
+    skeleton={<ApprovalsView filtered={false} items={SAMPLE_APPROVALS} />}
+  >
     <ApprovalsContent />
-  </Suspense>
+  </SkeletonSuspense>
 );
 
 export default ApprovalsPage;

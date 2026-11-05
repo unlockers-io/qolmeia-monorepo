@@ -1,10 +1,9 @@
 import { SignedInRedirect } from "@repo/app-shell/signed-in-redirect";
 import { getSignupState, SIGNUP_CLOSED_MESSAGE } from "@repo/app-shell/signup";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
 import { RegisterForm } from "./register-form";
 
@@ -40,12 +39,17 @@ const Registration = async ({ searchParams }: Props) => {
   return open ? <RegisterForm searchParams={searchParams} /> : <RegistrationClosed />;
 };
 
+const NO_SEARCH_PARAMS: Props["searchParams"] = Promise.resolve({});
+
 const RegisterPage = ({ searchParams }: Props) => (
   <>
     <SignedInRedirect />
-    <Suspense fallback={<Skeleton className="h-96 w-full rounded-xl" />}>
+    <SkeletonSuspense
+      label="Carregando cadastro"
+      skeleton={<RegisterForm searchParams={NO_SEARCH_PARAMS} />}
+    >
       <Registration searchParams={searchParams} />
-    </Suspense>
+    </SkeletonSuspense>
   </>
 );
 

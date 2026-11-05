@@ -19,6 +19,7 @@ import { agentAvatarClass } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import { ArrowDown, ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
+import { Skeleton } from "skullet/react";
 
 import { ChatComposer } from "@/components/chat-composer";
 import type { ChatMessage, UseFlueChatResult } from "@/lib/use-flue-chat";
@@ -194,17 +195,6 @@ const ChatEmptyState = ({ description, icon, title }: ChatEmptyStateProps) => (
   </div>
 );
 
-const ChatSkeleton = () => (
-  <div className="flex min-h-0 flex-1 flex-col bg-background">
-    <div className="flex flex-1 items-center justify-center">
-      <LoadingSpinner className="size-5 text-muted-foreground" />
-    </div>
-    <div className="flex-none border-t border-border bg-card px-6 py-4">
-      <div className="h-16 rounded-xl border border-input bg-background" />
-    </div>
-  </div>
-);
-
 const AssistantAvatar = ({ agent }: { agent: "correspondent" | "planner" }) => (
   <div
     aria-hidden
@@ -230,6 +220,82 @@ const PlannerGreeting = ({ scrollAnchor }: { scrollAnchor: boolean }) => (
   </MessageScrollerItem>
 );
 
+type ConversationProps = {
+  agent: "correspondent" | "planner";
+  messages: ReadonlyArray<ChatMessage>;
+};
+
+const Conversation = ({ agent, messages }: ConversationProps) => {
+  const visibleMessages = messages.filter(
+    (message) => !isKickoffMessage(message) && isChatMessage(message) && hasVisibleContent(message),
+  );
+
+  const showPlannerGreeting =
+    agent === "planner" && !messages.some((message) => isKickoffMessage(message));
+
+  const lastIndex = visibleMessages.length - 1;
+
+  if (!showPlannerGreeting && visibleMessages.length === 0) {
+    return (
+      <ChatEmptyState
+        description="Os agentes da Qolmeia respondem em segundos."
+        icon={<MessageSquare aria-hidden className="size-10" />}
+        title="Comece a conversa"
+      />
+    );
+  }
+
+  return (
+    <>
+      <Marker variant="separator">
+        <MarkerContent>Início da conversa</MarkerContent>
+      </Marker>
+      {showPlannerGreeting ? <PlannerGreeting scrollAnchor={visibleMessages.length === 0} /> : null}
+      {visibleMessages.map((message, index) => (
+        <MessageScrollerItem
+          key={message.id}
+          messageId={message.id}
+          scrollAnchor={index === lastIndex}
+        >
+          <Message align={message.role === "user" ? "end" : "start"}>
+            {message.role === "user" ? null : <AssistantAvatar agent={agent} />}
+            <MessageContent>
+              <MessageBubble message={message} />
+            </MessageContent>
+          </Message>
+        </MessageScrollerItem>
+      ))}
+    </>
+  );
+};
+
+const sampleMessage = (id: string, role: "assistant" | "user", text: string): ChatMessage => ({
+  display: "visible",
+  id,
+  parts: [{ state: "done", text, type: "text" }],
+  purpose: role,
+  role,
+});
+
+const SAMPLE_MESSAGES: ReadonlyArray<ChatMessage> = [
+  sampleMessage(
+    "sample-1",
+    "user",
+    "Preciso de três posts para o lançamento do cardápio de verão.",
+  ),
+  sampleMessage(
+    "sample-2",
+    "assistant",
+    "Combinado! Vou pedir ao Designer três artes no tom da marca e te aviso assim que estiverem prontas para aprovação.",
+  ),
+  sampleMessage("sample-3", "user", "Pode começar pelo post do açaí?"),
+  sampleMessage(
+    "sample-4",
+    "assistant",
+    "Claro. O post do açaí sai primeiro, e o Redator já está escrevendo a legenda.",
+  ),
+];
+
 type ChatViewProps = Pick<ChatProps, "agent"> & {
   chat: UseFlueChatResult;
 };
@@ -238,22 +304,8 @@ const ChatView = ({
   agent: agentName = "correspondent",
   chat: { historyReady, messages, sendMessage, status },
 }: ChatViewProps) => {
-  const visibleMessages = messages.filter(
-    (message) => !isKickoffMessage(message) && isChatMessage(message) && hasVisibleContent(message),
-  );
-
-  const showPlannerGreeting =
-    agentName === "planner" && !messages.some((message) => isKickoffMessage(message));
-
-  const hasConversation = showPlannerGreeting || visibleMessages.length > 0;
-
   const isThinking = status === "submitted" || status === "streaming";
   const isCorrespondent = agentName === "correspondent";
-  const lastIndex = visibleMessages.length - 1;
-
-  if (!historyReady) {
-    return <ChatSkeleton />;
-  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
@@ -283,71 +335,65 @@ const ChatView = ({
         <h1 className="sr-only">Conversa com o Planejador</h1>
       )}
 
-      <MessageScrollerProvider autoScroll defaultScrollPosition="end">
-        <MessageScroller className="flex-1">
-          <MessageScrollerViewport aria-label="Mensagens da conversa">
-            <MessageScrollerContent className="p-4">
-              {hasConversation ? (
-                <>
-                  <Marker variant="separator">
-                    <MarkerContent>Início da conversa</MarkerContent>
+      {historyReady ? (
+        <MessageScrollerProvider autoScroll defaultScrollPosition="end">
+          <MessageScroller className="flex-1">
+            <MessageScrollerViewport aria-label="Mensagens da conversa">
+              <MessageScrollerContent className="p-4">
+                <Conversation agent={agentName} messages={messages} />
+
+                {isThinking ? (
+                  <Marker className="pl-9">
+                    <LoadingSpinner className="size-4" />
+                    <MarkerContent>Um agente está respondendo…</MarkerContent>
                   </Marker>
-                  {showPlannerGreeting ? (
-                    <PlannerGreeting scrollAnchor={visibleMessages.length === 0} />
-                  ) : null}
-                  {visibleMessages.map((message, index) => (
-                    <MessageScrollerItem
-                      key={message.id}
-                      messageId={message.id}
-                      scrollAnchor={index === lastIndex}
-                    >
-                      <Message align={message.role === "user" ? "end" : "start"}>
-                        {message.role === "user" ? null : <AssistantAvatar agent={agentName} />}
-                        <MessageContent>
-                          <MessageBubble message={message} />
-                        </MessageContent>
-                      </Message>
-                    </MessageScrollerItem>
-                  ))}
-                </>
-              ) : (
-                <ChatEmptyState
-                  description="Os agentes da Qolmeia respondem em segundos."
-                  icon={<MessageSquare aria-hidden className="size-10" />}
-                  title="Comece a conversa"
-                />
-              )}
+                ) : null}
 
-              {isThinking ? (
-                <Marker className="pl-9">
-                  <LoadingSpinner className="size-4" />
-                  <MarkerContent>Um agente está respondendo…</MarkerContent>
-                </Marker>
-              ) : null}
+                {status === "error" ? (
+                  <Marker className="pl-9">
+                    <span className="contents text-destructive">
+                      <MarkerIcon>
+                        <TriangleAlert aria-hidden />
+                      </MarkerIcon>
+                      <MarkerContent>Não foi possível enviar. Tente novamente.</MarkerContent>
+                    </span>
+                  </Marker>
+                ) : null}
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <MessageScrollerButton>
+              <ArrowDown aria-hidden />
+              <span className="sr-only">Ir para a mensagem mais recente</span>
+            </MessageScrollerButton>
+          </MessageScroller>
+        </MessageScrollerProvider>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-hidden p-4">
+          <MessageScrollerProvider>
+            <Skeleton label="Carregando conversa" loading>
+              <div className="flex flex-col gap-6">
+                <Conversation agent={agentName} messages={SAMPLE_MESSAGES} />
+              </div>
+            </Skeleton>
+          </MessageScrollerProvider>
+        </div>
+      )}
 
-              {status === "error" ? (
-                <Marker className="pl-9">
-                  <span className="contents text-destructive">
-                    <MarkerIcon>
-                      <TriangleAlert aria-hidden />
-                    </MarkerIcon>
-                    <MarkerContent>Não foi possível enviar. Tente novamente.</MarkerContent>
-                  </span>
-                </Marker>
-              ) : null}
-            </MessageScrollerContent>
-          </MessageScrollerViewport>
-          <MessageScrollerButton>
-            <ArrowDown aria-hidden />
-            <span className="sr-only">Ir para a mensagem mais recente</span>
-          </MessageScrollerButton>
-        </MessageScroller>
-      </MessageScrollerProvider>
-
-      <ChatComposer disabled={isThinking} onSend={sendMessage} status={status} />
+      <ChatComposer disabled={isThinking || !historyReady} onSend={sendMessage} status={status} />
     </div>
   );
 };
+
+const LOADING_CHAT: UseFlueChatResult = {
+  historyReady: false,
+  messages: [],
+  sendMessage: () => Promise.resolve(),
+  status: "ready",
+};
+
+const ChatLoading = ({ agent }: Pick<ChatProps, "agent">) => (
+  <ChatView agent={agent} chat={LOADING_CHAT} />
+);
 
 const ChatClient = ({ agent = "correspondent", companyId }: ChatProps) => {
   const chat = useFlueChat({ agent, companyId });
@@ -359,12 +405,12 @@ const Chat = (props: ChatProps) => {
   const ready = useClientReady();
 
   if (!ready) {
-    return <ChatSkeleton />;
+    return <ChatLoading agent={props.agent} />;
   }
 
   return <ChatClient {...props} />;
 };
 
-export { Chat, ChatView, PLANNER_GREETING, PLANNER_KICKOFF };
+export { Chat, ChatLoading, ChatView, PLANNER_GREETING, PLANNER_KICKOFF };
 
 export type { ChatProps, ChatViewProps };

@@ -4,7 +4,6 @@ import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
@@ -14,6 +13,7 @@ import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Skeleton } from "skullet/react";
 import { toast } from "sonner";
 
 import {
@@ -27,6 +27,37 @@ import { BRIEF_MAX_LENGTH, companyBriefSchema } from "@/lib/form-schemas";
 
 const companyQueryKey = (companyId: string) => ["company", companyId] as const;
 const REQUIRED_COUNT = 6;
+
+const SAMPLE_COMPANY: CompanyResponse = {
+  company: {
+    brief: {
+      audience: "Famílias do bairro que buscam pães e bolos frescos para o café da manhã.",
+      brand: {
+        palette: "#B45309, creme",
+        references: "Padarias artesanais de bairro e cafés de esquina",
+        voice: "Acolhedor e próximo",
+      },
+      industry: "Padaria artesanal",
+      primaryGoal: "Aumentar as encomendas pelo Instagram",
+    },
+    id: "00000000-0000-4000-8000-000000000001",
+    slug: "padaria-pao-dourado",
+    status: "active",
+  },
+  completeness: {
+    filled: [
+      "audience",
+      "brand.palette",
+      "brand.references",
+      "brand.voice",
+      "industry",
+      "primaryGoal",
+    ],
+    isComplete: true,
+    missing: [],
+    percent: 100,
+  },
+};
 
 type FormState = {
   audience: string;
@@ -278,36 +309,24 @@ type CompanyBriefFormProps = {
 };
 
 const CompanyBriefForm = ({ companyId, initialData }: CompanyBriefFormProps) => {
-  const { data, isPending } = useQuery({
+  const { data } = useQuery({
     initialData,
     meta: { errorToast: "Falha ao carregar dados da empresa" },
     queryFn: fetchCompany,
     queryKey: companyQueryKey(companyId),
   });
 
-  if (isPending || !data) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Sobre a empresa</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <BriefCard
-      companyId={companyId}
-      initial={data.company.brief}
-      key={JSON.stringify(data.company.brief)}
-    />
+    <Skeleton data={data} label="Carregando dados da empresa" sample={SAMPLE_COMPANY}>
+      {(company) => (
+        <BriefCard
+          companyId={companyId}
+          initial={company.company.brief}
+          key={JSON.stringify(company.company.brief)}
+        />
+      )}
+    </Skeleton>
   );
 };
 
-export { CompanyBriefForm };
+export { BriefCard, CompanyBriefForm, SAMPLE_COMPANY };

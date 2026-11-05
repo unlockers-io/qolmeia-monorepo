@@ -12,10 +12,11 @@ import { apiGet, describeRequestError } from "@/lib/api-client";
 type ActivityListProps = {
   category?: string;
   initial: ReadonlyArray<ActivityEntry>;
+  now?: Date;
   pageSize?: number;
 };
 
-const ActivityList = ({ category, initial, pageSize = 50 }: ActivityListProps) => {
+const ActivityList = ({ category, initial, now, pageSize = 50 }: ActivityListProps) => {
   const [fetched, setFetched] = useState<ReadonlyArray<ActivityEntry>>([]);
   const [fetchExhausted, setFetchExhausted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,7 +63,7 @@ const ActivityList = ({ category, initial, pageSize = 50 }: ActivityListProps) =
     <>
       <ul className="flex flex-col">
         {rows.map((row) => (
-          <ActivityRow key={row.id} row={row} />
+          <ActivityRow key={row.id} now={now} row={row} />
         ))}
       </ul>
       {!exhausted && (

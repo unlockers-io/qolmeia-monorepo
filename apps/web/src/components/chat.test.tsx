@@ -124,7 +124,7 @@ describe("Chat", () => {
     expect(screen.queryByText(PLANNER_GREETING)).not.toBeInTheDocument();
   });
 
-  it("does not show the Planner greeting before durable history loads", () => {
+  it("keeps the Planner greeting inside the inert skeleton before durable history loads", () => {
     chatState.historyReady = false;
     render(
       <Chat
@@ -133,7 +133,7 @@ describe("Chat", () => {
         companyId="co_test"
       />,
     );
-    expect(screen.queryByText(PLANNER_GREETING)).not.toBeInTheDocument();
+    expect(screen.getByText(PLANNER_GREETING).closest("[inert]")).not.toBeNull();
   });
 
   it("does not prepend the deterministic greeting to legacy kickoff histories", () => {
@@ -218,7 +218,9 @@ describe("Chat", () => {
   it("shows a loading skeleton until durable history is ready", () => {
     chatState.historyReady = false;
     render(<Chat companyId="co_test" />);
+    expect(screen.getByText("Carregando conversa")).toBeInTheDocument();
     expect(screen.queryByText("Comece a conversa")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enviar" })).toBeDisabled();
   });
 
   it("renders an activity marker for an in-flight tool call", () => {

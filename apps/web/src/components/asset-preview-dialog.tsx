@@ -14,7 +14,8 @@ import { DialogCloseButton } from "@repo/ui/compositions/dialog-close-button";
 import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import { cn } from "@repo/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
+import { Skeleton } from "skullet/react";
 
 import type { WebChatAsset } from "@/lib/api-types";
 
@@ -27,10 +28,20 @@ const isImage = (mime: string): boolean => mime.startsWith("image/");
 const isAudio = (mime: string): boolean => mime.startsWith("audio/");
 const isText = (mime: string): boolean => mime.startsWith("text/") || mime === "application/json";
 
+const SAMPLE_TEXT = [
+  "Plano de conteúdo de verão",
+  "",
+  "Três posts por semana no Instagram, com foco nos lançamentos do cardápio de verão.",
+  "",
+  "Segunda: bastidores da cozinha.",
+  "Quarta: produto da semana.",
+  "Sexta: depoimento de cliente.",
+].join("\n");
+
 const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
   const wantsText = asset !== null && isText(asset.mimeType);
 
-  const { data, isError, isPending } = useQuery({
+  const { data, isError } = useQuery({
     enabled: wantsText,
     queryFn: async (): Promise<string> => {
       if (!asset) {
@@ -49,38 +60,32 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const renderText = () => {
-    if (isPending) {
-      return (
-        <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-          <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" />
-          Carregando…
-        </div>
-      );
-    }
-
-    if (isError) {
-      return (
-        <p className="py-12 text-center text-sm text-muted-foreground">
-          Não foi possível abrir este arquivo. Use o botão Baixar.
-        </p>
-      );
-    }
-
-    if (asset?.mimeType === "text/markdown") {
-      return (
-        <div className="text-sm leading-relaxed text-foreground">
-          <MarkdownResponse>{data}</MarkdownResponse>
-        </div>
-      );
-    }
-
-    return (
-      <pre className="overflow-auto rounded-lg bg-muted p-4 font-mono text-xs whitespace-pre-wrap text-foreground">
-        {data}
-      </pre>
-    );
-  };
+  const renderText = () => (
+    <Skeleton
+      data={data}
+      error={
+        isError ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            Não foi possível abrir este arquivo. Use o botão Baixar.
+          </p>
+        ) : undefined
+      }
+      label="Carregando arquivo"
+      sample={SAMPLE_TEXT}
+    >
+      {(text) =>
+        asset?.mimeType === "text/markdown" ? (
+          <div className="text-sm leading-relaxed text-foreground">
+            <MarkdownResponse>{text}</MarkdownResponse>
+          </div>
+        ) : (
+          <pre className="overflow-auto rounded-lg bg-muted p-4 font-mono text-xs whitespace-pre-wrap text-foreground">
+            {text}
+          </pre>
+        )
+      }
+    </Skeleton>
+  );
 
   return (
     <Dialog

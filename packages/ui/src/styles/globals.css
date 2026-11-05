@@ -497,6 +497,11 @@
   --skullet-animation: pulse;
 }
 
+/* Skullet draws bars in a layer after the ghost; isolating the ghost keeps a sticky or z-indexed sample from painting over them. */
+[skullet-ghost] {
+  isolation: isolate;
+}
+
 @layer components {
   [data-slot="message-scroller-viewport"] {
     @apply size-full min-h-0 min-w-0 scroll-fade-b scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-thumb-transparent data-autoscrolling:scrollbar-track-transparent;

@@ -1,9 +1,7 @@
-import { Skeleton } from "@repo/ui/components/skeleton";
-import { PageContainer } from "@repo/ui/compositions/page-container";
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
-import { EmpresaClient } from "@/components/empresa-client";
+import { EmpresaClient, EmpresaSample } from "@/components/empresa-client";
 import { apiGetServer } from "@/lib/api-server";
 import { requireCustomer } from "@/lib/auth-helpers";
 import type { BrandAsset, CompanyResponse } from "@/lib/company";
@@ -37,20 +35,10 @@ const EmpresaContent = async () => {
   );
 };
 
-const EmpresaSkeleton = () => (
-  <PageContainer aria-hidden>
-    <div className="flex flex-col gap-4">
-      <Skeleton className="h-8 w-56" />
-      <Skeleton className="h-40 w-full" />
-      <Skeleton className="h-40 w-full" />
-    </div>
-  </PageContainer>
-);
-
 const EmpresaPage = () => (
-  <Suspense fallback={<EmpresaSkeleton />}>
+  <SkeletonSuspense label="Carregando sua empresa" skeleton={<EmpresaSample />}>
     <EmpresaContent />
-  </Suspense>
+  </SkeletonSuspense>
 );
 
 export default EmpresaPage;

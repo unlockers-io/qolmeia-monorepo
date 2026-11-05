@@ -5,13 +5,14 @@ import { activityStyle } from "@/lib/activity-category";
 import { formatRelative } from "@/lib/format";
 
 type ActivityRowProps = {
+  now?: Date;
   row: ActivityEntry;
 };
 
 const hasPayload = (payload: ActivityEntry["payload"]): boolean =>
   payload !== null && Object.keys(payload).length > 0;
 
-const ActivityRow = ({ row }: ActivityRowProps) => {
+const ActivityRow = ({ now, row }: ActivityRowProps) => {
   const style = activityStyle(row.type);
 
   return (
@@ -33,7 +34,7 @@ const ActivityRow = ({ row }: ActivityRowProps) => {
           {row.companyName}
         </span>
         <time className="ml-auto text-xs whitespace-nowrap text-muted-foreground md:ml-0 md:min-w-24 md:shrink-0 md:text-right">
-          {formatRelative(row.createdAt)}
+          {formatRelative(row.createdAt, now)}
         </time>
       </div>
       {hasPayload(row.payload) && (

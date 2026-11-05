@@ -1,8 +1,7 @@
-import { Skeleton } from "@repo/ui/components/skeleton";
-import type { TemplateResponse } from "@repo/worker-api/contracts";
+import type { Template, TemplateResponse } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
 import { TemplateForm } from "@/components/template-form";
 import { ApiError } from "@/lib/api-client";
@@ -39,17 +38,27 @@ const EditTemplateContent = async ({ params }: EditTemplatePageProps) => {
   return <TemplateForm initial={detail.template} />;
 };
 
-const EditTemplateSkeleton = () => (
-  <div aria-hidden className="flex flex-col gap-6">
-    <Skeleton className="h-8 w-48" />
-    <Skeleton className="h-64 w-full" />
-  </div>
-);
+const SAMPLE_TEMPLATE: Template = {
+  createdAt: Date.parse("2026-01-01T12:00:00.000Z"),
+  defaultActionType: "worker_deliverable",
+  defaultPolicies: {},
+  description: "Cria imagens, posts e direções visuais alinhados à marca do cliente.",
+  displayName: "Designer",
+  id: "tpl-designer",
+  model: "openai/gpt-6-luna",
+  skillIds: ["generateBrandImage", "rememberFact", "recallMemory", "saveAsset"],
+  status: "active",
+  systemPrompt:
+    "Você é o Designer da Qolmeia. Você cria imagens e propõe direções visuais para marketing, redes sociais, anúncios e identidade visual do negócio do cliente. Responda sempre em português do Brasil, de forma direta e criativa.",
+  updatedAt: Date.parse("2026-01-01T12:00:00.000Z"),
+  version: 1,
+  workerKind: "designer",
+};
 
 const EditTemplatePage = (props: EditTemplatePageProps) => (
-  <Suspense fallback={<EditTemplateSkeleton />}>
+  <SkeletonSuspense label="Carregando modelo" skeleton={<TemplateForm initial={SAMPLE_TEMPLATE} />}>
     <EditTemplateContent {...props} />
-  </Suspense>
+  </SkeletonSuspense>
 );
 
 export default EditTemplatePage;

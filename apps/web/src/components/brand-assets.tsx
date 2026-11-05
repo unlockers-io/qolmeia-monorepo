@@ -9,12 +9,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { AssetImage } from "@repo/ui/compositions/asset-image";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, Loader2, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { type ChangeEvent, useRef, useState } from "react";
+import { Skeleton } from "skullet/react";
 import { toast } from "sonner";
 
 import {
@@ -33,6 +33,28 @@ const isBrandCategory = (value: string): value is BrandCategory =>
 const brandQueryKey = (companyId: string) => ["brand-assets", companyId] as const;
 const MAX_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME = ["image/gif", "image/jpeg", "image/png", "image/svg+xml", "image/webp"];
+
+const BLANK_IMAGE =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+const SAMPLE_BRAND_ASSETS: ReadonlyArray<BrandAsset> = [
+  {
+    category: "logo",
+    createdAt: "2026-01-01T12:00:00.000Z",
+    id: "00000000-0000-4000-8000-000000000001",
+    mimeType: "image/png",
+    name: "logo.png",
+    url: BLANK_IMAGE,
+  },
+  {
+    category: "post",
+    createdAt: "2026-01-01T12:00:00.000Z",
+    id: "00000000-0000-4000-8000-000000000002",
+    mimeType: "image/png",
+    name: "post-cardapio.png",
+    url: BLANK_IMAGE,
+  },
+];
 
 type BrandAssetsProps = {
   companyId: string;
@@ -64,10 +86,132 @@ const fileToDataUrl = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
+type BrandAssetsCardProps = {
+  assets: ReadonlyArray<BrandAsset>;
+  category: BrandCategory;
+  onCategoryChange: (category: BrandCategory) => void;
+  onFileSelected: (event: ChangeEvent<HTMLInputElement>) => void;
+  onRemove: (id: string) => void;
+  ready: boolean;
+  removing: boolean;
+  uploading: boolean;
+};
+
+const BrandAssetsCard = ({
+  assets,
+  category,
+  onCategoryChange,
+  onFileSelected,
+  onRemove,
+  ready,
+  removing,
+  uploading,
+}: BrandAssetsCardProps) => {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>Identidade da marca</h2>
+        </CardTitle>
+        <CardDescription>
+          Envie seu logo, posts e referências visuais. O Designer usa essas imagens para manter as
+          entregas alinhadas à sua marca.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Categoria
+            <select
+              className="h-11 rounded-lg border border-input bg-background px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 sm:h-9 sm:text-sm"
+              disabled={!ready}
+              onChange={(e) => {
+                const { value } = e.currentTarget;
+
+                if (isBrandCategory(value)) {
+                  onCategoryChange(value);
+                }
+              }}
+              value={category}
+            >
+              {BRAND_CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            accept={ALLOWED_MIME.join(",")}
+            aria-label="Enviar arquivo de marca"
+            className="sr-only"
+            disabled={!ready}
+            onChange={onFileSelected}
+            ref={fileRef}
+            type="file"
+          />
+          <Button
+            disabled={!ready || uploading}
+            onClick={() => fileRef.current?.click()}
+            type="button"
+            variant="outline"
+          >
+            {uploading ? (
+              <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" />
+            ) : (
+              <ImagePlus aria-hidden className="size-4" />
+            )}
+            Adicionar
+          </Button>
+        </div>
+
+        {assets.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma referência ainda. Comece pelo logo.
+          </p>
+        ) : null}
+        {assets.length > 0 ? (
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {assets.map((asset) => (
+              <li
+                className="relative overflow-hidden rounded-lg border border-border bg-muted"
+                key={asset.id}
+              >
+                <AssetImage
+                  alt={asset.name ?? "Referência de marca"}
+                  className="aspect-square w-full object-contain p-3"
+                  height={800}
+                  src={asset.url}
+                  width={800}
+                />
+                <Badge className="absolute top-1.5 left-1.5" variant="secondary">
+                  {BRAND_CATEGORY_LABEL[asset.category]}
+                </Badge>
+                <button
+                  aria-label="Remover referência"
+                  className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-md bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
+                  disabled={!ready || removing}
+                  onClick={() => {
+                    onRemove(asset.id);
+                  }}
+                  type="button"
+                >
+                  <X aria-hidden className="size-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+};
+
 const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
   const queryClient = useQueryClient();
   const queryKey = brandQueryKey(companyId);
-  const fileRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<BrandCategory>("logo");
   const ready = useClientReady();
 
@@ -137,7 +281,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
     },
   });
 
-  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -161,109 +305,27 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2>Identidade da marca</h2>
-        </CardTitle>
-        <CardDescription>
-          Envie seu logo, posts e referências visuais. O Designer usa essas imagens para manter as
-          entregas alinhadas à sua marca.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1.5 text-sm font-medium">
-            Categoria
-            <select
-              className="h-11 rounded-lg border border-input bg-background px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 sm:h-9 sm:text-sm"
-              disabled={!ready}
-              onChange={(e) => {
-                const { value } = e.currentTarget;
-
-                if (isBrandCategory(value)) {
-                  setCategory(value);
-                }
-              }}
-              value={category}
-            >
-              {BRAND_CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <input
-            accept={ALLOWED_MIME.join(",")}
-            aria-label="Enviar arquivo de marca"
-            className="sr-only"
-            disabled={!ready}
-            onChange={handleFileSelected}
-            ref={fileRef}
-            type="file"
-          />
-          <Button
-            disabled={!ready || uploadMutation.isPending}
-            onClick={() => fileRef.current?.click()}
-            type="button"
-            variant="outline"
-          >
-            {uploadMutation.isPending ? (
-              <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" />
-            ) : (
-              <ImagePlus aria-hidden className="size-4" />
-            )}
-            Adicionar
-          </Button>
-        </div>
-
-        {isPending ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <Skeleton className="aspect-square w-full" />
-            <Skeleton className="aspect-square w-full" />
-          </div>
-        ) : null}
-        {!isPending && assets.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma referência ainda. Comece pelo logo.
-          </p>
-        ) : null}
-        {!isPending && assets.length > 0 ? (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {assets.map((asset) => (
-              <li
-                className="relative overflow-hidden rounded-lg border border-border bg-muted"
-                key={asset.id}
-              >
-                <AssetImage
-                  alt={asset.name ?? "Referência de marca"}
-                  className="aspect-square w-full object-contain p-3"
-                  height={800}
-                  src={asset.url}
-                  width={800}
-                />
-                <Badge className="absolute top-1.5 left-1.5" variant="secondary">
-                  {BRAND_CATEGORY_LABEL[asset.category]}
-                </Badge>
-                <button
-                  aria-label="Remover referência"
-                  className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-md bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
-                  disabled={!ready || deleteMutation.isPending}
-                  onClick={() => {
-                    deleteMutation.mutate(asset.id);
-                  }}
-                  type="button"
-                >
-                  <X aria-hidden className="size-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </CardContent>
-    </Card>
+    <Skeleton
+      data={isPending ? null : assets}
+      label="Carregando a marca"
+      sample={SAMPLE_BRAND_ASSETS}
+    >
+      {(items) => (
+        <BrandAssetsCard
+          assets={items}
+          category={category}
+          onCategoryChange={setCategory}
+          onFileSelected={handleFileSelected}
+          onRemove={(id) => {
+            deleteMutation.mutate(id);
+          }}
+          ready={ready}
+          removing={deleteMutation.isPending}
+          uploading={uploadMutation.isPending}
+        />
+      )}
+    </Skeleton>
   );
 };
 
-export { BrandAssets };
+export { BrandAssets, BrandAssetsCard, SAMPLE_BRAND_ASSETS };
