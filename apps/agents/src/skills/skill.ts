@@ -1,4 +1,5 @@
 import type { AssetVisibility } from "@repo/db/worker";
+import type { SkillId } from "@repo/worker-api/contracts";
 import type { z } from "zod";
 
 type SkillContext = {
@@ -18,25 +19,34 @@ type SkillResult =
   | ReadonlyArray<SkillResult>
   | { readonly [key: string]: SkillResult | undefined };
 
-type Skill<Schema extends z.ZodObject = z.ZodObject, Result extends SkillResult = SkillResult> = {
+type Skill<
+  Id extends SkillId = SkillId,
+  Schema extends z.ZodObject = z.ZodObject,
+  Result extends SkillResult = SkillResult,
+> = {
   description: string;
   displayName: string;
   execute: (input: SkillInput, ctx: SkillContext) => Promise<Result>;
-  id: string;
+  id: Id;
   inputSchema: Schema;
 };
 
-type SkillDefinition<Schema extends z.ZodObject, Result extends SkillResult> = Omit<
-  Skill<Schema, Result>,
-  "execute"
-> & {
+type SkillDefinition<
+  Id extends SkillId,
+  Schema extends z.ZodObject,
+  Result extends SkillResult,
+> = Omit<Skill<Id, Schema, Result>, "execute"> & {
   execute: (input: z.output<Schema>, ctx: SkillContext) => Promise<Result>;
 };
 
-const defineSkill = <Schema extends z.ZodObject, Result extends SkillResult>({
+const defineSkill = <
+  const Id extends SkillId,
+  Schema extends z.ZodObject,
+  Result extends SkillResult,
+>({
   execute,
   ...definition
-}: SkillDefinition<Schema, Result>): Skill<Schema, Result> => ({
+}: SkillDefinition<Id, Schema, Result>): Skill<Id, Schema, Result> => ({
   ...definition,
   execute: async (input, ctx) => execute(definition.inputSchema.parse(input), ctx),
 });

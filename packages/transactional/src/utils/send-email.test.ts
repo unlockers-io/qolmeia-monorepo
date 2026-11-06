@@ -6,11 +6,10 @@ import { sendEmail, type EmailClientFactory } from "./send-email";
 const sendMock = vi.fn();
 
 const createClient: EmailClientFactory = () => ({
-  batch: { send: vi.fn() },
   emails: { send: sendMock },
 });
 
-describe("sendEmail from validation", () => {
+describe("sendEmail", () => {
   beforeEach(() => {
     sendMock.mockReset();
     sendMock.mockResolvedValue({ data: { id: "test" }, error: null });
@@ -18,49 +17,9 @@ describe("sendEmail from validation", () => {
 
   const template = createElement("div", null, "hi");
 
-  it('accepts "Display Name <email>" form in from', async () => {
+  it("sends from the Qolmeia sender on the email subdomain", async () => {
     const result = await sendEmail(
-      {
-        apiKey: "re_test",
-        from: "Qolmeia <noreply@email.qolmeia.com>",
-        subject: "x",
-        template,
-        to: "delivered+test@resend.dev",
-      },
-      createClient,
-    );
-
-    expect(result.success).toBe(true);
-    expect(sendMock).toHaveBeenCalledOnce();
-    expect(sendMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ from: "Qolmeia <noreply@email.qolmeia.com>" }),
-    );
-  });
-
-  it("accepts bare email in from", async () => {
-    const result = await sendEmail(
-      {
-        apiKey: "re_test",
-        from: "noreply@email.qolmeia.com",
-        subject: "x",
-        template,
-        to: "delivered+test@resend.dev",
-      },
-      createClient,
-    );
-
-    expect(result.success).toBe(true);
-  });
-
-  it("falls back to default wrapped sender when from is omitted", async () => {
-    const result = await sendEmail(
-      {
-        apiKey: "re_test",
-        subject: "x",
-        template,
-        to: "delivered+test@resend.dev",
-      },
+      { apiKey: "re_test", subject: "x", template, to: "delivered+test@resend.dev" },
       createClient,
     );
 
@@ -71,15 +30,9 @@ describe("sendEmail from validation", () => {
     );
   });
 
-  it("rejects from values that are neither bare email nor wrapped form", async () => {
+  it("refuses a recipient that is not an e-mail address", async () => {
     const result = await sendEmail(
-      {
-        apiKey: "re_test",
-        from: "not-an-email",
-        subject: "x",
-        template,
-        to: "delivered+test@resend.dev",
-      },
+      { apiKey: "re_test", subject: "x", template, to: "not-an-email" },
       createClient,
     );
 

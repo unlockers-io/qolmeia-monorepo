@@ -1,48 +1,12 @@
 "use client";
 
-import { Button } from "@repo/ui/components/button";
-import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import { useEffect, useRef } from "react";
+import { RouteError } from "@repo/app-shell/route-error";
+import type { ComponentProps } from "react";
 
 import { log } from "@/lib/observability-client";
 
-type ClientErrorProps = {
-  error: Error & { digest?: string };
-  reset: () => void;
-};
-
-const ClientError = ({ error, reset }: ClientErrorProps) => {
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const ready = useClientReady();
-
-  useEffect(() => {
-    log.error({ digest: error.digest, error: error.message, message: "Route error boundary" });
-    headingRef.current?.focus();
-  }, [error]);
-
-  return (
-    <main
-      className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-6 text-center"
-      id="main-content"
-    >
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-foreground" ref={headingRef} tabIndex={-1}>
-          Não foi possível carregar esta página
-        </h1>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Algo falhou do nosso lado. Tente de novo em instantes; seus dados continuam salvos.
-        </p>
-      </div>
-      <Button
-        disabled={!ready}
-        onClick={() => {
-          reset();
-        }}
-      >
-        Tentar novamente
-      </Button>
-    </main>
-  );
-};
+const ClientError = (props: Omit<ComponentProps<typeof RouteError>, "log">) => (
+  <RouteError {...props} log={log} />
+);
 
 export default ClientError;

@@ -1,4 +1,4 @@
-import { createServerApi, type ServerApi } from "@repo/worker-api";
+import { createServerApi } from "@repo/worker-api";
 import { headers } from "next/headers";
 
 import { agentsServerUrl } from "./agents-url";
@@ -9,7 +9,6 @@ const readCookieHeader = async (): Promise<string> => {
   return headersList.get("cookie") ?? "";
 };
 
-const createAppServerApi = (basePath?: string): ServerApi =>
-  createServerApi({ basePath, baseUrl: agentsServerUrl(), readCookieHeader });
+const { apiGetServer } = createServerApi({ baseUrl: agentsServerUrl(), readCookieHeader });
 
-export { createAppServerApi };
+export { apiGetServer };

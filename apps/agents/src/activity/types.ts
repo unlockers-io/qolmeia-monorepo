@@ -1,3 +1,5 @@
+import type { Surface } from "@repo/auth/roles";
+
 type ActionProposedEvent = {
   payload: { actionId: string; summary: string };
   refId: string;
@@ -88,14 +90,14 @@ type MemberRenamedEvent = {
 };
 
 type MemberPromptEditedEvent = {
-  payload: { editedBy: "customer" | "operator"; length: number };
+  payload: { editedBy: Surface; length: number };
   refId: string;
   refType: "agent_instance";
   type: "MEMBER_PROMPT_EDITED";
 };
 
 type MemberPromptResetEvent = {
-  payload: { editedBy: "customer" | "operator" };
+  payload: { editedBy: Surface };
   refId: string;
   refType: "agent_instance";
   type: "MEMBER_PROMPT_RESET";

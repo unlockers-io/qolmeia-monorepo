@@ -24,31 +24,7 @@ beforeEach(async () => {
   );
 });
 
-describe("/api/backoffice/teams/:companyId/members", () => {
-  it("lists members for STAFF", async () => {
-    cookie = await signInAs(meStaff);
-
-    const res = await fetchWithCookie(
-      cookie,
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members`,
-    );
-
-    expect(res.status).toBe(200);
-    const body = await res.json<{ members: Array<{ id: string }> }>();
-    expect(body.members.some((m) => m.id === WORKER_ID)).toBe(true);
-  });
-
-  it("403 for CUSTOMER", async () => {
-    cookie = await signInAs(meCustomer);
-
-    const res = await fetchWithCookie(
-      cookie,
-      `https://agents.test/api/backoffice/teams/${COMPANY_ID}/members`,
-    );
-
-    expect(res.status).toBe(403);
-  });
-
+describe("/api/backoffice/teams/:companyId/members/:id", () => {
   it("GET member detail returns templateSystemPrompt and promptOverride", async () => {
     cookie = await signInAs(meStaff);
 
@@ -109,19 +85,6 @@ describe("/api/backoffice/teams/:companyId/members", () => {
 });
 
 describe("backoffice team routes: cross-tenant", () => {
-  it("STAFF queries another company's members list (empty when it has none)", async () => {
-    cookie = await signInAs(meStaff);
-
-    const res = await fetchWithCookie(
-      cookie,
-      `https://agents.test/api/backoffice/teams/co_other_company/members`,
-    );
-
-    expect(res.status).toBe(200);
-    const body = await res.json<{ members: Array<{ id: string }> }>();
-    expect(body.members).toEqual([]);
-  });
-
   it("404 (not 403) when STAFF reads a member that doesn't exist in that company", async () => {
     cookie = await signInAs(meStaff);
 

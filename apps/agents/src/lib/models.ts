@@ -9,8 +9,8 @@ type GatewayEnv = Pick<
   "AI_GATEWAY_ACCOUNT_ID" | "AI_GATEWAY_NAME" | "OPENROUTER_API_KEY" | "WORKER_PUBLIC_URL"
 >;
 
-// Pi's bundled catalog predates this release; the metadata is copied from
-// https://openrouter.ai/api/v1/models (2026-09-29).
+// shortcut: metadata copied by hand from https://openrouter.ai/api/v1/models (2026-09-29) because
+// Pi 0.83's bundled catalog stops at Claude Sonnet 5; drop it once @earendil-works/pi-ai ships 5.5.
 const CONVERSATION: Omit<Model<"openai-completions">, "baseUrl"> = {
   api: "openai-completions",
   contextWindow: 1_000_000,

@@ -1,5 +1,6 @@
 "use client";
 
+import { describeRequestError } from "@repo/worker-api";
 import Link from "next/link";
 
 import { AgentCard } from "@/components/agent-card";
@@ -22,7 +23,9 @@ const TeamSidebar = ({ companyId }: TeamSidebarProps) => {
         <p className="text-xs text-muted-foreground">Carregando…</p>
       )}
       {error && (
-        <p className="text-xs text-destructive">Falha ao carregar o time: {error.message}</p>
+        <p className="text-xs text-destructive">
+          {describeRequestError(error, "Falha ao carregar o Time.")}
+        </p>
       )}
       <ul className="flex flex-col gap-2.5">
         {members.map((m) => (

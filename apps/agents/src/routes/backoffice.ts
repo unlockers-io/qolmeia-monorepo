@@ -1,45 +1,42 @@
 import { sendCustomerInvitation } from "@repo/auth/server";
-import { Prisma } from "@repo/db/worker";
-import type {
-  ActionDetailResponse,
-  ActionsResponse,
-  ActivityResponse,
-  CompanyRoster,
-  CoverageResponse,
-  CustomerInvitationResponse,
-  SkillCatalogResponse,
-  TemplateInput,
-  TemplateResponse,
-  TemplatesResponse,
-  TicketDetailResponse,
-  TicketsResponse,
-  TicketStatus,
+import {
+  ACTIVITY_CATEGORIES,
+  companyInputSchema,
+  coverageInputSchema,
+  decisionInputSchema,
+  invitationInputSchema,
+  operatorMemberPatchSchema,
+  templateInputSchema,
+  templateStatusInputSchema,
+  type ActionDetailResponse,
+  type ActivityResponse,
+  type CompaniesResponse,
+  type CoverageResponse,
+  type CustomerInvitationResponse,
+  type MemberDetailResponse,
+  type PendingActionsResponse,
+  type SkillCatalogResponse,
+  type TemplateResponse,
+  type TemplatesResponse,
+  type TicketDetailResponse,
+  type TicketsResponse,
 } from "@repo/worker-api/contracts";
 import { Hono } from "hono";
-import { z } from "zod";
 
-import {
-  canRequestChanges,
-  getAction,
-  listActions,
-  listPendingActions,
-  listTicketActions,
-} from "#/action/action";
-import { actionTypeSchema, defaultPoliciesSchema } from "#/action/action-types";
-import { ACTIVITY_CATEGORIES, listActivity } from "#/activity/log";
+import { getActionDetail, listPendingActions, listTicketActions } from "#/action/action";
+import { submitDecision } from "#/action/decision";
+import { listActivity } from "#/activity/log";
 import { listCompaniesOverview } from "#/company/company";
 import { inviteCustomer } from "#/company/invitation";
 import { createOrganization } from "#/company/organization";
 import { requireOperator, type IdentityEnv } from "#/identity/gates";
-import { submitDecision } from "#/jobs/decision";
 import { createWorkerAuth } from "#/lib/auth";
-import { dbPerRequest } from "#/lib/db";
 import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
+import { jsonBody } from "#/lib/validate";
 import { getCoverage, getCoverageOptions, setCoverage } from "#/operator/assignment";
-import { isKnownSkill, listSkillCatalog } from "#/skills/registry";
-import { TeamError } from "#/team/errors";
-import { backofficeTeamMemberPatchSchema, setMemberStatus, updateMember } from "#/team/members";
-import { getMemberDetail, getTeamRoster, listTeamRosters } from "#/team/roster";
+import { listSkillCatalog } from "#/skills/registry";
+import { setMemberStatus, updateMember } from "#/team/members";
+import { getMemberDetail, listTeamRosters } from "#/team/roster";
 import {
   createTemplate,
   getTemplate,
@@ -51,139 +48,12 @@ import { listTickets, loadTicket } from "#/ticket/ticket";
 
 const backofficeRoutes = new Hono<IdentityEnv>();
 
-backofficeRoutes.use("*", dbPerRequest);
-
 backofficeRoutes.use("*", requireOperator);
 
-const TICKET_STATUSES: ReadonlyArray<TicketStatus> = [
-  "awaiting_approval",
-  "blocked",
-  "cancelled",
-  "done",
-  "in_progress",
-  "open",
-  "rejected",
-];
-
-const isTicketStatus = (value: string): value is TicketStatus =>
-  TICKET_STATUSES.some((status) => status === value);
-
 backofficeRoutes.get("/tickets", async (c) => {
-  const companyId = c.req.query("companyId");
-  const status = c.req.query("status");
-
-  if (status !== undefined && !isTicketStatus(status)) {
-    return c.json({ error: "invalid status" }, 400);
-  }
-
-  const limit = parsePositiveInt(c.req.query("limit"), 50, 200);
-  const items = await listTickets(c.var.db, { companyId, limit, status });
-  const body: TicketsResponse = { items };
-
-  return c.json(body);
-});
-
-backofficeRoutes.get("/actions", async (c) => {
-  const status = c.req.query("status");
-  const sort = c.req.query("sort");
-  const companyId = c.req.query("companyId");
-
-  const { db } = c.var;
-
-  if (status === "pending") {
-    const items = await listPendingActions(
-      db,
-      companyId !== undefined && companyId !== ""
-        ? { companyId }
-        : await getCoverage(db, c.get("session").userId),
-    );
-
-    const now = Date.now();
-
-    const enriched = items.map((a) => ({
-      actionType: a.actionType,
-      agent: a.agent,
-      ageSeconds: Math.floor((now - a.createdAt) / 1000),
-      companyId: a.companyId,
-      companyName: a.companyName,
-      createdAt: a.createdAt,
-      decidedAt: a.decidedAt,
-      decidedByUserId: a.decidedByUserId,
-      feedback: a.feedback,
-      id: a.id,
-      policy: a.policy,
-      proposed: a.proposed,
-      status: a.status,
-      ticketId: a.ticketId,
-    }));
-
-    const sorted =
-      sort === "age" ? enriched.toSorted((x, y) => y.ageSeconds - x.ageSeconds) : enriched;
-
-    const pendingBody: ActionsResponse = { items: sorted };
-
-    return c.json(pendingBody);
-  }
-
-  const items = await listActions(db, companyId);
-  const body: ActionsResponse = { items };
-
-  return c.json(body);
-});
-
-const decideBodySchema = z.object({
-  decision: z.enum(["approved", "changes_requested", "rejected"]),
-  feedback: z.string().max(2000).optional(),
-});
-
-backofficeRoutes.post("/actions/:id/decide", async (c) => {
-  let body: unknown;
-
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "invalid JSON" }, 400);
-  }
-
-  const parsed = decideBodySchema.safeParse(body);
-
-  if (!parsed.success) {
-    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
-  }
-
-  const receipt = await submitDecision(c.env, c.var.db, c.req.param("id"), {
-    ...parsed.data,
-    decidedByUserId: c.get("session").userId,
-  });
-
-  if (receipt.ok) {
-    return c.json({ ok: true });
-  }
-
-  if (receipt.reason === "not_found") {
-    return c.text("Not found", 404);
-  }
-
-  if (receipt.reason === "not_pending") {
-    return c.json({ error: `action already ${receipt.status}` }, 409);
-  }
-
-  if (receipt.reason === "revision_limit") {
-    return c.json({ error: "revision limit reached" }, 409);
-  }
-
-  return c.json({ error: "no workflow for this action" }, 500);
-});
-
-backofficeRoutes.get("/activity", async (c) => {
-  const companyId = c.req.query("companyId");
-  const since = parseTimestamp(c.req.query("since"));
-  const before = parseTimestamp(c.req.query("before"));
-  const limit = parsePositiveInt(c.req.query("limit"), 100, 500);
-  const rawCategory = c.req.query("category");
-  const category = ACTIVITY_CATEGORIES.find((value) => value === rawCategory);
-  const items = await listActivity(c.var.db, { before, category, companyId, limit, since });
-  const body: ActivityResponse = { items };
+  const body: TicketsResponse = {
+    items: await listTickets(c.var.db, parsePositiveInt(c.req.query("limit"), 50, 200)),
+  };
 
   return c.json(body);
 });
@@ -194,36 +64,52 @@ backofficeRoutes.get("/tickets/:id", async (c) => {
   const ticket = await loadTicket(db, id);
 
   if (!ticket) {
-    return c.text("Not found", 404);
+    return c.json({ error: "not found" }, 404);
   }
 
-  const actions = await listTicketActions(db, id);
-  const body: TicketDetailResponse = { actions, ticket };
+  const body: TicketDetailResponse = { actions: await listTicketActions(db, id), ticket };
+
+  return c.json(body);
+});
+
+backofficeRoutes.get("/actions", async (c) => {
+  const { db } = c.var;
+
+  const body: PendingActionsResponse = {
+    items: await listPendingActions(db, await getCoverage(db, c.var.session.userId)),
+  };
 
   return c.json(body);
 });
 
 backofficeRoutes.get("/actions/:id", async (c) => {
-  const id = c.req.param("id");
-  const { db } = c.var;
-  const action = await getAction(db, id);
+  const body: ActionDetailResponse | null = await getActionDetail(c.var.db, c.req.param("id"));
 
-  if (!action) {
-    return c.text("Not found", 404);
+  if (!body) {
+    return c.json({ error: "not found" }, 404);
   }
 
-  const [ticket, changesAllowed] = await Promise.all([
-    loadTicket(db, action.ticketId),
-    canRequestChanges(db, action.ticketId),
-  ]);
+  return c.json(body);
+});
 
-  const ageSeconds = Math.floor((Date.now() - action.createdAt) / 1000);
+backofficeRoutes.post("/actions/:id/decide", jsonBody(decisionInputSchema), async (c) => {
+  await submitDecision(c.env, c.var.db, c.req.param("id"), {
+    ...c.req.valid("json"),
+    decidedByUserId: c.var.session.userId,
+  });
 
-  const body: ActionDetailResponse = {
-    action,
-    ageSeconds,
-    canRequestChanges: changesAllowed,
-    ticket,
+  return c.json({ ok: true });
+});
+
+backofficeRoutes.get("/activity", async (c) => {
+  const rawCategory = c.req.query("category");
+
+  const body: ActivityResponse = {
+    items: await listActivity(c.var.db, {
+      before: parseTimestamp(c.req.query("before")),
+      category: ACTIVITY_CATEGORIES.find((value) => value === rawCategory),
+      limit: parsePositiveInt(c.req.query("limit"), 100, 500),
+    }),
   };
 
   return c.json(body);
@@ -238,94 +124,57 @@ backofficeRoutes.get("/companies", async (c) => {
     companies.map((company) => company.id),
   );
 
-  const withRosters = companies.map((company): CompanyRoster => ({
-    briefPercent: company.briefPercent,
-    id: company.id,
-    members: rosters.get(company.id) ?? [],
-    name: company.name,
-    status: company.status,
-  }));
+  const body: CompaniesResponse = {
+    companies: companies.map((company) =>
+      Object.assign(company, { members: rosters.get(company.id) ?? [] }),
+    ),
+  };
 
-  return c.json({ companies: withRosters });
+  return c.json(body);
 });
 
-const SLUG_PATTERN = /^[a-z0-9\-]+$/v;
+backofficeRoutes.post("/companies", jsonBody(companyInputSchema), async (c) => {
+  const company = await createOrganization(c.var.db, c.req.valid("json"));
 
-const companyBodySchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  slug: z
-    .string()
-    .min(1)
-    .max(80)
-    .regex(SLUG_PATTERN, "slug must be lowercase alphanumeric or dashes"),
+  return c.json({ company }, 201);
 });
 
-backofficeRoutes.post("/companies", async (c) => {
-  const parsed = companyBodySchema.safeParse(await c.req.json().catch(() => null));
+backofficeRoutes.post(
+  "/companies/:companyId/invitations",
+  jsonBody(invitationInputSchema),
+  async (c) => {
+    const { companyName, invitation } = await inviteCustomer(
+      createWorkerAuth(c.env, c.var.db),
+      c.var.db,
+      {
+        companyId: c.req.param("companyId"),
+        email: c.req.valid("json").email,
+        inviterId: c.var.session.userId,
+      },
+    );
 
-  if (!parsed.success) {
-    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
-  }
+    const sent = await sendCustomerInvitation({
+      acceptUrl: `${c.env.WEB_APP_URL}/convite/${invitation.id}`,
+      companyName,
+      email: invitation.email,
+      resendApiKey: c.env.RESEND_API_KEY,
+    });
 
-  try {
-    const company = await createOrganization(c.var.db, parsed.data);
-
-    return c.json({ company }, 201);
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return c.json({ error: "slug already in use" }, 409);
+    if (!sent) {
+      return c.json({ error: "invitation email failed" }, 502);
     }
 
-    throw error;
-  }
-});
+    const body: CustomerInvitationResponse = { invitation };
 
-const invitationBodySchema = z.object({ email: z.email().max(254) });
-
-backofficeRoutes.post("/companies/:companyId/invitations", async (c) => {
-  const parsed = invitationBodySchema.safeParse(await c.req.json().catch(() => null));
-
-  if (!parsed.success) {
-    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
-  }
-
-  const email = parsed.data.email.toLowerCase();
-
-  const result = await inviteCustomer(createWorkerAuth(c.env, c.var.db), c.var.db, {
-    companyId: c.req.param("companyId"),
-    email,
-    inviterId: c.get("session").userId,
-  });
-
-  if (result.kind === "company_not_found") {
-    return c.json({ error: "not found" }, 404);
-  }
-
-  if (result.kind === "already_member") {
-    return c.json({ error: "email already belongs to a member" }, 409);
-  }
-
-  const sent = await sendCustomerInvitation({
-    acceptUrl: `${c.env.WEB_APP_URL}/convite/${result.invitation.id}`,
-    companyName: result.companyName,
-    email,
-    resendApiKey: c.env.RESEND_API_KEY,
-  });
-
-  if (!sent) {
-    return c.json({ error: "invitation email failed" }, 502);
-  }
-
-  const body: CustomerInvitationResponse = { invitation: result.invitation };
-
-  return c.json(body, 201);
-});
+    return c.json(body, 201);
+  },
+);
 
 backofficeRoutes.get("/assignments/me", async (c) => {
   const { db } = c.var;
 
   const [assigned, options] = await Promise.all([
-    getCoverage(db, c.get("session").userId),
+    getCoverage(db, c.var.session.userId),
     getCoverageOptions(db),
   ]);
 
@@ -334,101 +183,46 @@ backofficeRoutes.get("/assignments/me", async (c) => {
   return c.json(body);
 });
 
-const coverageBodySchema = z.object({
-  companies: z.array(z.string().min(1)).max(1000),
-  disciplines: z.array(z.string().min(1)).max(100),
-});
+backofficeRoutes.put("/assignments/me", jsonBody(coverageInputSchema), async (c) => {
+  const assigned = c.req.valid("json");
+  await setCoverage(c.var.db, c.var.session.userId, assigned);
 
-backofficeRoutes.put("/assignments/me", async (c) => {
-  const parsed = coverageBodySchema.safeParse(await c.req.json().catch(() => null));
+  const body: Pick<CoverageResponse, "assigned"> = { assigned };
 
-  if (!parsed.success) {
-    return c.json({ error: "invalid body" }, 400);
-  }
-
-  await setCoverage(c.var.db, c.get("session").userId, parsed.data);
-
-  return c.json({ assigned: parsed.data });
-});
-
-backofficeRoutes.get("/teams/:companyId/members", async (c) => {
-  const companyId = c.req.param("companyId");
-  const members = await getTeamRoster(c.var.db, companyId);
-
-  return c.json({ members });
+  return c.json(body);
 });
 
 backofficeRoutes.get("/teams/:companyId/members/:id", async (c) => {
-  const member = await getMemberDetail(c.var.db, c.req.param("companyId"), c.req.param("id"));
+  const body: MemberDetailResponse = {
+    member: await getMemberDetail(c.var.db, c.req.param("companyId"), c.req.param("id")),
+  };
 
-  if (!member) {
-    return c.json({ error: "not found" }, 404);
-  }
-
-  return c.json({ member });
+  return c.json(body);
 });
 
-backofficeRoutes.patch("/teams/:companyId/members/:id", async (c) => {
-  const companyId = c.req.param("companyId");
-  const id = c.req.param("id");
-  const parsed = backofficeTeamMemberPatchSchema.safeParse(await c.req.json().catch(() => null));
+backofficeRoutes.patch(
+  "/teams/:companyId/members/:id",
+  jsonBody(operatorMemberPatchSchema),
+  async (c) => {
+    const patch = c.req.valid("json");
 
-  if (!parsed.success) {
-    return c.json({ error: "invalid body" }, 400);
-  }
+    const target = {
+      actor: c.var.session,
+      agentInstanceId: c.req.param("id"),
+      companyId: c.req.param("companyId"),
+    };
 
-  const { db } = c.var;
+    await ("status" in patch
+      ? setMemberStatus(c.env, c.var.db, { ...target, status: patch.status })
+      : updateMember(c.env, c.var.db, { ...target, ...patch }));
 
-  try {
-    await (parsed.data.status === undefined
-      ? updateMember(c.env, db, {
-          agentInstanceId: id,
-          companyId,
-          displayName: parsed.data.displayName,
-          editedBy: "operator",
-          operatorId: c.get("session").userId,
-          promptOverride: parsed.data.promptOverride,
-        })
-      : setMemberStatus(c.env, db, {
-          actorId: c.get("session").userId,
-          agentInstanceId: id,
-          companyId,
-          status: parsed.data.status,
-        }));
-    const member = await getMemberDetail(db, companyId, id);
+    const body: MemberDetailResponse = {
+      member: await getMemberDetail(c.var.db, target.companyId, target.agentInstanceId),
+    };
 
-    if (!member) {
-      return c.json({ error: "not found" }, 404);
-    }
-
-    return c.json({ member });
-  } catch (error) {
-    if (error instanceof TeamError) {
-      return c.json({ error: error.message }, error.status);
-    }
-
-    throw error;
-  }
-});
-
-const skillIdsSchema = z.array(z.string().min(1)).refine((ids) => ids.every(isKnownSkill), {
-  message: "unknown skill id",
-});
-
-const templateBodySchema = z.object({
-  defaultActionType: actionTypeSchema.default("worker_deliverable"),
-  defaultPolicies: defaultPoliciesSchema.default({}),
-  description: z.string().trim().min(1).max(2000),
-  displayName: z.string().trim().min(1).max(120),
-  model: z.string().trim().min(1).max(160),
-  skillIds: skillIdsSchema,
-  systemPrompt: z.string().trim().min(1).max(20_000),
-  workerKind: z.string().trim().min(1).max(80),
-});
-
-const templateStatusSchema = z.object({
-  status: z.enum(["active", "retired"]),
-});
+    return c.json(body);
+  },
+);
 
 backofficeRoutes.get("/skills", (c) => {
   const body: SkillCatalogResponse = { items: listSkillCatalog() };
@@ -437,8 +231,7 @@ backofficeRoutes.get("/skills", (c) => {
 });
 
 backofficeRoutes.get("/templates", async (c) => {
-  const items = await listAllTemplates(c.var.db);
-  const body: TemplatesResponse = { items };
+  const body: TemplatesResponse = { items: await listAllTemplates(c.var.db) };
 
   return c.json(body);
 });
@@ -455,29 +248,16 @@ backofficeRoutes.get("/templates/:id", async (c) => {
   return c.json(body);
 });
 
-backofficeRoutes.post("/templates", async (c) => {
-  const parsed = templateBodySchema.safeParse(await c.req.json().catch(() => null));
-
-  if (!parsed.success) {
-    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
-  }
-
-  const input: TemplateInput = parsed.data;
-  const template = await createTemplate(c.var.db, input);
-  const body: TemplateResponse = { template };
+backofficeRoutes.post("/templates", jsonBody(templateInputSchema), async (c) => {
+  const body: TemplateResponse = {
+    template: await createTemplate(c.var.db, c.req.valid("json")),
+  };
 
   return c.json(body, 201);
 });
 
-backofficeRoutes.patch("/templates/:id", async (c) => {
-  const parsed = templateBodySchema.safeParse(await c.req.json().catch(() => null));
-
-  if (!parsed.success) {
-    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
-  }
-
-  const input: TemplateInput = parsed.data;
-  const template = await updateTemplate(c.var.db, c.req.param("id"), input);
+backofficeRoutes.patch("/templates/:id", jsonBody(templateInputSchema), async (c) => {
+  const template = await updateTemplate(c.var.db, c.req.param("id"), c.req.valid("json"));
 
   if (!template) {
     return c.json({ error: "not found" }, 404);
@@ -488,14 +268,8 @@ backofficeRoutes.patch("/templates/:id", async (c) => {
   return c.json(body);
 });
 
-backofficeRoutes.patch("/templates/:id/status", async (c) => {
-  const parsed = templateStatusSchema.safeParse(await c.req.json().catch(() => null));
-
-  if (!parsed.success) {
-    return c.json({ error: "invalid body", issues: parsed.error.issues }, 400);
-  }
-
-  const template = await setTemplateStatus(c.var.db, c.req.param("id"), parsed.data.status);
+backofficeRoutes.patch("/templates/:id/status", jsonBody(templateStatusInputSchema), async (c) => {
+  const template = await setTemplateStatus(c.var.db, c.req.param("id"), c.req.valid("json").status);
 
   if (!template) {
     return c.json({ error: "not found" }, 404);

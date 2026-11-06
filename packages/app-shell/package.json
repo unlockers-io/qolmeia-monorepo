@@ -4,31 +4,54 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./agent-avatar": "./src/agent-avatar.ts",
+    "./agent-status": "./src/agent-status.ts",
     "./auth-client": "./src/auth-client.ts",
+    "./auth-fields": "./src/auth-fields.tsx",
+    "./auth-schemas": "./src/auth-schemas.ts",
+    "./document": "./src/document.tsx",
+    "./error-boundary": "./src/error-boundary.ts",
+    "./form-limits": "./src/form-limits.ts",
+    "./global-error": "./src/global-error.tsx",
+    "./match-route": "./src/match-route.ts",
     "./next-config": "./src/next-config.ts",
+    "./no-access": "./src/no-access.tsx",
+    "./not-found": "./src/not-found.tsx",
+    "./opengraph-image": "./src/opengraph-image.tsx",
+    "./prompt-editor": "./src/prompt-editor.tsx",
     "./proxy": "./src/proxy.ts",
-    "./redirect-path": "./src/redirect-path.ts",
+    "./root-layout": "./src/root-layout.ts",
+    "./route-error": "./src/route-error.tsx",
     "./server-api": "./src/server-api.ts",
     "./session": "./src/session.ts",
+    "./sign-out-button": "./src/sign-out-button.tsx",
     "./signed-in-redirect": "./src/signed-in-redirect.tsx",
-    "./signup": "./src/signup.ts"
+    "./skip-link": "./src/skip-link.tsx",
+    "./styles.css": "./src/styles.css"
   },
   "scripts": {
-    "lint": "oxlint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@repo/auth": "workspace:*",
     "@repo/portless-env": "workspace:*",
+    "@repo/social-image": "workspace:*",
+    "@repo/ui": "workspace:*",
     "@repo/worker-api": "workspace:*",
-    "better-auth": "^1.7.6"
+    "@tanstack/react-form": "^1.33.5",
+    "better-auth": "^1.7.6",
+    "lucide-react": "^1.48.0",
+    "sonner": "^2.0.8",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@repo/config-vitest": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@testing-library/react": "^16.3.3",
     "next": "^16.3.8",
     "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
   }

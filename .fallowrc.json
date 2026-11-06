@@ -7,10 +7,7 @@
     "oxlint.config.ts",
     "**/prisma.config.ts",
     "apps/agents/scripts/*.ts",
-    "apps/*/src/lib/observability.ts",
     "packages/transactional/src/emails/**/*.tsx",
-    "scripts/e2e-*.mjs",
-    "tests/e2e/support/*.mjs",
     "apps/agents/src/app.ts",
     "apps/agents/src/cloudflare.ts",
     "apps/agents/src/agents/*.ts"
@@ -28,6 +25,10 @@
     {
       "file": "apps/landing/src/app/not-found.tsx",
       "exports": ["metadata"]
+    },
+    {
+      "file": "apps/*/src/lib/observability.ts",
+      "exports": ["onRequestError", "register"]
     }
   ],
   "ignoreDependencies": [

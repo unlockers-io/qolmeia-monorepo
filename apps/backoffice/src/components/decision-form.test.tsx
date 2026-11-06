@@ -99,14 +99,14 @@ describe("DecisionForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Rejeitar ação" }));
 
-    expect(screen.getByText("Use no máximo 2000 caracteres.")).toBeInTheDocument();
+    expect(screen.getByText("Use no máximo 2.000 caracteres.")).toBeInTheDocument();
     await waitFor(() => {
       expect(feedback).toHaveFocus();
     });
     expect(fetchMock).not.toHaveBeenCalled();
 
     fireEvent.change(feedback, { target: { value: "a".repeat(2000) } });
-    expect(screen.queryByText("Use no máximo 2000 caracteres.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Use no máximo 2.000 caracteres.")).not.toBeInTheDocument();
   });
 
   it("reports a failed send in the form alert and clears it on the next change", async () => {

@@ -10,14 +10,12 @@ type BaseLayoutProps = {
   children: React.ReactNode;
   footerText?: string;
   preview: string;
-  unsubscribeUrl?: string;
 };
 
 const BaseLayout = ({
   children,
   footerText = "Você está recebendo este e-mail porque tem uma conta na Qolmeia.",
   preview,
-  unsubscribeUrl,
 }: BaseLayoutProps) => {
   const currentYear = new Date().getFullYear();
 
@@ -53,17 +51,6 @@ const BaseLayout = ({
                 >
                   Visite a Qolmeia
                 </Link>
-                {unsubscribeUrl !== undefined && unsubscribeUrl !== "" && (
-                  <>
-                    <span className="px-2 text-sm text-border">·</span>
-                    <Link
-                      className="text-sm font-semibold text-muted-foreground no-underline"
-                      href={unsubscribeUrl}
-                    >
-                      Cancelar inscrição
-                    </Link>
-                  </>
-                )}
               </Text>
 
               <Text className="m-0 text-xs text-muted-foreground">

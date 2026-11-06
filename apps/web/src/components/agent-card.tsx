@@ -1,11 +1,11 @@
 "use client";
 
-import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
-import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/ui/lib/agent-avatar";
+import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/app-shell/agent-avatar";
+import { AGENT_STATUS } from "@repo/app-shell/agent-status";
+import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { cn } from "@repo/ui/lib/utils";
+import type { TeamMemberView } from "@repo/worker-api/contracts";
 import { Pencil } from "lucide-react";
-
-import { STATUS_LABEL, type AgentDisplayStatus, type TeamMemberView } from "@/lib/team";
 
 type Variant = "compact" | "detailed";
 
@@ -17,26 +17,14 @@ type AgentCardProps = {
 const deliveriesLabel = (count: number): string =>
   `${count} ${count === 1 ? "entrega" : "entregas"}`;
 
-const STATUS_TONE = {
-  available: "success",
-  awaiting_approval: "warning",
-  paused: "neutral",
-  working: "info",
-} satisfies Record<AgentDisplayStatus, StatusTone>;
-
 const AgentCard = ({ member, variant }: AgentCardProps) => {
   const currentWork = member.currentWork.at(0);
   const detailed = variant === "detailed";
-  const tone = STATUS_TONE[member.status];
+  const status = AGENT_STATUS[member.status];
   const deliveries = member.role === "worker" ? deliveriesLabel(member.lifetimeDone) : null;
 
   const statusPill = (
-    <StatusPill
-      className="shrink-0"
-      label={STATUS_LABEL[member.status]}
-      pulse={member.status === "working"}
-      tone={tone}
-    />
+    <StatusPill className="shrink-0" label={status.label} pulse={status.pulse} tone={status.tone} />
   );
 
   return (
@@ -82,5 +70,3 @@ const AgentCard = ({ member, variant }: AgentCardProps) => {
 };
 
 export { AgentCard };
-
-export type { AgentCardProps };

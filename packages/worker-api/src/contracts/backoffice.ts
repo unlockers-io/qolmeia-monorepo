@@ -1,12 +1,22 @@
-import type {
-  ActionPolicy,
-  ActionStatus,
-  AgentRole,
+import {
+  type ActionPolicy,
+  type ActionStatus,
+  type AgentRole,
   TemplateStatus,
-  TicketStatus,
+  type TicketStatus,
 } from "@repo/db/enums";
+import { z } from "zod";
 
-import type { ActionType } from "./actions";
+import {
+  actionPolicySchema,
+  actionTypeSchema,
+  type ActionType,
+  type ProposedOf,
+  type TicketResult,
+} from "./actions";
+import type { CompanyRoster } from "./agents";
+import { memberPatchSchema } from "./customer";
+import { SKILL_IDS, type SkillId } from "./skills";
 
 type WireValue =
   | boolean
@@ -32,59 +42,55 @@ type AgentSummary = {
 
 type Ticket = {
   agent: AgentSummary;
-  agentInstanceId: string;
   brief: string;
   companyId: string;
   companyName: string;
   id: string;
-  result: WireObject | null;
+  result: TicketResult | null;
   status: TicketStatus;
-  workflowId: string | null;
+  title: string;
 };
 
 type TicketListRow = Ticket & {
   createdAt: number;
-  origin: string;
-  title: string;
   updatedAt: number;
 };
 
-type Action = {
-  actionType: ActionType;
+type ActionFields = {
   agent: AgentSummary;
   companyId: string;
   companyName: string;
   createdAt: number;
   decidedAt: number | null;
-  decidedByUserId: string | null;
   feedback: string | null;
   id: string;
   policy: ActionPolicy;
-  proposed: WireObject;
   status: ActionStatus;
   ticketId: string;
 };
 
-type ActionListRow = Action & {
-  ageSeconds?: number;
+type ActionOf<Type extends ActionType> = ActionFields & {
+  actionType: Type;
+  proposed: ProposedOf<Type>;
 };
 
+type Action = { [Type in ActionType]: ActionOf<Type> }[ActionType];
+
+type PendingAction = Action & { ageSeconds: number };
+
 type ActivityEntry = {
-  actorId: string | null;
   companyId: string;
   companyName: string;
   createdAt: number;
   id: string;
   payload: WireObject | null;
-  refId: string | null;
-  refType: string | null;
   summary: string;
   type: string;
 };
 
 type TicketsResponse = { items: ReadonlyArray<TicketListRow> };
 
-type ActionsResponse = { items: ReadonlyArray<ActionListRow> };
+type PendingActionsResponse = { items: ReadonlyArray<PendingAction> };
 
 type ActivityResponse = { items: ReadonlyArray<ActivityEntry> };
 
@@ -96,30 +102,33 @@ type ActionDetailResponse = {
   action: ActionDetail;
   ageSeconds: number;
   canRequestChanges: boolean;
-  ticket: Ticket | null;
+  rounds: ReadonlyArray<Action>;
+  ticket: Ticket;
 };
-
-type DecisionOutcome = "approved" | "changes_requested" | "rejected";
 
 type OperatorCoverage = {
   companies: ReadonlyArray<string>;
   disciplines: ReadonlyArray<string>;
 };
 
+type CoverageOption = { id: string; name: string };
+
 type CoverageResponse = {
   assigned: OperatorCoverage;
   options: {
-    companies: ReadonlyArray<{ id: string; name: string }>;
-    disciplineNames?: Readonly<Record<string, string>>;
-    // Keep IDs as strings for clients deployed before discipline labels were added.
-    disciplines: ReadonlyArray<string>;
+    companies: ReadonlyArray<CoverageOption>;
+    disciplines: ReadonlyArray<CoverageOption>;
   };
 };
 
+const coverageInputSchema = z.object({
+  companies: z.array(z.string().min(1)).max(1000),
+  disciplines: z.array(z.string().min(1)).max(100),
+});
+
 type Template = {
-  createdAt: number;
   defaultActionType: ActionType;
-  defaultPolicies: Record<string, string>;
+  defaultPolicies: Partial<Record<ActionType, ActionPolicy>>;
   description: string;
   displayName: string;
   id: string;
@@ -127,27 +136,55 @@ type Template = {
   skillIds: ReadonlyArray<string>;
   status: TemplateStatus;
   systemPrompt: string;
-  updatedAt: number;
-  version: number;
   workerKind: string;
 };
 
-type TemplateInput = {
-  defaultActionType: ActionType;
-  defaultPolicies: Partial<Record<ActionType, ActionPolicy>>;
-  description: string;
-  displayName: string;
-  model: string;
-  skillIds: ReadonlyArray<string>;
-  systemPrompt: string;
-  workerKind: string;
-};
+const TEMPLATE_MAX_LENGTH = {
+  description: 2000,
+  displayName: 120,
+  model: 160,
+  systemPrompt: 20_000,
+  workerKind: 80,
+} as const;
+
+const DEFAULT_ACTION_TYPE = "worker_deliverable" satisfies ActionType;
+
+const templateInputSchema = z.object({
+  defaultActionType: actionTypeSchema.default(DEFAULT_ACTION_TYPE),
+  defaultPolicies: z.partialRecord(actionTypeSchema, actionPolicySchema).default({}),
+  description: z.string().trim().min(1).max(TEMPLATE_MAX_LENGTH.description),
+  displayName: z.string().trim().min(1).max(TEMPLATE_MAX_LENGTH.displayName),
+  model: z.string().trim().min(1).max(TEMPLATE_MAX_LENGTH.model),
+  skillIds: z.array(z.enum(SKILL_IDS)),
+  systemPrompt: z.string().trim().min(1).max(TEMPLATE_MAX_LENGTH.systemPrompt),
+  workerKind: z.string().trim().min(1).max(TEMPLATE_MAX_LENGTH.workerKind),
+});
+
+type TemplateInput = z.output<typeof templateInputSchema>;
+
+const templateStatusInputSchema = z.object({ status: z.enum(TemplateStatus) });
 
 type SkillCatalogEntry = {
-  description: string;
   displayName: string;
-  id: string;
+  id: SkillId;
 };
+
+const COMPANY_NAME_MAX_LENGTH = 120;
+
+const COMPANY_SLUG_MAX_LENGTH = 80;
+
+const companyInputSchema = z.object({
+  name: z.string().trim().min(1).max(COMPANY_NAME_MAX_LENGTH),
+  slug: z
+    .string()
+    .min(1)
+    .max(COMPANY_SLUG_MAX_LENGTH)
+    .regex(/^[a-z0-9\-]+$/v, "slug must be lowercase alphanumeric or dashes"),
+});
+
+const EMAIL_MAX_LENGTH = 254;
+
+const invitationInputSchema = z.object({ email: z.email().max(EMAIL_MAX_LENGTH) });
 
 type CustomerInvitation = {
   email: string;
@@ -155,9 +192,15 @@ type CustomerInvitation = {
   id: string;
 };
 
-type CustomerInvitationInput = { email: string };
-
 type CustomerInvitationResponse = { invitation: CustomerInvitation };
+
+/** An Operator either sets a Worker's status or edits it, never both in one request. */
+const operatorMemberPatchSchema = z.union([
+  z.strictObject({ status: z.enum(["active", "paused"]) }),
+  z.strictObject(memberPatchSchema.shape),
+]);
+
+type CompaniesResponse = { companies: ReadonlyArray<CompanyRoster> };
 
 type TemplatesResponse = { items: ReadonlyArray<Template> };
 
@@ -165,21 +208,39 @@ type TemplateResponse = { template: Template };
 
 type SkillCatalogResponse = { items: ReadonlyArray<SkillCatalogEntry> };
 
+type SignupState = { open: boolean };
+
+export {
+  COMPANY_NAME_MAX_LENGTH,
+  COMPANY_SLUG_MAX_LENGTH,
+  companyInputSchema,
+  coverageInputSchema,
+  DEFAULT_ACTION_TYPE,
+  EMAIL_MAX_LENGTH,
+  invitationInputSchema,
+  operatorMemberPatchSchema,
+  TEMPLATE_MAX_LENGTH,
+  templateInputSchema,
+  templateStatusInputSchema,
+};
+
 export type {
   Action,
   ActionDetail,
   ActionDetailResponse,
-  ActionListRow,
-  ActionsResponse,
+  ActionOf,
   ActivityEntry,
   ActivityResponse,
   AgentSummary,
+  CompaniesResponse,
+  CoverageOption,
   CoverageResponse,
   CustomerInvitation,
-  CustomerInvitationInput,
   CustomerInvitationResponse,
-  DecisionOutcome,
   OperatorCoverage,
+  PendingAction,
+  PendingActionsResponse,
+  SignupState,
   SkillCatalogEntry,
   SkillCatalogResponse,
   Template,
@@ -191,13 +252,4 @@ export type {
   TicketListRow,
   TicketsResponse,
   WireObject,
-  WireValue,
 };
-
-export type {
-  ActionPolicy,
-  ActionStatus,
-  AgentRole,
-  TemplateStatus,
-  TicketStatus,
-} from "@repo/db/enums";

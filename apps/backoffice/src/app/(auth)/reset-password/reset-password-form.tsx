@@ -1,6 +1,8 @@
 "use client";
 
-import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
+import { authClient, authRequest } from "@repo/app-shell/auth-client";
+import { PasswordField } from "@repo/app-shell/auth-fields";
+import { PASSWORD_HINT } from "@repo/app-shell/auth-schemas";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -10,11 +12,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
+import { FieldGroup } from "@repo/ui/components/field";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
-import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
@@ -38,19 +38,13 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
     onSubmit: async ({ value }) => {
       setSubmitError(null);
 
-      try {
-        const { error } = await authClient.resetPassword({
-          newPassword: value.password,
-          token,
-        });
+      const { error } = await authRequest(
+        () => authClient.resetPassword({ newPassword: value.password, token }),
+        "Não foi possível redefinir a senha.",
+      );
 
-        if (error) {
-          setSubmitError(authErrorMessage(error, "Não foi possível redefinir a senha."));
-
-          return;
-        }
-      } catch {
-        setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
+      if (error !== null) {
+        setSubmitError(error);
 
         return;
       }
@@ -89,66 +83,23 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
           <FieldGroup>
             <FormAlert message={submitError} />
             <form.Field name="password">
-              {(field) => {
-                const isInvalid = !field.state.meta.isValid;
-
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Nova senha</FieldLabel>
-                    <Input
-                      aria-describedby={
-                        isInvalid
-                          ? `${field.name}-description ${field.name}-error`
-                          : `${field.name}-description`
-                      }
-                      aria-invalid={isInvalid}
-                      autoComplete="new-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    <FieldDescription id={`${field.name}-description`}>
-                      Pelo menos 12 caracteres.
-                    </FieldDescription>
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
+              {(field) => (
+                <PasswordField
+                  autoComplete="new-password"
+                  description={PASSWORD_HINT}
+                  field={field}
+                  label="Nova senha"
+                />
+              )}
             </form.Field>
-
             <form.Field name="confirmPassword">
-              {(field) => {
-                const isInvalid = !field.state.meta.isValid;
-
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Confirmar nova senha</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="new-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
+              {(field) => (
+                <PasswordField
+                  autoComplete="new-password"
+                  field={field}
+                  label="Confirmar nova senha"
+                />
+              )}
             </form.Field>
           </FieldGroup>
         </CardContent>

@@ -5,6 +5,8 @@ type Db = PrismaClient | Prisma.TransactionClient;
 
 type DbVariables = { db: PrismaClient };
 
+type DbEnv = { Bindings: Env; Variables: DbVariables };
+
 const withDb = async <Result>(
   env: Pick<Env, "HYPERDRIVE">,
   run: (db: PrismaClient) => Promise<Result>,
@@ -18,7 +20,7 @@ const withDb = async <Result>(
   }
 };
 
-const dbPerRequest = createMiddleware<{ Bindings: Env; Variables: DbVariables }>((c, next) =>
+const dbPerRequest = createMiddleware<DbEnv>((c, next) =>
   withDb(c.env, (db) => {
     c.set("db", db);
 
@@ -28,6 +30,6 @@ const dbPerRequest = createMiddleware<{ Bindings: Env; Variables: DbVariables }>
 
 export { dbPerRequest, withDb };
 
-export type { Db, DbVariables };
+export type { Db, DbEnv, DbVariables };
 
 export type { PrismaClient } from "@repo/db/worker";

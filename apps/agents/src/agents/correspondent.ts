@@ -1,31 +1,27 @@
 "use agent";
 
-import {
-  type AgentProps,
-  useAgentStart,
-  useModel,
-  usePersistentState,
-  useTool,
-} from "@flue/runtime";
-import { correspondentIdFor } from "@repo/worker-api/contracts";
-import { env } from "cloudflare:workers";
+import type { AgentProps } from "@flue/runtime";
 
-import { withDb } from "#/lib/db";
-import { CONVERSATION_MODEL } from "#/lib/models";
-import { buildFlueTools } from "#/lib/skill-tool";
-import { loadDisabledSkillIds } from "#/skills/registry";
-import type { SkillContext } from "#/skills/skill";
+import { useConversationAgent } from "#/conversation/agent";
+import { listAssetsSkill, readAssetSkill, saveAssetSkill } from "#/skills/assets";
+import { delegateToWorkerSkill } from "#/skills/delegate-to-worker";
+import { extractBriefSkill } from "#/skills/extract-brief";
+import { fetchUrlSkill } from "#/skills/fetch-url";
+import { recallMemorySkill } from "#/skills/recall-memory";
+import { rememberFactSkill } from "#/skills/remember-fact";
+import { webSearchSkill } from "#/skills/web-search";
+import { correspondentIdFor } from "#/team/ids";
 
 const CORRESPONDENT_SKILLS = [
-  "rememberFact",
-  "recallMemory",
-  "delegateToWorker",
-  "extractBrief",
-  "listAssets",
-  "readAsset",
-  "saveAsset",
-  "webSearch",
-  "fetchUrl",
+  rememberFactSkill,
+  recallMemorySkill,
+  delegateToWorkerSkill,
+  extractBriefSkill,
+  listAssetsSkill,
+  readAssetSkill,
+  saveAssetSkill,
+  webSearchSkill,
+  fetchUrlSkill,
 ];
 
 const CORRESPONDENT_INSTRUCTIONS = `Você é o Correspondente da Qolmeia, o ponto único de contato de uma agência de IA para negócios. Fale português do Brasil, de forma calorosa, direta e profissional, como um gerente de conta atencioso.
@@ -37,27 +33,11 @@ Ao mostrar imagens geradas, inclua a URL no formato markdown ![descrição curta
 Use recallMemory no início de pedidos relevantes para lembrar o que já sabe sobre o cliente, e rememberFact para guardar fatos novos importantes.`;
 
 export function CorrespondentV2({ id }: AgentProps): string {
-  const [disabledSkillIds, setDisabledSkillIds] = usePersistentState<ReadonlyArray<string>>(
-    "disabledSkillIds",
-    [],
-  );
-
-  useAgentStart(async () => {
-    setDisabledSkillIds(await withDb(env, loadDisabledSkillIds));
-  });
-
-  useModel(CONVERSATION_MODEL, { thinkingLevel: "low" });
-
-  const ctx: SkillContext = {
+  useConversationAgent({
     agentInstanceId: correspondentIdFor(id),
     companyId: id,
-    deliverableFolder: "customer",
-    env,
-  };
-
-  for (const skillTool of buildFlueTools(ctx, CORRESPONDENT_SKILLS, disabledSkillIds)) {
-    useTool(skillTool);
-  }
+    skills: CORRESPONDENT_SKILLS,
+  });
 
   return CORRESPONDENT_INSTRUCTIONS;
 }

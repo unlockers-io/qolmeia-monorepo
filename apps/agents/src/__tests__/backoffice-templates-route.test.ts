@@ -25,10 +25,10 @@ const validBody = {
 
 type Template = {
   defaultActionType: string;
+  displayName: string;
   id: string;
   skillIds: ReadonlyArray<string>;
   status: "active" | "retired";
-  version: number;
 };
 
 const post = (body: JsonBody) =>
@@ -56,14 +56,11 @@ describe("backoffice skill catalog", () => {
     const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/skills");
     expect(res.status).toBe(200);
 
-    const body = await res.json<{
-      items: Array<{ description: string; displayName: string; id: string }>;
-    }>();
+    const body = await res.json<{ items: Array<{ displayName: string; id: string }> }>();
 
     expect(body.items.length).toBe(12);
     const webSearch = body.items.find((s) => s.id === "webSearch");
     expect(webSearch?.displayName).toBeTruthy();
-    expect(webSearch?.description).toBeTruthy();
   });
 });
 
@@ -73,7 +70,6 @@ describe("backoffice template CRUD", () => {
     expect(created.status).toBe(201);
     const createdBody = await created.json<{ template: Template }>();
     expect(createdBody.template.id).toMatch(/^tpl-/v);
-    expect(createdBody.template.version).toBe(1);
     expect(createdBody.template.status).toBe("active");
     expect([...createdBody.template.skillIds]).toEqual(["webSearch", "fetchUrl"]);
 
@@ -105,7 +101,7 @@ describe("backoffice template CRUD", () => {
     expect(res.status).toBe(400);
   });
 
-  it("updates a template and bumps the version", async () => {
+  it("updates a template", async () => {
     const created = await post(validBody);
     const { template } = await created.json<{ template: Template }>();
 
@@ -117,7 +113,7 @@ describe("backoffice template CRUD", () => {
 
     expect(updated.status).toBe(200);
     const updatedBody = await updated.json<{ template: Template }>();
-    expect(updatedBody.template.version).toBe(2);
+    expect(updatedBody.template.displayName).toBe("Auditor SEO v2");
     expect([...updatedBody.template.skillIds]).toEqual(["webSearch"]);
   });
 

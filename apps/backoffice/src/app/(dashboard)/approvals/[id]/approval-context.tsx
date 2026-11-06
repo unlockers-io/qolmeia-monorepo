@@ -1,5 +1,5 @@
+import { agentAvatarClass, agentInitials } from "@repo/app-shell/agent-avatar";
 import { Card } from "@repo/ui/components/card";
-import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import type { ActionDetailResponse } from "@repo/worker-api/contracts";
 import Link from "next/link";
@@ -14,7 +14,7 @@ const ContextRow = ({ children, label }: { children: React.ReactNode; label: str
 );
 
 type ApprovalContextProps = Pick<ActionDetailResponse, "action" | "ageSeconds" | "ticket"> & {
-  policyCopy: string | undefined;
+  policyCopy: string;
 };
 
 const ApprovalContext = ({ action, ageSeconds, policyCopy, ticket }: ApprovalContextProps) => (
@@ -36,27 +36,23 @@ const ApprovalContext = ({ action, ageSeconds, policyCopy, ticket }: ApprovalCon
         </span>
         <span className="truncate">{action.agent.name}</span>
       </ContextRow>
-      {ticket && (
-        <ContextRow label="Ticket">
-          <Link
-            className="truncate rounded-sm font-mono text-xs text-primary transition-colors outline-none hover:text-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
-            href={`/tickets/${ticket.id}`}
-          >
-            {ticket.id}
-          </Link>
-        </ContextRow>
-      )}
+      <ContextRow label="Ticket">
+        <Link
+          className="truncate rounded-sm font-mono text-xs text-primary transition-colors outline-none hover:text-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
+          href={`/tickets/${ticket.id}`}
+        >
+          {ticket.id}
+        </Link>
+      </ContextRow>
       {action.status === "pending" ? (
-        <ContextRow label="Aguardando">{formatDurationSeconds(Math.max(0, ageSeconds))}</ContextRow>
+        <ContextRow label="Aguardando">{formatDurationSeconds(ageSeconds)}</ContextRow>
       ) : null}
       <ContextRow label="Política">{policyCopy}</ContextRow>
       <ContextRow label="Criado">{formatDateTime(action.createdAt)}</ContextRow>
     </dl>
-    {ticket && (
-      <p className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
-        {ticket.brief}
-      </p>
-    )}
+    <p className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
+      {ticket.brief}
+    </p>
   </Card>
 );
 

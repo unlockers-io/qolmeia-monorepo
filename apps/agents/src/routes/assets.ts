@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 
 import { requireMember, type IdentityEnv } from "#/identity/gates";
-import { dbPerRequest } from "#/lib/db";
 import { openAsset } from "#/library/assets";
 
 const assetsRoutes = new Hono<IdentityEnv>();
@@ -23,7 +22,7 @@ const buildAssetHeaders = (mime: string) => {
   return headers;
 };
 
-assetsRoutes.get("/:id", dbPerRequest, requireMember, async (c) => {
+assetsRoutes.get("/:id", requireMember, async (c) => {
   const asset = await openAsset(c.env, c.var.db, c.req.param("id"), c.get("session"));
 
   if (!asset) {

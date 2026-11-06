@@ -3,20 +3,19 @@ import { Heading, Link, Text } from "react-email";
 import { Button } from "../components/button";
 import { Card } from "../components/card";
 import { Divider } from "../components/divider";
+import { formatDuration } from "../utils/duration";
 
 import { BaseLayout } from "./base-layout";
 
 type PasswordResetEmailProps = {
-  browserInfo?: string;
-  ipAddress?: string;
+  expiresInSeconds: number;
   resetUrl: string;
   userEmail: string;
   username?: string;
 };
 
 const PasswordResetEmail = ({
-  browserInfo,
-  ipAddress,
+  expiresInSeconds,
   resetUrl,
   userEmail,
   username,
@@ -47,16 +46,10 @@ const PasswordResetEmail = ({
       <Card accent title="Detalhes do pedido">
         <ul className="m-0 list-none p-0 text-base text-muted-foreground">
           <li className="py-1">E-mail: {userEmail}</li>
-          {ipAddress !== undefined && ipAddress !== "" && (
-            <li className="py-1">Endereço IP: {ipAddress}</li>
-          )}
-          {browserInfo !== undefined && browserInfo !== "" && (
-            <li className="py-1">Navegador: {browserInfo}</li>
-          )}
         </ul>
         <Text className="m-0 mt-3 mb-2 text-base font-semibold text-foreground">Importante</Text>
         <ul className="m-0 list-inside list-disc text-base text-muted-foreground">
-          <li className="py-1">O link expira em 1 hora</li>
+          <li className="py-1">O link expira em {formatDuration(expiresInSeconds)}</li>
           <li className="py-1">Ele só pode ser usado uma vez</li>
           <li className="py-1">Se você não fez este pedido, proteja sua conta</li>
         </ul>

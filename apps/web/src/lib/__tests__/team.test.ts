@@ -40,7 +40,6 @@ const lastCall = () => {
     contentType: headers.get("content-type"),
     credentials: init?.credentials,
     method: init?.method,
-    orgId: headers.get("x-org-id"),
     url,
   };
 };
@@ -58,13 +57,13 @@ afterEach(() => {
 });
 
 describe("the customer surface", () => {
-  it("names no org: the Worker acts in the Customer's own Company", async () => {
+  it("rides the session cookie: the Worker acts in the Customer's own Company", async () => {
     respondWith({ "/api/me/team": okJson({ members: [] }) });
 
     await team.fetchTeam();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(lastCall()).toMatchObject({ credentials: "include", orgId: null });
+    expect(lastCall()).toMatchObject({ credentials: "include" });
   });
 });
 

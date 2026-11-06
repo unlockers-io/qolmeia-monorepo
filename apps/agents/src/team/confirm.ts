@@ -1,20 +1,17 @@
 import type { CompanyBrief } from "@repo/worker-api/brief";
-import { correspondentIdFor, teamIdFor, workerIdFor } from "@repo/worker-api/contracts";
+import type { ConfirmTeamResponse } from "@repo/worker-api/contracts";
 
 import { recordActivity } from "#/activity/log";
 import { getCompany } from "#/company/company";
+import type { Actor } from "#/identity/identity";
 import type { PrismaClient } from "#/lib/db";
 import { insertFacts, type NewFact } from "#/memory/memory";
 import { CompanyNotFoundError, TemplateNotFoundError } from "#/team/errors";
 import { emitTeamEvent } from "#/team/events";
-import { lockDelegationTargets } from "#/team/members";
+import { correspondentIdFor, teamIdFor, workerIdFor } from "#/team/ids";
 import { listEntitledTemplates } from "#/template/template";
 
-type ConfirmedTeam = {
-  correspondentId: string;
-  teamId: string;
-  workerIds: ReadonlyArray<string>;
-};
+type ConfirmedTeam = ConfirmTeamResponse["team"];
 
 const ONBOARDING_SUMMARY = "Time confirmado via onboarding.";
 
@@ -41,7 +38,7 @@ const briefFacts = (brief: Partial<CompanyBrief>, agentInstanceId: string): Arra
 const confirmTeam = async (
   env: Env,
   db: PrismaClient,
-  input: { actorId: string; companyId: string; templateIds: ReadonlyArray<string> },
+  input: { actor: Actor; companyId: string; templateIds: ReadonlyArray<string> },
 ): Promise<ConfirmedTeam> => {
   const { companyId } = input;
   const templateIds = [...new Set(input.templateIds)];
@@ -70,10 +67,6 @@ const confirmTeam = async (
 
     const reconfirm = existing !== null && existing.confirmedAt !== null;
 
-    const delegateTo = reconfirm
-      ? [...new Set([...(await lockDelegationTargets(tx, companyId)), ...workerIds])]
-      : workerIds;
-
     await tx.team.upsert({
       create: { companyId, confirmedAt: new Date(), id: teamId },
       update: reconfirm ? {} : { confirmedAt: new Date() },
@@ -96,17 +89,11 @@ const confirmTeam = async (
         id: workerIdFor(template.id, companyId),
         role: "worker" as const,
         templateId: template.id,
-        templateVersion: template.version,
       })),
       skipDuplicates: true,
     });
-    await tx.teamMember.upsert({
-      create: { agentInstanceId: correspondentId, canDelegateTo: delegateTo, teamId },
-      update: { canDelegateTo: delegateTo },
-      where: { teamId_agentInstanceId: { agentInstanceId: correspondentId, teamId } },
-    });
     await tx.teamMember.createMany({
-      data: workerIds.map((agentInstanceId) => ({ agentInstanceId, canDelegateTo: [], teamId })),
+      data: [correspondentId, ...workerIds].map((agentInstanceId) => ({ agentInstanceId, teamId })),
       skipDuplicates: true,
     });
     await tx.company.update({ data: { status: "active" }, where: { id: companyId } });
@@ -116,7 +103,7 @@ const confirmTeam = async (
     }
 
     await recordActivity(tx, {
-      actorId: input.actorId,
+      actorId: input.actor.userId,
       companyId,
       payload: { correspondentId, teamId, templateIds, workerIds },
       refId: teamId,
@@ -126,7 +113,7 @@ const confirmTeam = async (
     });
     await insertFacts(tx, companyId, briefFacts(company.brief, correspondentId));
   });
-  await emitTeamEvent(env, { companyId, reason: "confirmed", type: "team:roster" });
+  await emitTeamEvent(env, { companyId, type: "team:roster" });
 
   return { correspondentId, teamId, workerIds };
 };

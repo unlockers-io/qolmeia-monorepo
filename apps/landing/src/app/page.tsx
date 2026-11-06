@@ -1,5 +1,5 @@
+import { agentAvatarClass } from "@repo/app-shell/agent-avatar";
 import { buttonVariants } from "@repo/ui/components/button";
-import { agentAvatarClass, type AgentRole } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
 import { CheckCircle2, MessagesSquare, Workflow } from "lucide-react";
 import type { Metadata } from "next";
@@ -33,12 +33,7 @@ const STEPS = [
   },
 ] as const;
 
-const ROSTER: ReadonlyArray<{
-  kind: string | null;
-  name: string;
-  role: AgentRole;
-  work: string;
-}> = [
+const ROSTER = [
   {
     kind: null,
     name: "Correspondente",
@@ -70,7 +65,7 @@ const ROSTER: ReadonlyArray<{
     role: "worker",
     work: "Pesquisa palavras-chave, concorrentes e tendências",
   },
-];
+] as const;
 
 const CONTACT_URL = "mailto:contato@qolmeia.com?subject=Quero%20um%20convite%20para%20a%20Qolmeia";
 

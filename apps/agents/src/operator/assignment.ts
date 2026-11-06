@@ -54,10 +54,7 @@ const getCoverageOptions = async (db: Db): Promise<CoverageResponse["options"]> 
 
   return {
     companies,
-    disciplineNames: Object.fromEntries(
-      disciplines.map((row) => [row.workerKind, row.displayName]),
-    ),
-    disciplines: disciplines.map((row) => row.workerKind),
+    disciplines: disciplines.map((row) => ({ id: row.workerKind, name: row.displayName })),
   };
 };
 

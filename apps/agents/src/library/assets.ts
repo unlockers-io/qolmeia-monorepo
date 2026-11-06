@@ -1,4 +1,5 @@
 import type { Asset, AssetKind, AssetVisibility, Prisma } from "@repo/db/worker";
+import { MODEL_IMAGE_TYPES } from "@repo/worker-api/contracts";
 
 import type { Identity } from "#/identity/identity";
 import type { Db } from "#/lib/db";
@@ -149,7 +150,7 @@ const listAssets = async (
 ): Promise<ReadonlyArray<AssetRecord>> => {
   const rows = await db.asset.findMany({
     orderBy: { createdAt: "desc" },
-    take: Math.min(filter.limit ?? 100, 200),
+    take: filter.limit ?? 100,
     where: { companyId, kind: filter.kind, visibility: filter.visibility },
   });
 
@@ -205,7 +206,7 @@ const readBrandReferences = async (
     orderBy: { createdAt: "desc" },
     select: { mime: true, r2Key: true },
     take: limit,
-    where: { companyId, kind: "brand_asset", mime: { not: "image/svg+xml" } },
+    where: { companyId, kind: "brand_asset", mime: { in: [...MODEL_IMAGE_TYPES] } },
   });
 
   const settled = await Promise.allSettled(

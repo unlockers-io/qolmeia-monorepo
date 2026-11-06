@@ -1,11 +1,12 @@
-import { correspondentIdFor, plannerIdFor } from "@repo/worker-api/contracts";
+import { entitleToActiveTemplates, Prisma } from "@repo/db/worker";
 
 import type { PrismaClient } from "#/lib/db";
-import { entitleToActiveTemplates } from "#/template/template";
+import { DomainError } from "#/lib/errors";
+import { correspondentIdFor, plannerIdFor } from "#/team/ids";
 
 type Organization = { id: string; name: string; slug: string };
 
-const createOrganization = (
+const insertOrganization = (
   db: PrismaClient,
   input: { name: string; slug: string },
 ): Promise<Organization> =>
@@ -32,9 +33,24 @@ const createOrganization = (
         },
       ],
     });
-    await entitleToActiveTemplates(tx, org.id);
+    await entitleToActiveTemplates(tx, [org.id]);
 
     return org;
   });
+
+const createOrganization = async (
+  db: PrismaClient,
+  input: { name: string; slug: string },
+): Promise<Organization> => {
+  try {
+    return await insertOrganization(db, input);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new DomainError(409, "slug already in use");
+    }
+
+    throw error;
+  }
+};
 
 export { createOrganization };

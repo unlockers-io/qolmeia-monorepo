@@ -1,4 +1,5 @@
 import { SignedInRedirect } from "@repo/app-shell/signed-in-redirect";
+import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
 import { Logo } from "@repo/ui/compositions/logo";
 import { MessageSquareText, Sparkles, Workflow } from "lucide-react";
 import type { Metadata } from "next";
@@ -31,7 +32,7 @@ const CAPABILITIES = [
 ] as const;
 
 const LoginPage = () => (
-  <main className="flex min-h-svh flex-col lg:grid lg:grid-cols-login" id="main-content">
+  <main className="flex min-h-svh flex-col lg:grid lg:grid-cols-login" id={MAIN_CONTENT_ID}>
     <SignedInRedirect />
     <section className="relative isolate flex flex-col justify-between gap-12 overflow-hidden border-b border-border px-6 pt-10 pb-9 sm:px-8 lg:border-r lg:border-b-0 lg:px-12 lg:py-14 xl:px-20">
       <Logo className="h-8 w-auto self-start" />

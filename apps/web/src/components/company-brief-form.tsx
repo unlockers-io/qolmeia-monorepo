@@ -1,5 +1,6 @@
 "use client";
 
+import { maxLengthHint } from "@repo/app-shell/form-limits";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
@@ -9,24 +10,24 @@ import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
-import { MissingBriefBadge } from "@repo/ui/compositions/missing-brief-badge";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
+import { describeRequestError } from "@repo/worker-api";
+import {
+  BRIEF_MAX_LENGTH,
+  briefCompleteness,
+  type BriefPatch,
+  type CompanyBrief,
+} from "@repo/worker-api/brief";
+import type { CompanyResponse } from "@repo/worker-api/contracts";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import {
-  type BriefPatch,
-  type CompanyBrief,
-  type CompanyResponse,
-  fetchCompany,
-  patchCompanyBrief,
-} from "@/lib/company";
-import { BRIEF_MAX_LENGTH, companyBriefSchema } from "@/lib/form-schemas";
-
-const companyQueryKey = (companyId: string) => ["company", companyId] as const;
-const REQUIRED_COUNT = 6;
+import { MissingBriefBadge } from "@/components/missing-brief-badge";
+import { fetchCompany, patchCompanyBrief } from "@/lib/company";
+import { companyBriefSchema } from "@/lib/form-schemas";
+import { queryKeys } from "@/lib/query-keys";
 
 type FormState = {
   audience: string;
@@ -81,7 +82,7 @@ const FIELDS = {
   { id: string; label: string; multiline: boolean; placeholder: string }
 >;
 
-const briefToForm = (brief: CompanyBrief): FormState => ({
+const briefToForm = (brief: Partial<CompanyBrief>): FormState => ({
   audience: brief.audience ?? "",
   industry: brief.industry ?? "",
   palette: brief.brand?.palette ?? "",
@@ -113,16 +114,6 @@ const buildPatch = (f: FormState): BriefPatch => {
 
   return patch;
 };
-
-const liveFilledCount = (f: FormState): number =>
-  [
-    f.industry.trim(),
-    f.primaryGoal.trim(),
-    f.audience.trim(),
-    f.voice.trim(),
-    f.palette.trim(),
-    f.references.trim(),
-  ].filter(Boolean).length;
 
 const MissingMark = ({ show }: { show: boolean }) =>
   show ? <MissingBriefBadge className="ml-2 align-middle">A preencher</MissingBriefBadge> : null;
@@ -171,18 +162,18 @@ const BriefField = ({ field, name }: BriefFieldProps) => {
         />
       )}
       <FieldDescription id={`${id}-description`}>
-        Até {BRIEF_MAX_LENGTH[name]} caracteres.
+        {maxLengthHint(BRIEF_MAX_LENGTH[name])}
       </FieldDescription>
       {isInvalid && <FormFieldError errors={field.state.meta.errors} id={`${id}-error`} />}
     </Field>
   );
 };
 
-type BriefCardProps = { companyId: string; initial: CompanyBrief };
+type BriefCardProps = { companyId: string; initial: Partial<CompanyBrief> };
 
 const BriefCard = ({ companyId, initial }: BriefCardProps) => {
   const queryClient = useQueryClient();
-  const queryKey = companyQueryKey(companyId);
+  const queryKey = queryKeys.company(companyId);
 
   const mutation = useMutation({
     mutationFn: (patch: BriefPatch) => patchCompanyBrief(patch),
@@ -209,9 +200,8 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
     validators: { onDynamic: companyBriefSchema },
   });
 
-  const filled = useSelector(form.store, (state) => liveFilledCount(state.values));
-  const percent = Math.round((filled / REQUIRED_COUNT) * 100);
-  const isComplete = filled === REQUIRED_COUNT;
+  const values = useSelector(form.store, (state) => state.values);
+  const { isComplete, percent } = briefCompleteness(buildPatch(values));
 
   return (
     <Card>
@@ -236,7 +226,11 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
           }}
         >
           <FormAlert
-            message={mutation.isError ? "Não foi possível salvar. Tente novamente." : null}
+            message={
+              mutation.isError
+                ? describeRequestError(mutation.error, "Não foi possível salvar. Tente novamente.")
+                : null
+            }
           />
           <div className="grid gap-5 sm:grid-cols-2">
             <form.Field name="industry">
@@ -281,8 +275,8 @@ const CompanyBriefForm = ({ companyId, initialData }: CompanyBriefFormProps) => 
   const { data, isPending } = useQuery({
     initialData,
     meta: { errorToast: "Falha ao carregar dados da empresa" },
-    queryFn: fetchCompany,
-    queryKey: companyQueryKey(companyId),
+    queryFn: () => fetchCompany(),
+    queryKey: queryKeys.company(companyId),
   });
 
   if (isPending || !data) {

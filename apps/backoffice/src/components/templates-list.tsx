@@ -5,31 +5,33 @@ import { Card } from "@repo/ui/components/card";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
 import { cn } from "@repo/ui/lib/utils";
+import { apiGet } from "@repo/worker-api";
 import type { Template, TemplateStatus } from "@repo/worker-api/contracts";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useOptimistic, useTransition } from "react";
-import { toast } from "sonner";
 
-import { describeRequestError } from "@/lib/api-client";
-import { fetchTemplates, setTemplateStatus, templateKeys } from "@/lib/templates-api";
-
-type StatusLabelContract = Record<TemplateStatus, { label: string; tone: StatusTone }>;
+import { getTemplates, templateKeys } from "@/lib/backoffice-api";
+import {
+  NEXT_STATUS,
+  TOGGLE_LABEL,
+  useToggleTemplateStatus,
+} from "@/lib/use-toggle-template-status";
 
 const STATUS_LABEL = {
   active: { label: "Ativo", tone: "success" },
   retired: { label: "Desativado", tone: "neutral" },
-} satisfies StatusLabelContract;
+} satisfies Record<TemplateStatus, { label: string; tone: StatusTone }>;
 
 type TemplateRowProps = {
   busy: boolean;
   onToggle: (template: Template) => void;
+  status: TemplateStatus;
   template: Template;
 };
 
-const TemplateRow = ({ busy, onToggle, template }: TemplateRowProps) => {
-  const status = STATUS_LABEL[template.status];
-  const toggleLabel = template.status === "retired" ? "Reativar" : "Desativar";
+const TemplateRow = ({ busy, onToggle, status, template }: TemplateRowProps) => {
+  const pill = STATUS_LABEL[status];
+  const toggleLabel = TOGGLE_LABEL[status];
 
   return (
     <tr className="border-b border-border last:border-0 hover:bg-accent/40">
@@ -47,7 +49,7 @@ const TemplateRow = ({ busy, onToggle, template }: TemplateRowProps) => {
         {template.skillIds.length}
       </td>
       <td className="px-5 py-3">
-        <StatusPill label={status.label} tone={status.tone} />
+        <StatusPill label={pill.label} tone={pill.tone} />
       </td>
       <td className="px-5 py-3">
         <div className="flex items-center justify-end gap-2">
@@ -76,19 +78,19 @@ const TemplateRow = ({ busy, onToggle, template }: TemplateRowProps) => {
 };
 
 type TemplatesTableBodyProps = {
-  busy: boolean;
   isError: boolean;
   isLoading: boolean;
   onToggle: (template: Template) => void;
   templates: ReadonlyArray<Template>;
+  toggling: Template | undefined;
 };
 
 const TemplatesTableBody = ({
-  busy,
   isError,
   isLoading,
   onToggle,
   templates,
+  toggling,
 }: TemplatesTableBodyProps) => {
   if (isLoading) {
     return (
@@ -129,7 +131,13 @@ const TemplatesTableBody = ({
         </thead>
         <tbody>
           {templates.map((template) => (
-            <TemplateRow busy={busy} key={template.id} onToggle={onToggle} template={template} />
+            <TemplateRow
+              busy={toggling !== undefined}
+              key={template.id}
+              onToggle={onToggle}
+              status={template.id === toggling?.id ? NEXT_STATUS[toggling.status] : template.status}
+              template={template}
+            />
           ))}
         </tbody>
       </table>
@@ -137,50 +145,24 @@ const TemplatesTableBody = ({
   );
 };
 
-type StatusPatch = { id: string; status: TemplateStatus };
-
-const applyStatus = (
-  templates: ReadonlyArray<Template>,
-  patch: StatusPatch,
-): ReadonlyArray<Template> =>
-  templates.map((template) =>
-    template.id === patch.id ? { ...template, status: patch.status } : template,
-  );
-
 const TemplatesList = () => {
-  const queryClient = useQueryClient();
-
   const { data, isError, isLoading } = useQuery({
-    queryFn: fetchTemplates,
+    queryFn: () => getTemplates(apiGet),
     queryKey: templateKeys.all,
   });
 
-  const [isToggling, startToggle] = useTransition();
-  const [templates, applyOptimisticStatus] = useOptimistic(data?.items ?? [], applyStatus);
-
-  const handleToggle = (template: Template) => {
-    const status: TemplateStatus = template.status === "retired" ? "active" : "retired";
-    startToggle(async () => {
-      applyOptimisticStatus({ id: template.id, status });
-
-      try {
-        await setTemplateStatus(template.id, status);
-        await queryClient.invalidateQueries({ queryKey: templateKeys.all });
-        toast.success(status === "retired" ? "Modelo desativado." : "Modelo reativado.");
-      } catch (error) {
-        toast.error(describeRequestError(error, "Não foi possível alterar o status."));
-      }
-    });
-  };
+  const toggle = useToggleTemplateStatus();
 
   return (
     <Card className="overflow-hidden p-0">
       <TemplatesTableBody
-        busy={isToggling}
         isError={isError}
         isLoading={isLoading}
-        onToggle={handleToggle}
-        templates={templates}
+        onToggle={(template) => {
+          toggle.mutate(template);
+        }}
+        templates={data?.items ?? []}
+        toggling={toggle.isPending ? toggle.variables : undefined}
       />
     </Card>
   );

@@ -37,7 +37,7 @@ Important local variables:
 | `apps/web/.env`         | optional `AGENTS_INTERNAL_URL`                                                                      |
 | `apps/backoffice/.env`  | optional `AGENTS_INTERNAL_URL`                                                                      |
 
-The Next apps rewrite `/api/auth/*`, `/api/me/*`, `/api/teams/*`, `/api/backoffice/*`, `/agents/*`, and `/assets/:id` to the Worker so cookies stay first-party in development. They hold no database URL and no auth secret.
+The Next apps rewrite `/api/auth/*`, `/api/me/*`, `/api/backoffice/*`, `/agents/*`, and `/assets/:id` to the Worker so cookies stay first-party in development. They hold no database URL and no auth secret.
 
 ## 4. Initialize Data
 

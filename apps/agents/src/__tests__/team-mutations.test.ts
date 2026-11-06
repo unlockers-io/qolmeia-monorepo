@@ -2,20 +2,22 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, entitle, seedCompany, seedTeam } from "#/__tests__/fixtures";
+import type { Actor } from "#/identity/identity";
 import { hireMember, setMemberStatus, updateMember } from "#/team/members";
 
 const COMPANY_ID = "co_hire_test";
 const CORR_ID = `corr-${COMPANY_ID}`;
+const CUSTOMER: Actor = { surface: "customer", userId: "user-1" };
 
 const hire = (displayName?: string, templateId = "tpl-designer") =>
   db((client) =>
-    hireMember(env, client, { actorId: null, companyId: COMPANY_ID, displayName, templateId }),
+    hireMember(env, client, { actor: CUSTOMER, companyId: COMPANY_ID, displayName, templateId }),
   );
 
 const setStatus = (agentInstanceId: string, status: "active" | "paused") =>
   db((client) =>
     setMemberStatus(env, client, {
-      actorId: "user-1",
+      actor: CUSTOMER,
       agentInstanceId,
       companyId: COMPANY_ID,
       status,
@@ -24,22 +26,11 @@ const setStatus = (agentInstanceId: string, status: "active" | "paused") =>
 
 const update = (
   agentInstanceId: string,
-  patch: {
-    displayName?: string;
-    editedBy?: "customer" | "operator";
-    operatorId?: string;
-    promptOverride?: string | null;
-  },
+  patch: { displayName?: string; promptOverride?: string | null },
+  actor: Actor = CUSTOMER,
 ) =>
   db((client) =>
-    updateMember(env, client, {
-      agentInstanceId,
-      companyId: COMPANY_ID,
-      displayName: patch.displayName,
-      editedBy: patch.editedBy ?? "customer",
-      operatorId: patch.operatorId ?? null,
-      promptOverride: patch.promptOverride,
-    }),
+    updateMember(env, client, { ...patch, actor, agentInstanceId, companyId: COMPANY_ID }),
   );
 
 const activity = (refId: string, type: string) =>
@@ -57,17 +48,15 @@ beforeEach(async () => {
 });
 
 describe("hireMember", () => {
-  it("creates a new agent_instance + team_member and appends to correspondent's delegation list", async () => {
+  it("creates a new agent_instance and puts it on the team", async () => {
     const member = await hire();
     expect(member.displayName).toBe("Designer");
     expect(member.role).toBe("worker");
     expect(member.templateId).toBe("tpl-designer");
 
-    const correspondent = await db((client) =>
-      client.teamMember.findFirst({ where: { agentInstanceId: CORR_ID } }),
-    );
-
-    expect(correspondent?.canDelegateTo).toContain(member.id);
+    await expect(
+      db((client) => client.teamMember.count({ where: { agentInstanceId: member.id } })),
+    ).resolves.toBe(1);
   });
 
   it("allows multi-hire of the same template with auto-numbered name", async () => {
@@ -78,16 +67,14 @@ describe("hireMember", () => {
     expect(second.id).not.toBe(first.id);
   });
 
-  it("keeps every concurrent hire on the correspondent's delegation list", async () => {
-    const members = await Promise.all([hire("Ana"), hire("Bia"), hire("Caio")]);
+  it("gives concurrent hires of the same template distinct names", async () => {
+    const members = await Promise.all([hire(), hire(), hire()]);
 
-    const correspondent = await db((client) =>
-      client.teamMember.findFirst({ where: { agentInstanceId: CORR_ID } }),
-    );
-
-    expect(correspondent?.canDelegateTo).toEqual(
-      expect.arrayContaining(members.map(({ id }) => id)),
-    );
+    expect(members.map(({ displayName }) => displayName).toSorted()).toEqual([
+      "Designer",
+      "Designer #2",
+      "Designer #3",
+    ]);
   });
 
   it("uses a provided displayName when present", async () => {
@@ -104,9 +91,9 @@ describe("hireMember", () => {
     await expect(hire(undefined, "tpl-nope")).rejects.toThrow(/template.*tpl-nope/v);
   });
 
-  it("rejects whitespace-only displayName by falling back to the template name", async () => {
-    const member = await hire("   ");
-    expect(member.displayName).toBe("Designer");
+  it("rejects a hire before the team is confirmed", async () => {
+    await db((client) => client.team.deleteMany({ where: { companyId: COMPANY_ID } }));
+    await expect(hire()).rejects.toThrow(/team not confirmed/v);
   });
 });
 
@@ -144,21 +131,23 @@ describe("setMemberStatus", () => {
 });
 
 describe("updateMember", () => {
-  it("renames a worker", async () => {
+  it("renames a worker and logs the caller as its actor", async () => {
     const member = await hire();
     const updated = await update(member.id, { displayName: "Marina" });
     expect(updated.displayName).toBe("Marina");
-    await expect(activity(member.id, "MEMBER_RENAMED")).resolves.not.toBeNull();
+    await expect(activity(member.id, "MEMBER_RENAMED")).resolves.toMatchObject({
+      actorId: "user-1",
+    });
   });
 
   it("sets the prompt override and logs MEMBER_PROMPT_EDITED", async () => {
     const member = await hire();
 
-    const updated = await update(member.id, {
-      editedBy: "operator",
-      operatorId: "user-staff-1",
-      promptOverride: "Seja minimalista, monocromático.",
-    });
+    const updated = await update(
+      member.id,
+      { promptOverride: "Seja minimalista, monocromático." },
+      { surface: "operator", userId: "user-staff-1" },
+    );
 
     expect(updated.hasPromptOverride).toBe(true);
     await expect(activity(member.id, "MEMBER_PROMPT_EDITED")).resolves.toMatchObject({
@@ -179,19 +168,5 @@ describe("updateMember", () => {
     const updated = await update(member.id, { displayName: "Carla", promptOverride: "boa noite" });
     expect(updated.displayName).toBe("Carla");
     expect(updated.hasPromptOverride).toBe(true);
-  });
-
-  it("treats empty/whitespace promptOverride as a reset (does not store empty string)", async () => {
-    const member = await hire();
-    await update(member.id, { promptOverride: "real prompt" });
-    const result = await update(member.id, { promptOverride: "   " });
-    expect(result.hasPromptOverride).toBe(false);
-    const row = await db((client) => client.agentInstance.findUnique({ where: { id: member.id } }));
-    expect(row?.promptOverride).toBeNull();
-  });
-
-  it("rejects a whitespace-only rename", async () => {
-    const member = await hire();
-    await expect(update(member.id, { displayName: "   " })).rejects.toThrow(/displayName/v);
   });
 });

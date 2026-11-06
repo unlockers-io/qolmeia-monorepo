@@ -1,10 +1,12 @@
 import { SignedInRedirect } from "@repo/app-shell/signed-in-redirect";
-import { getSignupState, SIGNUP_CLOSED_MESSAGE } from "@repo/app-shell/signup";
+import { SIGNUP_CLOSED_MESSAGE } from "@repo/auth/signup";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+
+import { getSignupState } from "@/lib/signup";
 
 import { RegisterForm } from "./register-form";
 

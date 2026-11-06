@@ -1,7 +1,9 @@
 "use client";
 
-import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
-import { safeRedirectPath } from "@repo/app-shell/redirect-path";
+import { authClient, authRequest } from "@repo/app-shell/auth-client";
+import { EmailField, PasswordField, TextField } from "@repo/app-shell/auth-fields";
+import { PASSWORD_HINT } from "@repo/app-shell/auth-schemas";
+import { loginHref, safeRedirectPath } from "@repo/auth/redirect-path";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -11,11 +13,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
+import { FieldGroup } from "@repo/ui/components/field";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
-import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
@@ -23,7 +23,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, use, useState } from "react";
 import { toast } from "sonner";
 
-import { registerSchema } from "@/lib/form-schemas";
+import { NAME_MAX_LENGTH, NAME_MIN_LENGTH, registerSchema } from "@/lib/form-schemas";
 
 type Props = {
   searchParams: Promise<{ from?: string }>;
@@ -37,12 +37,11 @@ const LoginLinkFallback = () => (
 
 const LoginLink = ({ searchParams }: Props) => {
   const { from } = use(searchParams);
-  const redirectTo = safeRedirectPath(from);
 
   return (
     <Link
       className="font-medium text-primary underline-offset-4 hover:underline"
-      href={redirectTo === "/" ? "/login" : `/login?from=${encodeURIComponent(redirectTo)}`}
+      href={loginHref(from)}
     >
       Entrar
     </Link>
@@ -66,29 +65,27 @@ const RegisterForm = ({ searchParams }: Props) => {
       const { from } = await searchParams;
       const redirectTo = safeRedirectPath(from);
 
-      try {
-        const result = await authClient.signUp.email({
-          callbackURL: redirectTo,
-          email: value.email,
-          name: value.name,
-          password: value.password,
-        });
+      const outcome = await authRequest(
+        () =>
+          authClient.signUp.email({
+            callbackURL: redirectTo,
+            email: value.email,
+            name: value.name,
+            password: value.password,
+          }),
+        "Não foi possível criar a conta.",
+      );
 
-        if (result.error) {
-          setSubmitError(authErrorMessage(result.error, "Não foi possível criar a conta."));
+      if (outcome.error !== null) {
+        setSubmitError(outcome.error);
 
-          return;
-        }
+        return;
+      }
 
-        const { token } = result.data;
+      const token = outcome.result.data?.token ?? null;
 
-        if (token === null || token === "") {
-          setSentToEmail(value.email);
-
-          return;
-        }
-      } catch {
-        setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
+      if (token === null || token === "") {
+        setSentToEmail(value.email);
 
         return;
       }
@@ -147,130 +144,31 @@ const RegisterForm = ({ searchParams }: Props) => {
           <FieldGroup>
             <FormAlert message={submitError} />
             <form.Field name="name">
-              {(field) => {
-                const isInvalid = !field.state.meta.isValid;
-
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Nome</FieldLabel>
-                    <Input
-                      aria-describedby={
-                        isInvalid
-                          ? `${field.name}-description ${field.name}-error`
-                          : `${field.name}-description`
-                      }
-                      aria-invalid={isInvalid}
-                      autoComplete="name"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="text"
-                      value={field.state.value}
-                    />
-                    <FieldDescription id={`${field.name}-description`}>
-                      De 3 a 32 caracteres.
-                    </FieldDescription>
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
+              {(field) => (
+                <TextField
+                  autoComplete="name"
+                  description={`De ${NAME_MIN_LENGTH} a ${NAME_MAX_LENGTH} caracteres.`}
+                  field={field}
+                  label="Nome"
+                  type="text"
+                />
+              )}
             </form.Field>
-
-            <form.Field name="email">
-              {(field) => {
-                const isInvalid = !field.state.meta.isValid;
-
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="email"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      placeholder="voce@empresa.com"
-                      type="email"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
-            </form.Field>
-
+            <form.Field name="email">{(field) => <EmailField field={field} />}</form.Field>
             <form.Field name="password">
-              {(field) => {
-                const isInvalid = !field.state.meta.isValid;
-
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
-                    <Input
-                      aria-describedby={
-                        isInvalid
-                          ? `${field.name}-description ${field.name}-error`
-                          : `${field.name}-description`
-                      }
-                      aria-invalid={isInvalid}
-                      autoComplete="new-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    <FieldDescription id={`${field.name}-description`}>
-                      Pelo menos 12 caracteres.
-                    </FieldDescription>
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
+              {(field) => (
+                <PasswordField
+                  autoComplete="new-password"
+                  description={PASSWORD_HINT}
+                  field={field}
+                  label="Senha"
+                />
+              )}
             </form.Field>
-
             <form.Field name="confirmPassword">
-              {(field) => {
-                const isInvalid = !field.state.meta.isValid;
-
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Confirmar senha</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="new-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
+              {(field) => (
+                <PasswordField autoComplete="new-password" field={field} label="Confirmar senha" />
+              )}
             </form.Field>
           </FieldGroup>
         </CardContent>

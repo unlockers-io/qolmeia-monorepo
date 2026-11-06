@@ -5,8 +5,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OnboardingActions } from "./onboarding-actions";
 
 const templates = [
-  { description: "Cria posts.", displayName: "Designer", id: "designer", workerKind: "designer" },
-  { description: "Escreve textos.", displayName: "Redator", id: "writer", workerKind: "writer" },
+  {
+    description: "Cria posts.",
+    displayName: "Designer",
+    hiredCount: 0,
+    id: "designer",
+    workerKind: "designer",
+  },
+  {
+    description: "Escreve textos.",
+    displayName: "Redator",
+    hiredCount: 0,
+    id: "writer",
+    workerKind: "writer",
+  },
 ];
 
 beforeEach(() => {
@@ -20,7 +32,7 @@ afterEach(() => {
 describe("OnboardingActions", () => {
   it("asks for a specialist on submit instead of disabling the button", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    render(<OnboardingActions companyId="company-1" templates={templates} />);
+    render(<OnboardingActions templates={templates} />);
     const designer = screen.getByRole("checkbox", { name: "Designer" });
     const writer = screen.getByRole("checkbox", { name: "Redator" });
     const confirm = screen.getByRole("button", { name: "Confirmar Time" });
@@ -54,7 +66,7 @@ describe("OnboardingActions", () => {
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response("boom", { status: 500 }));
 
-    render(<OnboardingActions companyId="company-1" templates={templates} />);
+    render(<OnboardingActions templates={templates} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Confirmar Time" }));
 
@@ -62,7 +74,7 @@ describe("OnboardingActions", () => {
     expect(alert).toHaveAttribute("data-slot", "form-alert");
     expect(alert).toHaveTextContent("Algo falhou do nosso lado. Tente de novo em instantes.");
     expect(fetchSpy).toHaveBeenCalledWith(
-      "/api/teams/company-1/confirm",
+      "/api/me/team/confirm",
       expect.objectContaining({ body: JSON.stringify({ templateIds: ["designer", "writer"] }) }),
     );
     expect(toast.error).not.toHaveBeenCalled();

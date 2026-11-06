@@ -1,20 +1,15 @@
-import type { CompanyStatus, Prisma } from "@repo/db/worker";
+import type { Prisma } from "@repo/db/worker";
 import {
   briefCompleteness,
   mergeBrief,
   parseBrief,
   type CompanyBrief,
 } from "@repo/worker-api/brief";
-import type { CompanyOverview } from "@repo/worker-api/contracts";
+import type { CompanyOverview, CompanyResponse } from "@repo/worker-api/contracts";
 
 import type { Db, PrismaClient } from "#/lib/db";
 
-type Company = {
-  brief: Partial<CompanyBrief>;
-  id: string;
-  slug: string;
-  status: CompanyStatus;
-};
+type Company = CompanyResponse["company"];
 
 const companySelect = {
   brief: true,

@@ -1,25 +1,15 @@
 import "@/styles/globals.css";
 
-import { Toaster } from "@repo/ui/components/sonner";
-import { ThemeProvider } from "@repo/ui/compositions/theme-provider";
-import type { Metadata, Viewport } from "next";
-import { Hanken_Grotesk, JetBrains_Mono, Sora } from "next/font/google";
+import { AppDocument, documentMetadata } from "@repo/app-shell/document";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { Providers } from "@/components/providers";
 
-const hanken = Hanken_Grotesk({ display: "swap", subsets: ["latin"], variable: "--font-hanken" });
-const sora = Sora({ display: "swap", subsets: ["latin"], variable: "--font-sora" });
-
-const jetbrainsMono = JetBrains_Mono({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-jetbrains",
-});
-
 const metadataBase = URL.parse(process.env.WEB_APP_URL ?? "") ?? new URL("https://app.qolmeia.com");
 
 export const metadata: Metadata = {
+  ...documentMetadata,
   authors: [{ name: "Qolmeia" }],
   category: "technology",
   creator: "Qolmeia",
@@ -50,43 +40,12 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  initialScale: 1,
-  maximumScale: 5,
-  themeColor: [
-    { color: "white", media: "(prefers-color-scheme: light)" },
-    { color: "black", media: "(prefers-color-scheme: dark)" },
-  ],
-  userScalable: true,
-  width: "device-width",
-};
+export { viewport } from "@repo/app-shell/root-layout";
 
-const RootLayout = ({ children }: { children: ReactNode }) => {
-  return (
-    <html
-      className={`${hanken.variable} ${sora.variable} ${jetbrainsMono.variable}`}
-      lang="pt-BR"
-      suppressHydrationWarning
-    >
-      <head>
-        <meta content="telephone=no" name="format-detection" />
-        <meta content="#000000" name="msapplication-TileColor" />
-      </head>
-      <body className={hanken.className} suppressHydrationWarning>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <a
-            className="sr-only fixed top-2 left-2 z-50 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground ring-1 ring-ring focus:not-sr-only"
-            // oxlint-disable-next-line react-doctor/anchor-target-exists -- every page shell renders the one <main id="main-content">
-            href="#main-content"
-          >
-            Pular para o conteúdo
-          </a>
-          <Providers>{children}</Providers>
-          <Toaster containerAriaLabel="Notificações" />
-        </ThemeProvider>
-      </body>
-    </html>
-  );
-};
+const RootLayout = ({ children }: { children: ReactNode }) => (
+  <AppDocument>
+    <Providers>{children}</Providers>
+  </AppDocument>
+);
 
 export default RootLayout;

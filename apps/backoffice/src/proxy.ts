@@ -1,16 +1,8 @@
 import { createProxy } from "@repo/app-shell/proxy";
 
-export const proxy = createProxy({
-  protectedRoutes: [
-    "/",
-    "/approvals",
-    "/activity",
-    "/cobertura",
-    "/teams",
-    "/templates",
-    "/tickets",
-  ],
-});
+import { PROTECTED_ROUTES } from "@/lib/routes";
+
+export const proxy = createProxy({ protectedRoutes: PROTECTED_ROUTES });
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],

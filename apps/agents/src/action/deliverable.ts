@@ -1,21 +1,7 @@
-import { z } from "zod";
+import type { Deliverable } from "@repo/worker-api/contracts";
 
-import type { ExecutionContext, Generation } from "#/action/action-type";
-import { withDb } from "#/lib/db";
-import { promoteAssets } from "#/library/assets";
-
-const deliverableAssetSchema = z.object({
-  assetId: z.string(),
-  deliverable: z.literal(true),
-  url: z.string().optional(),
-});
-
-const deliverableSchema = z.object({
-  assetIds: z.array(z.string()),
-  summary: z.string(),
-});
-
-type Deliverable = z.infer<typeof deliverableSchema>;
+import type { Generation } from "#/action/action-type";
+import { assetOutputSchema } from "#/action/action-type";
 
 const escapeRegExp = (value: string): string =>
   value.replaceAll(/[.*+?^$\{\}\(\)\|\[\]\\]/gv, String.raw`\$&`);
@@ -42,9 +28,9 @@ const embedImage = (summary: string, url: string): string => {
 
 const readDeliverable = (generation: Generation): Deliverable => {
   const assets = generation.outputs.flatMap(({ json }) => {
-    const parsed = deliverableAssetSchema.safeParse(JSON.parse(json));
+    const parsed = assetOutputSchema.safeParse(JSON.parse(json));
 
-    return parsed.success ? [parsed.data] : [];
+    return parsed.success && parsed.data.deliverable ? [parsed.data] : [];
   });
 
   return {
@@ -56,10 +42,4 @@ const readDeliverable = (generation: Generation): Deliverable => {
   };
 };
 
-const releaseDeliverable = (
-  ctx: ExecutionContext,
-  assetIds: ReadonlyArray<string>,
-): Promise<ReadonlyArray<{ id: string; mime: string }>> =>
-  withDb(ctx.env, (db) => promoteAssets(db, ctx.companyId, assetIds));
-
-export { deliverableSchema, readDeliverable, releaseDeliverable };
+export { readDeliverable };

@@ -1,3 +1,4 @@
+import { entitleToActiveTemplates } from "./entitlement";
 import type { PrismaClient } from "./generated/prisma/client";
 
 const DEFAULT_TEMPLATES = [
@@ -87,42 +88,24 @@ const DEFAULT_TEMPLATES = [
   },
 ] as const;
 
-// Only replace known shipped defaults; preserve operator-selected models.
-const LEGACY_TEMPLATE_MODELS = {
-  "tpl-designer": ["openai/gpt-5.4-nano"],
-  "tpl-marketing-strategist": ["openai/gpt-5.4-mini"],
-  "tpl-redator": ["openai/gpt-5.4-mini"],
-  "tpl-seo-researcher": ["openai/gpt-5.4-mini"],
-} as const;
-
 type SeedDb = Pick<PrismaClient, "agentTemplate" | "company" | "companyTemplateEntitlement">;
 
 const seedProductDefaults = async (db: SeedDb): Promise<void> => {
   await Promise.all(
-    DEFAULT_TEMPLATES.map(async (template) => {
-      await db.agentTemplate.upsert({
+    DEFAULT_TEMPLATES.map((template) =>
+      db.agentTemplate.upsert({
         create: { ...template, skillIds: [...template.skillIds] },
         update: {},
         where: { id: template.id },
-      });
-      await db.agentTemplate.updateMany({
-        data: { model: template.model },
-        where: { id: template.id, model: { in: [...LEGACY_TEMPLATE_MODELS[template.id]] } },
-      });
-    }),
+      }),
+    ),
   );
 
-  const [companies, templates] = await Promise.all([
-    db.company.findMany({ select: { id: true } }),
-    db.agentTemplate.findMany({ select: { id: true }, where: { status: "active" } }),
-  ]);
-
-  await db.companyTemplateEntitlement.createMany({
-    data: companies.flatMap(({ id: companyId }) =>
-      templates.map(({ id: templateId }) => ({ companyId, templateId })),
-    ),
-    skipDuplicates: true,
-  });
+  const companies = await db.company.findMany({ select: { id: true } });
+  await entitleToActiveTemplates(
+    db,
+    companies.map(({ id }) => id),
+  );
 };
 
 export { DEFAULT_TEMPLATES, seedProductDefaults };

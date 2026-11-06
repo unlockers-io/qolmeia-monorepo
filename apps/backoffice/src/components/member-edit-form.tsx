@@ -1,38 +1,27 @@
 "use client";
 
+import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/app-shell/agent-avatar";
+import { AGENT_STATUS } from "@repo/app-shell/agent-status";
+import { PromptEditor } from "@repo/app-shell/prompt-editor";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
-import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
+import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
-import type { TeamMemberDetailView } from "@repo/worker-api/contracts";
+import { describeRequestError } from "@repo/worker-api";
+import type { operatorMemberPatchSchema, TeamMemberDetailView } from "@repo/worker-api/contracts";
 import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
+import type { z } from "zod";
 
 import { MemberNameForm } from "@/components/member-name-form";
-import { PromptEditor } from "@/components/prompt-editor";
-import { apiSend, describeRequestError } from "@/lib/api-client";
+import { patchMember } from "@/lib/backoffice-api";
 
 type MemberEditFormProps = {
   companyId: string;
   initialMember: TeamMemberDetailView;
   memberId: string;
 };
-
-const STATUS_LABEL = {
-  available: "Disponível",
-  awaiting_approval: "Aguardando aprovação",
-  paused: "Pausado",
-  working: "Trabalhando",
-} satisfies Record<TeamMemberDetailView["status"], string>;
-
-const STATUS_TONE = {
-  available: "success",
-  awaiting_approval: "warning",
-  paused: "neutral",
-  working: "info",
-} satisfies Record<TeamMemberDetailView["status"], StatusTone>;
 
 const applyStatus = (
   member: TeamMemberDetailView,
@@ -47,19 +36,11 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
   const ready = useClientReady();
   const disabled = !ready || busy;
 
-  const patch = async (body: {
-    displayName?: string;
-    promptOverride?: string | null;
-    status?: "active" | "paused";
-  }) => {
+  const patch = async (body: z.input<typeof operatorMemberPatchSchema>) => {
     setBusy(true);
 
     try {
-      const data = await apiSend<{ member: TeamMemberDetailView }>(
-        "PATCH",
-        `/teams/${companyId}/members/${memberId}`,
-        body,
-      );
+      const data = await patchMember(companyId, memberId, body);
 
       setMember(data.member);
     } catch (error) {
@@ -118,9 +99,9 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
               {member.displayName}
             </h1>
             <StatusPill
-              label={STATUS_LABEL[optimisticMember.status]}
-              pulse={optimisticMember.status === "working"}
-              tone={STATUS_TONE[optimisticMember.status]}
+              label={AGENT_STATUS[optimisticMember.status].label}
+              pulse={AGENT_STATUS[optimisticMember.status].pulse}
+              tone={AGENT_STATUS[optimisticMember.status].tone}
             />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -166,14 +147,24 @@ const MemberEditForm = ({ companyId, initialMember, memberId }: MemberEditFormPr
           <MemberNameForm busy={busy} displayName={member.displayName} onRename={handleRename} />
 
           {member.role === "worker" ? (
-            <PromptEditor
-              busy={busy}
-              initialValue={member.promptOverride}
-              onReset={() => handleSavePrompt(null)}
-              onSave={handleSavePrompt}
-              templatePrompt={member.templateSystemPrompt}
-              updatedAt={member.promptOverrideUpdatedAt}
-            />
+            <div className="flex flex-col gap-3">
+              <details className="rounded-lg border border-border p-3">
+                <summary className="cursor-pointer text-sm font-medium text-foreground">
+                  Padrão do template
+                </summary>
+                <pre className="mt-2 font-mono text-xs whitespace-pre-wrap text-muted-foreground">
+                  {member.templateSystemPrompt}
+                </pre>
+              </details>
+              <PromptEditor
+                busy={busy}
+                initialValue={member.promptOverride}
+                label="Prompt do agente"
+                onSave={handleSavePrompt}
+                placeholder="Escreva instruções específicas para este agente, em pt-BR."
+                updatedAt={member.promptOverrideUpdatedAt}
+              />
+            </div>
           ) : null}
         </CardContent>
       </Card>

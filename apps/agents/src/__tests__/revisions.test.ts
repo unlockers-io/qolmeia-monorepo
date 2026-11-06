@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
@@ -16,12 +17,12 @@ beforeEach(async () => {
 
 const proposeRound = async (round: number): Promise<string> => {
   const { id } = await db((client) =>
-    proposeAction(client, {
+    proposeAction(env, client, {
       actionType: "worker_deliverable",
       companyId: COMPANY_ID,
       feedback: round > 0 ? "ajuste" : null,
       policy: "require_approval",
-      proposed: {},
+      proposed: { assetIds: [], summary: `round ${round}` },
       round,
       summary: `round ${round}`,
       ticketId: TICKET_ID,
@@ -33,7 +34,7 @@ const proposeRound = async (round: number): Promise<string> => {
 
 const requestChanges = (actionId: string, round: number) =>
   db((client) =>
-    recordDecision(client, {
+    recordDecision(env, client, {
       actionId,
       companyId: COMPANY_ID,
       decidedByUserId: "operator",

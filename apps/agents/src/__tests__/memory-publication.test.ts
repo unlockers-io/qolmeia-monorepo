@@ -24,7 +24,7 @@ const production = {
 const confirm = () =>
   db((client) =>
     confirmTeam(production, client, {
-      actorId: "customer",
+      actor: { surface: "customer", userId: "customer" },
       companyId: COMPANY_ID,
       templateIds: ["tpl-designer"],
     }),

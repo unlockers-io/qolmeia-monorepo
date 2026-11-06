@@ -23,6 +23,10 @@ describe("createProxy", () => {
     );
   });
 
+  it("sends a visitor on the root to /login with no page to remember", () => {
+    expect(visit("/").headers.get("location")).toBe("https://admin.qolmeia.com/login");
+  });
+
   it("lets a visitor holding a session cookie through", () => {
     const response = visit("/approvals", { cookie: "__Secure-qolmeia.session_token=t.s" });
     expect(response.headers.get("location")).toBeNull();

@@ -1,20 +1,16 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import type {
-  Action,
-  ActionDetailResponse,
-  ActionStatus,
-  TicketDetailResponse,
-} from "@repo/worker-api/contracts";
+import { StatusPill } from "@repo/ui/compositions/status-pill";
+import type { ActionPolicy, ActionStatus } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { createElement, Suspense } from "react";
+import { Suspense } from "react";
 
-import { ACTION_RENDERERS } from "@/components/action-renderers";
+import { ACTION_TYPE_VIEWS, ActionCard } from "@/components/action-types";
 import { BackLink } from "@/components/back-link";
-import { StatusPill } from "@/components/status-pill";
-import { ApiError } from "@/lib/api-client";
-import { apiGetServer } from "@/lib/api-server";
-import { actionTypeLabel, formatRelative } from "@/lib/format";
+import { getAction } from "@/lib/backoffice-api";
+import { formatRelative } from "@/lib/format";
+import { orNotFound } from "@/lib/or-not-found";
+import { ACTION_STATUS } from "@/lib/status";
 
 import { ApprovalContext } from "./approval-context";
 import { ApprovalDecision } from "./approval-decision";
@@ -33,7 +29,7 @@ const POLICY_COPY = {
   auto_execute: "Execução automática",
   notify_only: "Apenas notificar",
   require_approval: "Sob aprovação",
-} satisfies Record<string, string>;
+} satisfies Record<ActionPolicy, string>;
 
 const TITLE = {
   approved: "Ação aprovada",
@@ -43,36 +39,14 @@ const TITLE = {
   rejected: "Ação rejeitada",
 } satisfies Record<ActionStatus, string>;
 
-const loadTicketActions = async (ticketId: string): Promise<ReadonlyArray<Action>> => {
-  try {
-    const detail = await apiGetServer<TicketDetailResponse>(`/tickets/${ticketId}`);
-
-    return detail.actions;
-  } catch {
-    return [];
-  }
-};
-
 const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
   const { id } = await params;
 
-  let detail: ActionDetailResponse | null = null;
+  const { action, ageSeconds, canRequestChanges, rounds, ticket } = await orNotFound(
+    getAction(apiGetServer, id),
+  );
 
-  try {
-    detail = await apiGetServer<ActionDetailResponse>(`/actions/${id}`);
-  } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 404) {
-      throw error;
-    }
-  }
-
-  if (!detail) {
-    notFound();
-  }
-
-  const { action, ageSeconds, canRequestChanges, ticket } = detail;
   const policyCopy = POLICY_COPY[action.policy];
-  const rounds = ticket === null ? [] : await loadTicketActions(ticket.id);
   const roundIndex = rounds.findIndex((round) => round.id === action.id);
   const previousRound = roundIndex > 0 ? rounds[roundIndex - 1] : undefined;
 
@@ -88,22 +62,19 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
           </div>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">
-              {actionTypeLabel(action.actionType)}
+              {ACTION_TYPE_VIEWS[action.actionType].label}
             </span>
-            {rounds.length > 1 && roundIndex !== -1 ? ` · Rodada ${roundIndex + 1}` : ""} ·{" "}
-            {policyCopy} · {formatRelative(action.createdAt)}
+            {rounds.length > 1 ? ` · Rodada ${roundIndex + 1}` : ""} · {policyCopy} ·{" "}
+            {formatRelative(action.createdAt)}
           </p>
         </div>
-        <StatusPill status={action.status} />
+        <StatusPill {...ACTION_STATUS[action.status]} />
       </header>
 
       <div className="grid items-start gap-4 lg:grid-cols-approval">
         <div className="flex flex-col gap-4">
           <PreviousRound round={previousRound} roundIndex={roundIndex} />
-          {createElement(ACTION_RENDERERS[action.actionType], {
-            agent: action.agent,
-            proposed: action.proposed,
-          })}
+          <ActionCard action={action} />
         </div>
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-6">

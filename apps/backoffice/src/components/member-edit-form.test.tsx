@@ -144,7 +144,7 @@ describe("member prompt editor", () => {
       />,
     );
     const prompt = screen.getByRole("textbox", { name: "Prompt do agente" });
-    const save = screen.getByRole("button", { name: "Salvar prompt" });
+    const save = screen.getByRole("button", { name: "Salvar" });
     expect(save).toBeDisabled();
 
     fireEvent.change(prompt, { target: { value: "" } });
@@ -161,7 +161,7 @@ describe("member prompt editor", () => {
     expect(prompt).toHaveAccessibleDescription(/Até 20\.000 caracteres\./v);
     fireEvent.change(prompt, { target: { value: "a".repeat(20_001) } });
 
-    fireEvent.click(screen.getByRole("button", { name: "Salvar prompt" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     expect(await screen.findByText("Use no máximo 20.000 caracteres.")).toBeInTheDocument();
     await waitFor(() => {
@@ -177,7 +177,7 @@ describe("member prompt editor", () => {
       target: { value: "Seja breve." },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Salvar prompt" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Algo falhou do nosso lado. Tente de novo em instantes.");

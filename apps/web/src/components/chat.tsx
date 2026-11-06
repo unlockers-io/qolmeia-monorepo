@@ -1,5 +1,8 @@
 "use client";
 
+import type { FlueConversationMessage } from "@flue/sdk";
+import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/app-shell/agent-avatar";
+import { AGENT_STATUS } from "@repo/app-shell/agent-status";
 import { Marker, MarkerContent, MarkerIcon } from "@repo/ui/components/marker";
 import { Message, MessageContent } from "@repo/ui/components/message";
 import {
@@ -11,26 +14,23 @@ import {
   MessageScrollerViewport,
 } from "@repo/ui/components/message-scroller";
 import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import { agentAvatarClass } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
+import type { ConversationAgent, SkillId } from "@repo/worker-api/contracts";
 import { ArrowDown, ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
-import type { ReactNode } from "react";
 
 import { ChatComposer } from "@/components/chat-composer";
-import type { ChatMessage, UseFlueChatResult } from "@/lib/use-flue-chat";
+import type { UseFlueChatResult } from "@/lib/use-flue-chat";
 import { useFlueChat } from "@/lib/use-flue-chat";
 
 type ChatProps = {
-  agent?: "correspondent" | "planner";
+  agent: ConversationAgent;
   companyId: string;
 };
-
-const PLANNER_KICKOFF =
-  "O cliente acabou de abrir o chat de onboarding. Cumprimente-o de forma calorosa e breve, diga em uma frase que você vai fazer algumas perguntas para entender o negócio dele, e já faça a primeira pergunta da entrevista.";
 
 const PLANNER_GREETING =
   "Oi! Vou fazer algumas perguntas para conhecer seu negócio e montar o time certo para você. Para começar: o que sua empresa faz e quem ela atende?";
@@ -46,45 +46,24 @@ const TOOL_ACTIVITY_LABELS = {
   rememberFact: "Anotando na memória…",
   saveAsset: "Salvando na biblioteca…",
   webSearch: "Pesquisando na web…",
-} satisfies Record<string, string>;
+} satisfies Partial<Record<SkillId, string>>;
 
 const toolActivityLabelByName = new Map<string, string>(Object.entries(TOOL_ACTIVITY_LABELS));
 
 const toolActivityLabel = (toolName: string): string =>
   toolActivityLabelByName.get(toolName) ?? "Trabalhando…";
 
-const isKickoffMessage = (message: ChatMessage): boolean =>
-  message.role === "user" &&
-  message.parts.some((part) => part.type === "text" && part.text === PLANNER_KICKOFF);
+const isChatMessage = (message: FlueConversationMessage): boolean => message.display === "visible";
 
-const isChatMessage = (message: ChatMessage): boolean => message.display === "visible";
+const hasVisibleContent = (message: FlueConversationMessage): boolean =>
+  message.parts.some(
+    (part) =>
+      part.type === "file" ||
+      (part.type === "text" && part.text.length > 0) ||
+      (part.type === "dynamic-tool" && part.state === "input-available"),
+  );
 
-const hasVisibleContent = (message: ChatMessage): boolean =>
-  message.parts.some((part) => {
-    switch (part.type) {
-      case "dynamic-tool": {
-        return part.state === "input-available";
-      }
-
-      case "file": {
-        return true;
-      }
-
-      case "text": {
-        return part.text.length > 0;
-      }
-
-      case "reasoning": {
-        return false;
-      }
-
-      default: {
-        return false;
-      }
-    }
-  });
-
-const MessageBubble = ({ message }: { message: ChatMessage }) => {
+const MessageBubble = ({ message }: { message: FlueConversationMessage }) => {
   const isUser = message.role === "user";
 
   return (
@@ -178,22 +157,6 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
   );
 };
 
-type ChatEmptyStateProps = {
-  description: string;
-  icon: ReactNode;
-  title: string;
-};
-
-const ChatEmptyState = ({ description, icon, title }: ChatEmptyStateProps) => (
-  <div className="flex size-full flex-col items-center justify-center gap-3 p-8 text-center">
-    <div className="text-muted-foreground">{icon}</div>
-    <div className="space-y-1">
-      <h3 className="text-sm font-medium">{title}</h3>
-      <p className="max-w-md text-sm text-muted-foreground">{description}</p>
-    </div>
-  </div>
-);
-
 const ChatSkeleton = () => (
   <div className="flex min-h-0 flex-1 flex-col bg-background">
     <div className="flex flex-1 items-center justify-center">
@@ -205,7 +168,7 @@ const ChatSkeleton = () => (
   </div>
 );
 
-const AssistantAvatar = ({ agent }: { agent: "correspondent" | "planner" }) => (
+const AssistantAvatar = ({ agent }: { agent: ConversationAgent }) => (
   <div
     aria-hidden
     className={cn(
@@ -213,7 +176,7 @@ const AssistantAvatar = ({ agent }: { agent: "correspondent" | "planner" }) => (
       agentAvatarClass(agent, null),
     )}
   >
-    {agent === "planner" ? "P" : "C"}
+    {agentInitials(agentRoleLabel(agent, null))}
   </div>
 );
 
@@ -235,21 +198,24 @@ type ChatViewProps = Pick<ChatProps, "agent"> & {
 };
 
 const ChatView = ({
-  agent: agentName = "correspondent",
+  agent: agentName,
   chat: { historyReady, messages, sendMessage, status },
 }: ChatViewProps) => {
   const visibleMessages = messages.filter(
-    (message) => !isKickoffMessage(message) && isChatMessage(message) && hasVisibleContent(message),
+    (message) => isChatMessage(message) && hasVisibleContent(message),
   );
 
-  const showPlannerGreeting =
-    agentName === "planner" && !messages.some((message) => isKickoffMessage(message));
+  const showPlannerGreeting = agentName === "planner";
 
   const hasConversation = showPlannerGreeting || visibleMessages.length > 0;
 
   const isThinking = status === "submitted" || status === "streaming";
   const isCorrespondent = agentName === "correspondent";
   const lastIndex = visibleMessages.length - 1;
+
+  const headerStatus = isThinking
+    ? { ...AGENT_STATUS.working, label: "Respondendo…" }
+    : AGENT_STATUS.available;
 
   if (!historyReady) {
     return <ChatSkeleton />;
@@ -261,21 +227,24 @@ const ChatView = ({
         <header className="flex h-13.5 flex-none items-center gap-3 border-b border-border bg-card px-6">
           <span
             aria-hidden
-            className="flex size-8 flex-none items-center justify-center rounded-lg bg-avatar-1 text-(length:--text-label) font-bold text-white"
+            className={cn(
+              "flex size-8 flex-none items-center justify-center rounded-lg text-(length:--text-label) font-bold text-white",
+              agentAvatarClass(agentName, null),
+            )}
           >
-            C
+            {agentInitials(agentRoleLabel(agentName, null))}
           </span>
           <div className="min-w-0">
             <h1 className="font-display text-sm font-bold tracking-tight text-foreground">
-              Correspondente
+              {agentRoleLabel(agentName, null)}
             </h1>
             <p className="text-xs text-muted-foreground">Seu ponto de contato</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <StatusPill
-              label={isThinking ? "Respondendo…" : "Disponível"}
-              pulse={isThinking}
-              tone={isThinking ? "info" : "success"}
+              label={headerStatus.label}
+              pulse={headerStatus.pulse}
+              tone={headerStatus.tone}
             />
           </div>
         </header>
@@ -311,9 +280,10 @@ const ChatView = ({
                   ))}
                 </>
               ) : (
-                <ChatEmptyState
+                <EmptyState
+                  className="size-full"
                   description="Os agentes da Qolmeia respondem em segundos."
-                  icon={<MessageSquare aria-hidden className="size-10" />}
+                  icon={<MessageSquare aria-hidden />}
                   title="Comece a conversa"
                 />
               )}
@@ -344,12 +314,12 @@ const ChatView = ({
         </MessageScroller>
       </MessageScrollerProvider>
 
-      <ChatComposer disabled={isThinking} onSend={sendMessage} status={status} />
+      <ChatComposer onSend={sendMessage} status={status} />
     </div>
   );
 };
 
-const ChatClient = ({ agent = "correspondent", companyId }: ChatProps) => {
+const ChatClient = ({ agent, companyId }: ChatProps) => {
   const chat = useFlueChat({ agent, companyId });
 
   return <ChatView agent={agent} chat={chat} />;
@@ -365,6 +335,6 @@ const Chat = (props: ChatProps) => {
   return <ChatClient {...props} />;
 };
 
-export { Chat, ChatView, PLANNER_GREETING, PLANNER_KICKOFF };
+export { Chat, ChatView, PLANNER_GREETING };
 
-export type { ChatProps, ChatViewProps };
+export type { ChatProps };

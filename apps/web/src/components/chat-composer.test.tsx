@@ -16,7 +16,7 @@ const attach = async () => {
   vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
     Response.json({
       assetId: "image-1",
-      mime: "image/png",
+      mimeType: "image/png",
       size: 4,
       url: "/assets/image-1",
     }),
@@ -33,7 +33,7 @@ describe("chat submission acknowledgement", () => {
   it("retains text and attachments after failure and retries the same draft", async () => {
     const pending = Promise.withResolvers<undefined>();
     const onSend = vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValueOnce(undefined);
-    render(<ChatComposer disabled={false} onSend={onSend} status="ready" />);
+    render(<ChatComposer onSend={onSend} status="ready" />);
     const message = screen.getByLabelText("Mensagem");
     fireEvent.change(message, { target: { value: "meu pedido" } });
     await attach();
@@ -65,7 +65,7 @@ describe("chat submission acknowledgement", () => {
 
   it("clears a failed send's alert on the next change", async () => {
     const onSend = vi.fn().mockRejectedValueOnce(new Error("offline"));
-    render(<ChatComposer disabled={false} onSend={onSend} status="ready" />);
+    render(<ChatComposer onSend={onSend} status="ready" />);
     const message = screen.getByLabelText("Mensagem");
     fireEvent.change(message, { target: { value: "pedido" } });
     fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
@@ -81,7 +81,7 @@ describe("chat submission acknowledgement", () => {
   it("blocks duplicate submissions until acceptance, then allows the next draft", async () => {
     const pending = Promise.withResolvers<undefined>();
     const onSend = vi.fn(() => pending.promise);
-    render(<ChatComposer disabled={false} onSend={onSend} status="ready" />);
+    render(<ChatComposer onSend={onSend} status="ready" />);
     const message = screen.getByLabelText("Mensagem");
     fireEvent.change(message, { target: { value: "pedido" } });
     const form = message.closest("form") as HTMLFormElement;

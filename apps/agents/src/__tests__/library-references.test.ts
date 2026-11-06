@@ -86,26 +86,30 @@ describe("persisted asset references", () => {
 
     const output = { json: JSON.stringify(generated), tool: generateBrandImageSkill.id };
 
-    const delivered = await ACTION_TYPE_MODULES.worker_deliverable.execute(
-      { companyId: COMPANY_ID, env },
-      ACTION_TYPE_MODULES.worker_deliverable.propose({
-        outputs: [output],
-        summary: "Arte pronta.",
-      }),
+    const delivered = await db((client) =>
+      ACTION_TYPE_MODULES.worker_deliverable.execute(
+        { companyId: COMPANY_ID, db: client },
+        ACTION_TYPE_MODULES.worker_deliverable.propose({
+          outputs: [output],
+          summary: "Arte pronta.",
+        }),
+      ),
     );
 
-    const posted = await ACTION_TYPE_MODULES.publish_post.execute(
-      { companyId: COMPANY_ID, env },
-      {
-        assetIds: [generated.assetId],
-        draft: {
-          body: "Pão quentinho",
-          callToAction: "Visite-nos",
-          platform: "instagram",
-          tone: "acolhedor",
+    const posted = await db((client) =>
+      ACTION_TYPE_MODULES.publish_post.execute(
+        { companyId: COMPANY_ID, db: client },
+        {
+          assetIds: [generated.assetId],
+          draft: {
+            body: "Pão quentinho",
+            callToAction: "Visite-nos",
+            platform: "instagram",
+            tone: "acolhedor",
+          },
+          summary: "Post pronto.",
         },
-        summary: "Post pronto.",
-      },
+      ),
     );
 
     expect(delivered).toBe(`Arte pronta.\n\n![](${reference})`);

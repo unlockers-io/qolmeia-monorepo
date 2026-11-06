@@ -1,5 +1,7 @@
-import { OPERATOR_ROLES, type OrgRole } from "@repo/worker-api/contracts";
+import type { OrgRole } from "@repo/db/enums";
 import { APIError, createAuthMiddleware } from "better-auth/api";
+
+import { OPERATOR_ROLES } from "./roles";
 
 const SIGNUP_CLOSED_MESSAGE = "Este painel já tem um operador. Peça um convite para entrar.";
 

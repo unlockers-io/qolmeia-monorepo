@@ -1,1 +1,23 @@
 @import "@repo/ui/globals.css";
+
+@import "@repo/app-shell/styles.css";
+
+@utility max-h-dialog-body {
+  max-height: 64vh;
+}
+
+@utility max-h-popover-viewport {
+  max-height: 60vh;
+}
+
+@utility w-nav-bleed {
+  width: calc(100% + 2rem);
+}
+
+@utility grid-cols-login {
+  grid-template-columns: 3fr 2fr;
+}
+
+@utility navigation-avatar {
+  background: var(--color-avatar-7);
+}

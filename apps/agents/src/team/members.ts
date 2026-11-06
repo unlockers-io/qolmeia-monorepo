@@ -1,81 +1,44 @@
 import type { Prisma } from "@repo/db/worker";
-import { correspondentIdFor, teamIdFor, type TeamMemberView } from "@repo/worker-api/contracts";
-import { z } from "zod";
+import type { TeamMemberView } from "@repo/worker-api/contracts";
 
 import { recordActivity } from "#/activity/log";
+import type { Actor } from "#/identity/identity";
 import type { Db, PrismaClient } from "#/lib/db";
 import {
-  CorrespondentMissingError,
-  InvalidDisplayNameError,
   MemberNotFoundError,
   MemberNotPausableError,
   MemberPromptNotEditableError,
+  TeamNotConfirmedError,
   TemplateNotFoundError,
   TemplateRetiredError,
 } from "#/team/errors";
-import { emitTeamEvent, type TeamEvent } from "#/team/events";
+import { emitTeamEvent, type TeamEventsEnv } from "#/team/events";
 import { getTeamMember, nextDisplayName } from "#/team/roster";
 
-const teamMemberPatchSchema = z.object({
-  displayName: z.string().trim().min(1).max(80).optional(),
-  promptOverride: z.union([z.string().trim().min(1).max(20_000), z.null()]).optional(),
-});
-
-const backofficeTeamMemberPatchSchema = teamMemberPatchSchema
-  .extend({
-    status: z.enum(["active", "paused"]).optional(),
-  })
-  .refine(
-    ({ displayName, promptOverride, status }) =>
-      status === undefined || (displayName === undefined && promptOverride === undefined),
-  );
-
-const hireTeamMemberSchema = z.object({
-  displayName: z.string().trim().min(1).max(80).optional(),
-  templateId: z.string().min(1),
-});
-
-const delegationTargetsSchema = z.array(z.string());
-
-type RosterReason = Extract<TeamEvent, { type: "team:roster" }>["reason"];
+type MemberTarget = { actor: Actor; agentInstanceId: string; companyId: string };
 
 type HireInput = {
-  actorId: string | null;
+  actor: Actor;
   companyId: string;
-  displayName: string | undefined;
+  displayName?: string;
   templateId: string;
 };
 
-type SetMemberStatusInput = {
-  actorId: string;
-  agentInstanceId: string;
-  companyId: string;
-  status: "active" | "paused";
-};
+type SetMemberStatusInput = MemberTarget & { status: "active" | "paused" };
 
-type UpdateMemberInput = {
-  agentInstanceId: string;
-  companyId: string;
-  displayName: string | undefined;
-  editedBy: "customer" | "operator";
-  operatorId: string | null;
-  promptOverride: string | null | undefined;
-};
-
-type RosterChange = {
-  change: (tx: Prisma.TransactionClient) => Promise<string>;
-  companyId: string;
-  reason: RosterReason;
+type UpdateMemberInput = MemberTarget & {
+  displayName?: string;
+  promptOverride?: string | null;
 };
 
 const changeRoster = async (
-  env: Env,
+  env: TeamEventsEnv,
   db: PrismaClient,
-  { change, companyId, reason }: RosterChange,
+  companyId: string,
+  change: (tx: Prisma.TransactionClient) => Promise<string>,
 ): Promise<TeamMemberView> => {
   const member = await db.$transaction(async (tx) => {
-    const agentInstanceId = await change(tx);
-    const view = await getTeamMember(tx, companyId, agentInstanceId);
+    const view = await getTeamMember(tx, companyId, await change(tx));
 
     if (!view) {
       throw new MemberNotFoundError();
@@ -84,102 +47,85 @@ const changeRoster = async (
     return view;
   });
 
-  await emitTeamEvent(env, { companyId, reason, type: "team:roster" });
+  await emitTeamEvent(env, { companyId, type: "team:roster" });
 
   return member;
 };
 
-const lockDelegationTargets = async (
-  tx: Prisma.TransactionClient,
-  companyId: string,
-): Promise<ReadonlyArray<string>> => {
-  const rows = await tx.$queryRaw<Array<{ can_delegate_to: Prisma.JsonValue }>>`
-    SELECT can_delegate_to FROM team_member
-    WHERE team_id = ${teamIdFor(companyId)} AND agent_instance_id = ${correspondentIdFor(companyId)}
-    FOR UPDATE`;
+/** Holds the team row until commit, so concurrent hires pick distinct display names. */
+const lockTeam = async (tx: Prisma.TransactionClient, companyId: string): Promise<string> => {
+  const [team] = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM team WHERE company_id = ${companyId} FOR UPDATE`;
 
-  const row = rows.at(0);
-
-  if (row === undefined) {
-    throw new CorrespondentMissingError();
+  if (team === undefined) {
+    throw new TeamNotConfirmedError();
   }
 
-  return delegationTargetsSchema.safeParse(row.can_delegate_to).data ?? [];
+  return team.id;
 };
 
-const hireMember = (env: Env, db: PrismaClient, input: HireInput): Promise<TeamMemberView> =>
-  changeRoster(env, db, {
-    change: async (tx) => {
-      const template = await tx.agentTemplate.findFirst({
-        where: {
-          entitlements: { some: { companyId: input.companyId, enabled: true } },
-          id: input.templateId,
-        },
-      });
+const hireMember = (
+  env: TeamEventsEnv,
+  db: PrismaClient,
+  input: HireInput,
+): Promise<TeamMemberView> =>
+  changeRoster(env, db, input.companyId, async (tx) => {
+    const template = await tx.agentTemplate.findFirst({
+      where: {
+        entitlements: { some: { companyId: input.companyId, enabled: true } },
+        id: input.templateId,
+      },
+    });
 
-      if (!template) {
-        throw new TemplateNotFoundError(input.templateId);
-      }
+    if (!template) {
+      throw new TemplateNotFoundError(input.templateId);
+    }
 
-      if (template.status !== "active") {
-        throw new TemplateRetiredError(input.templateId);
-      }
+    if (template.status !== "active") {
+      throw new TemplateRetiredError(input.templateId);
+    }
 
-      const targets = await lockDelegationTargets(tx, input.companyId);
+    const teamId = await lockTeam(tx, input.companyId);
 
-      const existing = await tx.agentInstance.findMany({
-        select: { displayName: true },
-        where: { companyId: input.companyId },
-      });
+    const existing = await tx.agentInstance.findMany({
+      select: { displayName: true },
+      where: { companyId: input.companyId },
+    });
 
-      const requestedName = input.displayName?.trim() ?? "";
+    const displayName =
+      input.displayName ??
+      nextDisplayName(
+        template.displayName,
+        existing.map((member) => member.displayName),
+      );
 
-      const displayName =
-        requestedName === ""
-          ? nextDisplayName(
-              template.displayName,
-              existing.map((member) => member.displayName),
-            )
-          : requestedName;
-
-      const agentInstanceId = `wkr_${crypto.randomUUID()}`;
-      const teamId = teamIdFor(input.companyId);
-      await tx.agentInstance.create({
-        data: {
-          companyId: input.companyId,
-          displayName,
-          id: agentInstanceId,
-          role: "worker",
-          templateId: template.id,
-          templateVersion: template.version,
-        },
-      });
-      await tx.teamMember.create({ data: { agentInstanceId, canDelegateTo: [], teamId } });
-      await tx.teamMember.update({
-        data: { canDelegateTo: [...targets, agentInstanceId] },
-        where: {
-          teamId_agentInstanceId: { agentInstanceId: correspondentIdFor(input.companyId), teamId },
-        },
-      });
-      await recordActivity(tx, {
-        actorId: input.actorId,
+    const agentInstanceId = `wkr_${crypto.randomUUID()}`;
+    await tx.agentInstance.create({
+      data: {
         companyId: input.companyId,
-        payload: { displayName, templateId: template.id },
-        refId: agentInstanceId,
-        refType: "agent_instance",
-        summary: `Agente "${displayName}" contratado.`,
-        type: "MEMBER_HIRED",
-      });
+        displayName,
+        id: agentInstanceId,
+        role: "worker",
+        templateId: template.id,
+      },
+    });
+    await tx.teamMember.create({ data: { agentInstanceId, teamId } });
+    await recordActivity(tx, {
+      actorId: input.actor.userId,
+      companyId: input.companyId,
+      payload: { displayName, templateId: template.id },
+      refId: agentInstanceId,
+      refType: "agent_instance",
+      summary: `Agente "${displayName}" contratado.`,
+      type: "MEMBER_HIRED",
+    });
 
-      return agentInstanceId;
-    },
-    companyId: input.companyId,
-    reason: "hired",
+    return agentInstanceId;
   });
 
 const findMember = async (
   db: Db,
-  input: { agentInstanceId: string; companyId: string },
+  input: MemberTarget,
 ): Promise<{ displayName: string; role: string }> => {
   const member = await db.agentInstance.findFirst({
     select: { displayName: true, role: true },
@@ -193,41 +139,35 @@ const findMember = async (
   return member;
 };
 
-const STATUS_REASON = { active: "resumed", paused: "paused" } as const;
-
 const setMemberStatus = (
-  env: Env,
+  env: TeamEventsEnv,
   db: PrismaClient,
   input: SetMemberStatusInput,
 ): Promise<TeamMemberView> =>
-  changeRoster(env, db, {
-    change: async (tx) => {
-      const member = await findMember(tx, input);
+  changeRoster(env, db, input.companyId, async (tx) => {
+    const member = await findMember(tx, input);
 
-      if (member.role !== "worker") {
-        throw new MemberNotPausableError(member.role);
-      }
+    if (member.role !== "worker") {
+      throw new MemberNotPausableError(member.role);
+    }
 
-      await tx.agentInstance.update({
-        data: { status: input.status },
-        where: { id: input.agentInstanceId },
-      });
-      await recordActivity(tx, {
-        actorId: input.actorId,
-        companyId: input.companyId,
-        refId: input.agentInstanceId,
-        refType: "agent_instance",
-        summary:
-          input.status === "active"
-            ? `${member.displayName} foi retomado.`
-            : `${member.displayName} foi pausado.`,
-        type: input.status === "active" ? "MEMBER_RESUMED" : "MEMBER_PAUSED",
-      });
+    await tx.agentInstance.update({
+      data: { status: input.status },
+      where: { id: input.agentInstanceId },
+    });
+    await recordActivity(tx, {
+      actorId: input.actor.userId,
+      companyId: input.companyId,
+      refId: input.agentInstanceId,
+      refType: "agent_instance",
+      summary:
+        input.status === "active"
+          ? `${member.displayName} foi retomado.`
+          : `${member.displayName} foi pausado.`,
+      type: input.status === "active" ? "MEMBER_RESUMED" : "MEMBER_PAUSED",
+    });
 
-      return input.agentInstanceId;
-    },
-    companyId: input.companyId,
-    reason: STATUS_REASON[input.status],
+    return input.agentInstanceId;
   });
 
 const renameMember = async (
@@ -235,53 +175,46 @@ const renameMember = async (
   input: UpdateMemberInput & { displayName: string },
   oldName: string,
 ): Promise<void> => {
-  const displayName = input.displayName.trim();
-
-  if (displayName === "") {
-    throw new InvalidDisplayNameError();
-  }
-
-  if (displayName === oldName) {
+  if (input.displayName === oldName) {
     return;
   }
 
-  await tx.agentInstance.update({ data: { displayName }, where: { id: input.agentInstanceId } });
+  await tx.agentInstance.update({
+    data: { displayName: input.displayName },
+    where: { id: input.agentInstanceId },
+  });
   await recordActivity(tx, {
-    actorId: input.operatorId,
+    actorId: input.actor.userId,
     companyId: input.companyId,
-    payload: { newName: displayName, oldName },
+    payload: { newName: input.displayName, oldName },
     refId: input.agentInstanceId,
     refType: "agent_instance",
-    summary: `${oldName} agora se chama ${displayName}.`,
+    summary: `${oldName} agora se chama ${input.displayName}.`,
     type: "MEMBER_RENAMED",
   });
 };
 
 const overridePrompt = async (
   tx: Prisma.TransactionClient,
-  input: UpdateMemberInput,
+  input: UpdateMemberInput & { promptOverride: string | null },
   memberName: string,
 ): Promise<void> => {
-  const trimmed = input.promptOverride?.trim() ?? "";
-  const promptOverride = trimmed === "" ? null : trimmed;
-  await tx.agentInstance.update({ data: { promptOverride }, where: { id: input.agentInstanceId } });
+  const { actor, agentInstanceId, companyId, promptOverride } = input;
+  const ref = { actorId: actor.userId, companyId, refId: agentInstanceId };
+  await tx.agentInstance.update({ data: { promptOverride }, where: { id: agentInstanceId } });
   await recordActivity(
     tx,
     promptOverride === null
       ? {
-          actorId: input.operatorId,
-          companyId: input.companyId,
-          payload: { editedBy: input.editedBy },
-          refId: input.agentInstanceId,
+          ...ref,
+          payload: { editedBy: actor.surface },
           refType: "agent_instance",
           summary: `Instruções de ${memberName} voltaram ao padrão.`,
           type: "MEMBER_PROMPT_RESET",
         }
       : {
-          actorId: input.operatorId,
-          companyId: input.companyId,
-          payload: { editedBy: input.editedBy, length: input.promptOverride?.length ?? 0 },
-          refId: input.agentInstanceId,
+          ...ref,
+          payload: { editedBy: actor.surface, length: promptOverride.length },
           refType: "agent_instance",
           summary: `Instruções de ${memberName} foram personalizadas.`,
           type: "MEMBER_PROMPT_EDITED",
@@ -290,38 +223,27 @@ const overridePrompt = async (
 };
 
 const updateMember = (
-  env: Env,
+  env: TeamEventsEnv,
   db: PrismaClient,
   input: UpdateMemberInput,
 ): Promise<TeamMemberView> =>
-  changeRoster(env, db, {
-    change: async (tx) => {
-      const member = await findMember(tx, input);
+  changeRoster(env, db, input.companyId, async (tx) => {
+    const member = await findMember(tx, input);
+    const { displayName, promptOverride } = input;
 
-      if (input.promptOverride !== undefined && member.role !== "worker") {
-        throw new MemberPromptNotEditableError(member.role);
-      }
+    if (promptOverride !== undefined && member.role !== "worker") {
+      throw new MemberPromptNotEditableError(member.role);
+    }
 
-      if (input.displayName !== undefined) {
-        await renameMember(tx, { ...input, displayName: input.displayName }, member.displayName);
-      }
+    if (displayName !== undefined) {
+      await renameMember(tx, { ...input, displayName }, member.displayName);
+    }
 
-      if (input.promptOverride !== undefined) {
-        await overridePrompt(tx, input, member.displayName);
-      }
+    if (promptOverride !== undefined) {
+      await overridePrompt(tx, { ...input, promptOverride }, member.displayName);
+    }
 
-      return input.agentInstanceId;
-    },
-    companyId: input.companyId,
-    reason: input.promptOverride === undefined ? "renamed" : "prompt_changed",
+    return input.agentInstanceId;
   });
 
-export {
-  lockDelegationTargets,
-  backofficeTeamMemberPatchSchema,
-  hireMember,
-  hireTeamMemberSchema,
-  setMemberStatus,
-  teamMemberPatchSchema,
-  updateMember,
-};
+export { hireMember, setMemberStatus, updateMember };

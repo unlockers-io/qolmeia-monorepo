@@ -90,4 +90,34 @@ describe("PATCH /api/me/company", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("415 and no write when the body isn't sent as JSON", async () => {
+    cookie = await signInAs(meCustomer);
+
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
+      body: JSON.stringify({ industry: "alimentação" }),
+      headers: { "content-type": "text/plain" },
+      method: "PATCH",
+    });
+
+    expect(res.status).toBe(415);
+    await expect(res.json()).resolves.toEqual({ error: "expected application/json" });
+
+    const after = await fetchWithCookie(cookie, "https://agents.test/api/me/company");
+    const { company } = await after.json<CompanyBody>();
+    expect(company.brief.industry).toBeUndefined();
+  });
+
+  it("answers malformed JSON with a JSON 400", async () => {
+    cookie = await signInAs(meCustomer);
+
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/me/company", {
+      body: "{",
+      headers: { "content-type": "application/json" },
+      method: "PATCH",
+    });
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Malformed JSON in request body" });
+  });
 });

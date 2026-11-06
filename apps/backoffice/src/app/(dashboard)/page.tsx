@@ -1,37 +1,32 @@
+import { agentAvatarClass, agentInitials } from "@repo/app-shell/agent-avatar";
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
-import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
-import type {
-  ActionsResponse,
-  ActivityResponse,
-  CompanyRoster,
-  TicketsResponse,
-} from "@repo/worker-api/contracts";
+import type { ActivityResponse } from "@repo/worker-api/contracts";
 import { Activity, CircleAlert, Inbox } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { ACTION_TYPE_VIEWS } from "@/components/action-types";
 import { activityStyle } from "@/lib/activity-category";
-import { apiGetServer } from "@/lib/api-server";
-import { actionTypeLabel, formatDurationSeconds, formatRelative } from "@/lib/format";
+import { getActivity, getCompanies, getPendingActions, getTickets } from "@/lib/backoffice-api";
+import { formatDurationSeconds, formatRelative } from "@/lib/format";
 import { log } from "@/lib/observability";
 
-import { CompanySummary, PendingSummary, TicketSummary } from "./home-summary";
+import { CompanySummary, PendingSummary, TicketSummary, UNAVAILABLE } from "./home-summary";
 
 export const metadata: Metadata = { title: "Início" };
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-const UNAVAILABLE = "Não foi possível carregar";
-
 const loadRecentEvents = async (): Promise<ActivityResponse | null> => {
   try {
-    return await apiGetServer<ActivityResponse>("/activity?limit=8");
+    return await getActivity(apiGetServer, { category: undefined, limit: 8 });
   } catch (error) {
     log.error({ error, message: "home: failed to load recent activity" });
 
@@ -99,9 +94,9 @@ const HomeContent = async () => {
   const activity = loadRecentEvents();
 
   const [pendingRes, ticketsRes, companiesRes] = await Promise.allSettled([
-    apiGetServer<ActionsResponse>("/actions?status=pending&sort=age"),
-    apiGetServer<TicketsResponse>("/tickets?limit=200"),
-    apiGetServer<{ companies: Array<CompanyRoster> }>("/companies"),
+    getPendingActions(apiGetServer),
+    getTickets(apiGetServer, 200),
+    getCompanies(apiGetServer),
   ]);
 
   const pending = pendingRes.status === "fulfilled" ? pendingRes.value.items : null;
@@ -158,17 +153,15 @@ const HomeContent = async () => {
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                       <span className="truncate text-(length:--text-label-lg) font-semibold text-foreground">
-                        {actionTypeLabel(action.actionType)}
+                        {ACTION_TYPE_VIEWS[action.actionType].label}
                       </span>
                       <span className="truncate text-xs text-muted-foreground">
                         {action.companyName} · {action.agent.name}
                       </span>
                     </div>
-                    {action.ageSeconds === undefined ? null : (
-                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                        {formatDurationSeconds(action.ageSeconds)}
-                      </span>
-                    )}
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {formatDurationSeconds(action.ageSeconds)}
+                    </span>
                   </Link>
                 </li>
               ))}

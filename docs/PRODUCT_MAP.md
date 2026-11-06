@@ -73,7 +73,7 @@ A read-only timeline of what the team did (delegations, proposals, approvals, de
 ```
 magic link -> /auth/verify -> /
   status onboarding: Planner interview -> extractBrief -> proposeTeam -> "Confirmar Time"
-     -> POST /api/teams/:companyId/confirm -> team materialized, status active
+     -> POST /api/me/team/confirm -> team materialized, status active
   status active: Correspondent chat -> delegateToWorker -> ticket + workflow
      -> (internal approval) -> delivery lands in chat -> asset saved to library
 ```
@@ -188,7 +188,7 @@ Executing runs the action type's executor, which moves the deliverable's files t
 ### 3.4 Data model (Postgres + Prisma)
 
 `company`, `agent_instance`, `template`, `skill` (operator kill-switch: `enabled` only),
-`company_template_entitlement`, `team`, `team_member` (with a cycle-checked `can_delegate_to` graph),
+`company_template_entitlement`, `team`, `team_member`,
 `ticket`, `action`, `activity_log`, `memory_fact`, `operator_assignment`, and `asset` (kinds:
 `generated_image`, `knowledge_doc`, `audio`, `brand_asset`, `user_upload`; customer/agent visibility;
 SHA-256 deduplication).

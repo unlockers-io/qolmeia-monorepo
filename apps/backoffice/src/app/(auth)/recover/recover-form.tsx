@@ -1,6 +1,7 @@
 "use client";
 
-import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
+import { authClient, authRequest } from "@repo/app-shell/auth-client";
+import { EmailField } from "@repo/app-shell/auth-fields";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -10,11 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
+import { FieldGroup } from "@repo/ui/components/field";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
-import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
@@ -36,19 +35,14 @@ const RecoverForm = () => {
     onSubmit: async ({ value }) => {
       setSubmitError(null);
 
-      try {
-        const { error } = await authClient.requestPasswordReset({
-          email: value.email,
-          redirectTo: "/reset-password",
-        });
+      const { error } = await authRequest(
+        () =>
+          authClient.requestPasswordReset({ email: value.email, redirectTo: "/reset-password" }),
+        "Não foi possível enviar o link.",
+      );
 
-        if (error) {
-          setSubmitError(authErrorMessage(error, "Não foi possível enviar o link."));
-
-          return;
-        }
-      } catch {
-        setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
+      if (error !== null) {
+        setSubmitError(error);
 
         return;
       }
@@ -87,34 +81,7 @@ const RecoverForm = () => {
         <CardContent>
           <FieldGroup>
             <FormAlert message={submitError} />
-            <form.Field name="email">
-              {(field) => {
-                const isInvalid = !field.state.meta.isValid;
-
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="email"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      placeholder="voce@empresa.com"
-                      type="email"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
-            </form.Field>
+            <form.Field name="email">{(field) => <EmailField field={field} />}</form.Field>
           </FieldGroup>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">

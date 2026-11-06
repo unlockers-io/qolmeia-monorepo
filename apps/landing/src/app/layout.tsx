@@ -1,22 +1,14 @@
 import "@/styles/globals.css";
 
-import type { Metadata, Viewport } from "next";
-import { Hanken_Grotesk, JetBrains_Mono, Sora } from "next/font/google";
+import { bodyFont, fontVariables } from "@repo/app-shell/root-layout";
+import { MAIN_CONTENT_ID, SkipLink } from "@repo/app-shell/skip-link";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { SHORT_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import { SITE_URL } from "@/lib/urls";
-
-const hanken = Hanken_Grotesk({ display: "swap", subsets: ["latin"], variable: "--font-hanken" });
-const sora = Sora({ display: "swap", subsets: ["latin"], variable: "--font-sora" });
-
-const jetbrainsMono = JetBrains_Mono({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-jetbrains",
-});
 
 export const metadata: Metadata = {
   authors: [{ name: SITE_NAME }],
@@ -50,31 +42,14 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  initialScale: 1,
-  maximumScale: 5,
-  themeColor: [
-    { color: "white", media: "(prefers-color-scheme: light)" },
-    { color: "black", media: "(prefers-color-scheme: dark)" },
-  ],
-  userScalable: true,
-  width: "device-width",
-};
+export { viewport } from "@repo/app-shell/root-layout";
 
 const RootLayout = ({ children }: { children: ReactNode }) => (
-  <html
-    className={`${hanken.variable} ${sora.variable} ${jetbrainsMono.variable} scroll-smooth`}
-    lang="pt-BR"
-  >
-    <body className={`${hanken.className} flex min-h-dvh flex-col antialiased`}>
-      <a
-        className="sr-only fixed top-2 left-2 z-50 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground ring-1 ring-ring focus:not-sr-only"
-        href="#main-content"
-      >
-        Pular para o conteúdo
-      </a>
+  <html className={`${fontVariables} scroll-smooth`} lang="pt-BR">
+    <body className={`${bodyFont} flex min-h-dvh flex-col antialiased`}>
+      <SkipLink />
       <Header />
-      <main className="flex-1" id="main-content">
+      <main className="flex-1" id={MAIN_CONTENT_ID}>
         {children}
       </main>
       <Footer />

@@ -1,5 +1,3 @@
-import type { ActionType } from "@repo/worker-api/contracts";
-
 const RTF = new Intl.RelativeTimeFormat("pt-BR", { numeric: "auto" });
 
 const DATE_SHORT = new Intl.DateTimeFormat("pt-BR", {
@@ -76,7 +74,7 @@ const formatDurationSeconds = (seconds: number): string => {
   return rem === 0 ? `${hours}h` : `${hours}h${rem}min`;
 };
 
-const truncate = (value: string, limit = 120): string => {
+const truncate = (value: string, limit: number): string => {
   if (value.length <= limit) {
     return value;
   }
@@ -84,30 +82,16 @@ const truncate = (value: string, limit = 120): string => {
   return `${value.slice(0, limit - 1).trimEnd()}…`;
 };
 
-const ACTION_TYPE_LABEL = {
-  publish_post: "Publicar post",
-  worker_deliverable: "Entrega",
-} satisfies Record<ActionType, string>;
-
-const actionTypeLabel = (actionType: ActionType): string => ACTION_TYPE_LABEL[actionType];
-
 type AgeTier = "calm" | "urgent" | "warning";
 
-const ageTier = (seconds: number | undefined): AgeTier => {
-  if (seconds === undefined || seconds < 3600) {
+const ageTier = (seconds: number): AgeTier => {
+  if (seconds < 3600) {
     return "calm";
   }
 
   return seconds >= 4 * 3600 ? "urgent" : "warning";
 };
 
-export {
-  actionTypeLabel,
-  ageTier,
-  formatDateTime,
-  formatDurationSeconds,
-  formatRelative,
-  truncate,
-};
+export { ageTier, formatDateTime, formatDurationSeconds, formatRelative, truncate };
 
 export type { AgeTier };

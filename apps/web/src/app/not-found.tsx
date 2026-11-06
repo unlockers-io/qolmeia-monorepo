@@ -1,28 +1,10 @@
-import { buttonVariants } from "@repo/ui/components/button";
-import { cn } from "@repo/ui/lib/utils";
+import { NotFound } from "@repo/app-shell/not-found";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Página não encontrada",
 };
 
-const NotFound = () => (
-  <main
-    className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-6 text-center"
-    id="main-content"
-  >
-    <p className="text-8xl font-bold tracking-tight text-foreground">404</p>
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-semibold text-foreground">Página não encontrada</h1>
-      <p className="max-w-md text-sm text-muted-foreground">
-        A página que você está procurando não existe ou foi movida.
-      </p>
-    </div>
-    <Link className={cn(buttonVariants())} href="/">
-      Voltar ao chat
-    </Link>
-  </main>
-);
+const NotFoundPage = () => <NotFound homeLabel="Voltar ao chat" />;
 
-export default NotFound;
+export default NotFoundPage;

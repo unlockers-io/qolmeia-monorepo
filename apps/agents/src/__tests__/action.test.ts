@@ -1,11 +1,11 @@
-import type { ActionPolicy, DecisionOutcome } from "@repo/worker-api/contracts";
+import type { ActionPolicy, DecisionOutcome, Deliverable } from "@repo/worker-api/contracts";
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
-import { actionIdFor, getAction, listPendingActions } from "#/action/action";
+import { actionIdFor, getActionDetail, listPendingActions } from "#/action/action";
 import { markExecuted, proposeAction, recordDecision } from "#/action/approval";
 import { listActivity } from "#/activity/log";
-import type { JsonRecord } from "#/lib/records";
 import { loadTicket } from "#/ticket/ticket";
 
 const COMPANY_ID = "co_action_test";
@@ -15,19 +15,21 @@ const SECOND_TICKET_ID = "tkt-action-test-2";
 
 type ProposeInput = {
   policy?: ActionPolicy;
-  proposed?: JsonRecord;
+  proposed?: Deliverable;
   round?: number;
   ticketId?: string;
 };
 
+const deliverable = (summary: string): Deliverable => ({ assetIds: [], summary });
+
 const propose = ({ policy, proposed, round, ticketId }: ProposeInput = {}) =>
   db((client) =>
-    proposeAction(client, {
+    proposeAction(env, client, {
       actionType: "worker_deliverable",
       companyId: COMPANY_ID,
       feedback: null,
       policy: policy ?? "require_approval",
-      proposed: proposed ?? {},
+      proposed: proposed ?? deliverable("review this"),
       round: round ?? 0,
       summary: "review this",
       ticketId: ticketId ?? TICKET_ID,
@@ -36,7 +38,7 @@ const propose = ({ policy, proposed, round, ticketId }: ProposeInput = {}) =>
 
 const decide = (actionId: string, decision: DecisionOutcome, decidedByUserId = "user-1") =>
   db((client) =>
-    recordDecision(client, {
+    recordDecision(env, client, {
       actionId,
       companyId: COMPANY_ID,
       decidedByUserId,
@@ -48,7 +50,7 @@ const decide = (actionId: string, decision: DecisionOutcome, decidedByUserId = "
 
 const execute = (actionId: string, policy: ActionPolicy) =>
   db((client) =>
-    markExecuted(client, {
+    markExecuted(env, client, {
       actionId,
       companyId: COMPANY_ID,
       policy,
@@ -57,9 +59,22 @@ const execute = (actionId: string, policy: ActionPolicy) =>
     }),
   );
 
-const action = (id: string) => db((client) => getAction(client, id));
+const action = async (id: string) => {
+  const detail = await db((client) => getActionDetail(client, id));
 
-const pending = () => db((client) => listPendingActions(client, { companyId: COMPANY_ID }));
+  return detail?.action;
+};
+
+const decidedBy = async (id: string) => {
+  const row = await db((client) =>
+    client.action.findUniqueOrThrow({ select: { decidedByUserId: true }, where: { id } }),
+  );
+
+  return row.decidedByUserId;
+};
+
+const pending = () =>
+  db((client) => listPendingActions(client, { companies: [COMPANY_ID], disciplines: [] }));
 
 const ticket = () => db((client) => loadTicket(client, TICKET_ID));
 
@@ -83,7 +98,7 @@ beforeEach(async () => {
 
 describe("proposeAction + getAction", () => {
   it("inserts a pending action keyed by ticket and round; getAction round-trips it", async () => {
-    const { id } = await propose({ proposed: { summary: "let's ship X" } });
+    const { id } = await propose({ proposed: deliverable("let's ship X") });
     expect(id).toBe(actionIdFor(TICKET_ID, 0));
     const stored = await action(id);
     expect(stored?.status).toBe("pending");
@@ -92,10 +107,10 @@ describe("proposeAction + getAction", () => {
   });
 
   it("is idempotent per round: a retried propose returns the same id and keeps one row", async () => {
-    const first = await propose({ proposed: { attempt: 1 } });
-    const second = await propose({ proposed: { attempt: 2 } });
+    const first = await propose({ proposed: deliverable("attempt 1") });
+    const second = await propose({ proposed: deliverable("attempt 2") });
     expect(second.id).toBe(first.id);
-    await expect(action(first.id)).resolves.toMatchObject({ proposed: { attempt: 1 } });
+    await expect(action(first.id)).resolves.toMatchObject({ proposed: { summary: "attempt 1" } });
     await expect(activityTypes()).resolves.toEqual(["ACTION_PROPOSED"]);
   });
 
@@ -113,7 +128,7 @@ describe("recordDecision", () => {
     await expect(decide(id, "approved")).resolves.toBe("execute");
     const after = await action(id);
     expect(after?.status).toBe("approved");
-    expect(after?.decidedByUserId).toBe("user-1");
+    await expect(decidedBy(id)).resolves.toBe("user-1");
     await expect(activityTypes()).resolves.toContain("ACTION_APPROVED");
   });
 
@@ -123,7 +138,7 @@ describe("recordDecision", () => {
     await decide(id, "rejected", "user-2");
     const after = await action(id);
     expect(after?.status).toBe("approved");
-    expect(after?.decidedByUserId).toBe("user-1");
+    await expect(decidedBy(id)).resolves.toBe("user-1");
     await expect(activityTypes()).resolves.not.toContain("ACTION_REJECTED");
   });
 
@@ -170,11 +185,11 @@ describe("listPendingActions", () => {
 
   it("returns oldest-first within companyId", async () => {
     await seedTicket({ agentInstanceId: WORKER_ID, companyId: COMPANY_ID, id: SECOND_TICKET_ID });
-    const first = await propose({ proposed: { n: 1 } });
+    const first = await propose({ proposed: deliverable("first") });
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 5);
     });
-    const second = await propose({ proposed: { n: 2 }, ticketId: SECOND_TICKET_ID });
+    const second = await propose({ proposed: deliverable("second"), ticketId: SECOND_TICKET_ID });
     const ids = await pendingIds();
     expect(ids).toContain(first.id);
     expect(ids.indexOf(first.id)).toBeLessThan(ids.indexOf(second.id));

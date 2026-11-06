@@ -1,14 +1,11 @@
 import { Card } from "@repo/ui/components/card";
-import type { ActionDetail, ActionType, DecisionOutcome } from "@repo/worker-api/contracts";
+import { StatusPill } from "@repo/ui/compositions/status-pill";
+import type { ActionDetail } from "@repo/worker-api/contracts";
 
+import { ACTION_TYPE_VIEWS } from "@/components/action-types";
 import { DecisionForm } from "@/components/decision-form";
-import { StatusPill } from "@/components/status-pill";
 import { formatDateTime } from "@/lib/format";
-
-const DEFAULT_DECISION = {
-  publish_post: null,
-  worker_deliverable: "approved",
-} satisfies Record<ActionType, DecisionOutcome | null>;
+import { ACTION_STATUS } from "@/lib/status";
 
 type ApprovalDecisionProps = { action: ActionDetail; canRequestChanges: boolean };
 
@@ -19,7 +16,7 @@ const ApprovalDecision = ({ action, canRequestChanges }: ApprovalDecisionProps) 
       <DecisionForm
         actionId={action.id}
         allowChanges={canRequestChanges}
-        defaultDecision={DEFAULT_DECISION[action.actionType]}
+        defaultDecision={ACTION_TYPE_VIEWS[action.actionType].defaultDecision}
       />
     </Card>
   ) : (
@@ -27,7 +24,7 @@ const ApprovalDecision = ({ action, canRequestChanges }: ApprovalDecisionProps) 
       <h2 className="font-mono text-xs tracking-wide text-muted-foreground uppercase">Decidido</h2>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">Status final:</span>
-        <StatusPill status={action.status} />
+        <StatusPill {...ACTION_STATUS[action.status]} />
       </div>
       {action.decidedAt !== null && (
         <p className="text-sm text-muted-foreground">

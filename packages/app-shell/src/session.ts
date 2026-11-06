@@ -1,15 +1,10 @@
+import { activeMembership, type Surface } from "@repo/auth/roles";
 import { ApiError } from "@repo/worker-api";
-import {
-  activeMembership,
-  type MeOrg,
-  type MeResponse,
-  type MeUser,
-  type Surface,
-} from "@repo/worker-api/contracts";
+import type { MeOrg, MeResponse, MeUser } from "@repo/worker-api/contracts";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { cache } from "react";
 
-import { createAppServerApi } from "./server-api";
+import { apiGetServer } from "./server-api";
 
 type AppLogFields = {
   error?: unknown;
@@ -34,7 +29,7 @@ const UNAUTHORIZED = 401;
  */
 const createSessionHelpers = ({
   log,
-  readMe = () => createAppServerApi().apiGetServer<MeResponse>("/api/me"),
+  readMe = () => apiGetServer<MeResponse>("/api/me"),
   surface,
 }: SessionConfig) => {
   const fetchMe = cache(async (): Promise<MeResponse> => {
@@ -68,4 +63,4 @@ const createSessionHelpers = ({
 
 export { createSessionHelpers };
 
-export type { AppLogger, Membership };
+export type { AppLogger };

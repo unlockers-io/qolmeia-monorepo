@@ -1,5 +1,6 @@
 "use client";
 
+import { maxLengthHint } from "@repo/app-shell/form-limits";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
@@ -7,10 +8,11 @@ import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
+import { describeRequestError } from "@repo/worker-api";
+import { MEMBER_NAME_MAX_LENGTH } from "@repo/worker-api/contracts";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useState } from "react";
 
-import { describeRequestError } from "@/lib/api-client";
 import { memberNameSchema } from "@/lib/form-schemas";
 
 type MemberNameFormProps = {
@@ -98,7 +100,9 @@ const MemberNameForm = ({ busy, displayName, onRename }: MemberNameFormProps) =>
                   )}
                 </form.Subscribe>
               </div>
-              <FieldDescription id="member-name-description">Até 80 caracteres.</FieldDescription>
+              <FieldDescription id="member-name-description">
+                {maxLengthHint(MEMBER_NAME_MAX_LENGTH)}
+              </FieldDescription>
               {isInvalid && (
                 <FormFieldError errors={field.state.meta.errors} id="member-name-error" />
               )}

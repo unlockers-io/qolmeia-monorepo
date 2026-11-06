@@ -1,7 +1,6 @@
 import "./fields";
 
 import { initLogger } from "evlog";
-import { evlog } from "evlog/hono";
 
 import { buildConfig } from "./config";
 
@@ -9,10 +8,8 @@ const initApiLogger = (opts: { service: string }): void => {
   initLogger(buildConfig(opts.service));
 };
 
-const honoEvlog = () => evlog();
+export { evlog as honoEvlog } from "evlog/hono";
 
-export { honoEvlog, initApiLogger };
-
-export { log } from "evlog";
+export { initApiLogger };
 
 export type { EvlogVariables } from "evlog/hono";

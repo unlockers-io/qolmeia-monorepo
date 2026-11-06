@@ -1,14 +1,14 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
-import type { CoverageResponse } from "@repo/worker-api/contracts";
 import { TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { CoverageForm } from "@/components/coverage-form";
-import { apiGetServer } from "@/lib/api-server";
+import { getCoverage } from "@/lib/backoffice-api";
 
 export const metadata: Metadata = { title: "Cobertura" };
 
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Cobertura" };
 export const instant = true;
 
 const CoverageContent = async () => {
-  const coverage = await apiGetServer<CoverageResponse>("/assignments/me").catch(() => null);
+  const coverage = await getCoverage(apiGetServer).catch(() => null);
 
   return (
     <Card className="max-w-2xl p-6">

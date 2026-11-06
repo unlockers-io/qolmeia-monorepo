@@ -1,10 +1,12 @@
-import type { OrgRole } from "@repo/worker-api/contracts";
+import type { OrgRole } from "@repo/db/enums";
 import { APIError, createAuthEndpoint } from "better-auth/api";
 import { createAccessControl, type Role } from "better-auth/plugins/access";
 import { getOrgAdapter, type OrganizationOptions } from "better-auth/plugins/organization";
 import { defaultStatements } from "better-auth/plugins/organization/access";
 import type { BetterAuthPlugin } from "better-auth/types";
 import { z } from "zod";
+
+import { LINK_LIFETIME_SECONDS } from "./link-lifetimes";
 
 const accessControl = createAccessControl(defaultStatements);
 
@@ -23,13 +25,11 @@ const ROLES = {
   STAFF: NO_PERMISSIONS,
 } satisfies Record<OrgRole, Role>;
 
-const INVITATION_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 7;
-
 const organizationOptions = {
   ac: accessControl,
   allowUserToCreateOrganization: false,
   creatorRole: "OWNER",
-  invitationExpiresIn: INVITATION_EXPIRES_IN_SECONDS,
+  invitationExpiresIn: LINK_LIFETIME_SECONDS.invitation,
   roles: ROLES,
   schema: {
     member: { fields: { organizationId: "orgId" }, modelName: "orgMembership" },

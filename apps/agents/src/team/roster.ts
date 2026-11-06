@@ -1,19 +1,17 @@
 import type { Prisma, TicketStatus } from "@repo/db/worker";
-import type {
-  AgentDisplayStatus,
-  HireableTemplate,
-  OpenTicketSlim,
-  TeamMemberDetailView,
-  TeamMemberView,
+import {
+  OPEN_TICKET_STATUSES,
+  type AgentDisplayStatus,
+  type HireableTemplate,
+  type OpenTicketSlim,
+  type TeamMemberDetailView,
+  type TeamMemberView,
 } from "@repo/worker-api/contracts";
 
+import type { ActivityEvent } from "#/activity/types";
 import type { Db } from "#/lib/db";
+import { MemberNotFoundError } from "#/team/errors";
 import { listEntitledTemplates } from "#/template/template";
-
-const OPEN_TICKET_STATUSES = [
-  "in_progress",
-  "awaiting_approval",
-] as const satisfies ReadonlyArray<TicketStatus>;
 
 const rosterInclude = {
   _count: { select: { tickets: { where: { status: "done" } } } },
@@ -144,7 +142,7 @@ const getMemberDetail = async (
   db: Db,
   companyId: string,
   agentInstanceId: string,
-): Promise<TeamMemberDetailView | null> => {
+): Promise<TeamMemberDetailView> => {
   const row = await db.agentInstance.findFirst({
     include: {
       ...rosterInclude,
@@ -157,13 +155,17 @@ const getMemberDetail = async (
   });
 
   if (!row) {
-    return null;
+    throw new MemberNotFoundError();
   }
 
   const edited = await db.activityLog.findFirst({
     orderBy: { createdAt: "desc" },
     select: { createdAt: true },
-    where: { companyId, refId: agentInstanceId, type: "MEMBER_PROMPT_EDITED" },
+    where: {
+      companyId,
+      refId: agentInstanceId,
+      type: "MEMBER_PROMPT_EDITED" satisfies ActivityEvent["type"],
+    },
   });
 
   return {

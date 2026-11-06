@@ -83,7 +83,7 @@ describe("CompanyBriefForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Não foi possível salvar. Tente novamente.");
+    expect(alert).toHaveTextContent("Algo falhou do nosso lado. Tente de novo em instantes.");
 
     fireEvent.change(screen.getByLabelText(/Setor/v), { target: { value: "Alimentação" } });
     expect(alert).not.toBeInTheDocument();

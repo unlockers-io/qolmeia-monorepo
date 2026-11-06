@@ -13,16 +13,17 @@ import {
 import { AssetImage } from "@repo/ui/compositions/asset-image";
 import { DialogCloseButton } from "@repo/ui/compositions/dialog-close-button";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
+import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { cn } from "@repo/ui/lib/utils";
-import { Eye, FileText, FolderOpen, Loader2, Music, Trash2 } from "lucide-react";
+import type { AssetKind, LibraryAsset } from "@repo/worker-api/contracts";
+import { Eye, FileText, FolderOpen, Music, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useReducer, useState } from "react";
 import { toast } from "sonner";
 
 import { AssetPreviewDialog } from "@/components/asset-preview-dialog";
-import type { WebChatAsset } from "@/lib/api-types";
-import { deleteAssets } from "@/lib/assets";
+import { deleteAssets } from "@/lib/library";
 
 const KIND_LABEL = {
   audio: "Áudio",
@@ -30,11 +31,9 @@ const KIND_LABEL = {
   generated_image: "Imagens",
   knowledge_doc: "Documentos",
   user_upload: "Uploads",
-} satisfies Record<string, string>;
+} satisfies Record<AssetKind, string>;
 
-const kindLabelById = new Map<string, string>(Object.entries(KIND_LABEL));
-
-const kindLabel = (kind: string): string => kindLabelById.get(kind) ?? "Outros";
+type KindFilter = AssetKind | "all";
 
 const formatBytes = (bytes: number): string => {
   if (bytes < 1024) {
@@ -49,7 +48,7 @@ const formatBytes = (bytes: number): string => {
 };
 
 type GalleryState = {
-  active: string;
+  active: KindFilter;
   confirmIds: ReadonlyArray<string> | null;
   deleting: boolean;
   removedIds: ReadonlySet<string>;
@@ -65,7 +64,7 @@ const INITIAL_STATE: GalleryState = {
 };
 
 type GalleryAction =
-  | { key: string; type: "setFilter" }
+  | { key: KindFilter; type: "setFilter" }
   | { id: string; type: "toggleSelect" }
   | { ids: ReadonlyArray<string>; selectAll: boolean; type: "toggleSelectAll" }
   | { ids: ReadonlyArray<string>; type: "requestDelete" }
@@ -140,7 +139,7 @@ const galleryReducer = (state: GalleryState, action: GalleryAction): GalleryStat
   }
 };
 
-const AssetPreview = ({ asset }: { asset: WebChatAsset }) => {
+const AssetPreview = ({ asset }: { asset: LibraryAsset }) => {
   if (asset.mimeType.startsWith("image/")) {
     return (
       <AssetImage
@@ -158,26 +157,29 @@ const AssetPreview = ({ asset }: { asset: WebChatAsset }) => {
   return (
     <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 bg-muted text-muted-foreground">
       <Icon aria-hidden className="size-9" />
-      <span className="font-mono text-xs tracking-wide uppercase">{kindLabel(asset.kind)}</span>
+      <span className="font-mono text-xs tracking-wide uppercase">{KIND_LABEL[asset.kind]}</span>
     </div>
   );
 };
 
 type AssetsGalleryProps = {
-  assets: ReadonlyArray<WebChatAsset>;
+  assets: ReadonlyArray<LibraryAsset>;
 };
 
 const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
   const router = useRouter();
   const [state, dispatch] = useReducer(galleryReducer, INITIAL_STATE);
   const { active, confirmIds, deleting, removedIds, selected } = state;
-  const [previewing, setPreviewing] = useState<WebChatAsset | null>(null);
+  const [previewing, setPreviewing] = useState<LibraryAsset | null>(null);
   const ready = useClientReady();
 
   const displayed = assets.filter((asset) => !removedIds.has(asset.id));
 
   const present = new Set(displayed.map((a) => a.kind));
-  const kinds = [...present].toSorted((a, b) => kindLabel(a).localeCompare(kindLabel(b), "pt-BR"));
+
+  const kinds = [...present].toSorted((a, b) =>
+    KIND_LABEL[a].localeCompare(KIND_LABEL[b], "pt-BR"),
+  );
 
   const filtered = active === "all" ? displayed : displayed.filter((a) => a.kind === active);
 
@@ -220,8 +222,8 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
       {kinds.length > 1 ? (
         <div className="flex flex-wrap gap-2">
           {[
-            { key: "all", label: "Tudo" },
-            ...kinds.map((k) => ({ key: k, label: kindLabel(k) })),
+            { key: "all" as const, label: "Tudo" },
+            ...kinds.map((k) => ({ key: k, label: KIND_LABEL[k] })),
           ].map((chip) => {
             const isActive = active === chip.key;
 
@@ -307,7 +309,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground">{asset.name}</p>
                         <p className="truncate font-mono text-xs tracking-wide text-muted-foreground uppercase">
-                          {kindLabel(asset.kind)} · {formatBytes(asset.size)}
+                          {KIND_LABEL[asset.kind]} · {formatBytes(asset.size)}
                         </p>
                       </div>
                       <Eye aria-hidden className="size-4 shrink-0 text-muted-foreground" />
@@ -377,7 +379,7 @@ const AssetsGallery = ({ assets }: AssetsGalleryProps) => {
               variant="destructive"
             >
               {deleting ? (
-                <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" />
+                <LoadingSpinner aria-hidden />
               ) : (
                 <Trash2 aria-hidden className="size-4" />
               )}

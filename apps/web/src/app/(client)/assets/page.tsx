@@ -1,12 +1,13 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { PageContainer } from "@repo/ui/compositions/page-container";
 import { PageHeader } from "@repo/ui/compositions/page-header";
+import type { LibraryAsset } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { AssetsGallery } from "@/components/assets-gallery";
-import { apiGetServer } from "@/lib/api-server";
-import type { ListResponse, WebChatAsset } from "@/lib/api-types";
+import { fetchLibraryAssets } from "@/lib/library";
 import { log } from "@/lib/observability";
 
 export const metadata: Metadata = {
@@ -16,11 +17,9 @@ export const metadata: Metadata = {
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-const loadAssets = async (): Promise<ReadonlyArray<WebChatAsset>> => {
+const loadAssets = async (): Promise<ReadonlyArray<LibraryAsset>> => {
   try {
-    const result = await apiGetServer<ListResponse<WebChatAsset>>("/api/me/assets?limit=200");
-
-    return result.items;
+    return await fetchLibraryAssets(apiGetServer);
   } catch (error) {
     log.error({ error, message: "assets: failed to load" });
 

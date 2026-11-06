@@ -1,11 +1,11 @@
 import { cn } from "@repo/ui/lib/utils";
-import type { SkillCatalogEntry } from "@repo/worker-api/contracts";
+import type { SkillCatalogEntry, SkillId } from "@repo/worker-api/contracts";
 
 type TemplateFormSkillPickerProps = {
   busy: boolean;
   loading: boolean;
-  onToggle: (id: string) => void;
-  selected: ReadonlyArray<string>;
+  onToggle: (id: SkillId) => void;
+  selected: ReadonlyArray<SkillId>;
   skills: ReadonlyArray<SkillCatalogEntry>;
 };
 

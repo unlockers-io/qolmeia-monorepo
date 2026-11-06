@@ -1,47 +1,12 @@
 "use client";
 
-import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import { useEffect, useRef } from "react";
+import { GlobalError } from "@repo/app-shell/global-error";
+import type { ComponentProps } from "react";
 
 import { log } from "@/lib/observability-client";
 
-import styles from "./global-error.module.css";
+const AppGlobalError = (props: Omit<ComponentProps<typeof GlobalError>, "log" | "subject">) => (
+  <GlobalError {...props} log={log} subject="O aplicativo" />
+);
 
-type GlobalErrorProps = {
-  error: Error & { digest?: string };
-  reset: () => void;
-};
-
-const GlobalError = ({ error, reset }: GlobalErrorProps) => {
-  const headingRef = useRef<HTMLHeadingElement>(null);
-  const ready = useClientReady();
-
-  useEffect(() => {
-    log.error({ digest: error.digest, error: error.message, message: "Global error boundary" });
-    headingRef.current?.focus();
-  }, [error]);
-
-  return (
-    <html className={styles.document} lang="pt-BR">
-      <body className={styles.body}>
-        <main className={styles.main} id="main-content">
-          <h1 className={styles.heading} ref={headingRef} tabIndex={-1}>
-            Algo deu errado
-          </h1>
-          <p className={styles.text}>
-            O aplicativo parou de funcionar inesperadamente. Tente novamente e, se o problema
-            continuar, recarregue a página ou volte em alguns minutos.
-          </p>
-          <button className={styles.button} disabled={!ready} onClick={reset} type="button">
-            Tentar novamente
-          </button>
-          {error.digest !== undefined && (
-            <p className={styles.digest}>Referência: {error.digest}</p>
-          )}
-        </main>
-      </body>
-    </html>
-  );
-};
-
-export default GlobalError;
+export default AppGlobalError;

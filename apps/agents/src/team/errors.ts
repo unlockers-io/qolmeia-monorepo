@@ -1,79 +1,53 @@
-abstract class TeamError extends Error {
-  abstract readonly status: 400 | 404 | 409 | 500;
-}
+import { DomainError } from "#/lib/errors";
 
-class CompanyNotFoundError extends TeamError {
-  readonly status = 404;
-
+class CompanyNotFoundError extends DomainError {
   constructor() {
-    super("company not found");
+    super(404, "company not found");
   }
 }
 
-class TemplateNotFoundError extends TeamError {
-  readonly status = 404;
-
+class TemplateNotFoundError extends DomainError {
   constructor(templateId: string) {
-    super(`template ${templateId} not found`);
+    super(404, `template ${templateId} not found`);
   }
 }
 
-class TemplateRetiredError extends TeamError {
-  readonly status = 409;
-
+class TemplateRetiredError extends DomainError {
   constructor(templateId: string) {
-    super(`template ${templateId} is retired`);
+    super(409, `template ${templateId} is retired`);
   }
 }
 
-class MemberNotFoundError extends TeamError {
-  readonly status = 404;
-
+class TeamNotConfirmedError extends DomainError {
   constructor() {
-    super("not found");
+    super(409, "team not confirmed");
   }
 }
 
-class MemberNotPausableError extends TeamError {
-  readonly status = 409;
+class MemberNotFoundError extends DomainError {
+  constructor() {
+    super(404, "not found");
+  }
+}
 
+class MemberNotPausableError extends DomainError {
   constructor(role: string) {
-    super(`cannot pause/resume a ${role}`);
+    super(409, `cannot pause/resume a ${role}`);
   }
 }
 
-class MemberPromptNotEditableError extends TeamError {
-  readonly status = 409;
-
+class MemberPromptNotEditableError extends DomainError {
   constructor(role: string) {
-    super(`cannot edit the prompt of a ${role}`);
-  }
-}
-
-class InvalidDisplayNameError extends TeamError {
-  readonly status = 400;
-
-  constructor() {
-    super("displayName cannot be empty");
-  }
-}
-
-class CorrespondentMissingError extends TeamError {
-  readonly status = 500;
-
-  constructor() {
-    super("correspondent missing from the team");
+    super(409, `cannot edit the prompt of a ${role}`);
   }
 }
 
 export {
   CompanyNotFoundError,
-  CorrespondentMissingError,
-  InvalidDisplayNameError,
   MemberNotFoundError,
   MemberNotPausableError,
   MemberPromptNotEditableError,
-  TeamError,
+  TeamNotConfirmedError,
   TemplateNotFoundError,
   TemplateRetiredError,
 };

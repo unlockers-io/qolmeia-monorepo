@@ -58,6 +58,7 @@ describe("TemplateForm", () => {
     expect(screen.getByText("Informe o nome de exibição.")).toBeInTheDocument();
     expect(screen.getByText("Informe uma descrição.")).toBeInTheDocument();
     expect(displayName).toHaveAttribute("aria-invalid", "true");
+    expect(displayName.closest('[data-slot="field"]')).toHaveAttribute("data-invalid", "true");
     await waitFor(() => {
       expect(displayName).toHaveFocus();
     });
@@ -68,6 +69,22 @@ describe("TemplateForm", () => {
     fireEvent.change(displayName, { target: { value: "Pesquisador de SEO" } });
     expect(screen.queryByText("Informe o nome de exibição.")).not.toBeInTheDocument();
     expect(screen.getByText("Informe uma descrição.")).toBeInTheDocument();
+    expect(saves()).toHaveLength(0);
+  });
+
+  it("explains the server's length limits from the start and refuses longer values on submit", () => {
+    renderForm();
+    const displayName = screen.getByLabelText("Nome de exibição");
+    expect(displayName).toHaveAccessibleDescription("Até 120 caracteres.");
+    expect(screen.getByLabelText("Prompt do sistema")).toHaveAccessibleDescription(
+      "Até 20.000 caracteres.",
+    );
+
+    fireEvent.change(displayName, { target: { value: "a".repeat(121) } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar modelo" }));
+
+    expect(screen.getByText("Use no máximo 120 caracteres.")).toBeInTheDocument();
+    expect(displayName).toHaveValue("a".repeat(121));
     expect(saves()).toHaveLength(0);
   });
 

@@ -1,9 +1,9 @@
+import type { TeamMemberView } from "@repo/worker-api/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { TeamMemberView } from "@/lib/team";
 import { createUseTeamRoster } from "@/lib/use-team-roster";
 
 const mockFetchTeam = vi.fn();

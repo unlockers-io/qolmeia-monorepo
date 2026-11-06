@@ -10,29 +10,12 @@ import { username } from "better-auth/plugins/username";
 import type { BetterAuthPlugin } from "better-auth/types";
 
 import { CLIENT_IP_HEADER } from "./client-ip";
+import { LINK_LIFETIME_SECONDS } from "./link-lifetimes";
 import { customerInvitations, organizationOptions } from "./organization";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "./password";
+import { safeRedirectPath } from "./redirect-path";
 import { AUTH_COOKIE_PREFIX } from "./session-cookie";
 import { countOperators, createSignupGuard, type OperatorCounter } from "./signup";
-
-const CALLBACK_FALLBACK_PATH = "/";
-
-const CALLBACK_ANCHOR_ORIGIN = "https://qolmeia.invalid";
-
-export const safeCallbackPath = (value: string | null): string => {
-  if (value === null || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
-    return CALLBACK_FALLBACK_PATH;
-  }
-
-  try {
-    if (new URL(value, CALLBACK_ANCHOR_ORIGIN).origin !== CALLBACK_ANCHOR_ORIGIN) {
-      return CALLBACK_FALLBACK_PATH;
-    }
-  } catch {
-    return CALLBACK_FALLBACK_PATH;
-  }
-
-  return value;
-};
 
 const isLinkOrigin = (origin: URL, trustedOrigins: ReadonlyArray<string>): boolean =>
   trustedOrigins.includes(origin.origin) || isLoopbackHost(origin.host);
@@ -59,10 +42,8 @@ export const linkOnRequestOrigin = (
   return new URL(`${link.pathname}${link.search}`, requestOrigin.origin).toString();
 };
 
-const mailerFor = (resendApiKey: string | undefined, fromEmail?: string): MailerConfig | null =>
-  resendApiKey !== undefined && resendApiKey !== ""
-    ? { apiKey: resendApiKey, from: fromEmail }
-    : null;
+const mailerFor = (resendApiKey: string | undefined): MailerConfig | null =>
+  resendApiKey !== undefined && resendApiKey !== "" ? { apiKey: resendApiKey } : null;
 
 type CustomerInvitationEmail = {
   acceptUrl: string;
@@ -90,7 +71,13 @@ const sendCustomerInvitation = async ({
   }
 
   const result = await sendTransactionalEmail(
-    { acceptUrl, companyName, type: "invitation", userEmail: email },
+    {
+      acceptUrl,
+      companyName,
+      expiresInSeconds: LINK_LIFETIME_SECONDS.invitation,
+      type: "invitation",
+      userEmail: email,
+    },
     mailer,
   );
 
@@ -105,7 +92,6 @@ type AuthConfig = {
   allowedHosts: Array<string>;
   extraPlugins?: Array<BetterAuthPlugin>;
   fallbackBaseURL: string;
-  fromEmail?: string;
   prisma: OperatorCounter;
   rateLimitEnabled?: boolean;
   resendApiKey?: string;
@@ -119,7 +105,6 @@ export const createAuth = (config: AuthConfig) => {
     allowedHosts,
     extraPlugins = [],
     fallbackBaseURL,
-    fromEmail,
     prisma,
     rateLimitEnabled = false,
     resendApiKey,
@@ -128,7 +113,7 @@ export const createAuth = (config: AuthConfig) => {
     useSecureCookies = false,
   } = config;
 
-  const mailer = mailerFor(resendApiKey, fromEmail);
+  const mailer = mailerFor(resendApiKey);
 
   return betterAuth({
     account: {
@@ -162,8 +147,8 @@ export const createAuth = (config: AuthConfig) => {
 
     emailAndPassword: {
       enabled: true,
-      maxPasswordLength: 128,
-      minPasswordLength: 12,
+      maxPasswordLength: PASSWORD_MAX_LENGTH,
+      minPasswordLength: PASSWORD_MIN_LENGTH,
       onExistingUserSignUp: mailer
         ? async ({ user }, request) => {
             const origin = request?.headers.get("origin") ?? "";
@@ -189,6 +174,7 @@ export const createAuth = (config: AuthConfig) => {
           }
         : undefined,
       requireEmailVerification: Boolean(mailer),
+      resetPasswordTokenExpiresIn: LINK_LIFETIME_SECONDS.passwordReset,
       sendResetPassword: async ({ url, user }, request) => {
         const resetUrl = linkOnRequestOrigin(url, request?.headers, trustedOrigins);
 
@@ -204,6 +190,7 @@ export const createAuth = (config: AuthConfig) => {
 
         const result = await sendTransactionalEmail(
           {
+            expiresInSeconds: LINK_LIFETIME_SECONDS.passwordReset,
             resetUrl,
             type: "password-reset",
             userEmail: user.email,
@@ -221,6 +208,7 @@ export const createAuth = (config: AuthConfig) => {
 
     emailVerification: {
       autoSignInAfterVerification: true,
+      expiresIn: LINK_LIFETIME_SECONDS.emailVerification,
       sendOnSignIn: true,
       sendVerificationEmail: async ({ url, user }, request) => {
         const origin = request?.headers.get("origin");
@@ -233,7 +221,7 @@ export const createAuth = (config: AuthConfig) => {
 
             try {
               const target = new URL(url);
-              const callbackPath = safeCallbackPath(target.searchParams.get("callbackURL"));
+              const callbackPath = safeRedirectPath(target.searchParams.get("callbackURL"));
               target.searchParams.set("callbackURL", `${origin}${callbackPath}`);
 
               return target.toString();
@@ -257,6 +245,7 @@ export const createAuth = (config: AuthConfig) => {
 
         const result = await sendTransactionalEmail(
           {
+            expiresInSeconds: LINK_LIFETIME_SECONDS.emailVerification,
             type: "welcome",
             userEmail: user.email,
             userId: user.id,
@@ -279,6 +268,7 @@ export const createAuth = (config: AuthConfig) => {
     plugins: [
       username(),
       magicLink({
+        expiresIn: LINK_LIFETIME_SECONDS.magicLink,
         sendMagicLink: async ({ email, url }, ctx) => {
           const link = linkOnRequestOrigin(url, ctx?.headers, trustedOrigins);
 
@@ -290,6 +280,7 @@ export const createAuth = (config: AuthConfig) => {
 
           const result = await sendTransactionalEmail(
             {
+              expiresInSeconds: LINK_LIFETIME_SECONDS.magicLink,
               type: "magic-link",
               url: link,
               userEmail: email,
@@ -345,6 +336,7 @@ export const createAuth = (config: AuthConfig) => {
             {
               changeUrl: linkOnRequestOrigin(url, request?.headers, trustedOrigins),
               currentEmail: user.email,
+              expiresInSeconds: LINK_LIFETIME_SECONDS.emailVerification,
               newEmail,
               type: "change-email-confirmation",
               userId: user.id,

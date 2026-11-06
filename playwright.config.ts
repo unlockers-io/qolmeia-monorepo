@@ -1,31 +1,32 @@
 /// <reference types="node" />
 
-import { execFileSync } from "node:child_process";
-
 import { defineConfig, devices } from "@playwright/test";
+import { portlessUrl } from "@repo/portless-env";
+import { apps, loopbackUrl, type App } from "@repo/portless-env/apps";
 
-const getPortlessUrl = (name: string) => {
+const localUrl = (app: App): string | undefined => {
   if (process.env.CI) {
     return undefined;
   }
 
   try {
-    return execFileSync("portless", ["get", name], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
+    return portlessUrl(app);
   } catch {
     return undefined;
   }
 };
 
-const backofficeUrl =
-  process.env.E2E_BACKOFFICE_URL ?? getPortlessUrl("qolmeia.backoffice") ?? "http://127.0.0.1:3000";
+const appUrl = (app: App, override: string | undefined): string =>
+  override ?? localUrl(app) ?? loopbackUrl(app, "127.0.0.1");
 
-const webUrl = process.env.E2E_WEB_URL ?? getPortlessUrl("qolmeia.web") ?? "http://127.0.0.1:3001";
+const backofficeUrl = appUrl("backoffice", process.env.E2E_BACKOFFICE_URL);
 
-const landingUrl =
-  process.env.E2E_LANDING_URL ?? getPortlessUrl("qolmeia.landing") ?? "http://127.0.0.1:3002";
+const webUrl = appUrl("web", process.env.E2E_WEB_URL);
+
+const landingUrl = appUrl("landing", process.env.E2E_LANDING_URL);
+
+const nextStart = (app: Exclude<App, "agents">): string =>
+  `node_modules/.bin/next start apps/${app} --port ${apps[app].port} --hostname 127.0.0.1`;
 
 export default defineConfig({
   forbidOnly: !!process.env.CI,
@@ -100,10 +101,10 @@ export default defineConfig({
           stderr: "pipe",
           stdout: "pipe",
           timeout: 120_000,
-          url: "http://127.0.0.1:8787/healthz",
+          url: `${loopbackUrl("agents", "127.0.0.1")}/healthz`,
         },
         {
-          command: "node_modules/.bin/next start apps/backoffice --port 3000 --hostname 127.0.0.1",
+          command: nextStart("backoffice"),
           env: { PGAPPNAME: "qolmeia:ci:backoffice" },
           stderr: "pipe",
           stdout: "pipe",
@@ -111,7 +112,7 @@ export default defineConfig({
           url: `${backofficeUrl}/login`,
         },
         {
-          command: "node_modules/.bin/next start apps/web --port 3001 --hostname 127.0.0.1",
+          command: nextStart("web"),
           env: { PGAPPNAME: "qolmeia:ci:web" },
           stderr: "pipe",
           stdout: "pipe",
@@ -119,7 +120,7 @@ export default defineConfig({
           url: `${webUrl}/login`,
         },
         {
-          command: "node_modules/.bin/next start apps/landing --port 3002 --hostname 127.0.0.1",
+          command: nextStart("landing"),
           env: { PGAPPNAME: "qolmeia:ci:landing" },
           stderr: "pipe",
           stdout: "pipe",
