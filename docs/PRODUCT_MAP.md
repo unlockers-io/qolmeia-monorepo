@@ -25,7 +25,7 @@ Customers sign in with a magic link only; there is no password on this surface. 
 
 ### 1.2 Onboarding: Planner interview + team confirmation
 
-While `company.status === "onboarding"`, the home screen renders the Planner. It greets automatically (a hidden kickoff prompt), interviews the customer about the business (industry, goal, audience, tone, brand), and fills the company brief incrementally with the `extractBrief` tool. When it calls `proposeTeam`, the footer shows the proposed specialists as selectable cards. "Confirmar Time" materializes the team, flips the company to active, and hands the chat over to the Correspondent.
+While `company.status === "onboarding"`, the home screen renders the Planner. It opens with a fixed greeting, interviews the customer about the business (industry, goal, audience, tone, brand), and fills the company brief incrementally with the `extractBrief` tool. When it calls `proposeTeam`, the footer shows the proposed specialists as selectable cards. "Confirmar Time" materializes the team, flips the company to active, and hands the chat over to the Correspondent.
 
 ![Onboarding: planner chat with team proposal](product-map/client-onboarding.png)
 

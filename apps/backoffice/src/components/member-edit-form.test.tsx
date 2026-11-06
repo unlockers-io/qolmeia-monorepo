@@ -34,7 +34,7 @@ describe("member prompt capability", () => {
       };
 
       render(<MemberEditForm companyId="company" initialMember={member} memberId="agent" />);
-      expect(screen.queryByRole("region", { name: "Prompt do agente" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "Comportamento do agente" })).not.toBeInTheDocument();
       expect(screen.getByLabelText("Nome de exibição")).toBeInTheDocument();
     },
   );
@@ -50,7 +50,7 @@ describe("member prompt capability", () => {
     };
 
     render(<MemberEditForm companyId="company" initialMember={member} memberId="agent" />);
-    expect(screen.getByRole("region", { name: "Prompt do agente" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Comportamento do agente" })).toBeInTheDocument();
   });
 });
 
@@ -181,6 +181,6 @@ describe("member prompt editor", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Algo falhou do nosso lado. Tente de novo em instantes.");
-    expect(screen.getByRole("region", { name: "Prompt do agente" })).toContainElement(alert);
+    expect(screen.getByRole("region", { name: "Comportamento do agente" })).toContainElement(alert);
   });
 });

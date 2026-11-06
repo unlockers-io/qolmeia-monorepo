@@ -85,7 +85,7 @@ const PromptEditor = ({
   };
 
   return (
-    <section aria-label={label} className="flex flex-col gap-3">
+    <section aria-label="Comportamento do agente" className="flex flex-col gap-3">
       <ClientReadyForm
         className="flex flex-col gap-3"
         id={form.formId}
