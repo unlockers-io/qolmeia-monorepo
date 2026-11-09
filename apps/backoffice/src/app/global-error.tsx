@@ -6,7 +6,11 @@ import type { ComponentProps } from "react";
 import { log } from "@/lib/observability-client";
 
 const AppGlobalError = (props: Omit<ComponentProps<typeof GlobalError>, "log" | "subject">) => (
-  <GlobalError {...props} log={log} subject="O aplicativo" />
+  <html lang="pt-BR">
+    <body>
+      <GlobalError {...props} log={log} subject="O aplicativo" />
+    </body>
+  </html>
 );
 
 export default AppGlobalError;

@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 
-import { AppDocument, documentMetadata } from "@repo/app-shell/document";
+import { AppDocument } from "@repo/app-shell/document";
+import { documentMetadata } from "@repo/app-shell/document-metadata";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 

@@ -25,12 +25,6 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/*/src/app/global-error.tsx"],
-      rules: {
-        "react-doctor/nextjs-global-error-missing-html-body": "off",
-      },
-    },
-    {
       files: ["tests/e2e/**/*.ts"],
       rules: {
         "no-console": "off",
