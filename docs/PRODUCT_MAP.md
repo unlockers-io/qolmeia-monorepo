@@ -25,7 +25,7 @@ Customers sign in with a magic link only; there is no password on this surface. 
 
 ### 1.2 Onboarding: Planner interview + team confirmation
 
-While `company.status === "onboarding"`, the home screen renders the Planner. It greets automatically (a hidden kickoff prompt), interviews the customer about the business (industry, goal, audience, tone, brand), and fills the company brief incrementally with the `extractBrief` tool. When it calls `proposeTeam`, the footer shows the proposed specialists as selectable cards. "Confirmar Time" materializes the team, flips the company to active, and hands the chat over to the Correspondent.
+While `company.status === "onboarding"`, the home screen renders the Planner. It opens with a fixed greeting, interviews the customer about the business (industry, goal, audience, tone, brand), and fills the company brief incrementally with the `extractBrief` tool. When it calls `proposeTeam`, the footer shows the proposed specialists as selectable cards. "Confirmar Time" materializes the team, flips the company to active, and hands the chat over to the Correspondent.
 
 ![Onboarding: planner chat with team proposal](product-map/client-onboarding.png)
 
@@ -73,7 +73,7 @@ A read-only timeline of what the team did (delegations, proposals, approvals, de
 ```
 magic link -> /auth/verify -> /
   status onboarding: Planner interview -> extractBrief -> proposeTeam -> "Confirmar Time"
-     -> POST /api/teams/:companyId/confirm -> team materialized, status active
+     -> POST /api/me/team/confirm -> team materialized, status active
   status active: Correspondent chat -> delegateToWorker -> ticket + workflow
      -> (internal approval) -> delivery lands in chat -> asset saved to library
 ```
@@ -188,7 +188,7 @@ Executing runs the action type's executor, which moves the deliverable's files t
 ### 3.4 Data model (Postgres + Prisma)
 
 `company`, `agent_instance`, `template`, `skill` (operator kill-switch: `enabled` only),
-`company_template_entitlement`, `team`, `team_member` (with a cycle-checked `can_delegate_to` graph),
+`company_template_entitlement`, `team`, `team_member`,
 `ticket`, `action`, `activity_log`, `memory_fact`, `operator_assignment`, and `asset` (kinds:
 `generated_image`, `knowledge_doc`, `audio`, `brand_asset`, `user_upload`; customer/agent visibility;
 SHA-256 deduplication).

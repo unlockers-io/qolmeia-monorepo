@@ -1,9 +1,11 @@
+import { emailSchema, newPasswordSchema } from "@repo/app-shell/auth-schemas";
+import { maxLength, maxLengthMessage } from "@repo/app-shell/form-limits";
+import { EMAIL_MAX_LENGTH, MEMBER_NAME_MAX_LENGTH } from "@repo/worker-api/contracts";
 import { z } from "zod";
 
-export const loginSchema = z.object({
-  email: z.email("E-mail inválido"),
-  password: z.string().min(1, "Informe sua senha"),
-});
+export const NAME_MIN_LENGTH = 3;
+
+export const NAME_MAX_LENGTH = 32;
 
 const passwordsMatch = {
   message: "As senhas não conferem.",
@@ -12,37 +14,29 @@ const passwordsMatch = {
 
 export const registerSchema = z
   .object({
-    confirmPassword: z.string().min(12, "A senha deve ter pelo menos 12 caracteres"),
-    email: z.email("E-mail inválido"),
+    confirmPassword: newPasswordSchema,
+    email: emailSchema,
     name: z
       .string()
-      .min(3, "O nome deve ter pelo menos 3 caracteres")
-      .max(32, "O nome deve ter no máximo 32 caracteres"),
-    password: z.string().min(12, "A senha deve ter pelo menos 12 caracteres"),
+      .min(NAME_MIN_LENGTH, `O nome deve ter pelo menos ${NAME_MIN_LENGTH} caracteres`)
+      .max(NAME_MAX_LENGTH, `O nome deve ter no máximo ${NAME_MAX_LENGTH} caracteres`),
+    password: newPasswordSchema,
   })
   .refine((value) => value.password === value.confirmPassword, passwordsMatch);
 
 export const recoverSchema = z.object({
-  email: z.email("E-mail inválido"),
+  email: emailSchema,
 });
 
 export const resetPasswordSchema = z
   .object({
-    confirmPassword: z.string().min(12, "A senha deve ter pelo menos 12 caracteres"),
-    password: z.string().min(12, "A senha deve ter pelo menos 12 caracteres"),
+    confirmPassword: newPasswordSchema,
+    password: newPasswordSchema,
   })
   .refine((value) => value.password === value.confirmPassword, passwordsMatch);
 
 export const inviteCustomerSchema = z.object({
-  email: z.email("E-mail inválido"),
+  email: emailSchema.max(EMAIL_MAX_LENGTH, maxLengthMessage(EMAIL_MAX_LENGTH)),
 });
 
-const maxLength = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max, `Use no máximo ${max.toLocaleString("pt-BR")} caracteres.`);
-
-export const memberNameSchema = z.object({ displayName: maxLength(80) });
-
-export const promptSchema = z.object({ prompt: maxLength(20_000) });
+export const memberNameSchema = z.object({ displayName: maxLength(MEMBER_NAME_MAX_LENGTH) });

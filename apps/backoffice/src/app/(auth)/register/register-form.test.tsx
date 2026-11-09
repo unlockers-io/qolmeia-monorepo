@@ -86,7 +86,7 @@ describe("RegisterForm", () => {
     const password = screen.getByLabelText("Senha");
     await waitFor(() => {
       expect(password).toHaveAccessibleDescription(
-        "Pelo menos 12 caracteres. A senha deve ter pelo menos 12 caracteres",
+        "Pelo menos 12 caracteres. A senha deve ter pelo menos 12 caracteres.",
       );
     });
     await waitFor(() => {

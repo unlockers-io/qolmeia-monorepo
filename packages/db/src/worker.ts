@@ -7,6 +7,6 @@ const createPrismaClient = (connectionString: string): PrismaClient =>
 
 export * from "./generated/prisma-worker/client";
 
-export { DEFAULT_TEMPLATES } from "./product-seed";
+export { entitleToActiveTemplates } from "./entitlement";
 
 export { createPrismaClient };

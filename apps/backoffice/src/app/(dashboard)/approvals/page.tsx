@@ -1,24 +1,19 @@
+import { agentAvatarClass, agentInitials } from "@repo/app-shell/agent-avatar";
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { buttonVariants } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
-import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
-import type { ActionsResponse, CoverageResponse } from "@repo/worker-api/contracts";
 import { Inbox } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { apiGetServer } from "@/lib/api-server";
-import {
-  actionTypeLabel,
-  type AgeTier,
-  ageTier,
-  formatDurationSeconds,
-  truncate,
-} from "@/lib/format";
+import { ACTION_TYPE_VIEWS } from "@/components/action-types";
+import { getCoverage, getPendingActions } from "@/lib/backoffice-api";
+import { type AgeTier, ageTier, formatDurationSeconds, truncate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Aprovações" };
 
@@ -31,16 +26,10 @@ const AGE_TIER_CLASS = {
   warning: "font-semibold text-warning-surface-foreground",
 } satisfies Record<AgeTier, string>;
 
-const proposedSummary = (proposed: ActionsResponse["items"][number]["proposed"]): string => {
-  const summary = typeof proposed.summary === "string" ? proposed.summary : "";
-
-  return summary.split("\n")[0]?.trim() ?? "";
-};
-
 const ApprovalsContent = async () => {
   const [res, coverage] = await Promise.all([
-    apiGetServer<ActionsResponse>("/actions?status=pending&sort=age"),
-    apiGetServer<CoverageResponse>("/assignments/me").catch(() => null),
+    getPendingActions(apiGetServer),
+    getCoverage(apiGetServer).catch(() => null),
   ]);
 
   const pendingCount = res.items.length;
@@ -99,7 +88,7 @@ const ApprovalsContent = async () => {
             </div>
             <ul className="flex flex-col">
               {res.items.map((action) => {
-                const preview = proposedSummary(action.proposed);
+                const preview = action.proposed.summary.split("\n")[0]?.trim() ?? "";
 
                 return (
                   <li className="border-b border-border/60 last:border-b-0" key={action.id}>
@@ -111,7 +100,7 @@ const ApprovalsContent = async () => {
                         <span aria-hidden className="size-2 shrink-0 rounded-full bg-warning" />
                         <div className="min-w-0">
                           <div className="truncate text-sm font-semibold text-foreground">
-                            {actionTypeLabel(action.actionType)}
+                            {ACTION_TYPE_VIEWS[action.actionType].label}
                           </div>
                           <div className="truncate text-xs text-muted-foreground">
                             {preview ? (
@@ -144,9 +133,7 @@ const ApprovalsContent = async () => {
                         )}
                       >
                         <span className="font-medium md:hidden">Aguardando · </span>
-                        {action.ageSeconds === undefined
-                          ? "—"
-                          : formatDurationSeconds(action.ageSeconds)}
+                        {formatDurationSeconds(action.ageSeconds)}
                       </span>
                       <span
                         aria-hidden

@@ -14,7 +14,6 @@ import { createTransactionalEmailSender } from "./senders";
 const sendMock = vi.fn();
 
 const createClient: EmailClientFactory = () => ({
-  batch: { send: vi.fn() },
   emails: { send: sendMock },
 });
 
@@ -26,6 +25,7 @@ describe("WelcomeEmail render", () => {
   it("includes the verification URL and Qolmeia branding", async () => {
     const { html, text } = await previewEmail(
       React.createElement(WelcomeEmail, {
+        expiresInSeconds: 3600,
         userEmail: "user@example.com",
         username: "Pedro",
         verificationUrl: "https://app.qolmeia.com/verify?token=abc",
@@ -35,20 +35,23 @@ describe("WelcomeEmail render", () => {
     expect(html).toContain("https://app.qolmeia.com/verify?token=abc");
     expect(html).toContain("Boas-vindas à Qolmeia");
     expect(text).toMatch(/boas-vindas à qolmeia/iv);
+    expect(text).toContain("expira em 1 hora.");
     expect(html).not.toContain("Acme");
   });
 });
 
 describe("PasswordResetEmail render", () => {
   it("includes the reset URL and Qolmeia branding", async () => {
-    const { html } = await previewEmail(
+    const { html, text } = await previewEmail(
       React.createElement(PasswordResetEmail, {
+        expiresInSeconds: 3600,
         resetUrl: "https://app.qolmeia.com/reset?token=xyz",
         userEmail: "user@example.com",
       }),
     );
 
     expect(html).toContain("https://app.qolmeia.com/reset?token=xyz");
+    expect(text).toContain("O link expira em 1 hora");
     expect(html).toContain("Redefina sua senha");
     expect(html).not.toContain("Acme");
   });
@@ -72,14 +75,16 @@ describe("SignUpAttemptEmail render", () => {
 
 describe("ChangeEmail render", () => {
   it("renders both current and new emails", async () => {
-    const { html } = await previewEmail(
+    const { html, text } = await previewEmail(
       React.createElement(ChangeEmail, {
         changeUrl: "https://app.qolmeia.com/change?token=abc",
         currentEmail: "old@example.com",
+        expiresInSeconds: 3600,
         newEmail: "new@example.com",
       }),
     );
 
+    expect(text).toContain("expira em 1 hora.");
     expect(html).toContain("old@example.com");
     expect(html).toContain("new@example.com");
     expect(html).toContain("https://app.qolmeia.com/change?token=abc");
@@ -90,6 +95,7 @@ describe("MagicLinkEmail render", () => {
   it("includes the magic link URL and pt-BR copy", async () => {
     const { html, text } = await previewEmail(
       React.createElement(MagicLinkEmail, {
+        expiresInSeconds: 300,
         url: "https://app.qolmeia.com/auth/magic?token=mlk-123",
         userEmail: "user@example.com",
         username: "Pedro",
@@ -98,6 +104,7 @@ describe("MagicLinkEmail render", () => {
 
     expect(html).toContain("https://app.qolmeia.com/auth/magic?token=mlk-123");
     expect(html).toContain("Entre na Qolmeia");
+    expect(text).toContain("expira em 5 minutos.");
     expect(html).not.toContain('lang="en"');
     expect(text).toMatch(/entre na qolmeia/iv);
     expect(html).toContain("user@example.com");
@@ -106,6 +113,7 @@ describe("MagicLinkEmail render", () => {
   it("renders without a username", async () => {
     const { html, text } = await previewEmail(
       React.createElement(MagicLinkEmail, {
+        expiresInSeconds: 300,
         url: "https://app.qolmeia.com/auth/magic?token=mlk-456",
         userEmail: "user@example.com",
       }),
@@ -122,10 +130,12 @@ describe("InvitationEmail render", () => {
       React.createElement(InvitationEmail, {
         acceptUrl: "https://app.qolmeia.com/convite/inv-123",
         companyName: "Padaria Nova",
+        expiresInSeconds: 604_800,
         userEmail: "cliente@example.com",
       }),
     );
 
+    expect(text).toContain("O convite expira em 7 dias.");
     expect(html).toContain("https://app.qolmeia.com/convite/inv-123");
     expect(html).toContain("Padaria Nova");
     expect(html).toContain("cliente@example.com");
@@ -142,6 +152,7 @@ describe("sendTransactionalEmail", () => {
   it("routes a welcome payload to the user with type and userId tags", async () => {
     const result = await sendTransactionalEmail(
       {
+        expiresInSeconds: 3600,
         type: "welcome",
         userEmail: "user@example.com",
         userId: "user_1",
@@ -169,18 +180,18 @@ describe("sendTransactionalEmail", () => {
   it("sends a magic-link email without a userId tag when the account does not exist yet", async () => {
     const result = await sendTransactionalEmail(
       {
+        expiresInSeconds: 300,
         type: "magic-link",
         url: "https://app.qolmeia.com/auth/magic?token=mlk-123",
         userEmail: "user@example.com",
       },
-      { apiKey: "re_test", from: "noreply@email.qolmeia.com" },
+      { apiKey: "re_test" },
     );
 
     expect(result.success).toBe(true);
     expect(sendMock).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        from: "noreply@email.qolmeia.com",
         html: expect.stringContaining("https://app.qolmeia.com/auth/magic?token=mlk-123"),
         subject: "Seu link de acesso à Qolmeia",
         tags: [{ name: "type", value: "magic-link" }],
@@ -194,6 +205,7 @@ describe("sendTransactionalEmail", () => {
       {
         changeUrl: "https://app.qolmeia.com/change?token=abc",
         currentEmail: "old@example.com",
+        expiresInSeconds: 3600,
         newEmail: "new@example.com",
         type: "change-email-confirmation",
         userId: "user_1",
@@ -216,6 +228,7 @@ describe("sendTransactionalEmail", () => {
       {
         acceptUrl: "https://app.qolmeia.com/convite/inv-123",
         companyName: "Padaria Nova",
+        expiresInSeconds: 604_800,
         type: "invitation",
         userEmail: "cliente@example.com",
       },

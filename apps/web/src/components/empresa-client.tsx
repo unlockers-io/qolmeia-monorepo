@@ -1,5 +1,6 @@
 "use client";
 
+import { PromptEditor } from "@repo/app-shell/prompt-editor";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -12,6 +13,13 @@ import { PageContainer } from "@repo/ui/compositions/page-container";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { describeRequestError } from "@repo/worker-api";
+import type {
+  BrandAsset,
+  CompanyResponse,
+  HireableTemplate,
+  TeamMemberDetailView,
+  TeamMemberView,
+} from "@repo/worker-api/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -20,27 +28,16 @@ import { AgentCard } from "@/components/agent-card";
 import { BrandAssets } from "@/components/brand-assets";
 import { CompanyBriefForm } from "@/components/company-brief-form";
 import { HireDialog } from "@/components/hire-dialog";
-import { PromptEditor } from "@/components/prompt-editor";
-import type { BrandAsset, CompanyResponse } from "@/lib/company";
-import {
-  fetchCatalogue,
-  fetchMemberDetail,
-  patchMember,
-  setPaused,
-  type HireableTemplate,
-  type TeamMemberDetailView,
-  type TeamMemberView,
-} from "@/lib/team";
-import { teamQueryKey, useTeamRoster } from "@/lib/use-team-roster";
-
-const catalogueQueryKey = (companyId: string) => ["catalogue", companyId] as const;
+import { queryKeys } from "@/lib/query-keys";
+import { fetchCatalogue, fetchMemberDetail, patchMember, setPaused } from "@/lib/team";
+import { useTeamRoster } from "@/lib/use-team-roster";
 
 type EmpresaClientProps = {
   companyId: string;
-  initialBrandAssets?: Array<BrandAsset>;
-  initialCatalogue?: Array<HireableTemplate>;
+  initialBrandAssets?: ReadonlyArray<BrandAsset>;
+  initialCatalogue?: ReadonlyArray<HireableTemplate>;
   initialCompany?: CompanyResponse;
-  initialMembers?: Array<TeamMemberView>;
+  initialMembers?: ReadonlyArray<TeamMemberView>;
 };
 
 const EmpresaClient = ({
@@ -56,14 +53,14 @@ const EmpresaClient = ({
   const ready = useClientReady();
 
   const queryClient = useQueryClient();
-  const rosterQueryKey = teamQueryKey(companyId);
-  const catalogueKey = catalogueQueryKey(companyId);
+  const rosterQueryKey = queryKeys.team(companyId);
+  const catalogueKey = queryKeys.catalogue(companyId);
   const { members, refetch } = useTeamRoster(companyId, initialMembers);
 
   const { data: catalogue = [] } = useQuery({
     initialData: initialCatalogue,
     meta: { errorToast: "Falha ao carregar catálogo" },
-    queryFn: fetchCatalogue,
+    queryFn: () => fetchCatalogue(),
     queryKey: catalogueKey,
   });
 
@@ -100,8 +97,8 @@ const EmpresaClient = ({
   const handleTogglePause = async (id: string, paused: boolean) => {
     setBusyId(id);
     await queryClient.cancelQueries({ queryKey: rosterQueryKey });
-    const previousMembers = queryClient.getQueryData<Array<TeamMemberView>>(rosterQueryKey);
-    queryClient.setQueryData<Array<TeamMemberView>>(rosterQueryKey, (current) =>
+    const previousMembers = queryClient.getQueryData<ReadonlyArray<TeamMemberView>>(rosterQueryKey);
+    queryClient.setQueryData<ReadonlyArray<TeamMemberView>>(rosterQueryKey, (current) =>
       current?.map((member) =>
         member.id === id ? { ...member, status: paused ? "paused" : "available" } : member,
       ),
@@ -109,7 +106,7 @@ const EmpresaClient = ({
 
     try {
       const updated = await setPaused(id, paused);
-      queryClient.setQueryData<Array<TeamMemberView>>(rosterQueryKey, (current) =>
+      queryClient.setQueryData<ReadonlyArray<TeamMemberView>>(rosterQueryKey, (current) =>
         current?.map((member) => (member.id === id ? updated : member)),
       );
     } catch (error) {
@@ -189,8 +186,9 @@ const EmpresaClient = ({
                   <PromptEditor
                     busy={busyId === m.id}
                     initialValue={detail.promptOverride}
-                    onReset={() => savePrompt(m.id, null)}
+                    label="Instruções para este agente"
                     onSave={(v) => savePrompt(m.id, v)}
+                    placeholder="Ex.: Use um tom descontraído e sempre inclua o endereço da loja."
                     updatedAt={detail.promptOverrideUpdatedAt}
                   />
                 )}

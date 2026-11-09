@@ -1,30 +1,25 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { cn } from "@repo/ui/lib/utils";
-import type { ActivityResponse } from "@repo/worker-api/contracts";
+import { ACTIVITY_CATEGORIES, type ActivityCategory } from "@repo/worker-api/contracts";
 import { Activity } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { ActivityList } from "@/components/activity-list";
-import {
-  ACTIVITY_CATEGORIES,
-  type ActivityCategory,
-  CATEGORY_STYLE,
-} from "@/lib/activity-category";
-import { apiGetServer } from "@/lib/api-server";
+import { CATEGORY_STYLE } from "@/lib/activity-category";
+import { ACTIVITY_PAGE_SIZE, getActivity } from "@/lib/backoffice-api";
 
 export const metadata: Metadata = { title: "Atividade" };
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-type Category = ActivityCategory;
-
-const FilterChips = ({ active }: { active?: Category }) => (
+const FilterChips = ({ active }: { active: ActivityCategory | undefined }) => (
   <nav aria-label="Filtrar por categoria" className="flex flex-wrap gap-2">
     <Link
       aria-current={active === undefined ? "page" : undefined}
@@ -58,14 +53,8 @@ const FilterChips = ({ active }: { active?: Category }) => (
 
 type ActivitySearchParams = Promise<Record<string, string | Array<string> | undefined>>;
 
-const ActivityFeed = async ({ category }: { category?: Category }) => {
-  const query = new URLSearchParams({ limit: "50" });
-
-  if (category) {
-    query.set("category", category);
-  }
-
-  const res = await apiGetServer<ActivityResponse>(`/activity?${query.toString()}`);
+const ActivityFeed = async ({ category }: { category: ActivityCategory | undefined }) => {
+  const res = await getActivity(apiGetServer, { category, limit: ACTIVITY_PAGE_SIZE });
 
   return (
     <Card>
@@ -73,9 +62,9 @@ const ActivityFeed = async ({ category }: { category?: Category }) => {
         {res.items.length === 0 ? (
           <EmptyState
             description={
-              category
-                ? `Nenhum evento em ${CATEGORY_STYLE[category].label.toLocaleLowerCase("pt-BR")} ainda.`
-                : "Quando os agentes começarem a trabalhar, os eventos aparecem aqui."
+              category === undefined
+                ? "Quando os agentes começarem a trabalhar, os eventos aparecem aqui."
+                : `Nenhum evento em ${CATEGORY_STYLE[category].label.toLocaleLowerCase("pt-BR")} ainda.`
             }
             icon={<Activity aria-hidden />}
             title="Nenhum evento ainda"

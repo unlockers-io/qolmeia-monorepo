@@ -1,26 +1,43 @@
-import type { AgentTemplate } from "@repo/db/worker";
-import type { Template, TemplateInput, TemplateStatus } from "@repo/worker-api/contracts";
+import type { AgentTemplate, Prisma } from "@repo/db/worker";
+import {
+  ACTION_TYPES,
+  actionPolicySchema,
+  actionTypeSchema,
+  type Template,
+  type TemplateInput,
+  type TemplateStatus,
+} from "@repo/worker-api/contracts";
 import { z } from "zod";
 
-import { actionTypeSchema } from "#/action/action-types";
 import type { Db } from "#/lib/db";
 
-const stringRecordSchema = z.record(z.string(), z.string());
-const stringArraySchema = z.array(z.string());
+const storedRecordSchema = z.record(z.string(), z.unknown());
+
+/** A key that names no Action type is dropped; an unrecognised policy fails closed to the safest one. */
+const readStoredPolicies = (stored: Prisma.JsonValue): Template["defaultPolicies"] => {
+  const policies = storedRecordSchema.parse(stored);
+
+  return Object.fromEntries(
+    ACTION_TYPES.flatMap((type) =>
+      Object.hasOwn(policies, type)
+        ? [[type, actionPolicySchema.safeParse(policies[type]).data ?? "require_approval"] as const]
+        : [],
+    ),
+  );
+};
+
+const skillIdsSchema = z.array(z.string());
 
 const toTemplate = (row: AgentTemplate): Template => ({
-  createdAt: row.createdAt.getTime(),
   defaultActionType: actionTypeSchema.parse(row.defaultActionType),
-  defaultPolicies: stringRecordSchema.parse(row.defaultPolicies),
+  defaultPolicies: readStoredPolicies(row.defaultPolicies),
   description: row.description,
   displayName: row.displayName,
   id: row.id,
   model: row.model,
-  skillIds: stringArraySchema.parse(row.skillIds),
+  skillIds: skillIdsSchema.parse(row.skillIds),
   status: row.status,
   systemPrompt: row.systemPrompt,
-  updatedAt: row.updatedAt.getTime(),
-  version: row.version,
   workerKind: row.workerKind,
 });
 
@@ -66,7 +83,7 @@ const updateTemplate = async (
   input: TemplateInput,
 ): Promise<Template | null> => {
   const result = await db.agentTemplate.updateMany({
-    data: { ...input, skillIds: [...input.skillIds], version: { increment: 1 } },
+    data: { ...input, skillIds: [...input.skillIds] },
     where: { id },
   });
 
@@ -83,21 +100,8 @@ const setTemplateStatus = async (
   return result.count > 0 ? getTemplate(db, id) : null;
 };
 
-const entitleToActiveTemplates = async (db: Db, companyId: string): Promise<void> => {
-  const templates = await db.agentTemplate.findMany({
-    select: { id: true },
-    where: { status: "active" },
-  });
-
-  await db.companyTemplateEntitlement.createMany({
-    data: templates.map(({ id: templateId }) => ({ companyId, templateId })),
-    skipDuplicates: true,
-  });
-};
-
 export {
   createTemplate,
-  entitleToActiveTemplates,
   getTemplate,
   listAllTemplates,
   listEntitledTemplates,

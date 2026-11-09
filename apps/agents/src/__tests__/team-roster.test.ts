@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, entitle, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
+import { MemberNotFoundError } from "#/team/errors";
 import { getCatalogue, getMemberDetail, getTeamRoster, listTeamRosters } from "#/team/roster";
 
 const COMPANY_ID = "co_roster_test";
@@ -182,13 +183,14 @@ describe("getMemberDetail", () => {
       client.agentInstance.update({ data: { promptOverride: null }, where: { id: WORKER_ID } }),
     );
     const detail = await db((client) => getMemberDetail(client, COMPANY_ID, WORKER_ID));
-    expect(detail?.hasPromptOverride).toBe(false);
-    expect(detail?.promptOverride).toBeNull();
-    expect(detail?.promptOverrideUpdatedAt).toBeNull();
+    expect(detail.hasPromptOverride).toBe(false);
+    expect(detail.promptOverride).toBeNull();
+    expect(detail.promptOverrideUpdatedAt).toBeNull();
   });
 
-  it("returns null when the instance doesn't belong to that company", async () => {
-    const detail = await db((client) => getMemberDetail(client, OTHER_COMPANY_ID, WORKER_ID));
-    expect(detail).toBeNull();
+  it("throws MemberNotFoundError when the instance doesn't belong to that company", async () => {
+    await expect(
+      db((client) => getMemberDetail(client, OTHER_COMPANY_ID, WORKER_ID)),
+    ).rejects.toThrow(MemberNotFoundError);
   });
 });

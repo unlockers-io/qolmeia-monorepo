@@ -139,10 +139,10 @@ Planner are protected from customer pause operations so the core experience rema
 
 - Cross-company list of every delegated unit of work with title, company, specialist, status, and
   last update.
-- Detail view with original brief, result payload, workflow identity, related actions, and an
+- Detail view with original brief, result payload, related actions, and an
   execution timeline.
 - Ticket states cover open, in progress, awaiting approval, done, rejected, cancelled, and blocked.
-- Operator API filters support company, status, and bounded result limits.
+- The operator list returns the most recent tickets, with a bounded result limit.
 
 ### 2.5 Companies and teams
 
@@ -166,7 +166,7 @@ Planner are protected from customer pause operations so the core experience rema
 
 - Cross-company activity log with URL-backed category filters for actions, tickets, workers, teams,
   and members.
-- Cursor-style older-event loading and server-side time/category/company filters.
+- Cursor-style older-event loading and a server-side category filter.
 - Each operator can limit their queue to specific companies, disciplines, or both.
 - Empty coverage means access to the entire approval queue.
 
@@ -220,7 +220,7 @@ and specialist Workflows read it when each generation step assembles its tools.
 
 ### 3.4 Delegation and workload routing
 
-- Delegation is restricted to active team members and the team's `canDelegateTo` graph.
+- Only the company's Correspondent delegates, to its company's active specialists.
 - The requested worker kind must match an active, entitled template instance in the same company.
 - Idle eligible specialists are preferred; if all are busy, work is distributed among eligible
   instances.
@@ -260,7 +260,7 @@ round, so a retried step does not duplicate actions, activity, or released files
 
 - A weekly cron scans active companies with complete briefs.
 - Each eligible Correspondent suggests two or three concrete tasks for the coming week.
-- A company receives at most one proactive suggestion per seven-day window.
+- A company receives at most one proactive suggestion per weekly run (a six-day window, so each Monday sweep finds the last one old enough).
 - The sweep isolates failures per company and records successful suggestions in activity history.
 
 ## 4. Platform, security, and operations
@@ -326,8 +326,7 @@ Those items are roadmap candidates in [`agent-tools.md`](agent-tools.md), not cu
 | Audience    | Prefix                                         | Capabilities                                                                                                                   |
 | ----------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Public/auth | `/api/auth/*`                                  | Magic links, email/password, verification, recovery, session management, accepting invitations.                                |
-| Customer    | `/api/me/*`                                    | Membership relay, company brief, templates/catalogue, team management/events, assets/uploads, activity.                        |
-| Customer    | `/api/teams/*`                                 | Onboarding team confirmation.                                                                                                  |
+| Customer    | `/api/me/*`                                    | Membership relay, company brief, catalogue, onboarding team confirmation, team management/events, assets/uploads, activity.    |
 | Customer    | `/agents/planner/*`, `/agents/correspondent/*` | Durable Flue 2 chat submission and observation.                                                                                |
 | Operator    | `/api/backoffice/*`                            | Tickets, approvals, decisions, activity, coverage, company creation, customer invitations, companies/teams, skills, templates. |
 | Asset       | `/assets/:id`                                  | R2 asset delivery: a Customer's own customer folder, or any Company for an Operator.                                           |

@@ -1,9 +1,10 @@
+import type { FlueConversationMessage as ChatMessage } from "@flue/sdk";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ChatMessage, UseFlueChatResult } from "@/lib/use-flue-chat";
+import type { UseFlueChatResult } from "@/lib/use-flue-chat";
 
-import { ChatView, PLANNER_GREETING, PLANNER_KICKOFF } from "./chat";
+import { ChatView, PLANNER_GREETING } from "./chat";
 import type { ChatProps } from "./chat";
 
 class MockObserver {
@@ -65,18 +66,12 @@ describe("Chat", () => {
   });
 
   it("renders the empty state when there are no messages", () => {
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.getByText("Comece a conversa")).toBeInTheDocument();
   });
 
   it("opens the Planner with a deterministic greeting and no synthetic submission", () => {
-    render(
-      <Chat
-        agent="planner"
-
-        companyId="co_test"
-      />,
-    );
+    render(<Chat agent="planner" companyId="co_test" />);
     expect(screen.getByText(PLANNER_GREETING)).toBeInTheDocument();
     expect(sendMessage).not.toHaveBeenCalled();
   });
@@ -89,13 +84,7 @@ describe("Chat", () => {
         role: "user",
       }),
     ];
-    render(
-      <Chat
-        agent="planner"
-
-        companyId="co_test"
-      />,
-    );
+    render(<Chat agent="planner" companyId="co_test" />);
     expect(screen.getByText(PLANNER_GREETING)).toBeInTheDocument();
     expect(screen.getByText("Nós somos uma padaria.")).toBeInTheDocument();
   });
@@ -103,85 +92,19 @@ describe("Chat", () => {
   it("does not show a thinking spinner for an idle empty Planner transcript", () => {
     chatState.status = "ready";
     chatState.messages = [];
-    render(
-      <Chat
-        agent="planner"
-
-        companyId="co_test"
-      />,
-    );
+    render(<Chat agent="planner" companyId="co_test" />);
     expect(screen.queryByText(/Um agente está respondendo/v)).not.toBeInTheDocument();
   });
 
   it("does not show the Planner greeting for the Correspondent", () => {
-    render(
-      <Chat
-        agent="correspondent"
-
-        companyId="co_test"
-      />,
-    );
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.queryByText(PLANNER_GREETING)).not.toBeInTheDocument();
   });
 
   it("does not show the Planner greeting before durable history loads", () => {
     chatState.historyReady = false;
-    render(
-      <Chat
-        agent="planner"
-
-        companyId="co_test"
-      />,
-    );
+    render(<Chat agent="planner" companyId="co_test" />);
     expect(screen.queryByText(PLANNER_GREETING)).not.toBeInTheDocument();
-  });
-
-  it("does not prepend the deterministic greeting to legacy kickoff histories", () => {
-    chatState.messages = [
-      buildMessage({
-        id: "m1",
-        parts: [{ state: "done", text: PLANNER_KICKOFF, type: "text" }],
-        role: "user",
-      }),
-      buildMessage({
-        id: "m2",
-        parts: [{ state: "done", text: "Olá! Bem-vindo.", type: "text" }],
-        role: "assistant",
-      }),
-    ];
-    render(
-      <Chat
-        agent="planner"
-
-        companyId="co_test"
-      />,
-    );
-    expect(screen.queryByText(PLANNER_GREETING)).not.toBeInTheDocument();
-    expect(screen.getByText("Olá! Bem-vindo.")).toBeInTheDocument();
-  });
-
-  it("hides the kickoff prompt from the rendered transcript", () => {
-    chatState.messages = [
-      buildMessage({
-        id: "m1",
-        parts: [{ state: "done", text: PLANNER_KICKOFF, type: "text" }],
-        role: "user",
-      }),
-      buildMessage({
-        id: "m2",
-        parts: [{ state: "done", text: "Olá! Bem-vindo.", type: "text" }],
-        role: "assistant",
-      }),
-    ];
-    render(
-      <Chat
-        agent="planner"
-
-        companyId="co_test"
-      />,
-    );
-    expect(screen.queryByText(PLANNER_KICKOFF)).not.toBeInTheDocument();
-    expect(screen.getByText("Olá! Bem-vindo.")).toBeInTheDocument();
   });
 
   it("hides diagnostic messages: internal dispatches and runtime advisories", () => {
@@ -209,7 +132,7 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.queryByText(/Um especialista do Time/v)).not.toBeInTheDocument();
     expect(screen.queryByText(/was updated/v)).not.toBeInTheDocument();
     expect(screen.getByText("Sua arte ficou pronta!")).toBeInTheDocument();
@@ -217,7 +140,7 @@ describe("Chat", () => {
 
   it("shows a loading skeleton until durable history is ready", () => {
     chatState.historyReady = false;
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.queryByText("Comece a conversa")).not.toBeInTheDocument();
   });
 
@@ -238,7 +161,7 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.getByText("Encaminhando para o time…")).toBeInTheDocument();
   });
 
@@ -264,7 +187,7 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.getByText("oi")).toBeInTheDocument();
     expect(document.querySelectorAll('[class*="rounded-2xl"]')).toHaveLength(1);
   });
@@ -287,7 +210,7 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.queryByText("Encaminhando para o time…")).not.toBeInTheDocument();
     expect(screen.getByText("Encaminhei para o Designer.")).toBeInTheDocument();
   });
@@ -305,13 +228,13 @@ describe("Chat", () => {
         role: "assistant",
       }),
     ];
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.getByText("oi")).toBeInTheDocument();
     expect(screen.getByText("olá!")).toBeInTheDocument();
   });
 
   it("sends the typed message on submit", async () => {
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     const textarea = screen.getByLabelText("Mensagem");
     fireEvent.change(textarea, { target: { value: "preciso de ajuda" } });
     fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
@@ -323,7 +246,7 @@ describe("Chat", () => {
 
   it("does not send while a reply is streaming", () => {
     chatState.status = "streaming";
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     const textarea = screen.getByLabelText("Mensagem");
     fireEvent.change(textarea, { target: { value: "outra" } });
     fireEvent.submit(textarea.closest("form") as HTMLFormElement);
@@ -332,7 +255,7 @@ describe("Chat", () => {
 
   it("shows the thinking indicator while submitted", () => {
     chatState.status = "submitted";
-    render(<Chat companyId="co_test" />);
+    render(<Chat agent="correspondent" companyId="co_test" />);
     expect(screen.getByText(/Um agente está respondendo/v)).toBeInTheDocument();
   });
 });

@@ -1,19 +1,17 @@
 "use client";
 
-import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
-import { safeRedirectPath } from "@repo/app-shell/redirect-path";
+import { authClient, authRequest, type AuthError } from "@repo/app-shell/auth-client";
+import { EmailField, PasswordField } from "@repo/app-shell/auth-fields";
+import { loginSchema, magicLinkSchema } from "@repo/app-shell/auth-schemas";
+import { redirectFrom, withFrom } from "@repo/auth/redirect-path";
 import { Button } from "@repo/ui/components/button";
-import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
+import { FieldGroup } from "@repo/ui/components/field";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
-import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-import { loginSchema, magicLinkSchema } from "@/lib/form-schemas";
 
 type LoginFormDependencies = {
   redirectTo: () => string;
@@ -21,11 +19,11 @@ type LoginFormDependencies = {
   sendMagicLink: (input: {
     callbackURL: string;
     email: string;
-  }) => Promise<{ error: { code?: string; status?: number } | null }>;
+  }) => Promise<{ error: AuthError | null }>;
   signInEmail: (credentials: {
     email: string;
     password: string;
-  }) => Promise<{ error: { code?: string; status?: number } | null }>;
+  }) => Promise<{ error: AuthError | null }>;
 };
 
 type SubmitLabelState = {
@@ -42,7 +40,7 @@ const getSubmitLabel = ({ isMagicLink, isSubmitting }: SubmitLabelState) => {
 };
 
 const DEFAULT_DEPENDENCIES: Omit<LoginFormDependencies, "router"> = {
-  redirectTo: () => safeRedirectPath(new URLSearchParams(window.location.search).get("from")),
+  redirectTo: () => redirectFrom(window.location.search),
   sendMagicLink: async (input) => {
     const { error } = await authClient.signIn.magicLink(input);
 
@@ -64,18 +62,13 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
   const isMagicLink = loginMethod === "magicLink";
 
   const signIn = async (credentials: { email: string; password: string }) => {
-    try {
-      const { error } = await signInEmail(credentials);
+    const { error } = await authRequest(
+      () => signInEmail(credentials),
+      "Não foi possível entrar. Verifique seu e-mail e sua senha.",
+    );
 
-      if (error) {
-        setSubmitError(
-          authErrorMessage(error, "Não foi possível entrar. Verifique seu e-mail e sua senha."),
-        );
-
-        return;
-      }
-    } catch {
-      setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
+    if (error !== null) {
+      setSubmitError(error);
 
       return;
     }
@@ -85,28 +78,23 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
   };
 
   const requestMagicLink = async (email: string) => {
-    const verifyUrl = new URL("/auth/verify", window.location.origin);
-    const target = redirectTo();
+    const callbackURL = new URL(
+      withFrom("/auth/verify", redirectTo()),
+      window.location.origin,
+    ).toString();
 
-    if (target !== "/") {
-      verifyUrl.searchParams.set("from", target);
+    const { error } = await authRequest(
+      () => sendMagicLink({ callbackURL, email }),
+      "Não foi possível enviar o link. Tente novamente.",
+    );
+
+    if (error !== null) {
+      setSubmitError(error);
+
+      return;
     }
 
-    const callbackURL = verifyUrl.toString();
-
-    try {
-      const { error } = await sendMagicLink({ callbackURL, email });
-
-      if (error) {
-        setSubmitError(authErrorMessage(error, "Não foi possível enviar o link. Tente novamente."));
-
-        return;
-      }
-
-      setSent(true);
-    } catch {
-      setSubmitError("Não foi possível conectar ao servidor. Tente novamente.");
-    }
+    setSent(true);
   };
 
   const form = useForm({
@@ -177,62 +165,12 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
       <ClientReadyForm className="mt-8" id={form.formId} noValidate onSubmit={handleSubmit}>
         <FieldGroup>
           <FormAlert message={submitError} />
-          <form.Field name="email">
-            {(field) => {
-              const isInvalid = !field.state.meta.isValid;
-
-              return (
-                <Field data-invalid={isInvalid || undefined}>
-                  <FieldLabel htmlFor={field.name}>E-mail</FieldLabel>
-                  <Input
-                    aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                    aria-invalid={isInvalid}
-                    autoComplete="email"
-                    id={field.name}
-                    name={field.name}
-                    onBlur={field.handleBlur}
-                    onChange={(event) => {
-                      field.handleChange(event.target.value);
-                    }}
-                    placeholder="voce@empresa.com"
-                    type="email"
-                    value={field.state.value}
-                  />
-                  {isInvalid && (
-                    <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                  )}
-                </Field>
-              );
-            }}
-          </form.Field>
-
+          <form.Field name="email">{(field) => <EmailField field={field} />}</form.Field>
           {!isMagicLink && (
             <form.Field name="password">
-              {(field) => {
-                const isInvalid = !field.state.meta.isValid;
-
-                return (
-                  <Field data-invalid={isInvalid || undefined}>
-                    <FieldLabel htmlFor={field.name}>Senha</FieldLabel>
-                    <Input
-                      aria-describedby={isInvalid ? `${field.name}-error` : undefined}
-                      aria-invalid={isInvalid}
-                      autoComplete="current-password"
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        field.handleChange(event.target.value);
-                      }}
-                      type="password"
-                      value={field.state.value}
-                    />
-                    {isInvalid && (
-                      <FormFieldError errors={field.state.meta.errors} id={`${field.name}-error`} />
-                    )}
-                  </Field>
-                );
-              }}
+              {(field) => (
+                <PasswordField autoComplete="current-password" field={field} label="Senha" />
+              )}
             </form.Field>
           )}
         </FieldGroup>

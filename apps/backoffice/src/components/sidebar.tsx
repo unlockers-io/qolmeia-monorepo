@@ -1,18 +1,16 @@
 "use client";
 
+import { agentInitials } from "@repo/app-shell/agent-avatar";
+import { matchesRoute } from "@repo/app-shell/match-route";
+import { SignOutButton } from "@repo/app-shell/sign-out-button";
 import { Logo } from "@repo/ui/compositions/logo";
-import { SignOutButton } from "@repo/ui/compositions/sign-out-button";
-import { agentInitials } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
+import type { OrgRole } from "@repo/worker-api/contracts";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, ReactNode } from "react";
 
-type NavItem = {
-  href: string;
-  icon: ReactNode;
-  label: string;
-};
+import { NAV_ROUTES, type NavHref } from "@/lib/routes";
 
 const HomeIcon = (
   <svg aria-hidden fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 18 18">
@@ -76,38 +74,31 @@ const CoverageIcon = (
   </svg>
 );
 
-const NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { href: "/", icon: HomeIcon, label: "Início" },
-  { href: "/approvals", icon: ApprovalsIcon, label: "Aprovações" },
-  { href: "/tickets", icon: TicketsIcon, label: "Tickets" },
-  { href: "/teams", icon: TeamsIcon, label: "Times" },
-  { href: "/templates", icon: TemplatesIcon, label: "Modelos" },
-  { href: "/activity", icon: ActivityIcon, label: "Atividade" },
-  { href: "/cobertura", icon: CoverageIcon, label: "Cobertura" },
-];
+const NAV_ICONS = {
+  "/": HomeIcon,
+  "/activity": ActivityIcon,
+  "/approvals": ApprovalsIcon,
+  "/cobertura": CoverageIcon,
+  "/teams": TeamsIcon,
+  "/templates": TemplatesIcon,
+  "/tickets": TicketsIcon,
+} satisfies Record<NavHref, ReactNode>;
 
-const isActive = (pathname: string, href: string): boolean => {
-  if (href === "/") {
-    return pathname === "/";
-  }
-
-  return pathname === href || pathname.startsWith(`${href}/`);
-};
-
-const ROLE_LABEL = new Map<string, string>([
-  ["OWNER", "Dono"],
-  ["STAFF", "Equipe"],
-]);
+const ROLE_LABEL = {
+  CUSTOMER: "Cliente",
+  OWNER: "Dono",
+  STAFF: "Equipe",
+} satisfies Record<OrgRole, string>;
 
 type SidebarUser = {
   email: string;
   name: string;
-  role: string;
+  role: OrgRole;
 };
 
 type SidebarProps = {
-  pendingCount?: number | null;
-  user?: SidebarUser;
+  pendingCount: number | null;
+  user: SidebarUser;
 };
 
 type SidebarDependencies = {
@@ -123,8 +114,8 @@ type SidebarNavProps = {
 
 const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps) => (
   <nav className={cn("flex gap-0.5", mobile ? "overflow-x-auto px-3 pb-2" : "flex-col")}>
-    {NAV_ITEMS.map((item) => {
-      const active = isActive(pathname, item.href);
+    {NAV_ROUTES.map((item) => {
+      const active = matchesRoute(pathname, item.href);
       const isQueue = item.href === "/approvals";
 
       return (
@@ -141,7 +132,7 @@ const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps)
           href={item.href}
           key={item.href}
         >
-          {item.icon}
+          {NAV_ICONS[item.href]}
           {item.label}
           {isQueue && pendingCount === null ? (
             <span
@@ -166,7 +157,7 @@ const SidebarNav = ({ mobile = false, pathname, pendingCount }: SidebarNavProps)
 
 const SidebarView = ({
   dependencies,
-  pendingCount = 0,
+  pendingCount,
   user,
 }: SidebarProps & { dependencies: SidebarDependencies }) => {
   const { pathname, SignOutControl } = dependencies;
@@ -186,9 +177,7 @@ const SidebarView = ({
             <Logo className="h-6 w-auto" />
           </Link>
           <div className="flex min-w-0 items-center gap-2">
-            {user ? (
-              <span className="truncate text-sm font-semibold text-foreground">{user.name}</span>
-            ) : null}
+            <span className="truncate text-sm font-semibold text-foreground">{user.name}</span>
             <SignOutControl className="min-h-11" />
           </div>
         </div>
@@ -206,27 +195,25 @@ const SidebarView = ({
         <p className="px-2 pt-4 pb-2 text-xs font-medium text-muted-foreground">Painel operador</p>
         <SidebarNav pathname={pathname} pendingCount={pendingCount} />
         <div className="mt-auto border-t border-border pt-3.5">
-          {user ? (
-            <div className="flex items-center gap-2.5 px-1.5">
-              <span
-                aria-hidden
-                className="flex size-8.5 shrink-0 items-center justify-center rounded-panel bg-foreground text-(length:--text-label) font-bold text-background"
-              >
-                {agentInitials(user.name)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-(length:--text-label) font-bold text-foreground">
-                  {user.name}
-                </p>
-                <p className="truncate text-xs text-muted-foreground" title={user.email}>
-                  {user.email}
-                </p>
-              </div>
-              <span className="rounded-md bg-highlight-surface px-1.5 py-1 text-xs font-semibold text-highlight-surface-foreground">
-                {ROLE_LABEL.get(user.role) ?? user.role}
-              </span>
+          <div className="flex items-center gap-2.5 px-1.5">
+            <span
+              aria-hidden
+              className="flex size-8.5 shrink-0 items-center justify-center rounded-panel bg-foreground text-(length:--text-label) font-bold text-background"
+            >
+              {agentInitials(user.name)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-(length:--text-label) font-bold text-foreground">
+                {user.name}
+              </p>
+              <p className="truncate text-xs text-muted-foreground" title={user.email}>
+                {user.email}
+              </p>
             </div>
-          ) : null}
+            <span className="rounded-md bg-highlight-surface px-1.5 py-1 text-xs font-semibold text-highlight-surface-foreground">
+              {ROLE_LABEL[user.role]}
+            </span>
+          </div>
           <SignOutControl className="mt-2 w-full justify-start" />
         </div>
       </aside>

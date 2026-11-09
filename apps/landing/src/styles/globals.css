@@ -1,1 +1,11 @@
 @import "@repo/ui/globals.css";
+
+@import "@repo/app-shell/styles.css";
+
+@theme {
+  --container-measure-heading: 35ch;
+}
+
+@theme {
+  --container-measure-hero: 24ch;
+}

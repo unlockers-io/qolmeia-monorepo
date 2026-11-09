@@ -1,5 +1,5 @@
 import { log } from "@repo/observability";
-import type { SkillCatalogEntry } from "@repo/worker-api/contracts";
+import type { SkillCatalogEntry, SkillId } from "@repo/worker-api/contracts";
 import { tool, type ToolSet } from "ai";
 
 import type { Db } from "#/lib/db";
@@ -15,28 +15,38 @@ import { rememberFactSkill } from "#/skills/remember-fact";
 import type { Skill, SkillContext, SkillInput, SkillResult } from "#/skills/skill";
 import { webSearchSkill } from "#/skills/web-search";
 
-const ALL_SKILLS: ReadonlyArray<Skill> = [
-  rememberFactSkill,
-  recallMemorySkill,
-  delegateToWorkerSkill,
-  generateBrandImageSkill,
-  draftSocialPostSkill,
-  extractBriefSkill,
-  proposeTeamSkill,
-  listAssetsSkill,
-  readAssetSkill,
-  saveAssetSkill,
-  webSearchSkill,
-  fetchUrlSkill,
-];
+const SKILLS = {
+  delegateToWorker: delegateToWorkerSkill,
+  draftSocialPost: draftSocialPostSkill,
+  extractBrief: extractBriefSkill,
+  fetchUrl: fetchUrlSkill,
+  generateBrandImage: generateBrandImageSkill,
+  listAssets: listAssetsSkill,
+  proposeTeam: proposeTeamSkill,
+  readAsset: readAssetSkill,
+  recallMemory: recallMemorySkill,
+  rememberFact: rememberFactSkill,
+  saveAsset: saveAssetSkill,
+  webSearch: webSearchSkill,
+} satisfies { [Id in SkillId]: Skill<Id> };
 
-const skillsById = new Map(ALL_SKILLS.map((skill) => [skill.id, skill]));
+const ALL_SKILLS: ReadonlyArray<Skill> = Object.values(SKILLS);
 
-const isKnownSkill = (id: string): boolean => skillsById.has(id);
+const isKnownSkill = (id: string): id is SkillId => Object.hasOwn(SKILLS, id);
+
+/** Template skill ids are checked on write; a stale one fails the job that reads it. */
+const skillsFor = (skillIds: ReadonlyArray<string>): ReadonlyArray<Skill> =>
+  skillIds.map((id) => {
+    if (!isKnownSkill(id)) {
+      throw new Error(`References unknown skill id: ${id}`);
+    }
+
+    return SKILLS[id];
+  });
 
 const listSkillCatalog = (): ReadonlyArray<SkillCatalogEntry> =>
-  ALL_SKILLS.map(({ description, displayName, id }) => ({ description, displayName, id })).toSorted(
-    (a, b) => a.displayName.localeCompare(b.displayName, "pt-BR"),
+  ALL_SKILLS.map(({ displayName, id }) => ({ displayName, id })).toSorted((a, b) =>
+    a.displayName.localeCompare(b.displayName, "pt-BR"),
   );
 
 const loadDisabledSkillIds = async (db: Db): Promise<Array<string>> => {
@@ -46,20 +56,12 @@ const loadDisabledSkillIds = async (db: Db): Promise<Array<string>> => {
 };
 
 const enabledSkills = (
-  skillIds: ReadonlyArray<string>,
+  skills: ReadonlyArray<Skill>,
   disabledSkillIds: ReadonlyArray<string>,
 ): ReadonlyArray<Skill> => {
   const disabled = new Set(disabledSkillIds);
 
-  return skillIds.flatMap((id) => {
-    const skill = skillsById.get(id);
-
-    if (!skill) {
-      throw new Error(`References unknown skill id: ${id}`);
-    }
-
-    return disabled.has(id) ? [] : [skill];
-  });
+  return skills.filter(({ id }) => !disabled.has(id));
 };
 
 const previewResult = <Result extends SkillResult>(result: Result): Result | string => {
@@ -114,11 +116,11 @@ const runSkill = async (
 
 const buildSkillTools = (
   ctx: SkillContext,
-  skillIds: ReadonlyArray<string>,
+  skills: ReadonlyArray<Skill>,
   disabledSkillIds: ReadonlyArray<string>,
 ): ToolSet =>
   Object.fromEntries(
-    enabledSkills(skillIds, disabledSkillIds).map((skill) => [
+    enabledSkills(skills, disabledSkillIds).map((skill) => [
       skill.id,
       tool({
         description: skill.description,
@@ -131,8 +133,8 @@ const buildSkillTools = (
 export {
   buildSkillTools,
   enabledSkills,
-  isKnownSkill,
   listSkillCatalog,
   loadDisabledSkillIds,
   runSkill,
+  skillsFor,
 };

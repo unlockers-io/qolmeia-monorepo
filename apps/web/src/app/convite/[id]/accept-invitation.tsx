@@ -1,6 +1,7 @@
 "use client";
 
-import { authClient, authErrorMessage } from "@repo/app-shell/auth-client";
+import { authClient, authRequest, type AuthError } from "@repo/app-shell/auth-client";
+import { loginHref } from "@repo/auth/redirect-path";
 import { Button } from "@repo/ui/components/button";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { useRouter } from "next/navigation";
@@ -9,9 +10,7 @@ import { useState, useTransition } from "react";
 const UNAUTHORIZED = 401;
 
 type AcceptInvitationDependencies = {
-  acceptInvitation: (
-    invitationId: string,
-  ) => Promise<{ error: { code?: string; status?: number } | null }>;
+  acceptInvitation: (invitationId: string) => Promise<{ error: AuthError | null }>;
   router: Pick<ReturnType<typeof useRouter>, "push" | "refresh" | "replace">;
 };
 
@@ -38,30 +37,25 @@ const AcceptInvitationView = ({
   const accept = () => {
     setErrorMessage(null);
     startAccepting(async () => {
-      try {
-        const { error } = await acceptInvitation(invitationId);
+      const outcome = await authRequest(
+        () => acceptInvitation(invitationId),
+        "Não foi possível aceitar o convite. Tente novamente.",
+      );
 
-        if (error?.status === UNAUTHORIZED) {
-          replace(`/login?from=${encodeURIComponent(`/convite/${invitationId}`)}`);
-
-          return;
-        }
-
-        if (error) {
-          setErrorMessage(
-            authErrorMessage(error, "Não foi possível aceitar o convite. Tente novamente."),
-          );
-
-          return;
-        }
-      } catch {
-        setErrorMessage("Não foi possível conectar ao servidor. Tente novamente.");
+      if (outcome.error === null) {
+        push("/");
+        refresh();
 
         return;
       }
 
-      push("/");
-      refresh();
+      if (outcome.status === UNAUTHORIZED) {
+        replace(loginHref(`/convite/${invitationId}`));
+
+        return;
+      }
+
+      setErrorMessage(outcome.error);
     });
   };
 

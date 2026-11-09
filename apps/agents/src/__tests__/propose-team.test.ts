@@ -1,10 +1,10 @@
+import { entitleToActiveTemplates } from "@repo/db/worker";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany } from "#/__tests__/fixtures";
 import { proposeTeamSkill } from "#/skills/propose-team";
 import type { SkillContext } from "#/skills/skill";
-import { entitleToActiveTemplates } from "#/template/template";
 
 const COMPANY_ID = "co_propose_test";
 
@@ -19,7 +19,7 @@ const ctx: SkillContext = {
 
 beforeEach(async () => {
   await seedCompany({ id: COMPANY_ID, status: "onboarding" });
-  await db((client) => entitleToActiveTemplates(client, COMPANY_ID));
+  await db((client) => entitleToActiveTemplates(client, [COMPANY_ID]));
 });
 
 describe("proposeTeam", () => {

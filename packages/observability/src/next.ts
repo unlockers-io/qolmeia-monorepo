@@ -16,12 +16,9 @@ const createObservability = (opts: { service: string }) => {
   });
 
   return {
-    createError: next.createError,
     log: next.log,
     onRequestError: instrumentation.onRequestError,
     register: instrumentation.register,
-    useLogger: next.useLogger,
-    withEvlog: next.withEvlog,
   };
 };
 

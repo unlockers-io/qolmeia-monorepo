@@ -1,23 +1,24 @@
-import type {
-  AgentDisplayStatus,
-  HireableTemplate,
-  TeamMemberDetailView,
-  TeamMemberView,
+import { apiGet, apiSend } from "@repo/worker-api";
+import {
+  type CatalogueResponse,
+  type ConfirmTeamResponse,
+  type confirmTeamInputSchema,
+  type HireableTemplate,
+  type hireInputSchema,
+  type MemberDetailResponse,
+  type MemberResponse,
+  type memberPatchSchema,
+  TEAM_EVENT_TYPES,
+  type TeamMemberDetailView,
+  type TeamMemberView,
+  type TeamResponse,
 } from "@repo/worker-api/contracts";
+import type { z } from "zod";
 
-import { apiGet, apiSend } from "@/lib/api-client";
+const fetchTeam = async (get: typeof apiGet = apiGet): Promise<ReadonlyArray<TeamMemberView>> => {
+  const { members } = await get<TeamResponse>("/api/me/team");
 
-const STATUS_LABEL = {
-  available: "Disponível",
-  awaiting_approval: "Aguardando aprovação",
-  paused: "Pausado",
-  working: "Trabalhando",
-} satisfies Record<AgentDisplayStatus, string>;
-
-const fetchTeam = async (): Promise<Array<TeamMemberView>> => {
-  const body = await apiGet<{ members: Array<TeamMemberView> }>("/api/me/team");
-
-  return body.members;
+  return members;
 };
 
 type SharedTeamEvents = {
@@ -68,8 +69,11 @@ const openSharedSource = (): void => {
   source.addEventListener("open", () => {
     sharedTeamEvents.failedAttempts = 0;
   });
-  source.addEventListener("team:roster", notifyTeamEventListeners);
-  source.addEventListener("team:status", notifyTeamEventListeners);
+
+  for (const type of TEAM_EVENT_TYPES) {
+    source.addEventListener(type, notifyTeamEventListeners);
+  }
+
   source.addEventListener("error", () => {
     source.close();
 
@@ -107,63 +111,54 @@ const subscribeTeamEvents = (onEvent: () => void): (() => void) | null => {
   };
 };
 
-const fetchCatalogue = async (): Promise<Array<HireableTemplate>> => {
-  const body = await apiGet<{ templates: Array<HireableTemplate> }>("/api/me/catalogue");
+const fetchCatalogue = async (
+  get: typeof apiGet = apiGet,
+): Promise<ReadonlyArray<HireableTemplate>> => {
+  const { templates } = await get<CatalogueResponse>("/api/me/catalogue");
 
-  return body.templates;
+  return templates;
 };
 
-const hireMember = async (input: {
-  displayName?: string;
-  templateId: string;
-}): Promise<TeamMemberView> => {
-  const body = await apiSend<{ member: TeamMemberView }>("POST", "/api/me/team/hire", input);
+const confirmTeam = (input: z.input<typeof confirmTeamInputSchema>): Promise<ConfirmTeamResponse> =>
+  apiSend<ConfirmTeamResponse>("POST", "/api/me/team/confirm", input);
 
-  return body.member;
+const hireMember = async (input: z.input<typeof hireInputSchema>): Promise<TeamMemberView> => {
+  const { member } = await apiSend<MemberResponse>("POST", "/api/me/team/hire", input);
+
+  return member;
 };
 
 const patchMember = async (
   id: string,
-  patch: { displayName?: string; promptOverride?: string | null },
+  patch: z.input<typeof memberPatchSchema>,
 ): Promise<TeamMemberView> => {
-  const body = await apiSend<{ member: TeamMemberView }>(
-    "PATCH",
-    `/api/me/team/members/${id}`,
-    patch,
-  );
+  const { member } = await apiSend<MemberResponse>("PATCH", `/api/me/team/members/${id}`, patch);
 
-  return body.member;
+  return member;
 };
 
 const fetchMemberDetail = async (id: string): Promise<TeamMemberDetailView> => {
-  const body = await apiGet<{ member: TeamMemberDetailView }>(`/api/me/team/members/${id}`);
+  const { member } = await apiGet<MemberDetailResponse>(`/api/me/team/members/${id}`);
 
-  return body.member;
+  return member;
 };
 
 const setPaused = async (id: string, paused: boolean): Promise<TeamMemberView> => {
-  const body = await apiSend<{ member: TeamMemberView }>(
+  const { member } = await apiSend<MemberResponse>(
     "POST",
     `/api/me/team/members/${id}/${paused ? "pause" : "resume"}`,
   );
 
-  return body.member;
+  return member;
 };
 
 export {
+  confirmTeam,
   fetchCatalogue,
   fetchMemberDetail,
   fetchTeam,
   hireMember,
   patchMember,
   setPaused,
-  STATUS_LABEL,
   subscribeTeamEvents,
 };
-
-export type {
-  AgentDisplayStatus,
-  HireableTemplate,
-  TeamMemberDetailView,
-  TeamMemberView,
-} from "@repo/worker-api/contracts";

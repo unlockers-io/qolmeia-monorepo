@@ -1,10 +1,24 @@
-import { Hono } from "hono";
+import {
+  BRAND_CATEGORIES,
+  deleteAssetsInputSchema,
+  UPLOAD_POLICIES,
+  type UploadTarget,
+  type BrandAsset,
+  type BrandAssetResponse,
+  type BrandAssetsResponse,
+  type BrandCategory,
+  type DeleteAssetsResponse,
+  type LibraryAssetsResponse,
+  type UploadResponse,
+} from "@repo/worker-api/contracts";
+import { type Context, Hono } from "hono";
 import { z } from "zod";
 
 import type { IdentityEnv } from "#/identity/gates";
-import type { Db } from "#/lib/db";
+import { DomainError } from "#/lib/errors";
 import { parsePositiveInt } from "#/lib/pagination";
 import type { JsonRecord } from "#/lib/records";
+import { jsonBody } from "#/lib/validate";
 import {
   assetReference,
   deleteAssets,
@@ -13,179 +27,150 @@ import {
   type AssetRecord,
 } from "#/library/assets";
 
-const meAssetsRoutes = new Hono<IdentityEnv>();
+const brandCategorySchema = z.enum(BRAND_CATEGORIES);
 
-meAssetsRoutes.get("/assets", async (c) => {
-  const { companyId } = c.get("session");
-  const limit = parsePositiveInt(c.req.query("limit"), 100, 200);
-  const results = await listAssets(c.var.db, companyId, { limit, visibility: "customer" });
-
-  const items = results.map((row) => ({
-    createdAt: new Date(row.createdAt).toISOString(),
-    id: row.id,
-    kind: row.kind,
-    metadata: row.metadata,
-    mimeType: row.mime,
-    name: row.name,
-    size: row.bytes,
-    url: assetReference(row.id),
-  }));
-
-  return c.json({ items, nextCursor: null });
-});
-
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-
-const ALLOWED_UPLOAD_MIME = new Set([
-  "image/gif",
-  "image/jpeg",
-  "image/png",
-  "image/svg+xml",
-  "image/webp",
-]);
-
-const persistImageAsset = async (
-  env: Env,
-  db: Db,
-  opts: {
-    companyId: string;
-    extraMeta: JsonRecord;
-    file: File;
-    kind: "brand_asset" | "user_upload";
-  },
-): Promise<AssetRecord> => {
-  const { companyId, extraMeta, file, kind } = opts;
-  const bytes = new Uint8Array(await file.arrayBuffer());
-
-  return storeAsset(env, db, {
-    bytes,
-    companyId,
-    kind,
-    metadata: { originalName: file.name || null, ...extraMeta },
-    mime: file.type,
-    visibility: "customer",
-  });
-};
-
-const readUploadedImage = (
-  form: FormData,
-): { error: string; status: 400 | 413 | 415 } | { file: File } => {
-  const file = form.get("file");
-
-  if (!(file instanceof File)) {
-    return { error: "Missing 'file' field", status: 400 };
-  }
-
-  if (!ALLOWED_UPLOAD_MIME.has(file.type)) {
-    return { error: `Unsupported mime '${file.type}'`, status: 415 };
-  }
-
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return { error: `File too large (max ${MAX_UPLOAD_BYTES} bytes)`, status: 413 };
-  }
-
-  return { file };
-};
-
-const BRAND_CATEGORIES = new Set(["logo", "post", "reference", "other"]);
+const OTHER_CATEGORY: BrandCategory = "other";
 
 const brandAssetMetadataSchema = z.object({
   category: z.string().optional(),
-  originalName: z.string().optional(),
+  originalName: z.string().nullish(),
 });
 
-const toBrandAsset = (row: AssetRecord) => {
-  const metadata = brandAssetMetadataSchema.safeParse(row.metadata);
+const toBrandAsset = (row: AssetRecord): BrandAsset => {
+  const metadata = brandAssetMetadataSchema.safeParse(row.metadata).data;
 
   return {
-    category: metadata.success ? (metadata.data.category ?? "other") : "other",
-    createdAt: new Date(row.createdAt).toISOString(),
+    category: brandCategorySchema.safeParse(metadata?.category).data ?? OTHER_CATEGORY,
+    createdAt: row.createdAt,
     id: row.id,
     mimeType: row.mime,
-    name: metadata.success ? (metadata.data.originalName ?? null) : null,
+    name: metadata?.originalName ?? null,
     size: row.bytes,
     url: assetReference(row.id),
   };
 };
 
-meAssetsRoutes.post("/uploads", async (c) => {
-  const { companyId } = c.get("session");
-
-  let form: FormData;
-
+const readForm = async (c: Context<IdentityEnv>): Promise<FormData> => {
   try {
-    form = await c.req.formData();
+    return await c.req.formData();
   } catch {
-    return c.json({ error: "Invalid multipart body" }, 400);
+    throw new DomainError(400, "Invalid multipart body");
+  }
+};
+
+const readImageUpload = async (
+  c: Context<IdentityEnv>,
+  target: UploadTarget,
+): Promise<{ file: File; form: FormData }> => {
+  const policy = UPLOAD_POLICIES[target];
+  const form = await readForm(c);
+  const file = form.get("file");
+
+  if (!(file instanceof File)) {
+    throw new DomainError(400, "Missing 'file' field");
   }
 
-  const validated = readUploadedImage(form);
-
-  if ("error" in validated) {
-    return c.json({ error: validated.error }, validated.status);
+  if (!policy.mimeTypes.some((mimeType) => mimeType === file.type)) {
+    throw new DomainError(415, `Unsupported mime '${file.type}'`);
   }
 
-  const {
-    bytes,
-    id: assetId,
-    mime,
-  } = await persistImageAsset(c.env, c.var.db, {
-    companyId,
-    extraMeta: {},
-    file: validated.file,
-    kind: "user_upload",
+  if (file.size > policy.maxBytes) {
+    throw new DomainError(413, `File too large (max ${policy.maxBytes} bytes)`);
+  }
+
+  return { file, form };
+};
+
+const storeImageUpload = async (
+  c: Context<IdentityEnv>,
+  file: File,
+  kind: "brand_asset" | "user_upload",
+  metadata: JsonRecord = {},
+): Promise<AssetRecord> =>
+  storeAsset(c.env, c.var.db, {
+    bytes: new Uint8Array(await file.arrayBuffer()),
+    companyId: c.var.session.companyId,
+    kind,
+    metadata: { originalName: file.name || null, ...metadata },
+    mime: file.type,
+    visibility: "customer",
   });
 
-  return c.json({ assetId, mime, size: bytes, url: assetReference(assetId) });
+/** Mounted by the customer router, which gates it. */
+const libraryRoutes = new Hono<IdentityEnv>();
+
+libraryRoutes.get("/assets", async (c) => {
+  const rows = await listAssets(c.var.db, c.var.session.companyId, {
+    limit: parsePositiveInt(c.req.query("limit"), 100, 200),
+    visibility: "customer",
+  });
+
+  const body: LibraryAssetsResponse = {
+    items: rows.map((row) => ({
+      createdAt: row.createdAt,
+      id: row.id,
+      kind: row.kind,
+      mimeType: row.mime,
+      name: row.name,
+      size: row.bytes,
+      url: assetReference(row.id),
+    })),
+  };
+
+  return c.json(body);
 });
 
-meAssetsRoutes.get("/brand-assets", async (c) => {
-  const { companyId } = c.get("session");
-  const results = await listAssets(c.var.db, companyId, { kind: "brand_asset", limit: 200 });
+libraryRoutes.post("/assets/delete", jsonBody(deleteAssetsInputSchema), async (c) => {
+  const body: DeleteAssetsResponse = {
+    deleted: await deleteAssets(c.env, c.var.db, c.var.session.companyId, {
+      ids: c.req.valid("json").ids,
+      visibility: "customer",
+    }),
+  };
 
-  const items = results.map(toBrandAsset);
-
-  return c.json({ items });
+  return c.json(body);
 });
 
-meAssetsRoutes.post("/brand-assets", async (c) => {
-  const session = c.get("session");
+libraryRoutes.post("/uploads", async (c) => {
+  const { file } = await readImageUpload(c, "chat");
+  const asset = await storeImageUpload(c, file, "user_upload");
 
-  let form: FormData;
+  const body: UploadResponse = {
+    assetId: asset.id,
+    mimeType: asset.mime,
+    size: asset.bytes,
+    url: assetReference(asset.id),
+  };
 
-  try {
-    form = await c.req.formData();
-  } catch {
-    return c.json({ error: "Invalid multipart body" }, 400);
-  }
+  return c.json(body);
+});
 
-  const validated = readUploadedImage(form);
-
-  if ("error" in validated) {
-    return c.json({ error: validated.error }, validated.status);
-  }
-
-  const rawCategory = form.get("category");
-
-  const category =
-    typeof rawCategory === "string" && BRAND_CATEGORIES.has(rawCategory) ? rawCategory : "other";
-
-  const asset = await persistImageAsset(c.env, c.var.db, {
-    companyId: session.companyId,
-    extraMeta: { category },
-    file: validated.file,
+libraryRoutes.get("/brand-assets", async (c) => {
+  const rows = await listAssets(c.var.db, c.var.session.companyId, {
     kind: "brand_asset",
+    limit: 200,
   });
 
-  return c.json({ asset: toBrandAsset(asset) });
+  const body: BrandAssetsResponse = { items: rows.map(toBrandAsset) };
+
+  return c.json(body);
 });
 
-meAssetsRoutes.delete("/brand-assets/:id", async (c) => {
-  const session = c.get("session");
-  const id = c.req.param("id");
+libraryRoutes.post("/brand-assets", async (c) => {
+  const { file, form } = await readImageUpload(c, "brand");
 
-  const deleted = await deleteAssets(c.env, c.var.db, session.companyId, {
-    ids: [id],
+  const asset = await storeImageUpload(c, file, "brand_asset", {
+    category: brandCategorySchema.safeParse(form.get("category")).data ?? OTHER_CATEGORY,
+  });
+
+  const body: BrandAssetResponse = { asset: toBrandAsset(asset) };
+
+  return c.json(body);
+});
+
+libraryRoutes.delete("/brand-assets/:id", async (c) => {
+  const deleted = await deleteAssets(c.env, c.var.db, c.var.session.companyId, {
+    ids: [c.req.param("id")],
     kind: "brand_asset",
   });
 
@@ -196,26 +181,4 @@ meAssetsRoutes.delete("/brand-assets/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-const deleteAssetsInputSchema = z.object({
-  ids: z.array(z.string().min(1)).min(1).max(100),
-});
-
-meAssetsRoutes.post("/assets/delete", async (c) => {
-  const session = c.get("session");
-  const parsed = deleteAssetsInputSchema.safeParse(await c.req.json().catch(() => null));
-
-  if (!parsed.success) {
-    return c.json({ error: "invalid body" }, 400);
-  }
-
-  const { ids } = parsed.data;
-
-  const deleted = await deleteAssets(c.env, c.var.db, session.companyId, {
-    ids,
-    visibility: "customer",
-  });
-
-  return c.json({ deleted });
-});
-
-export { meAssetsRoutes };
+export { libraryRoutes };

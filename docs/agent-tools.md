@@ -8,12 +8,12 @@ each mapped to the agent(s) that use it. Companion to
 
 1. **Skill**: a code module in `apps/agents/src/skills/` built with
    `defineSkill({ id, displayName, description, inputSchema, execute })` and
-   listed in `ALL_SKILLS` (`skills/registry.ts`). The module is the whole
-   contract: the registry derives the Flue tool (Correspondent, Planner), the AI
-   SDK tool (specialist Workflow runs), and the backoffice catalog entry from it.
-   An agent only gets a skill if its skill set lists the id: the **Correspondent**
-   and **Planner** have hardcoded sets (`CORRESPONDENT_SKILLS`, `PLANNER_SKILLS`);
-   **specialist Workflow runs** get `template.skillIds`. The `skill` table holds
+   keyed by its id in the `SKILLS` record (`skills/registry.ts`), whose keys must
+   match `SKILL_IDS` in `packages/worker-api/src/contracts/skills.ts`. The module
+   is the whole contract: the Flue tool (Correspondent, Planner), the AI SDK tool
+   (specialist Workflow runs), and the backoffice catalog entry come from it.
+   The **Correspondent** and **Planner** list the skill modules they use in their
+   agent files; **specialist Workflow runs** get `template.skillIds`. The `skill` table holds
    only an operator kill-switch: a row with `enabled = false` hides the skill from
    every agent from its next turn or generation step; a missing row means enabled.
 2. **Channel**: how the customer reaches the Correspondent. Today the only
@@ -160,23 +160,27 @@ spike (2026-06-19):
    `inputSchema` is a top-level `z.object`; `.describe()` every field, and avoid
    unions and nullables (the Flue bridge rejects them). `execute(input, ctx)`
    receives the parsed input.
-2. Add the skill to `ALL_SKILLS` in `apps/agents/src/skills/registry.ts`.
-3. List its id where an agent should use it: a specialist template's `skillIds`
-   (backoffice template form; `DEFAULT_TEMPLATES` in
-   `packages/db/src/product-seed.ts` for a shipped template), or
-   `CORRESPONDENT_SKILLS` / `PLANNER_SKILLS`. The backoffice rejects unknown ids.
+2. Add its id to `SKILL_IDS` in `packages/worker-api/src/contracts/skills.ts`
+   and the module to `SKILLS` in `apps/agents/src/skills/registry.ts` (the
+   record fails to compile until both match). Give the web chat its activity
+   label in `apps/web/src/components/chat.tsx` if a conversation agent uses it.
+3. Use it where an agent should: a specialist template's `skillIds` (backoffice
+   template form; `DEFAULT_TEMPLATES` in `packages/db/src/product-seed.ts` for a
+   shipped template), or the skill list in `agents/correspondent.ts` /
+   `agents/planner.ts`. The Worker rejects ids outside `SKILL_IDS`.
 
 Declare any secret in `env.d.ts` + `wrangler secret put` + `docs/deploy.md`. A
 skill that writes to the library uses `ctx.deliverableFolder`, so a Worker job's
 files stay in the agent folder until its Action executes. A skill that calls a
 model goes through `apps/agents/src/lib/models.ts`.
 
-**Action type:** add the key to `ACTION_TYPES` in
-`packages/worker-api/src/contracts/actions.ts` → add a module under
-`apps/agents/src/action/` with its proposed-payload extraction, executor, and
-default policy (`require_approval` for outward, hard-to-reverse effects) → register
-it in `ACTION_TYPE_MODULES` → add its backoffice renderer, label, and default
-decision (the typed records fail to compile until you do).
+**Action type:** add the key to `ACTION_TYPES` and its proposed-payload schema to
+`PROPOSED_SCHEMAS` in `packages/worker-api/src/contracts/actions.ts` → add a module
+under `apps/agents/src/action/` with `read`, `propose`, `execute`, and its default
+policy (`require_approval` for outward, hard-to-reverse effects) → register it in
+`ACTION_TYPE_MODULES` → add its label, default decision and card to
+`apps/backoffice/src/components/action-types/` (the typed records fail to compile
+until you do).
 
 **Connector:** none exists yet. The first one adds a webhook route that
 `dispatch()`es inbound messages to the Correspondent, and a per-tenant secret

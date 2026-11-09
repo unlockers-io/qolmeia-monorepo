@@ -3,8 +3,10 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { buildFlueTools, buildInputSchema } from "#/lib/skill-tool";
-import { listSkillCatalog } from "#/skills/registry";
+import { listAssetsSkill } from "#/skills/assets";
+import { delegateToWorkerSkill } from "#/skills/delegate-to-worker";
+import { buildFlueTools, buildInputSchema } from "#/skills/flue-tools";
+import { listSkillCatalog, skillsFor } from "#/skills/registry";
 import type { SkillContext } from "#/skills/skill";
 
 const ctx: SkillContext = {
@@ -19,7 +21,7 @@ const ctx: SkillContext = {
 describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
   it("converts every registered skill's input schema without throwing", () => {
     const ids = listSkillCatalog().map((entry) => entry.id);
-    const tools = buildFlueTools(ctx, ids, []);
+    const tools = buildFlueTools(ctx, skillsFor(ids), []);
     expect(tools.map((tool) => tool.name).toSorted()).toEqual(ids.toSorted());
 
     for (const tool of tools) {
@@ -28,7 +30,7 @@ describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
   });
 
   it("keeps required fields and length limits enforceable", () => {
-    const [delegate] = buildFlueTools(ctx, ["delegateToWorker"], []);
+    const [delegate] = buildFlueTools(ctx, [delegateToWorkerSkill], []);
     const input = delegate?.input;
 
     if (!input) {
@@ -43,7 +45,7 @@ describe("buildFlueTools — zod input schemas re-expressed as Valibot", () => {
   });
 
   it("keeps enums and optional fields enforceable", () => {
-    const [listAssets] = buildFlueTools(ctx, ["listAssets"], []);
+    const [listAssets] = buildFlueTools(ctx, [listAssetsSkill], []);
     const input = listAssets?.input;
 
     if (!input) {

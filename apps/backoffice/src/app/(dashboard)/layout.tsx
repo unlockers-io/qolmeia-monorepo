@@ -1,16 +1,17 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
+import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import type { ActionsResponse } from "@repo/worker-api/contracts";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
 import { Sidebar } from "@/components/sidebar";
-import { apiGetServer } from "@/lib/api-server";
 import { requireOperator } from "@/lib/auth-helpers";
+import { getPendingActions } from "@/lib/backoffice-api";
 
 const SidebarData = async () => {
   const [me, pendingRes] = await Promise.all([
     requireOperator(),
-    apiGetServer<ActionsResponse>("/actions?status=pending&sort=age").catch(() => null),
+    getPendingActions(apiGetServer).catch(() => null),
   ]);
 
   const pendingCount = pendingRes?.items.length ?? null;
@@ -54,7 +55,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => (
       <SidebarData />
     </Suspense>
     <div className="flex flex-1 flex-col">
-      <main className="flex-1 px-4 py-6 pb-16 sm:px-6 md:px-10 md:py-8" id="main-content">
+      <main className="flex-1 px-4 py-6 pb-16 sm:px-6 md:px-10 md:py-8" id={MAIN_CONTENT_ID}>
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
     </div>

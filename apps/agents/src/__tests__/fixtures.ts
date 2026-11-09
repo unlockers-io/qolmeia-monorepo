@@ -1,8 +1,8 @@
 import type { AgentInstanceStatus, CompanyStatus, Prisma, TicketStatus } from "@repo/db/worker";
-import { correspondentIdFor, teamIdFor } from "@repo/worker-api/contracts";
 import { env } from "cloudflare:workers";
 
 import { withDb, type PrismaClient } from "#/lib/db";
+import { correspondentIdFor, teamIdFor } from "#/team/ids";
 
 const db = <Result>(run: (client: PrismaClient) => Promise<Result>): Promise<Result> =>
   withDb(env, run);
@@ -60,15 +60,14 @@ const seedTeam = async (companyId: string, workers: ReadonlyArray<WorkerSeed> = 
         role: "worker" as const,
         status: worker.status ?? "active",
         templateId: worker.templateId ?? "tpl-designer",
-        templateVersion: 1,
       })),
     });
     await client.team.create({ data: { companyId, confirmedAt: new Date(), id: teamId } });
     await client.teamMember.createMany({
-      data: [
-        { agentInstanceId: correspondentId, canDelegateTo: workers.map(({ id }) => id), teamId },
-        ...workers.map(({ id }) => ({ agentInstanceId: id, canDelegateTo: [], teamId })),
-      ],
+      data: [correspondentId, ...workers.map(({ id }) => id)].map((agentInstanceId) => ({
+        agentInstanceId,
+        teamId,
+      })),
     });
   });
 
@@ -81,7 +80,6 @@ type TicketSeed = {
   companyId: string;
   id: string;
   status?: TicketStatus;
-  workflowId?: string;
 };
 
 const seedTicket = async (seed: TicketSeed): Promise<void> => {
@@ -95,7 +93,6 @@ const seedTicket = async (seed: TicketSeed): Promise<void> => {
         origin: "delegation",
         status: seed.status ?? "in_progress",
         title: (seed.brief ?? "brief").slice(0, 80),
-        workflowId: seed.workflowId ?? null,
       },
     }),
   );

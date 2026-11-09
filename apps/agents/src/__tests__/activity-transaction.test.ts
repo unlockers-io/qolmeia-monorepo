@@ -1,9 +1,10 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
-import { getAction } from "#/action/action";
 import { markExecuted, proposeAction, recordDecision } from "#/action/approval";
 import { listActivity } from "#/activity/log";
+import type { PrismaClient } from "#/lib/db";
 import { loadTicket } from "#/ticket/ticket";
 
 const COMPANY_ID = "co_activity_tx";
@@ -11,6 +12,12 @@ const UNKNOWN_COMPANY_ID = "co_activity_tx_unknown";
 const TICKET_ID = "tkt-activity-tx";
 const WORKER_ID = "agent-activity-tx";
 const ACTIVITY_FOREIGN_KEY = /activity_log_company_id_fkey|Foreign key constraint/v;
+
+const actionRow = (client: PrismaClient, id: string) =>
+  client.action.findUniqueOrThrow({
+    select: { decidedByUserId: true, status: true },
+    where: { id },
+  });
 
 beforeEach(async () => {
   await seedCompany({ id: COMPANY_ID });
@@ -21,12 +28,12 @@ beforeEach(async () => {
 describe("a failed activity write inside a use-case transaction", () => {
   it("fails notify-only execution and keeps the action and ticket unchanged", async () => {
     const action = await db((client) =>
-      proposeAction(client, {
+      proposeAction(env, client, {
         actionType: "worker_deliverable",
         companyId: COMPANY_ID,
         feedback: null,
         policy: "notify_only",
-        proposed: { summary: "finished" },
+        proposed: { assetIds: [], summary: "finished" },
         round: 0,
         summary: "finished",
         ticketId: TICKET_ID,
@@ -35,7 +42,7 @@ describe("a failed activity write inside a use-case transaction", () => {
 
     await expect(
       db((client) =>
-        markExecuted(client, {
+        markExecuted(env, client, {
           actionId: action.id,
           companyId: UNKNOWN_COMPANY_ID,
           policy: "notify_only",
@@ -46,7 +53,7 @@ describe("a failed activity write inside a use-case transaction", () => {
     ).rejects.toThrow(ACTIVITY_FOREIGN_KEY);
 
     const [storedAction, ticket] = await db((client) =>
-      Promise.all([getAction(client, action.id), loadTicket(client, TICKET_ID)]),
+      Promise.all([actionRow(client, action.id), loadTicket(client, TICKET_ID)]),
     );
 
     expect(storedAction?.status).toBe("approved");
@@ -56,12 +63,12 @@ describe("a failed activity write inside a use-case transaction", () => {
 
   it("fails the approval and leaves the action pending", async () => {
     const action = await db((client) =>
-      proposeAction(client, {
+      proposeAction(env, client, {
         actionType: "worker_deliverable",
         companyId: COMPANY_ID,
         feedback: null,
         policy: "require_approval",
-        proposed: { summary: "review this" },
+        proposed: { assetIds: [], summary: "review this" },
         round: 0,
         summary: "review this",
         ticketId: TICKET_ID,
@@ -70,7 +77,7 @@ describe("a failed activity write inside a use-case transaction", () => {
 
     await expect(
       db((client) =>
-        recordDecision(client, {
+        recordDecision(env, client, {
           actionId: action.id,
           companyId: UNKNOWN_COMPANY_ID,
           decidedByUserId: "operator-1",
@@ -83,7 +90,7 @@ describe("a failed activity write inside a use-case transaction", () => {
 
     const [storedAction, ticket, activity] = await db((client) =>
       Promise.all([
-        getAction(client, action.id),
+        actionRow(client, action.id),
         loadTicket(client, TICKET_ID),
         listActivity(client, { companyId: COMPANY_ID }),
       ]),

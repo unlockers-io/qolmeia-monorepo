@@ -1,4 +1,4 @@
-import type { Surface } from "@repo/worker-api/contracts";
+import type { Surface } from "@repo/auth/roles";
 import { APIError } from "better-auth/api";
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";

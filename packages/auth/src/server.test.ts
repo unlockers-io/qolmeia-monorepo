@@ -1,7 +1,7 @@
 import { prisma } from "@repo/db";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { createAuth, linkOnRequestOrigin, safeCallbackPath } from "./server";
+import { createAuth, linkOnRequestOrigin } from "./server";
 import type { AuthConfig } from "./server";
 
 type Plugin = NonNullable<AuthConfig["extraPlugins"]>[number];
@@ -212,25 +212,11 @@ describe("Auth Server Configuration", () => {
     expect(auth.options.emailVerification?.sendOnSignIn).toBe(true);
   });
 
-  it("preserves a caller-provided in-app callbackURL path", () => {
-    expect(safeCallbackPath("/tickets")).toBe("/tickets");
-    expect(safeCallbackPath("/tickets?status=open#top")).toBe("/tickets?status=open#top");
-    expect(safeCallbackPath("/")).toBe("/");
-  });
-
-  it("defaults absent or empty callbackURL to the app root", () => {
-    expect(safeCallbackPath(null)).toBe("/");
-    expect(safeCallbackPath("")).toBe("/");
-  });
-
-  it("rejects open-redirect callbackURL values", () => {
-    expect(safeCallbackPath("//evil.com")).toBe("/");
-    expect(safeCallbackPath("//evil.com/phish")).toBe("/");
-    expect(safeCallbackPath(String.raw`/\evil.com`)).toBe("/");
-    expect(safeCallbackPath(String.raw`\/evil.com`)).toBe("/");
-    expect(safeCallbackPath("https://evil.com/phish")).toBe("/");
-    expect(safeCallbackPath(["javascript", "alert(1)"].join(":"))).toBe("/");
-    expect(safeCallbackPath("evil.com")).toBe("/");
+  it("enforces each e-mailed link lifetime at the values Better Auth defaulted to", () => {
+    const magicLinkPlugin = auth.options.plugins.find((plugin) => plugin.id === "magic-link");
+    expect(magicLinkPlugin).toMatchObject({ options: { expiresIn: 5 * 60 } });
+    expect(auth.options.emailVerification?.expiresIn).toBe(60 * 60);
+    expect(auth.options.emailAndPassword?.resetPasswordTokenExpiresIn).toBe(60 * 60);
   });
 
   describe("linkOnRequestOrigin", () => {

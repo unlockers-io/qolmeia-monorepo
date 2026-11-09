@@ -1,13 +1,12 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import type { TeamMemberDetailView } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { BackLink } from "@/components/back-link";
 import { MemberEditForm } from "@/components/member-edit-form";
-import { ApiError } from "@/lib/api-client";
-import { apiGetServer } from "@/lib/api-server";
+import { getMember } from "@/lib/backoffice-api";
+import { orNotFound } from "@/lib/or-not-found";
 
 export const metadata: Metadata = { title: "Agente" };
 
@@ -19,25 +18,7 @@ type Props = { params: Promise<{ companyId: string; memberId: string }> };
 const MemberEditContent = async ({ params }: Props) => {
   const { companyId, memberId } = await params;
 
-  let member: TeamMemberDetailView | null;
-
-  try {
-    const body = await apiGetServer<{ member: TeamMemberDetailView }>(
-      `/teams/${companyId}/members/${memberId}`,
-    );
-
-    member = body.member;
-  } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 404) {
-      throw error;
-    }
-
-    member = null;
-  }
-
-  if (!member) {
-    notFound();
-  }
+  const { member } = await orNotFound(getMember(apiGetServer, companyId, memberId));
 
   return (
     <MemberEditForm

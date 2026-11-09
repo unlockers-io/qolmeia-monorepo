@@ -10,10 +10,22 @@ const CORR_ID = `corr-${COMPANY_ID}`;
 const TEAM_ID = `team-${COMPANY_ID}`;
 const WORKER_ID = `worker-tpl-designer-${COMPANY_ID}`;
 
+const CUSTOMER = { surface: "customer", userId: "cust-1" } as const;
+
 const confirm = (templateIds: ReadonlyArray<string> = ["tpl-designer"]) =>
-  db((client) =>
-    confirmTeam(env, client, { actorId: "cust-1", companyId: COMPANY_ID, templateIds }),
+  db((client) => confirmTeam(env, client, { actor: CUSTOMER, companyId: COMPANY_ID, templateIds }));
+
+const teamMemberIds = async () => {
+  const members = await db((client) =>
+    client.teamMember.findMany({
+      orderBy: { agentInstanceId: "asc" },
+      select: { agentInstanceId: true },
+      where: { teamId: TEAM_ID },
+    }),
   );
+
+  return members.map(({ agentInstanceId }) => agentInstanceId);
+};
 
 const counts = () =>
   db(async (client) => ({
@@ -54,21 +66,9 @@ describe("confirmTeam", () => {
     ]);
   });
 
-  it("populates canDelegateTo so Correspondent → Designer is allowed", async () => {
+  it("puts the Correspondent and every Worker on the team", async () => {
     await confirm();
-
-    const members = await db((client) =>
-      client.teamMember.findMany({
-        orderBy: { agentInstanceId: "asc" },
-        select: { agentInstanceId: true, canDelegateTo: true },
-        where: { teamId: TEAM_ID },
-      }),
-    );
-
-    expect(members).toEqual([
-      { agentInstanceId: CORR_ID, canDelegateTo: [WORKER_ID] },
-      { agentInstanceId: WORKER_ID, canDelegateTo: [] },
-    ]);
+    await expect(teamMemberIds()).resolves.toEqual([CORR_ID, WORKER_ID]);
   });
 
   it("flips the company status to active", async () => {
@@ -156,23 +156,15 @@ describe("confirmTeam", () => {
 
     const hired = await db((client) =>
       hireMember(env, client, {
-        actorId: "cust-1",
+        actor: CUSTOMER,
         companyId: COMPANY_ID,
-        displayName: undefined,
         templateId: "tpl-designer",
       }),
     );
 
     await confirm();
 
-    const correspondent = await db((client) =>
-      client.teamMember.findUnique({
-        select: { canDelegateTo: true },
-        where: { teamId_agentInstanceId: { agentInstanceId: CORR_ID, teamId: TEAM_ID } },
-      }),
-    );
-
-    expect(correspondent?.canDelegateTo).toEqual([WORKER_ID, hired.id]);
+    await expect(teamMemberIds()).resolves.toEqual([CORR_ID, WORKER_ID, hired.id].toSorted());
     await expect(
       db((client) => client.memoryFact.count({ where: { companyId: COMPANY_ID } })),
     ).resolves.toBe(3);

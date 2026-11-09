@@ -11,41 +11,41 @@ import {
 } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
+import { BRAND_CATEGORIES, type BrandAsset, type BrandCategory } from "@repo/worker-api/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
-  BRAND_CATEGORIES,
-  BRAND_CATEGORY_LABEL,
-  type BrandAsset,
-  type BrandCategory,
   deleteBrandAsset,
   fetchBrandAssets,
+  uploadAccept,
   uploadBrandAsset,
-} from "@/lib/company";
+  uploadRefusal,
+} from "@/lib/library";
+import { queryKeys } from "@/lib/query-keys";
+
+const BRAND_CATEGORY_LABEL = {
+  logo: "Logotipo",
+  other: "Outro",
+  post: "Post de exemplo",
+  reference: "Referência visual",
+} satisfies Record<BrandCategory, string>;
 
 const isBrandCategory = (value: string): value is BrandCategory =>
-  BRAND_CATEGORIES.some((category) => category.value === value);
-
-const brandQueryKey = (companyId: string) => ["brand-assets", companyId] as const;
-const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED_MIME = ["image/gif", "image/jpeg", "image/png", "image/svg+xml", "image/webp"];
+  BRAND_CATEGORIES.some((category) => category === value);
 
 type BrandAssetsProps = {
   companyId: string;
-  initialData?: Array<BrandAsset>;
+  initialData?: ReadonlyArray<BrandAsset>;
 };
 
 type UploadContext = {
   optimisticId: string;
-  previous: Array<BrandAsset> | undefined;
-};
-
-type DeleteContext = {
-  previous: Array<BrandAsset> | undefined;
+  previous: ReadonlyArray<BrandAsset> | undefined;
 };
 
 const fileToDataUrl = (file: File): Promise<string> =>
@@ -66,7 +66,7 @@ const fileToDataUrl = (file: File): Promise<string> =>
 
 const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
   const queryClient = useQueryClient();
-  const queryKey = brandQueryKey(companyId);
+  const queryKey = queryKeys.brandAssets(companyId);
   const fileRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<BrandCategory>("logo");
   const ready = useClientReady();
@@ -74,7 +74,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
   const { data: assets = [], isPending } = useQuery({
     initialData,
     meta: { errorToast: "Falha ao carregar a marca" },
-    queryFn: fetchBrandAssets,
+    queryFn: () => fetchBrandAssets(),
     queryKey,
   });
 
@@ -89,20 +89,21 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
     },
     onMutate: async (file) => {
       await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<Array<BrandAsset>>(queryKey);
+      const previous = queryClient.getQueryData<ReadonlyArray<BrandAsset>>(queryKey);
       const previewUrl = await fileToDataUrl(file);
       const optimisticId = `optimistic-${crypto.randomUUID()}`;
 
       const optimisticAsset: BrandAsset = {
         category,
-        createdAt: new Date().toISOString(),
+        createdAt: Date.now(),
         id: optimisticId,
         mimeType: file.type,
         name: file.name || null,
+        size: file.size,
         url: previewUrl,
       };
 
-      queryClient.setQueryData<Array<BrandAsset>>(queryKey, (current = []) => [
+      queryClient.setQueryData<ReadonlyArray<BrandAsset>>(queryKey, (current = []) => [
         optimisticAsset,
         ...current,
       ]);
@@ -110,15 +111,15 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
       return { optimisticId, previous };
     },
     onSuccess: (asset, _file, context) => {
-      queryClient.setQueryData<Array<BrandAsset>>(queryKey, (current = []) =>
+      queryClient.setQueryData<ReadonlyArray<BrandAsset>>(queryKey, (current = []) =>
         current.map((item) => (item.id === context.optimisticId ? asset : item)),
       );
       toast.success("Referência adicionada.");
     },
   });
 
-  const deleteMutation = useMutation<boolean, Error, string, DeleteContext>({
-    mutationFn: (id: string) => deleteBrandAsset(id),
+  const deleteMutation = useMutation({
+    mutationFn: deleteBrandAsset,
     onError: (_error, _id, context) => {
       if (context?.previous !== undefined) {
         queryClient.setQueryData(queryKey, context.previous);
@@ -126,10 +127,10 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
 
       toast.error("Não foi possível remover.");
     },
-    onMutate: async (id) => {
+    onMutate: async (id: string) => {
       await queryClient.cancelQueries({ queryKey });
-      const previous = queryClient.getQueryData<Array<BrandAsset>>(queryKey);
-      queryClient.setQueryData<Array<BrandAsset>>(queryKey, (current = []) =>
+      const previous = queryClient.getQueryData<ReadonlyArray<BrandAsset>>(queryKey);
+      queryClient.setQueryData<ReadonlyArray<BrandAsset>>(queryKey, (current = []) =>
         current.filter((asset) => asset.id !== id),
       );
 
@@ -145,14 +146,10 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
       return;
     }
 
-    if (!ALLOWED_MIME.includes(file.type)) {
-      toast.error("Formato não suportado. Use PNG, JPG, WEBP, GIF ou SVG.");
+    const refusal = uploadRefusal(file, "brand");
 
-      return;
-    }
-
-    if (file.size > MAX_BYTES) {
-      toast.error("Imagem grande demais (máx 10 MB).");
+    if (refusal !== null) {
+      toast.error(refusal);
 
       return;
     }
@@ -188,14 +185,14 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
               value={category}
             >
               {BRAND_CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
+                <option key={c} value={c}>
+                  {BRAND_CATEGORY_LABEL[c]}
                 </option>
               ))}
             </select>
           </label>
           <input
-            accept={ALLOWED_MIME.join(",")}
+            accept={uploadAccept("brand")}
             aria-label="Enviar arquivo de marca"
             className="sr-only"
             disabled={!ready}
@@ -210,7 +207,7 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
             variant="outline"
           >
             {uploadMutation.isPending ? (
-              <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" />
+              <LoadingSpinner aria-hidden />
             ) : (
               <ImagePlus aria-hidden className="size-4" />
             )}

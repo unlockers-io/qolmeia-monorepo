@@ -1,18 +1,19 @@
+import { agentAvatarClass, agentInitials } from "@repo/app-shell/agent-avatar";
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
-import { agentAvatarClass, agentInitials } from "@repo/ui/lib/agent-avatar";
+import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { cn } from "@repo/ui/lib/utils";
-import type { TicketsResponse } from "@repo/worker-api/contracts";
 import { Ticket as TicketIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { StatusPill } from "@/components/status-pill";
-import { apiGetServer } from "@/lib/api-server";
+import { getTickets } from "@/lib/backoffice-api";
 import { formatRelative } from "@/lib/format";
+import { TICKET_STATUS } from "@/lib/status";
 
 export const metadata: Metadata = { title: "Tickets" };
 
@@ -20,7 +21,7 @@ export const metadata: Metadata = { title: "Tickets" };
 export const instant = true;
 
 const TicketsContent = async () => {
-  const res = await apiGetServer<TicketsResponse>("/tickets?limit=50");
+  const res = await getTickets(apiGetServer, 50);
 
   return (
     <Card className="gap-0 overflow-hidden p-0">
@@ -87,7 +88,7 @@ const TicketsContent = async () => {
                       <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
                         Status
                       </span>
-                      <StatusPill status={ticket.status} />
+                      <StatusPill {...TICKET_STATUS[ticket.status]} />
                     </div>
                     <div>
                       <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">

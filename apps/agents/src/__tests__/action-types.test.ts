@@ -1,8 +1,9 @@
+import type { Template } from "@repo/worker-api/contracts";
 import { describe, expect, it } from "vitest";
 
 import { actionIdFor } from "#/action/action";
 import { ACTION_TYPE_MODULES, resolvePolicy } from "#/action/action-types";
-import { decisionEventType } from "#/jobs/decision";
+import { decisionEventType } from "#/action/decision";
 
 type ToolResult = Record<string, ReadonlyArray<string> | boolean | number | string>;
 
@@ -18,7 +19,7 @@ const draft = (body: string) => ({
 
 describe("resolvePolicy", () => {
   it("returns the template's policy when the action type is pinned", () => {
-    const template = {
+    const template: Pick<Template, "defaultPolicies"> = {
       defaultPolicies: { publish_post: "notify_only", worker_deliverable: "require_approval" },
     };
 
@@ -27,14 +28,9 @@ describe("resolvePolicy", () => {
   });
 
   it("falls back to the action type's default policy", () => {
-    const template = { defaultPolicies: { publish_asset: "require_approval" } };
+    const template: Pick<Template, "defaultPolicies"> = { defaultPolicies: {} };
     expect(resolvePolicy("worker_deliverable", template)).toBe("auto_execute");
     expect(resolvePolicy("publish_post", template)).toBe("require_approval");
-  });
-
-  it("falls back to require-approval when the template policy is malformed", () => {
-    const template = { defaultPolicies: { worker_deliverable: "no-such-policy" } };
-    expect(resolvePolicy("worker_deliverable", template)).toBe("require_approval");
   });
 });
 

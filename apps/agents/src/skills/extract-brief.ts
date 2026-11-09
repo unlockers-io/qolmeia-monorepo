@@ -1,10 +1,8 @@
-import { companyBriefSchema, type CompanyBrief } from "@repo/worker-api/brief";
+import { briefPatchSchema, type CompanyBrief } from "@repo/worker-api/brief";
 
 import { updateBrief } from "#/company/company";
 import { withDb } from "#/lib/db";
 import { defineSkill } from "#/skills/skill";
-
-const extractBriefInputSchema = companyBriefSchema.partial();
 
 const extractBriefSkill = defineSkill({
   description:
@@ -20,7 +18,7 @@ const extractBriefSkill = defineSkill({
     return { brief: row.brief };
   },
   id: "extractBrief",
-  inputSchema: extractBriefInputSchema,
+  inputSchema: briefPatchSchema,
 });
 
 export { extractBriefSkill };

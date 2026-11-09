@@ -19,24 +19,6 @@ export default defineConfig({
       },
     },
     {
-      files: [
-        "apps/backoffice/src/proxy.ts",
-        "apps/backoffice/src/lib/auth-helpers.ts",
-        "apps/backoffice/src/components/sign-out-button.tsx",
-        "apps/web/src/proxy.ts",
-        "apps/web/src/lib/auth-helpers.ts",
-        "apps/web/src/components/sign-out-button.tsx",
-        "apps/web/src/app/auth/verify/page.tsx",
-        "apps/web/src/app/(client)/page.tsx",
-        "apps/web/src/app/(client)/assets/page.tsx",
-        "apps/web/src/app/(client)/activity/page.tsx",
-        "packages/auth/src/server.ts",
-      ],
-      rules: {
-        "no-console": "off",
-      },
-    },
-    {
       files: ["apps/agents/src/team/errors.ts"],
       rules: {
         "max-classes-per-file": "off",
@@ -49,7 +31,7 @@ export default defineConfig({
       },
     },
     {
-      files: ["apps/agents/src/agents/**/*.ts"],
+      files: ["apps/agents/src/agents/**/*.ts", "apps/agents/src/conversation/agent.ts"],
       rules: {
         "react-hooks/rules-of-hooks": "off",
       },

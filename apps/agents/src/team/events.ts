@@ -1,29 +1,14 @@
 import { log } from "@repo/observability";
+import type { TeamEvent } from "@repo/worker-api/contracts";
 
-type TeamEvent =
-  | {
-      companyId: string;
-      reason: "ticket_changed" | "instance_changed";
-      type: "team:status";
-    }
-  | {
-      companyId: string;
-      reason: "confirmed" | "hired" | "paused" | "prompt_changed" | "renamed" | "resumed";
-      type: "team:roster";
-    };
+type TeamEventsEnv = Pick<Env, "TEAM_EVENTS">;
 
-const stubFor = (env: Env, companyId: string) =>
-  env.TEAM_EVENTS.get(env.TEAM_EVENTS.idFromName(companyId));
+const teamEventsOf = (env: TeamEventsEnv, companyId: string) =>
+  env.TEAM_EVENTS.getByName(companyId);
 
-const emitTeamEvent = async (env: Env, event: TeamEvent): Promise<void> => {
+const emitTeamEvent = async (env: TeamEventsEnv, event: TeamEvent): Promise<void> => {
   try {
-    await stubFor(env, event.companyId).fetch(
-      new Request("https://team-events/broadcast", {
-        body: JSON.stringify(event),
-        headers: { "content-type": "application/json" },
-        method: "POST",
-      }),
-    );
+    await teamEventsOf(env, event.companyId).broadcast(event);
   } catch (error) {
     log.error({
       companyId: event.companyId,
@@ -34,9 +19,9 @@ const emitTeamEvent = async (env: Env, event: TeamEvent): Promise<void> => {
   }
 };
 
-const subscribeTeamEvents = (env: Env, companyId: string, signal: AbortSignal): Promise<Response> =>
-  stubFor(env, companyId).fetch(new Request("https://team-events/subscribe", { signal }));
+const subscribeTeamEvents = (env: TeamEventsEnv, companyId: string): Promise<Response> =>
+  teamEventsOf(env, companyId).subscribe();
 
 export { emitTeamEvent, subscribeTeamEvents };
 
-export type { TeamEvent };
+export type { TeamEventsEnv };

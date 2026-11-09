@@ -36,5 +36,43 @@
     "coverage/**",
     "pnpm-lock.yaml",
     ".github/ci/*.mjs"
+  ],
+  "overrides": [
+    {
+      "files": ["apps/backoffice/**"],
+      "options": {
+        "sortTailwindcss": {
+          "stylesheet": "./apps/backoffice/src/styles/globals.css",
+          "attributes": ["class", "className"],
+          "functions": ["cn", "cva"],
+          "preserveDuplicates": false,
+          "preserveWhitespace": false
+        }
+      }
+    },
+    {
+      "files": ["apps/landing/**"],
+      "options": {
+        "sortTailwindcss": {
+          "stylesheet": "./apps/landing/src/styles/globals.css",
+          "attributes": ["class", "className"],
+          "functions": ["cn", "cva"],
+          "preserveDuplicates": false,
+          "preserveWhitespace": false
+        }
+      }
+    },
+    {
+      "files": ["apps/web/**"],
+      "options": {
+        "sortTailwindcss": {
+          "stylesheet": "./apps/web/src/styles/globals.css",
+          "attributes": ["class", "className"],
+          "functions": ["cn", "cva"],
+          "preserveDuplicates": false,
+          "preserveWhitespace": false
+        }
+      }
+    }
   ]
 }

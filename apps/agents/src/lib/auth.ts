@@ -3,7 +3,7 @@ import { envAuthConfig } from "@repo/auth/env-config";
 import { createAuth } from "@repo/auth/server";
 import { Hono } from "hono";
 
-import { withDb, type PrismaClient } from "#/lib/db";
+import type { DbVariables, PrismaClient } from "#/lib/db";
 
 const createWorkerAuth = (env: Env, db: PrismaClient) =>
   createAuth({
@@ -16,12 +16,10 @@ const createWorkerAuth = (env: Env, db: PrismaClient) =>
 
 type WorkerAuth = ReturnType<typeof createWorkerAuth>;
 
-const authRoutes = new Hono<{ Bindings: Env }>();
+const authRoutes = new Hono<{ Bindings: Env; Variables: DbVariables }>();
 
 authRoutes.on(["GET", "POST"], "/*", (c) =>
-  withDb(c.env, (db) =>
-    createWorkerAuth(c.env, db).handler(withClientIp(c.req.raw, c.env.TRUSTED_PROXY_SECRET)),
-  ),
+  createWorkerAuth(c.env, c.var.db).handler(withClientIp(c.req.raw, c.env.TRUSTED_PROXY_SECRET)),
 );
 
 export { authRoutes, createWorkerAuth };

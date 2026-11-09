@@ -1,42 +1,36 @@
+import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/app-shell/agent-avatar";
+import { AGENT_STATUS } from "@repo/app-shell/agent-status";
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
-import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
-import type { CompanyOverview, CompanyRoster, TeamMemberView } from "@repo/worker-api/contracts";
+import type { CompanyStatus } from "@repo/worker-api/contracts";
 import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { InviteCustomerForm } from "@/components/invite-customer-form";
-import { apiGetServer } from "@/lib/api-server";
 import { requireOperator } from "@/lib/auth-helpers";
+import { getCompanies } from "@/lib/backoffice-api";
 
 export const metadata: Metadata = { title: "Times" };
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-type CompanyStatusContract = Record<CompanyOverview["status"], { label: string; tone: StatusTone }>;
-
 const COMPANY_STATUS = {
   active: { label: "Ativo", tone: "success" },
   onboarding: { label: "Onboarding", tone: "warning" },
   paused: { label: "Pausado", tone: "neutral" },
-} satisfies CompanyStatusContract;
-
-const MEMBER_STATUS = {
-  available: { label: "Disponível", pulse: false, tone: "success" },
-  awaiting_approval: { label: "Aguardando", pulse: false, tone: "warning" },
-  paused: { label: "Pausado", pulse: false, tone: "neutral" },
-  working: { label: "Trabalhando", pulse: true, tone: "info" },
-} satisfies Record<TeamMemberView["status"], { label: string; pulse: boolean; tone: StatusTone }>;
+} satisfies Record<CompanyStatus, { label: string; tone: StatusTone }>;
 
 const TeamsContent = async () => {
   await requireOperator();
-  const { companies } = await apiGetServer<{ companies: Array<CompanyRoster> }>("/companies");
+
+  const { companies } = await getCompanies(apiGetServer);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -66,7 +60,7 @@ const TeamsContent = async () => {
             </div>
             <div className="flex flex-col px-3 py-3">
               {company.members.map((m) => {
-                const memberStatus = MEMBER_STATUS[m.status];
+                const memberStatus = AGENT_STATUS[m.status];
 
                 return (
                   <Link

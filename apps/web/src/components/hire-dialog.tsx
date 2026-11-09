@@ -1,5 +1,6 @@
 "use client";
 
+import { maxLengthHint } from "@repo/app-shell/form-limits";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -17,12 +18,13 @@ import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { describeRequestError } from "@repo/worker-api";
+import { type HireableTemplate, MEMBER_NAME_MAX_LENGTH } from "@repo/worker-api/contracts";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { hireSchema } from "@/lib/form-schemas";
-import { hireMember, type HireableTemplate } from "@/lib/team";
+import { hireMember } from "@/lib/team";
 
 type HireFormProps = {
   onClose: () => void;
@@ -102,7 +104,9 @@ const HireForm = ({ onClose, onHired, template }: HireFormProps) => {
                 placeholder={template?.displayName ?? ""}
                 value={field.state.value}
               />
-              <FieldDescription id="hire-name-description">Até 80 caracteres.</FieldDescription>
+              <FieldDescription id="hire-name-description">
+                {maxLengthHint(MEMBER_NAME_MAX_LENGTH)}
+              </FieldDescription>
               {isInvalid && (
                 <FormFieldError errors={field.state.meta.errors} id="hire-name-error" />
               )}

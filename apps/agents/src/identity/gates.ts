@@ -1,9 +1,9 @@
+import type { Surface } from "@repo/auth/roles";
 import { identifyUser } from "@repo/observability/auth";
 import type { EvlogVariables } from "@repo/observability/hono";
-import type { Surface } from "@repo/worker-api/contracts";
 import type { Context, MiddlewareHandler } from "hono";
 
-import { resolveIdentity, type Identity } from "#/identity/identity";
+import { resolveIdentity, type Identity, type IdentityResult } from "#/identity/identity";
 import { createWorkerAuth } from "#/lib/auth";
 import type { DbVariables } from "#/lib/db";
 
@@ -17,7 +17,11 @@ type GateOptions = {
   tenant?: (c: Context<IdentityEnv>) => string | undefined;
 };
 
-const UNRESOLVED_STATUS = { forbidden: 403, "signed-out": 401, unavailable: 503 } as const;
+const UNRESOLVED_STATUS = {
+  forbidden: 403,
+  "signed-out": 401,
+  unavailable: 503,
+} as const satisfies Record<Exclude<IdentityResult["kind"], "signed-in">, number>;
 
 /** The only writer of the `session` variable, so IdentityEnv can declare it non-optional. */
 const identityGate =
@@ -55,14 +59,20 @@ const requireCustomer = identityGate({ surfaces: ["customer"] });
 const requireMember = identityGate({ surfaces: ["operator", "customer"] });
 
 /**
- * For /agents/<name>/<companyId>/… and /api/teams/<companyId>/…: segment 3 names a tenant, which
- * must be the Customer's own Company (ADR 0001). A shorter path names none and is refused.
+ * For /agents/<name>/<companyId>/…: the `:companyId` route parameter must be the Customer's own
+ * Company (ADR 0001). A path that names no tenant is refused.
  */
 const requireCustomerOfPathTenant = identityGate({
   surfaces: ["customer"],
-  tenant: (c) => c.req.path.split("/")[3],
+  tenant: (c) => c.req.param("companyId"),
 });
 
-export { requireCustomer, requireCustomerOfPathTenant, requireMember, requireOperator };
+export {
+  requireCustomer,
+  requireCustomerOfPathTenant,
+  requireMember,
+  requireOperator,
+  UNRESOLVED_STATUS,
+};
 
 export type { IdentityEnv };

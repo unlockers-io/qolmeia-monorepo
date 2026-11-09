@@ -24,7 +24,7 @@ const CUSTOMER_ROUTES: Array<CustomerRoute> = [
   {
     body: JSON.stringify({ templateIds: ["tpl-designer"] }),
     method: "POST",
-    path: `/api/teams/${COMPANY_ID}/confirm`,
+    path: "/api/me/team/confirm",
   },
 ];
 

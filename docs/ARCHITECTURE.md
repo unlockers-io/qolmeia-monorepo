@@ -15,7 +15,7 @@ User-facing locale is **pt-BR** across every agent and UI.
                  └────────────┬─────────────┘        └─────────────┬─────────────┘
          rewrites (same-origin,│ host-only cookie)                 │ rewrites
    /api/auth/*, /api/me/*,     │                                   │ /api/auth/*,
-   /api/teams/*, /agents/*,    │                                   │ /api/backoffice/*,
+   /agents/*,                  │                                   │ /api/backoffice/*,
    /assets/:id                 │                                   │ /assets/:id
                  ┌─────────────▼───────────────────────────────────▼─────────────┐
                  │  apps/agents  "worker-bees"  (Cloudflare Worker, Flue)          │
@@ -23,7 +23,7 @@ User-facing locale is **pt-BR** across every agent and UI.
                  │   • Better Auth (/api/auth/*) and the identity module           │
                  │   • Flue agents (Durable Objects): Planner · Correspondent      │
                  │   • WorkerJobWorkflow (Cloudflare Workflow, approval gate)      │
-                 │   • REST: /api/me /api/teams /api/backoffice /assets            │
+                 │   • REST: /api/me /api/backoffice /assets                       │
                  └────────────────────────────────┬────────────────────────────────┘
                                                   ▼
                Postgres on Railway (via Hyperdrive) · R2 · Vectorize · AI Gateway
@@ -48,19 +48,19 @@ Monorepo: pnpm 11 workspaces + Turborepo, Node 24.
 
 ### Packages
 
-| Package                   | Purpose                                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------------------------- |
-| `@repo/auth`              | `createAuth` factory over Better Auth, hosted by the Worker; session-cookie and client-IP helpers. |
-| `@repo/db`                | Prisma schema, Node and Cloudflare Worker client entry points, default template seed.              |
-| `@repo/worker-api`        | Typed Worker client and the request/response contracts (roles, surfaces, action types, brief).     |
-| `@repo/app-shell`         | Next glue shared by web and backoffice: `createNextConfig`, `createProxy`, session helpers.        |
-| `@repo/transactional`     | React Email templates + Resend sender (rendered in the Worker).                                    |
-| `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the Next apps.                          |
-| `@repo/social-image`      | Open Graph image text rendering for the Next apps.                                                 |
-| `@repo/observability`     | Structured logging helpers.                                                                        |
-| `@repo/portless-env`      | Fills dev URL env vars from `portless get`.                                                        |
-| `@repo/config-vitest`     | Shared Vitest config.                                                                              |
-| `@repo/typescript-config` | Shared tsconfig bases (`moduleResolution: Bundler`).                                               |
+| Package                   | Purpose                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `@repo/auth`              | `createAuth` factory over Better Auth, hosted by the Worker; roles and surfaces; session helpers. |
+| `@repo/db`                | Prisma schema, Node and Cloudflare Worker client entry points, default template seed.             |
+| `@repo/worker-api`        | Typed Worker client and the request/response contracts (limits, action types, brief).             |
+| `@repo/app-shell`         | Next app kit for web, backoffice, landing: `createNextConfig`, proxy, session, shared UI.         |
+| `@repo/transactional`     | React Email templates + Resend sender (rendered in the Worker).                                   |
+| `@repo/ui`                | shadcn-style component library + Tailwind preset shared by the Next apps.                         |
+| `@repo/social-image`      | Open Graph image text rendering for the Next apps.                                                |
+| `@repo/observability`     | Structured logging helpers.                                                                       |
+| `@repo/portless-env`      | Fills dev URL env vars from `portless get`.                                                       |
+| `@repo/config-vitest`     | Shared Vitest config.                                                                             |
+| `@repo/typescript-config` | Shared tsconfig bases (`moduleResolution: Bundler`).                                              |
 
 ## §4. Runtime topology & data stores
 
@@ -80,20 +80,20 @@ Every model call goes through **Cloudflare AI Gateway** to OpenRouter (§6, Prov
 
 Schema in [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.prisma). The idempotent seed in [`packages/db/src/product-seed.ts`](../packages/db/src/product-seed.ts) owns the default worker templates. Better Auth owns `User`, `Session`, `Account`, `Verification`, `RateLimit`, `Organization`, `OrgMembership` (the organization plugin's `member`, with `organizationId` mapped to `orgId`), and `Invitation`; an organization id is reused as the product company id. Product tables:
 
-| Table                          | Purpose                                                                                                                                                                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `company`                      | The tenant. `status: onboarding \| active \| paused`, `brief` (JSON, the AI-extracted business profile), slug, locale, timezone.                                                                                                |
-| `template`                     | System-defined agent blueprint. `worker_kind`, `system_prompt`, `model` (OpenRouter id), `skill_ids`, `default_action_type`, `default_policies`, `status`.                                                                      |
-| `company_template_entitlement` | Which templates a company may hire.                                                                                                                                                                                             |
-| `agent_instance`               | A hired agent for a company. `role: correspondent \| planner \| worker`, `template_id`, `prompt_override?`, `status`.                                                                                                           |
-| `team` / `team_member`         | The confirmed roster. `team_member.can_delegate_to` (JSON) encodes the delegation graph.                                                                                                                                        |
-| `ticket`                       | A unit of delegated work. `status: open \| in_progress \| awaiting_approval \| blocked \| done \| cancelled \| rejected`, `origin`, `brief`, `workflow_id`, `result`.                                                           |
-| `action`                       | The effect a Ticket proposes, one per round (id `<ticketId>-r<round>`). `action_type`, `policy`, `proposed` (JSON), `status: pending \| approved \| changes_requested \| rejected \| executed`, decision fields.                |
-| `memory_fact`                  | Long-term agent memory: the authority for a fact. `kind`, `content`; its vector lives in Vectorize.                                                                                                                             |
-| `asset`                        | R2 object metadata. `kind` (`generated_image`/`brand_asset`/`user_upload`/`knowledge_doc`/`audio`), `mime`, `visibility` (the folder: `customer` \| `agent`), `r2_key`, SHA-256.                                                |
-| `skill`                        | Operator kill-switch only: `id`, `enabled`. A missing row means enabled.                                                                                                                                                        |
-| `activity_log`                 | Append-only pt-BR timeline, written in the same transaction as the change it records. `type` strings are stable; the backoffice categorises by prefix (`ACTION_*`, `TICKET_*`, `WORKER_*`, `TEAM_*`, `MEMBER_*`, `CUSTOMER_*`). |
-| `operator_assignment`          | Which Companies and disciplines an Operator covers.                                                                                                                                                                             |
+| Table                          | Purpose                                                                                                                                                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `company`                      | The tenant. `status: onboarding \| active \| paused`, `brief` (JSON, the AI-extracted business profile), slug, locale, timezone.                                                                                                               |
+| `template`                     | System-defined agent blueprint. `worker_kind`, `system_prompt`, `model` (OpenRouter id), `skill_ids`, `default_action_type`, `default_policies`, `status`.                                                                                     |
+| `company_template_entitlement` | Which templates a company may hire.                                                                                                                                                                                                            |
+| `agent_instance`               | A hired agent for a company. `role: correspondent \| planner \| worker`, `template_id`, `prompt_override?`, `status`.                                                                                                                          |
+| `team` / `team_member`         | The confirmed roster. The Correspondent delegates to the company's active workers; `team_member.can_delegate_to` is no longer read.                                                                                                            |
+| `ticket`                       | A unit of delegated work. `status: open \| in_progress \| awaiting_approval \| blocked \| done \| cancelled \| rejected`, `origin`, `brief`, `result`; `workflow_id` is no longer read or written (the Workflow instance id is the ticket id). |
+| `action`                       | The effect a Ticket proposes, one per round (id `<ticketId>-r<round>`). `action_type`, `policy`, `proposed` (JSON), `status: pending \| approved \| changes_requested \| rejected \| executed`, decision fields.                               |
+| `memory_fact`                  | Long-term agent memory: the authority for a fact. `kind`, `content`; its vector lives in Vectorize.                                                                                                                                            |
+| `asset`                        | R2 object metadata. `kind` (`generated_image`/`brand_asset`/`user_upload`/`knowledge_doc`/`audio`), `mime`, `visibility` (the folder: `customer` \| `agent`), `r2_key`, SHA-256.                                                               |
+| `skill`                        | Operator kill-switch only: `id`, `enabled`. A missing row means enabled.                                                                                                                                                                       |
+| `activity_log`                 | Append-only pt-BR timeline, written in the same transaction as the change it records. `type` strings are stable; the backoffice categorises by prefix (`ACTION_*`, `TICKET_*`, `WORKER_*`, `TEAM_*`, `MEMBER_*`, `CUSTOMER_*`).                |
+| `operator_assignment`          | Which Companies and disciplines an Operator covers.                                                                                                                                                                                            |
 
 Product data lives in domain modules under `apps/agents/src/` (`team/`, `ticket/`, `action/`, `company/`, `library/`, `memory/`, `activity/`, `template/`, `operator/`). Each use case is one interactive transaction; `lib/db.ts` opens a short-lived client per request, Workflow step, or skill call.
 
@@ -122,7 +122,7 @@ Template-defined specialists are not conversational Flue agents. `delegateToWork
 
 ## §7. Skills catalog
 
-A skill is one module: `defineSkill({ id, displayName, description, inputSchema (zod), execute(input, ctx) })`, listed in `ALL_SKILLS` in [`apps/agents/src/skills/registry.ts`](../apps/agents/src/skills/registry.ts). The registry derives from it the Flue tool (zod → JSON Schema → Valibot in `lib/skill-tool.ts`; Flue validates tool input with Valibot only), the AI SDK tool for Workflow runs, and the backoffice catalog entry. The `skill` table only stores the operator kill-switch, read once per agent turn and once per generation step. 12 today:
+A skill is one module: `defineSkill({ id, displayName, description, inputSchema (zod), execute(input, ctx) })`, keyed by its id (one of `SKILL_IDS` in the contracts) in the `SKILLS` record in [`apps/agents/src/skills/registry.ts`](../apps/agents/src/skills/registry.ts). The registry derives from it the Flue tool (zod → JSON Schema → Valibot in `skills/flue-tools.ts`; Flue validates tool input with Valibot only), the AI SDK tool for Workflow runs, and the backoffice catalog entry. The `skill` table only stores the operator kill-switch, read once per agent turn and once per generation step. 12 today:
 
 `rememberFact` · `recallMemory` · `delegateToWorker` · `generateBrandImage` · `draftSocialPost` · `extractBrief` · `proposeTeam` · `listAssets` · `readAsset` · `saveAsset` · `webSearch` · `fetchUrl`
 
@@ -132,10 +132,10 @@ A template's `skillIds` selects which tools the Workflow exposes while generatin
 
 The highest-stakes path, kept on a Cloudflare Workflow for durability ([ADR 0003](adr/0003-approval-gate-on-cloudflare-workflows.md)). `WorkerJobWorkflow.run` ([`src/jobs/worker-job.ts`](../apps/agents/src/jobs/worker-job.ts)) runs one round per proposal:
 
-1. The Correspondent calls **`delegateToWorker`**, which creates the `ticket` already linked to its Workflow id and starts the run (the ticket is deleted if the start fails).
+1. The Correspondent calls **`delegateToWorker`**, which creates the `ticket` and starts the run under the ticket id as its Workflow instance id (the ticket is deleted if the start fails).
 2. **generate**: the model call and the template's skills run with the deliverable folder set to `agent`, so nothing reaches the customer yet.
 3. **propose**: the template's **Action type** builds the proposed payload and its **Policy** is resolved (the template's `default_policies` entry, else the type's default; an invalid value fails closed to `require_approval`). Every policy creates an `action`.
-4. **wait / decide** (only `require_approval`, [ADR 0006](adr/0006-approval-gates-only-high-impact-actions.md)): the ticket goes to `awaiting_approval` and the run pauses on `step.waitForEvent("decision-<actionId>")` for up to 60 days. An Operator decides on `/approvals`; `POST /api/backoffice/actions/:id/decide` and the Workflow share `submitDecision`. Request-changes starts the next round with the feedback, at most `MAX_REVISIONS` (3) times; reject ends the ticket and nothing reaches the customer folder.
+4. **wait / decide** (only `require_approval`, [ADR 0006](adr/0006-approval-gates-only-high-impact-actions.md)): the ticket goes to `awaiting_approval` and the run pauses on `step.waitForEvent("decision-<actionId>")` for up to 60 days. An Operator decides on `/approvals`; `POST /api/backoffice/actions/:id/decide` (`submitDecision`) sends the event the Workflow waits for (`decisionEventType`). Request-changes starts the next round with the feedback, at most `MAX_REVISIONS` (3) times; reject ends the ticket and nothing reaches the customer folder.
 5. **execute**: the Action type's executor promotes the deliverable's assets to the customer folder (or presents the approved `publish_post` draft), the action is marked `executed` and the ticket `done`, and the Workflow signals the result to the Correspondent, which presents it in chat (markdown, so images render inline).
 
 Action types live one module each under `apps/agents/src/action/` (`worker-deliverable.ts`: default `auto_execute`; `publish-post.ts`: default `require_approval`). The Workflow body never branches on type. Retried steps do not duplicate effects: Action ids are deterministic per round, and decision and execution writes only apply from `pending` and `approved`.
@@ -154,8 +154,8 @@ The customer reaches the Correspondent over the **web chat only**: the Flue agen
 ## §11. Authentication & authorization
 
 - **Better Auth** runs in the Worker at `/api/auth/*` (Postgres-backed, emails through `@repo/transactional` + Resend) and issues a host-only cookie on the app that proxied the call; magic link and email/password. Its organization plugin holds Customer invitations: an Operator creates one through `POST /api/backoffice/companies/:companyId/invitations` (a server-only endpoint, since Operators are not members of the Company), and the Customer accepts it with the plugin's `accept-invitation`, which creates the `CUSTOMER` membership. No role holds any of the plugin's organization, member, or invitation permissions, and no one creates organizations through it.
-- **Identity** (`identity/identity.ts`) resolves a request to signed-in `{userId, companyId, role}`, signed out (401), unavailable (503), or no membership on the surface (403). `OWNER`/`STAFF` belong to the operator surface and `CUSTOMER` to the customer surface (`SURFACE_OF_ROLE` in `@repo/worker-api/contracts`). A request acts through the caller's membership on the surface it calls; no client names an org ([ADR 0011](adr/0011-worker-hosts-better-auth.md)).
-- **Gates** (`identity/gates.ts`): `requireCustomer` on `/api/me/*`; `requireCustomerOfPathTenant` on `/agents/*` and `/api/teams/*` (the path's company must be the session's); `requireOperator` on `/api/backoffice/*` (cross-tenant, [ADR 0005](adr/0005-operator-is-platform-staff-cross-tenant.md)); `requireMember` on `/assets/:id` (either surface, the Operator membership first). Operators never open a connection to an agent; they act through REST.
+- **Identity** (`identity/identity.ts`) resolves a request to signed-in `{userId, companyId, role}`, signed out (401), unavailable (503), or no membership on the surface (403). `OWNER`/`STAFF` belong to the operator surface and `CUSTOMER` to the customer surface (`SURFACE_OF_ROLE` in `@repo/auth/roles`). A request acts through the caller's membership on the surface it calls; no client names an org ([ADR 0011](adr/0011-worker-hosts-better-auth.md)).
+- **Gates** (`identity/gates.ts`): `requireCustomer` on `/api/me/*`; `requireCustomerOfPathTenant` on `/agents/:agent/:companyId/*` (the path's company must be the session's; a path without one is refused); `requireOperator` on `/api/backoffice/*` (cross-tenant, [ADR 0005](adr/0005-operator-is-platform-staff-cross-tenant.md)); `requireMember` on `/assets/:id` (either surface, the Operator membership first). Operators never open a connection to an agent; they act through REST.
 - **Next apps** hold no auth secret and no database URL. `proxy.ts` only checks for the session cookie and forwards the client IP on `/api/auth/*`; server components read `/api/me` from the Worker, where 401 sends the visitor to `/login` and any other failure renders the error boundary.
 - **Rate limits**: Better Auth keeps them in Postgres, keyed on the browser's address, which the Next proxy forwards as `x-qolmeia-client-ip` with `TRUSTED_PROXY_SECRET`; without the secret the Worker uses `cf-connecting-ip` ([`docs/deploy.md`](deploy.md) §3).
 
@@ -164,7 +164,7 @@ The customer reaches the Correspondent over the **web chat only**: the Flue agen
 1. **Invitation and sign-in**: an Operator invites the Customer's e-mail; the link opens `/convite/<id>` on the web app, which signs the visitor in and accepts the invitation, creating the `CUSTOMER` membership. Better Auth on the Worker, reached through the app's `/api/auth/*` rewrite, issues a host-only cookie on that app.
 2. **Client opens**: `requireCustomer` → `/api/me`, answered by the Worker's identity module.
 3. **`status === "onboarding"`**: customer chats the **Planner**; it calls `extractBrief` + `proposeTeam`, then surfaces "Confirmar Time".
-4. **Customer confirms**: `POST /api/teams/:companyId/confirm` materialises `team` + `team_member`, flips `company.status = active`, and seeds Correspondent memory (`remember`), all in one transaction.
+4. **Customer confirms**: `POST /api/me/team/confirm` materialises `team` + `team_member`, flips `company.status = active`, and seeds Correspondent memory (`remember`), all in one transaction.
 5. **`status === "active"`**: customer chats the **Correspondent**, which `delegateToWorker`s.
 6. The **delegation + approval flow** of §8 runs; the deliverable lands back in chat.
 

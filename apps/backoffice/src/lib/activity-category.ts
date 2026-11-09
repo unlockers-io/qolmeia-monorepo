@@ -1,6 +1,4 @@
-const ACTIVITY_CATEGORIES = ["ACTION", "TICKET", "WORKER", "TEAM", "MEMBER", "CUSTOMER"] as const;
-
-type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
+import { type ActivityCategory, activityCategoryOf } from "@repo/worker-api/contracts";
 
 type CategoryStyle = { dot: string; label: string; tag: string };
 
@@ -35,15 +33,10 @@ const NEUTRAL_STYLE: CategoryStyle = {
   tag: "bg-muted text-foreground",
 };
 
-const activityCategory = (type: string): ActivityCategory | null =>
-  ACTIVITY_CATEGORIES.find((category) => type.startsWith(`${category}_`)) ?? null;
-
 const activityStyle = (type: string): CategoryStyle => {
-  const category = activityCategory(type);
+  const category = activityCategoryOf(type);
 
   return category === null ? NEUTRAL_STYLE : CATEGORY_STYLE[category];
 };
 
-export { ACTIVITY_CATEGORIES, activityStyle, CATEGORY_STYLE };
-
-export type { ActivityCategory };
+export { activityStyle, CATEGORY_STYLE };

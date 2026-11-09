@@ -1,13 +1,12 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import type { TemplateResponse } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { TemplateForm } from "@/components/template-form";
-import { ApiError } from "@/lib/api-client";
-import { apiGetServer } from "@/lib/api-server";
 import { requireOperator } from "@/lib/auth-helpers";
+import { getTemplate } from "@/lib/backoffice-api";
+import { orNotFound } from "@/lib/or-not-found";
 
 export const metadata: Metadata = { title: "Editar modelo" };
 
@@ -22,21 +21,9 @@ const EditTemplateContent = async ({ params }: EditTemplatePageProps) => {
   await requireOperator();
   const { id } = await params;
 
-  let detail: TemplateResponse | null = null;
+  const { template } = await orNotFound(getTemplate(apiGetServer, id));
 
-  try {
-    detail = await apiGetServer<TemplateResponse>(`/templates/${id}`);
-  } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 404) {
-      throw error;
-    }
-  }
-
-  if (!detail) {
-    notFound();
-  }
-
-  return <TemplateForm initial={detail.template} />;
+  return <TemplateForm initial={template} />;
 };
 
 const EditTemplateSkeleton = () => (

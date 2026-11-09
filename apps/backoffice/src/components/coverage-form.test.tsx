@@ -24,7 +24,10 @@ const fetchMock = vi.fn(() => Promise.resolve(Response.json({})));
 
 const options: CoverageResponse["options"] = {
   companies: [],
-  disciplines: ["marketing-strategist", "designer"],
+  disciplines: [
+    { id: "marketing-strategist", name: "Estrategista de marketing" },
+    { id: "designer", name: "Designer" },
+  ],
 };
 
 beforeEach(() => {
@@ -36,26 +39,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("coverage response compatibility", () => {
-  it.each([
-    { label: "Marketing Strategist", response: options, version: "without labels" },
-    {
-      label: "Estrategista de marketing",
-      response: {
-        ...options,
-        disciplineNames: { "marketing-strategist": "Estrategista de marketing" },
-      },
-      version: "with labels",
-    },
-  ])("edits and saves discipline IDs $version", async ({ label, response }) => {
+describe("CoverageForm", () => {
+  it("edits and saves discipline IDs under their names", async () => {
     render(
       <AppRouterContext value={router}>
-        <CoverageForm initial={{ companies: [], disciplines: ["designer"] }} options={response} />
+        <CoverageForm initial={{ companies: [], disciplines: ["designer"] }} options={options} />
       </AppRouterContext>,
     );
 
     expect(screen.getByRole("checkbox", { name: "Designer" })).toBeChecked();
-    fireEvent.click(screen.getByRole("checkbox", { name: label }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Estrategista de marketing" }));
     fireEvent.click(screen.getByRole("button", { name: "Salvar cobertura" }));
 
     await waitFor(() => {

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
 import { fetchWithCookie, signInAs } from "#/__tests__/sign-in";
 import { actionIdFor, MAX_REVISIONS } from "#/action/action";
-import { decisionEventType } from "#/jobs/decision";
+import { decisionEventType } from "#/action/decision";
 import { createNotifyCustomer } from "#/jobs/worker-job-notify";
 import { executeAction } from "#/jobs/worker-job-steps";
 import { listAssets } from "#/library/assets";
@@ -96,7 +96,7 @@ const gateDesigner = () =>
   );
 
 const startJob = async (ticketId: string, agentInstanceId = DESIGNER_ID, failingStep?: string) => {
-  await seedTicket({ agentInstanceId, companyId: COMPANY_ID, id: ticketId, workflowId: ticketId });
+  await seedTicket({ agentInstanceId, companyId: COMPANY_ID, id: ticketId });
   const instance = await introspectWorkflowInstance(env.WORKER_JOB, ticketId);
   await instance.modify(async (modifier) => {
     await modifier.disableRetryDelays();
@@ -391,11 +391,14 @@ describe("required customer delivery", () => {
     await expect(customerFolder()).resolves.toHaveLength(1);
     expect(prompts).toHaveLength(1);
     const job = { agentInstanceId: DESIGNER_ID, companyId: COMPANY_ID, env, ticketId };
-    await executeAction(job, {
-      actionId: actionIdFor(ticketId, 0),
-      actionType: "worker_deliverable",
-      policy: "auto_execute",
-    });
+
+    await expect(
+      executeAction(job, {
+        actionId: actionIdFor(ticketId, 0),
+        actionType: "worker_deliverable",
+        policy: "auto_execute",
+      }),
+    ).resolves.toBe("Entrega pronta.");
     await expect(activityTypes(ticketId)).resolves.toEqual(["ACTION_EXECUTED"]);
   });
 
@@ -442,11 +445,12 @@ describe("required customer delivery", () => {
       const notify = createNotifyCustomer(send);
       const job = { agentInstanceId: DESIGNER_ID, companyId: COMPANY_ID, env, ticketId };
       const actionId = actionIdFor(ticketId, 0);
-      await expect(notify(job, actionId, verdict)).rejects.toThrow("receipt lost");
+      const update = verdict === "execute" ? { result: "Entrega pronta.", verdict } : { verdict };
+      await expect(notify(job, actionId, update)).rejects.toThrow("receipt lost");
       let settled = false;
 
       const observeAdmission = async () => {
-        await notify(job, actionId, verdict);
+        await notify(job, actionId, update);
         settled = true;
       };
 

@@ -1,12 +1,12 @@
 import { forwardClientIp } from "@repo/auth/client-ip";
+import { FROM_PARAM } from "@repo/auth/redirect-path";
 import { hasSessionCookie } from "@repo/auth/session-cookie";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-type ProxyConfig = { protectedRoutes: ReadonlyArray<string> };
+import { matchesRoute } from "./match-route";
 
-const matchesRoute = (pathname: string, route: string): boolean =>
-  route === "/" ? pathname === "/" : pathname === route || pathname.startsWith(`${route}/`);
+type ProxyConfig = { protectedRoutes: ReadonlyArray<string> };
 
 /**
  * Vercel overwrites x-forwarded-for with the address it accepted the connection from, so the
@@ -42,7 +42,7 @@ const createProxy =
 
     if (isProtected && !hasSessionCookie(request.headers)) {
       const url = new URL("/login", request.url);
-      url.searchParams.set("from", pathname);
+      url.searchParams.set(FROM_PARAM, pathname);
 
       return NextResponse.redirect(url);
     }

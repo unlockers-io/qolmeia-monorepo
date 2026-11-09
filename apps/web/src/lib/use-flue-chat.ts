@@ -1,14 +1,9 @@
 "use client";
 
-import { type AgentStatus, useFlueAgent } from "@flue/react";
+import { type AgentStatus, useFlueAgent, type UseFlueAgentResult } from "@flue/react";
 import type { DeliveredAttachment, FlueConversationMessage } from "@flue/sdk";
+import type { ConversationAgent } from "@repo/worker-api/contracts";
 import type { ChatStatus, FileUIPart } from "ai";
-
-import { useFlueClient } from "./use-flue-client";
-
-type ChatMessage = FlueConversationMessage;
-
-type FlueChatStatus = ChatStatus;
 
 type SendInput = {
   files: Array<FileUIPart>;
@@ -16,20 +11,20 @@ type SendInput = {
 };
 
 type UseFlueChatOptions = {
-  agent: "correspondent" | "planner";
+  agent: ConversationAgent;
   companyId: string;
 };
 
 type UseFlueChatResult = {
   historyReady: boolean;
-  messages: Array<ChatMessage>;
+  messages: Array<FlueConversationMessage>;
   sendMessage: (input: SendInput) => Promise<void>;
-  status: FlueChatStatus;
+  status: ChatStatus;
 };
 
 type Conversation = Pick<
-  ReturnType<typeof useFlueAgent>,
-  "error" | "historyReady" | "messages" | "sendMessage" | "status"
+  UseFlueAgentResult,
+  "historyReady" | "messages" | "sendMessage" | "status"
 >;
 
 type UseConversation = (url: string) => Conversation;
@@ -40,7 +35,7 @@ const STATUS_MAP = {
   idle: "ready",
   streaming: "streaming",
   submitted: "submitted",
-} as const satisfies Record<AgentStatus, FlueChatStatus>;
+} as const satisfies Record<AgentStatus, ChatStatus>;
 
 const BASE64_CHUNK = 0x80_00;
 
@@ -55,47 +50,17 @@ const toBase64 = (buffer: ArrayBuffer): string => {
   return btoa(binary);
 };
 
-const toPromptImage = async (url: string, mimeType: string): Promise<DeliveredAttachment> => {
-  if (url.startsWith("data:")) {
-    return { data: url.slice(url.indexOf(",") + 1), mimeType, type: "image" };
-  }
-
+const toPromptImage = async ({ mediaType, url }: FileUIPart): Promise<DeliveredAttachment> => {
   const response = await fetch(url, { credentials: "include" });
 
   if (!response.ok) {
     throw new Error(`failed to read attachment (${response.status})`);
   }
 
-  return { data: toBase64(await response.arrayBuffer()), mimeType, type: "image" };
+  return { data: toBase64(await response.arrayBuffer()), mimeType: mediaType, type: "image" };
 };
 
-const toPromptImages = async (files: Array<FileUIPart>): Promise<Array<DeliveredAttachment>> => {
-  const imageFiles = files.flatMap((file) =>
-    file.mediaType.startsWith("image/") ? [{ mimeType: file.mediaType, url: file.url }] : [],
-  );
-
-  const settled = await Promise.allSettled(
-    imageFiles.map((file) => toPromptImage(file.url, file.mimeType)),
-  );
-
-  const images: Array<DeliveredAttachment> = [];
-
-  for (const result of settled) {
-    if (result.status === "rejected") {
-      throw result.reason instanceof Error ? result.reason : new Error(String(result.reason));
-    }
-
-    images.push(result.value);
-  }
-
-  return images;
-};
-
-const useConversation: UseConversation = (url) => {
-  const client = useFlueClient(url);
-
-  return useFlueAgent({ client, live: "sse" });
-};
+const useConversation: UseConversation = (url) => useFlueAgent({ url });
 
 const createUseFlueChat = (useAgentConversation: UseConversation) => {
   const useFlueChatWithDependencies = ({
@@ -111,7 +76,9 @@ const createUseFlueChat = (useAgentConversation: UseConversation) => {
         return;
       }
 
-      await conversation.sendMessage(text, { images: await toPromptImages(input.files) });
+      await conversation.sendMessage(text, {
+        images: await Promise.all(input.files.map(toPromptImage)),
+      });
     };
 
     return {
@@ -129,11 +96,4 @@ const useFlueChat = createUseFlueChat(useConversation);
 
 export { createUseFlueChat, useFlueChat };
 
-export type {
-  ChatMessage,
-  Conversation,
-  FlueChatStatus,
-  SendInput,
-  UseConversation,
-  UseFlueChatResult,
-};
+export type { UseFlueChatResult };
