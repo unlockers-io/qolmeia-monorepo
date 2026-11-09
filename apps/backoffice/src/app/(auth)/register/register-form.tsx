@@ -4,18 +4,7 @@ import { authClient, authRequest } from "@repo/app-shell/auth-client";
 import { EmailField, PasswordField, TextField } from "@repo/app-shell/auth-fields";
 import { PASSWORD_HINT } from "@repo/app-shell/auth-schemas";
 import { loginHref, safeRedirectPath } from "@repo/auth/redirect-path";
-import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
-import { FieldGroup } from "@repo/ui/components/field";
-import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
-import { FormAlert } from "@repo/ui/compositions/form-alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
@@ -23,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, use, useState } from "react";
 import { toast } from "sonner";
 
+import { AuthFormCard } from "@/app/(auth)/auth-form-card";
 import { NAME_MAX_LENGTH, NAME_MIN_LENGTH, registerSchema } from "@/lib/form-schemas";
 
 type Props = {
@@ -101,12 +91,6 @@ const RegisterForm = ({ searchParams }: Props) => {
     validators: { onDynamic: registerSchema },
   });
 
-  const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void form.handleSubmit();
-  };
-
   if (sentToEmail !== null) {
     return (
       <Card>
@@ -127,68 +111,56 @@ const RegisterForm = ({ searchParams }: Props) => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl">
-          <h1>Criar conta</h1>
-        </CardTitle>
-        <CardDescription>Cadastre-se para acessar o painel da Qolmeia.</CardDescription>
-      </CardHeader>
-      <ClientReadyForm
-        className="flex flex-col gap-(--card-spacing)"
-        id={form.formId}
-        noValidate
-        onSubmit={handleSubmit}
-      >
-        <CardContent>
-          <FieldGroup>
-            <FormAlert message={submitError} />
-            <form.Field name="name">
-              {(field) => (
-                <TextField
-                  autoComplete="name"
-                  description={`De ${NAME_MIN_LENGTH} a ${NAME_MAX_LENGTH} caracteres.`}
-                  field={field}
-                  label="Nome"
-                  type="text"
-                />
-              )}
-            </form.Field>
-            <form.Field name="email">{(field) => <EmailField field={field} />}</form.Field>
-            <form.Field name="password">
-              {(field) => (
-                <PasswordField
-                  autoComplete="new-password"
-                  description={PASSWORD_HINT}
-                  field={field}
-                  label="Senha"
-                />
-              )}
-            </form.Field>
-            <form.Field name="confirmPassword">
-              {(field) => (
-                <PasswordField autoComplete="new-password" field={field} label="Confirmar senha" />
-              )}
-            </form.Field>
-          </FieldGroup>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-                {isSubmitting ? "Criando conta…" : "Criar conta"}
-              </Button>
+    <form.Subscribe selector={(state) => state.isSubmitting}>
+      {(isSubmitting) => (
+        <AuthFormCard
+          description="Cadastre-se para acessar o painel da Qolmeia."
+          error={submitError}
+          footer={
+            <p className="text-center text-sm text-muted-foreground">
+              Já tem conta?{" "}
+              <Suspense fallback={<LoginLinkFallback />}>
+                <LoginLink searchParams={searchParams} />
+              </Suspense>
+            </p>
+          }
+          formId={form.formId}
+          isSubmitting={isSubmitting}
+          onSubmit={() => form.handleSubmit()}
+          pendingLabel="Criando conta…"
+          submitLabel="Criar conta"
+          title="Criar conta"
+        >
+          <form.Field name="name">
+            {(field) => (
+              <TextField
+                autoComplete="name"
+                description={`De ${NAME_MIN_LENGTH} a ${NAME_MAX_LENGTH} caracteres.`}
+                field={field}
+                label="Nome"
+                type="text"
+              />
             )}
-          </form.Subscribe>
-          <p className="text-center text-sm text-muted-foreground">
-            Já tem conta?{" "}
-            <Suspense fallback={<LoginLinkFallback />}>
-              <LoginLink searchParams={searchParams} />
-            </Suspense>
-          </p>
-        </CardFooter>
-      </ClientReadyForm>
-    </Card>
+          </form.Field>
+          <form.Field name="email">{(field) => <EmailField field={field} />}</form.Field>
+          <form.Field name="password">
+            {(field) => (
+              <PasswordField
+                autoComplete="new-password"
+                description={PASSWORD_HINT}
+                field={field}
+                label="Senha"
+              />
+            )}
+          </form.Field>
+          <form.Field name="confirmPassword">
+            {(field) => (
+              <PasswordField autoComplete="new-password" field={field} label="Confirmar senha" />
+            )}
+          </form.Field>
+        </AuthFormCard>
+      )}
+    </form.Subscribe>
   );
 };
 

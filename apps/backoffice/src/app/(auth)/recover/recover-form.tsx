@@ -2,24 +2,13 @@
 
 import { authClient, authRequest } from "@repo/app-shell/auth-client";
 import { EmailField } from "@repo/app-shell/auth-fields";
-import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
-import { FieldGroup } from "@repo/ui/components/field";
-import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
-import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { AuthFormCard } from "@/app/(auth)/auth-form-card";
 import { recoverSchema } from "@/lib/form-schemas";
 
 const RecoverForm = () => {
@@ -56,53 +45,33 @@ const RecoverForm = () => {
     validators: { onDynamic: recoverSchema },
   });
 
-  const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void form.handleSubmit();
-  };
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl">
-          <h1>Recuperar senha</h1>
-        </CardTitle>
-        <CardDescription>
-          Informe o e-mail cadastrado para receber o link de redefinição.
-        </CardDescription>
-      </CardHeader>
-      <ClientReadyForm
-        className="flex flex-col gap-(--card-spacing)"
-        id={form.formId}
-        noValidate
-        onSubmit={handleSubmit}
-      >
-        <CardContent>
-          <FieldGroup>
-            <FormAlert message={submitError} />
-            <form.Field name="email">{(field) => <EmailField field={field} />}</form.Field>
-          </FieldGroup>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
-                {isSubmitting ? "Enviando…" : "Enviar link"}
-              </Button>
-            )}
-          </form.Subscribe>
-          <p className="text-center text-sm text-muted-foreground">
-            <Link
-              className="font-medium text-primary underline-offset-4 hover:underline"
-              href="/login"
-            >
-              Voltar para o login
-            </Link>
-          </p>
-        </CardFooter>
-      </ClientReadyForm>
-    </Card>
+    <form.Subscribe selector={(state) => state.isSubmitting}>
+      {(isSubmitting) => (
+        <AuthFormCard
+          description="Informe o e-mail cadastrado para receber o link de redefinição."
+          error={submitError}
+          footer={
+            <p className="text-center text-sm text-muted-foreground">
+              <Link
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                href="/login"
+              >
+                Voltar para o login
+              </Link>
+            </p>
+          }
+          formId={form.formId}
+          isSubmitting={isSubmitting}
+          onSubmit={() => form.handleSubmit()}
+          pendingLabel="Enviando…"
+          submitLabel="Enviar link"
+          title="Recuperar senha"
+        >
+          <form.Field name="email">{(field) => <EmailField field={field} />}</form.Field>
+        </AuthFormCard>
+      )}
+    </form.Subscribe>
   );
 };
 

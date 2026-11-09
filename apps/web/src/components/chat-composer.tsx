@@ -43,6 +43,18 @@ const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
   }
 };
 
+const SubmitIcon = ({ busy, failed }: { busy: boolean; failed: boolean }) => {
+  if (busy) {
+    return <LoadingSpinner className="size-4" />;
+  }
+
+  return failed ? (
+    <X aria-hidden className="size-4" />
+  ) : (
+    <CornerDownLeft aria-hidden className="size-4" />
+  );
+};
+
 type ChatComposerProps = {
   onSend: (message: { files: Array<FileUIPart>; text: string }) => Promise<void>;
   status: ChatStatus;
@@ -192,14 +204,6 @@ const ChatComposer = ({ onSend, status }: ChatComposerProps) => {
     !submitting &&
     (input.trim().length > 0 || readyAttachments.length > 0);
 
-  let submitIcon = <CornerDownLeft aria-hidden className="size-4" />;
-
-  if (submitting || isReplying) {
-    submitIcon = <LoadingSpinner className="size-4" />;
-  } else if (status === "error") {
-    submitIcon = <X aria-hidden className="size-4" />;
-  }
-
   return (
     <div className="flex-none border-t border-border bg-card px-6 py-4">
       <form
@@ -290,7 +294,7 @@ const ChatComposer = ({ onSend, status }: ChatComposerProps) => {
             )}
           </Button>
           <Button aria-label="Enviar" disabled={!canSend} size="icon" type="submit">
-            {submitIcon}
+            <SubmitIcon busy={submitting || isReplying} failed={status === "error"} />
           </Button>
         </div>
       </form>

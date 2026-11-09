@@ -23,8 +23,8 @@ describe("createProxy", () => {
     );
   });
 
-  it("sends a visitor on the root to /login with no page to remember", () => {
-    expect(visit("/").headers.get("location")).toBe("https://admin.qolmeia.com/login");
+  it("sends a visitor on the root to /login and remembers the root", () => {
+    expect(visit("/").headers.get("location")).toBe("https://admin.qolmeia.com/login?from=%2F");
   });
 
   it("lets a visitor holding a session cookie through", () => {

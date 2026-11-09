@@ -34,7 +34,9 @@ describe("member prompt capability", () => {
       };
 
       render(<MemberEditForm companyId="company" initialMember={member} memberId="agent" />);
-      expect(screen.queryByRole("region", { name: "Comportamento do agente" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("region", { name: "Comportamento do agente" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByLabelText("Nome de exibição")).toBeInTheDocument();
     },
   );

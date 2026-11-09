@@ -1,5 +1,5 @@
 import { forwardClientIp } from "@repo/auth/client-ip";
-import { loginHref } from "@repo/auth/redirect-path";
+import { FROM_PARAM } from "@repo/auth/redirect-path";
 import { hasSessionCookie } from "@repo/auth/session-cookie";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -41,7 +41,10 @@ const createProxy =
     const isProtected = protectedRoutes.some((route) => matchesRoute(pathname, route));
 
     if (isProtected && !hasSessionCookie(request.headers)) {
-      return NextResponse.redirect(new URL(loginHref(pathname), request.url));
+      const url = new URL("/login", request.url);
+      url.searchParams.set(FROM_PARAM, pathname);
+
+      return NextResponse.redirect(url);
     }
 
     return NextResponse.next();

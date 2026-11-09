@@ -39,4 +39,4 @@ const loginHref = (from: string | null | undefined): string => withFrom("/login"
 const redirectFrom = (search: string): string =>
   safeRedirectPath(new URLSearchParams(search).get(FROM_PARAM));
 
-export { loginHref, redirectFrom, safeRedirectPath, withFrom };
+export { FROM_PARAM, loginHref, redirectFrom, safeRedirectPath, withFrom };

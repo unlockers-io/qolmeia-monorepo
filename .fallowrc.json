@@ -69,5 +69,8 @@
         "allow": ["package"]
       }
     ]
+  },
+  "duplicates": {
+    "ignore": ["apps/agents/src/env.d.ts"]
   }
 }
