@@ -133,7 +133,7 @@ const useTemplateForm = (initial: Template | undefined) => {
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const errors = submitAttempted ? fieldErrors(values) : {};
 
-  const { data: skills = [], isLoading: skillsLoading } = useQuery({
+  const { data: skillCatalog, isError: skillsFailed } = useQuery({
     queryFn: () => getSkillCatalog(apiGet),
     queryKey: templateKeys.skills,
     staleTime: 5 * 60_000,
@@ -203,6 +203,7 @@ const useTemplateForm = (initial: Template | undefined) => {
       ? null
       : describeRequestError(saveMutation.error, "Não foi possível salvar o modelo.");
 
+  const skills = skillCatalog ?? (skillsFailed ? [] : null);
   const editLabel = isEdit ? "Salvar alterações" : "Criar modelo";
   const submitLabel = busy ? "Salvando…" : editLabel;
 
@@ -215,7 +216,6 @@ const useTemplateForm = (initial: Template | undefined) => {
     setField,
     skillIds,
     skills,
-    skillsLoading,
     statusPending: toggleStatus.isPending,
     submitError,
     submitLabel,

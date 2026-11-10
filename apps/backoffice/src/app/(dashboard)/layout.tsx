@@ -1,8 +1,8 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
 import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
 import { Sidebar } from "@/components/sidebar";
 import { requireOperator } from "@/lib/auth-helpers";
@@ -31,20 +31,20 @@ const SidebarSkeleton = () => (
       aria-hidden
       className="flex h-24 flex-col gap-3 border-b border-border bg-card p-4 md:hidden"
     >
-      <Skeleton className="h-6 w-24" />
-      <Skeleton className="h-8 w-full" />
+      <SkeletonBox height={24} width={96} />
+      <SkeletonBox height={32} width="100%" />
     </div>
     <aside
       aria-hidden
       className="hidden h-dvh w-59.5 shrink-0 flex-col gap-2 border-r border-border bg-card px-3.5 pt-5 pb-4 md:sticky md:top-0 md:flex"
     >
-      <Skeleton className="h-6 w-24" />
+      <SkeletonBox height={24} width={96} />
       <div className="mt-4 flex flex-col gap-1.5">
         {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton className="h-8 w-full" key={index} />
+          <SkeletonBox height={32} key={index} width="100%" />
         ))}
       </div>
-      <Skeleton className="mt-auto h-10 w-full" />
+      <SkeletonBox className="mt-auto" height={40} width="100%" />
     </aside>
   </>
 );

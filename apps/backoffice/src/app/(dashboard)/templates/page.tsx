@@ -1,13 +1,11 @@
 import { buttonVariants } from "@repo/ui/components/button";
-import { Card } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { cn } from "@repo/ui/lib/utils";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { TemplatesList } from "@/components/templates-list";
+import { TemplatesList, TemplatesListSkeleton } from "@/components/templates-list";
 import { requireOperator } from "@/lib/auth-helpers";
 
 export const metadata: Metadata = { title: "Modelos" };
@@ -21,12 +19,6 @@ const TemplatesContent = async () => {
   return <TemplatesList />;
 };
 
-const TemplatesSkeleton = () => (
-  <Card aria-hidden className="overflow-hidden p-0">
-    <Skeleton className="h-64 w-full" />
-  </Card>
-);
-
 const TemplatesPage = () => (
   <div className="flex flex-col gap-6">
     <PageHeader
@@ -38,7 +30,7 @@ const TemplatesPage = () => (
       description="O catálogo de tipos de especialista que os times podem materializar."
       title="Modelos"
     />
-    <Suspense fallback={<TemplatesSkeleton />}>
+    <Suspense fallback={<TemplatesListSkeleton />}>
       <TemplatesContent />
     </Suspense>
   </div>

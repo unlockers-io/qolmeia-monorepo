@@ -5,7 +5,6 @@ import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
@@ -22,6 +21,7 @@ import {
 import type { CompanyResponse } from "@repo/worker-api/contracts";
 import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SkeletonBox } from "skullet/react";
 import { toast } from "sonner";
 
 import { MissingBriefBadge } from "@/components/missing-brief-badge";
@@ -288,8 +288,8 @@ const CompanyBriefForm = ({ companyId, initialData }: CompanyBriefFormProps) => 
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-20 w-full" />
+          <SkeletonBox height={36} width="100%" />
+          <SkeletonBox height={80} width="100%" />
         </CardContent>
       </Card>
     );

@@ -1,11 +1,11 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
 import { Card } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
 import { CoverageForm } from "@/components/coverage-form";
 import { getCoverage } from "@/lib/backoffice-api";
@@ -37,9 +37,9 @@ const CoverageContent = async () => {
 const CoverageSkeleton = () => (
   <Card aria-hidden className="max-w-2xl p-6">
     <div className="flex flex-col gap-4">
-      <Skeleton className="h-9 w-full" />
-      <Skeleton className="h-9 w-full" />
-      <Skeleton className="h-9 w-full" />
+      <SkeletonBox height={36} width="100%" />
+      <SkeletonBox height={36} width="100%" />
+      <SkeletonBox height={36} width="100%" />
     </div>
   </Card>
 );

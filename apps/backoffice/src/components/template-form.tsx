@@ -94,7 +94,6 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
     setField,
     skillIds,
     skills,
-    skillsLoading,
     statusPending,
     submitError,
     submitLabel,
@@ -210,7 +209,6 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
               </p>
               <TemplateFormSkillPicker
                 busy={busy}
-                loading={skillsLoading}
                 onToggle={toggleSkill}
                 selected={skillIds}
                 skills={skills}

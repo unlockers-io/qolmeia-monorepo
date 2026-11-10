@@ -1,9 +1,9 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
-import type { ActionPolicy, ActionStatus } from "@repo/worker-api/contracts";
+import type { ActionDetailResponse, ActionPolicy, ActionStatus } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import type { ReactNode } from "react";
+import { SkeletonBox, SkeletonSuspense } from "skullet/react";
 
 import { ACTION_TYPE_VIEWS, ActionCard } from "@/components/action-types";
 import { BackLink } from "@/components/back-link";
@@ -39,13 +39,14 @@ const TITLE = {
   rejected: "Ação rejeitada",
 } satisfies Record<ActionStatus, string>;
 
-const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
-  const { id } = await params;
+type ApprovalDetailViewProps = {
+  decision: ReactNode;
+  detail: ActionDetailResponse;
+  now: Date;
+};
 
-  const { action, ageSeconds, canRequestChanges, rounds, ticket } = await orNotFound(
-    getAction(apiGetServer, id),
-  );
-
+const ApprovalDetailView = ({ decision, detail, now }: ApprovalDetailViewProps) => {
+  const { action, ageSeconds, rounds, ticket } = detail;
   const policyCopy = POLICY_COPY[action.policy];
   const roundIndex = rounds.findIndex((round) => round.id === action.id);
   const previousRound = roundIndex > 0 ? rounds[roundIndex - 1] : undefined;
@@ -65,7 +66,7 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
               {ACTION_TYPE_VIEWS[action.actionType].label}
             </span>
             {rounds.length > 1 ? ` · Rodada ${roundIndex + 1}` : ""} · {policyCopy} ·{" "}
-            {formatRelative(action.createdAt)}
+            {formatRelative(action.createdAt, now)}
           </p>
         </div>
         <StatusPill {...ACTION_STATUS[action.status]} />
@@ -78,7 +79,7 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
         </div>
 
         <div className="flex flex-col gap-4 lg:sticky lg:top-6">
-          <ApprovalDecision action={action} canRequestChanges={canRequestChanges} />
+          {decision}
 
           <ApprovalContext
             action={action}
@@ -92,20 +93,79 @@ const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
   );
 };
 
-const ApprovalDetailSkeleton = () => (
-  <div aria-hidden className="flex flex-col gap-5">
-    <Skeleton className="h-8 w-72" />
-    <Skeleton className="h-48 w-full" />
-    <Skeleton className="h-48 w-full" />
-  </div>
-);
+const ApprovalDetailContent = async ({ params }: ApprovalDetailPageProps) => {
+  const { id } = await params;
+  const detail = await orNotFound(getAction(apiGetServer, id));
+  const now = new Date();
+
+  return (
+    <ApprovalDetailView
+      decision={
+        <ApprovalDecision action={detail.action} canRequestChanges={detail.canRequestChanges} />
+      }
+      detail={detail}
+      now={now}
+    />
+  );
+};
+
+const SAMPLE_NOW = new Date("2026-01-01T12:00:00.000Z");
+
+const SAMPLE_AGENT = { name: "Designer", role: "worker", workerKind: "designer" } as const;
+
+const SAMPLE_COMPANY = {
+  companyId: "00000000-0000-4000-8000-000000000100",
+  companyName: "Empresa Exemplo",
+} as const;
+
+const SAMPLE_DETAIL: ActionDetailResponse = {
+  action: {
+    ...SAMPLE_COMPANY,
+    actionType: "worker_deliverable",
+    agent: SAMPLE_AGENT,
+    createdAt: SAMPLE_NOW.getTime() - 2 * 60 * 60_000,
+    decidedAt: null,
+    decidedByName: null,
+    feedback: null,
+    id: "00000000-0000-4000-8000-000000000001",
+    policy: "require_approval",
+    proposed: {
+      assetIds: [],
+      summary:
+        "Carrossel com cinco imagens para o lançamento da coleção de verão, com a paleta da marca e chamada para a loja online.\n\nCada imagem destaca uma peça da coleção, e a última traz o cupom de primeira compra.",
+    },
+    status: "pending",
+    ticketId: "00000000-0000-4000-8000-000000000002",
+  },
+  ageSeconds: 2 * 60 * 60,
+  canRequestChanges: true,
+  rounds: [],
+  ticket: {
+    ...SAMPLE_COMPANY,
+    agent: SAMPLE_AGENT,
+    brief: "Criar um carrossel para o lançamento da coleção de verão no Instagram.",
+    id: "00000000-0000-4000-8000-000000000002",
+    result: null,
+    status: "awaiting_approval",
+    title: "Carrossel da coleção de verão",
+  },
+};
 
 const ApprovalDetailPage = (props: ApprovalDetailPageProps) => (
   <div className="flex flex-col gap-5">
     <BackLink href="/approvals">Aprovações</BackLink>
-    <Suspense fallback={<ApprovalDetailSkeleton />}>
+    <SkeletonSuspense
+      label="Carregando aprovação"
+      skeleton={
+        <ApprovalDetailView
+          decision={<SkeletonBox height={296} width="100%" />}
+          detail={SAMPLE_DETAIL}
+          now={SAMPLE_NOW}
+        />
+      }
+    >
       <ApprovalDetailContent {...props} />
-    </Suspense>
+    </SkeletonSuspense>
   </div>
 );
 

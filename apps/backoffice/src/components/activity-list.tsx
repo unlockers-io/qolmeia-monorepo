@@ -13,9 +13,10 @@ import { ACTIVITY_PAGE_SIZE, getActivity } from "@/lib/backoffice-api";
 type ActivityListProps = {
   category: ActivityCategory | undefined;
   initial: ReadonlyArray<ActivityEntry>;
+  now?: Date;
 };
 
-const ActivityList = ({ category, initial }: ActivityListProps) => {
+const ActivityList = ({ category, initial, now }: ActivityListProps) => {
   const [fetched, setFetched] = useState<ReadonlyArray<ActivityEntry>>([]);
   const [fetchExhausted, setFetchExhausted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,7 +57,7 @@ const ActivityList = ({ category, initial }: ActivityListProps) => {
     <>
       <ul className="flex flex-col">
         {rows.map((row) => (
-          <ActivityRow key={row.id} row={row} />
+          <ActivityRow key={row.id} now={now} row={row} />
         ))}
       </ul>
       {!exhausted && (

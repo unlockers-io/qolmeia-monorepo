@@ -24,7 +24,7 @@ const useToggleTemplateStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (template: Template) =>
+    mutationFn: (template: Pick<Template, "id" | "status">) =>
       setTemplateStatus(template.id, NEXT_STATUS[template.status]),
     onError: (error) => {
       toast.error(describeRequestError(error, "Não foi possível alterar o status."));

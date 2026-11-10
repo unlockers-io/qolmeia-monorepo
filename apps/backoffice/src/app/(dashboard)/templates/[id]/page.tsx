@@ -1,7 +1,7 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
 import { TemplateForm } from "@/components/template-form";
 import { requireOperator } from "@/lib/auth-helpers";
@@ -28,8 +28,8 @@ const EditTemplateContent = async ({ params }: EditTemplatePageProps) => {
 
 const EditTemplateSkeleton = () => (
   <div aria-hidden className="flex flex-col gap-6">
-    <Skeleton className="h-8 w-48" />
-    <Skeleton className="h-64 w-full" />
+    <SkeletonBox height={32} width={192} />
+    <SkeletonBox height={256} width="100%" />
   </div>
 );
 

@@ -396,6 +396,16 @@
   --color-brand-honey-shade: #ffbb32;
 }
 
+:root {
+  --skullet-base: var(--muted);
+  --skullet-animation: pulse;
+}
+
+/* Skullet paints its bars after the ghost, so a sticky or z-indexed sample would cover them without its own stacking context. */
+[skullet-ghost] {
+  isolation: isolate;
+}
+
 @layer components {
   [data-slot="message-scroller-viewport"] {
     @apply size-full min-h-0 min-w-0 scroll-fade-b scrollbar-thin scrollbar-gutter-stable overflow-y-auto overscroll-contain contain-content data-autoscrolling:scrollbar-thumb-transparent data-autoscrolling:scrollbar-track-transparent;

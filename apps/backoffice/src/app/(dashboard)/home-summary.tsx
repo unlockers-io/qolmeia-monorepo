@@ -1,9 +1,9 @@
 import { cn } from "@repo/ui/lib/utils";
 import {
-  type CompaniesResponse,
+  type CompanyRoster,
   OPEN_TICKET_STATUSES,
-  type PendingActionsResponse,
-  type TicketsResponse,
+  type PendingAction,
+  type TicketListRow,
 } from "@repo/worker-api/contracts";
 import Link from "next/link";
 
@@ -50,7 +50,11 @@ const SummaryItem = ({ emphasis = false, href, label, sub, value }: SummaryItemP
 const startOfMonth = (now: Date): number =>
   new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-const PendingSummary = ({ pending }: { pending: PendingActionsResponse["items"] | null }) => {
+const PendingSummary = ({
+  pending,
+}: {
+  pending: ReadonlyArray<Pick<PendingAction, "ageSeconds">> | null;
+}) => {
   const pendingCount = pending?.length ?? null;
   const oldestPendingAge = pending?.[0]?.ageSeconds;
 
@@ -69,8 +73,13 @@ const PendingSummary = ({ pending }: { pending: PendingActionsResponse["items"] 
   );
 };
 
-const TicketSummary = ({ tickets }: { tickets: TicketsResponse["items"] | null }) => {
-  const monthStart = startOfMonth(new Date());
+type TicketSummaryProps = {
+  now: Date;
+  tickets: ReadonlyArray<Pick<TicketListRow, "status" | "updatedAt">> | null;
+};
+
+const TicketSummary = ({ now, tickets }: TicketSummaryProps) => {
+  const monthStart = startOfMonth(now);
 
   const openTickets =
     tickets?.filter((ticket) => OPEN_TICKET_STATUSES.includes(ticket.status)).length ?? null;
@@ -92,7 +101,11 @@ const TicketSummary = ({ tickets }: { tickets: TicketsResponse["items"] | null }
   );
 };
 
-const CompanySummary = ({ companies }: { companies: CompaniesResponse["companies"] | null }) => {
+const CompanySummary = ({
+  companies,
+}: {
+  companies: ReadonlyArray<Pick<CompanyRoster, "status">> | null;
+}) => {
   const activeCompanies =
     companies?.filter((company) => company.status === "active").length ?? null;
 

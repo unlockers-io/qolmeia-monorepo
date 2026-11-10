@@ -1,8 +1,8 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { PageContainer } from "@repo/ui/compositions/page-container";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
 import { EmpresaClient } from "@/components/empresa-client";
 import { requireCustomer } from "@/lib/auth-helpers";
@@ -41,9 +41,9 @@ const EmpresaContent = async () => {
 const EmpresaSkeleton = () => (
   <PageContainer aria-hidden>
     <div className="flex flex-col gap-4">
-      <Skeleton className="h-8 w-56" />
-      <Skeleton className="h-40 w-full" />
-      <Skeleton className="h-40 w-full" />
+      <SkeletonBox height={32} width={224} />
+      <SkeletonBox height={160} width="100%" />
+      <SkeletonBox height={160} width="100%" />
     </div>
   </PageContainer>
 );

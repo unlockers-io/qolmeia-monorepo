@@ -141,7 +141,9 @@ describe("Chat", () => {
   it("shows a loading skeleton until durable history is ready", () => {
     chatState.historyReady = false;
     render(<Chat agent="correspondent" companyId="co_test" />);
+    expect(screen.getByText("Carregando conversa")).toBeInTheDocument();
     expect(screen.queryByText("Comece a conversa")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
   it("renders an activity marker for an in-flight tool call", () => {

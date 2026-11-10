@@ -1,7 +1,7 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
 import { BackLink } from "@/components/back-link";
 import { MemberEditForm } from "@/components/member-edit-form";
@@ -32,8 +32,8 @@ const MemberEditContent = async ({ params }: Props) => {
 
 const MemberEditSkeleton = () => (
   <div aria-hidden className="flex flex-col gap-6">
-    <Skeleton className="h-8 w-56" />
-    <Skeleton className="h-72 w-full" />
+    <SkeletonBox height={32} width={224} />
+    <SkeletonBox height={288} width="100%" />
   </div>
 );
 

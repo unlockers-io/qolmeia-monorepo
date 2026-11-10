@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import { AssetImage } from "@repo/ui/compositions/asset-image";
 import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
@@ -17,6 +16,7 @@ import { BRAND_CATEGORIES, type BrandAsset, type BrandCategory } from "@repo/wor
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { Skeleton } from "skullet/react";
 import { toast } from "sonner";
 
 import {
@@ -34,6 +34,30 @@ const BRAND_CATEGORY_LABEL = {
   post: "Post de exemplo",
   reference: "Referência visual",
 } satisfies Record<BrandCategory, string>;
+
+const BLANK_IMAGE =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+const SAMPLE_BRAND_ASSETS: ReadonlyArray<BrandAsset> = [
+  {
+    category: "logo",
+    createdAt: Date.parse("2026-01-01T12:00:00.000Z"),
+    id: "00000000-0000-4000-8000-000000000001",
+    mimeType: "image/png",
+    name: "logo.png",
+    size: 24_576,
+    url: BLANK_IMAGE,
+  },
+  {
+    category: "post",
+    createdAt: Date.parse("2026-01-01T12:00:00.000Z"),
+    id: "00000000-0000-4000-8000-000000000002",
+    mimeType: "image/png",
+    name: "post-cardapio.png",
+    size: 312_320,
+    url: BLANK_IMAGE,
+  },
+];
 
 const isBrandCategory = (value: string): value is BrandCategory =>
   BRAND_CATEGORIES.some((category) => category === value);
@@ -215,49 +239,50 @@ const BrandAssets = ({ companyId, initialData }: BrandAssetsProps) => {
           </Button>
         </div>
 
-        {isPending ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <Skeleton className="aspect-square w-full" />
-            <Skeleton className="aspect-square w-full" />
-          </div>
-        ) : null}
-        {!isPending && assets.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhuma referência ainda. Comece pelo logo.
-          </p>
-        ) : null}
-        {!isPending && assets.length > 0 ? (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {assets.map((asset) => (
-              <li
-                className="relative overflow-hidden rounded-lg border border-border bg-muted"
-                key={asset.id}
-              >
-                <AssetImage
-                  alt={asset.name ?? "Referência de marca"}
-                  className="aspect-square w-full object-contain p-3"
-                  height={800}
-                  src={asset.url}
-                  width={800}
-                />
-                <Badge className="absolute top-1.5 left-1.5" variant="secondary">
-                  {BRAND_CATEGORY_LABEL[asset.category]}
-                </Badge>
-                <button
-                  aria-label="Remover referência"
-                  className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-md bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
-                  disabled={!ready || deleteMutation.isPending}
-                  onClick={() => {
-                    deleteMutation.mutate(asset.id);
-                  }}
-                  type="button"
-                >
-                  <X aria-hidden className="size-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <Skeleton
+          data={isPending ? null : assets}
+          label="Carregando a marca"
+          sample={SAMPLE_BRAND_ASSETS}
+        >
+          {(items) =>
+            items.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma referência ainda. Comece pelo logo.
+              </p>
+            ) : (
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {items.map((asset) => (
+                  <li
+                    className="relative overflow-hidden rounded-lg border border-border bg-muted"
+                    key={asset.id}
+                  >
+                    <AssetImage
+                      alt={asset.name ?? "Referência de marca"}
+                      className="aspect-square w-full object-contain p-3"
+                      height={800}
+                      src={asset.url}
+                      width={800}
+                    />
+                    <Badge className="absolute top-1.5 left-1.5" variant="secondary">
+                      {BRAND_CATEGORY_LABEL[asset.category]}
+                    </Badge>
+                    <button
+                      aria-label="Remover referência"
+                      className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-md bg-background/80 text-muted-foreground backdrop-blur transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"
+                      disabled={!ready || deleteMutation.isPending}
+                      onClick={() => {
+                        deleteMutation.mutate(asset.id);
+                      }}
+                      type="button"
+                    >
+                      <X aria-hidden className="size-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </Skeleton>
       </CardContent>
     </Card>
   );

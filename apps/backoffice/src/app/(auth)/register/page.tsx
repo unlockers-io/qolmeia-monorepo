@@ -1,10 +1,10 @@
 import { SignedInRedirect } from "@repo/app-shell/signed-in-redirect";
 import { SIGNUP_CLOSED_MESSAGE } from "@repo/auth/signup";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@repo/ui/components/card";
-import { Skeleton } from "@repo/ui/components/skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
 import { getSignupState } from "@/lib/signup";
 
@@ -45,7 +45,7 @@ const Registration = async ({ searchParams }: Props) => {
 const RegisterPage = ({ searchParams }: Props) => (
   <>
     <SignedInRedirect />
-    <Suspense fallback={<Skeleton className="h-96 w-full rounded-xl" />}>
+    <Suspense fallback={<SkeletonBox height={384} radius="0.75rem" width="100%" />}>
       <Registration searchParams={searchParams} />
     </Suspense>
   </>

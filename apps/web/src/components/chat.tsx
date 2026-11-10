@@ -22,6 +22,7 @@ import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { cn } from "@repo/ui/lib/utils";
 import type { ConversationAgent, SkillId } from "@repo/worker-api/contracts";
 import { ArrowDown, ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
+import { Skeleton } from "skullet/react";
 
 import { ChatComposer } from "@/components/chat-composer";
 import type { UseFlueChatResult } from "@/lib/use-flue-chat";
@@ -157,17 +158,6 @@ const MessageBubble = ({ message }: { message: FlueConversationMessage }) => {
   );
 };
 
-const ChatSkeleton = () => (
-  <div className="flex min-h-0 flex-1 flex-col bg-background">
-    <div className="flex flex-1 items-center justify-center">
-      <LoadingSpinner className="size-5 text-muted-foreground" />
-    </div>
-    <div className="flex-none border-t border-border bg-card px-6 py-4">
-      <div className="h-16 rounded-xl border border-input bg-background" />
-    </div>
-  </div>
-);
-
 const AssistantAvatar = ({ agent }: { agent: ConversationAgent }) => (
   <div
     aria-hidden
@@ -193,6 +183,93 @@ const PlannerGreeting = ({ scrollAnchor }: { scrollAnchor: boolean }) => (
   </MessageScrollerItem>
 );
 
+const ChatHeader = ({ agent, thinking }: { agent: ConversationAgent; thinking: boolean }) => {
+  if (agent !== "correspondent") {
+    return <h1 className="sr-only">Conversa com o Planejador</h1>;
+  }
+
+  const status = thinking
+    ? { ...AGENT_STATUS.working, label: "Respondendo…" }
+    : AGENT_STATUS.available;
+
+  return (
+    <header className="flex h-13.5 flex-none items-center gap-3 border-b border-border bg-card px-6">
+      <span
+        aria-hidden
+        className={cn(
+          "flex size-8 flex-none items-center justify-center rounded-lg text-(length:--text-label) font-bold text-white",
+          agentAvatarClass(agent, null),
+        )}
+      >
+        {agentInitials(agentRoleLabel(agent, null))}
+      </span>
+      <div className="min-w-0">
+        <h1 className="font-display text-sm font-bold tracking-tight text-foreground">
+          {agentRoleLabel(agent, null)}
+        </h1>
+        <p className="text-xs text-muted-foreground">Seu ponto de contato</p>
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        <StatusPill label={status.label} pulse={status.pulse} tone={status.tone} />
+      </div>
+    </header>
+  );
+};
+
+const sampleMessage = (
+  id: string,
+  role: "assistant" | "user",
+  text: string,
+): FlueConversationMessage => ({
+  display: "visible",
+  id,
+  parts: [{ state: "done", text, type: "text" }],
+  purpose: role,
+  role,
+});
+
+const SAMPLE_MESSAGES: ReadonlyArray<FlueConversationMessage> = [
+  sampleMessage(
+    "sample-1",
+    "user",
+    "Preciso de três posts para o lançamento do cardápio de verão.",
+  ),
+  sampleMessage(
+    "sample-2",
+    "assistant",
+    "Combinado! Vou pedir ao Designer três artes no tom da marca e te aviso assim que estiverem prontas para aprovação.",
+  ),
+  sampleMessage("sample-3", "user", "Pode começar pelo post do açaí?"),
+  sampleMessage(
+    "sample-4",
+    "assistant",
+    "Claro. O post do açaí sai primeiro, e o Redator já está escrevendo a legenda.",
+  ),
+];
+
+const ChatSkeleton = ({ agent }: Pick<ChatProps, "agent">) => (
+  <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <ChatHeader agent={agent} thinking={false} />
+    <div className="min-h-0 flex-1 overflow-hidden p-4">
+      <Skeleton label="Carregando conversa" loading>
+        <div className="flex flex-col gap-6">
+          {SAMPLE_MESSAGES.map((message) => (
+            <Message align={message.role === "user" ? "end" : "start"} key={message.id}>
+              {message.role === "user" ? null : <AssistantAvatar agent={agent} />}
+              <MessageContent>
+                <MessageBubble message={message} />
+              </MessageContent>
+            </Message>
+          ))}
+        </div>
+      </Skeleton>
+    </div>
+    <div className="flex-none border-t border-border bg-card px-6 py-4">
+      <div className="h-16 rounded-xl border border-input bg-background" />
+    </div>
+  </div>
+);
+
 type ChatViewProps = Pick<ChatProps, "agent"> & {
   chat: UseFlueChatResult;
 };
@@ -210,47 +287,15 @@ const ChatView = ({
   const hasConversation = showPlannerGreeting || visibleMessages.length > 0;
 
   const isThinking = status === "submitted" || status === "streaming";
-  const isCorrespondent = agentName === "correspondent";
   const lastIndex = visibleMessages.length - 1;
 
-  const headerStatus = isThinking
-    ? { ...AGENT_STATUS.working, label: "Respondendo…" }
-    : AGENT_STATUS.available;
-
   if (!historyReady) {
-    return <ChatSkeleton />;
+    return <ChatSkeleton agent={agentName} />;
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
-      {isCorrespondent ? (
-        <header className="flex h-13.5 flex-none items-center gap-3 border-b border-border bg-card px-6">
-          <span
-            aria-hidden
-            className={cn(
-              "flex size-8 flex-none items-center justify-center rounded-lg text-(length:--text-label) font-bold text-white",
-              agentAvatarClass(agentName, null),
-            )}
-          >
-            {agentInitials(agentRoleLabel(agentName, null))}
-          </span>
-          <div className="min-w-0">
-            <h1 className="font-display text-sm font-bold tracking-tight text-foreground">
-              {agentRoleLabel(agentName, null)}
-            </h1>
-            <p className="text-xs text-muted-foreground">Seu ponto de contato</p>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <StatusPill
-              label={headerStatus.label}
-              pulse={headerStatus.pulse}
-              tone={headerStatus.tone}
-            />
-          </div>
-        </header>
-      ) : (
-        <h1 className="sr-only">Conversa com o Planejador</h1>
-      )}
+      <ChatHeader agent={agentName} thinking={isThinking} />
 
       <MessageScrollerProvider autoScroll defaultScrollPosition="end">
         <MessageScroller className="flex-1">
@@ -329,12 +374,12 @@ const Chat = (props: ChatProps) => {
   const ready = useClientReady();
 
   if (!ready) {
-    return <ChatSkeleton />;
+    return <ChatSkeleton agent={props.agent} />;
   }
 
   return <ChatClient {...props} />;
 };
 
-export { Chat, ChatView, PLANNER_GREETING };
+export { Chat, ChatSkeleton, ChatView, PLANNER_GREETING };
 
 export type { ChatProps };
