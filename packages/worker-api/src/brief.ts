@@ -13,16 +13,29 @@ const channelEnum = z.enum([
   "whatsapp",
 ]);
 
+const BRIEF_MAX_LENGTH = {
+  audience: 500,
+  industry: 200,
+  palette: 200,
+  primaryGoal: 500,
+  references: 500,
+  voice: 200,
+} as const;
+
 const brandSchema = z.object({
   palette: z
     .string()
-    .max(200)
+    .max(BRIEF_MAX_LENGTH.palette)
     .optional()
     .describe("Cores principais e secundárias (texto curto: hex ou nomes)."),
-  references: z.string().max(500).optional().describe("Marcas ou estilos de inspiração."),
+  references: z
+    .string()
+    .max(BRIEF_MAX_LENGTH.references)
+    .optional()
+    .describe("Marcas ou estilos de inspiração."),
   voice: z
     .string()
-    .max(200)
+    .max(BRIEF_MAX_LENGTH.voice)
     .optional()
     .describe("Tom da marca (formal, descontraído, técnico, etc.)."),
 });
@@ -31,7 +44,7 @@ const companyBriefSchema = z.object({
   audience: z
     .string()
     .min(1)
-    .max(500)
+    .max(BRIEF_MAX_LENGTH.audience)
     .optional()
     .describe("Quem é o cliente final do negócio (perfil, dor, contexto)."),
   brand: brandSchema.optional(),
@@ -39,14 +52,14 @@ const companyBriefSchema = z.object({
   industry: z
     .string()
     .min(1)
-    .max(200)
+    .max(BRIEF_MAX_LENGTH.industry)
     .optional()
     .describe("Setor do negócio (ex: alimentação, beleza, SaaS)."),
   locale: z.string().default("pt-BR"),
   primaryGoal: z
     .string()
     .min(1)
-    .max(500)
+    .max(BRIEF_MAX_LENGTH.primaryGoal)
     .optional()
     .describe("Objetivo principal nos próximos 3 meses."),
   schemaVersion: z.number().default(BRIEF_SCHEMA_VERSION),
@@ -54,7 +67,9 @@ const companyBriefSchema = z.object({
 
 type CompanyBrief = z.infer<typeof companyBriefSchema>;
 
-type CompanyBriefPartial = z.infer<typeof companyBriefSchema>;
+const briefPatchSchema = companyBriefSchema.partial();
+
+type BriefPatch = z.input<typeof briefPatchSchema>;
 
 const mergeBrief = (
   existing: Partial<CompanyBrief>,
@@ -66,7 +81,7 @@ const mergeBrief = (
     ),
   );
 
-  const parsed = companyBriefSchema.partial().parse({ ...existing, ...definedUpdates });
+  const parsed = briefPatchSchema.parse({ ...existing, ...definedUpdates });
 
   return {
     ...parsed,
@@ -77,40 +92,10 @@ const mergeBrief = (
 
 const hasText = (value: string | undefined): boolean => value !== undefined && value !== "";
 
-const jsonValueSchema = z.json();
+type BriefInput = Parameters<typeof briefPatchSchema.safeParse>[0];
 
-type BriefInput = Parameters<typeof jsonValueSchema.safeParse>[0];
-
-const parseBrief = (raw: BriefInput): Partial<CompanyBrief> => {
-  if (raw === null || raw === undefined || raw === "") {
-    return {};
-  }
-
-  try {
-    const parsed = typeof raw === "string" ? jsonValueSchema.parse(JSON.parse(raw)) : raw;
-    const result = companyBriefSchema.partial().safeParse(parsed);
-
-    return result.success ? result.data : {};
-  } catch {
-    return {};
-  }
-};
-
-const isBriefEmpty = (brief: Partial<CompanyBrief> | null | undefined): boolean => {
-  if (!brief) {
-    return true;
-  }
-
-  const brand = brief.brand;
-
-  const hasBrand =
-    brand !== undefined &&
-    (hasText(brand.palette) || hasText(brand.voice) || hasText(brand.references));
-
-  return (
-    !hasText(brief.industry) && !hasText(brief.primaryGoal) && !hasText(brief.audience) && !hasBrand
-  );
-};
+const parseBrief = (raw: BriefInput): Partial<CompanyBrief> =>
+  briefPatchSchema.safeParse(raw).data ?? {};
 
 const BRIEF_REQUIRED_FIELDS = [
   "industry",
@@ -163,13 +148,6 @@ const briefCompleteness = (brief: Partial<CompanyBrief> | null | undefined): Bri
   };
 };
 
-export {
-  BRIEF_SCHEMA_VERSION,
-  briefCompleteness,
-  companyBriefSchema,
-  isBriefEmpty,
-  mergeBrief,
-  parseBrief,
-};
+export { BRIEF_MAX_LENGTH, briefCompleteness, briefPatchSchema, mergeBrief, parseBrief };
 
-export type { BriefCompleteness, BriefFieldId, CompanyBrief, CompanyBriefPartial };
+export type { BriefCompleteness, BriefFieldId, BriefPatch, CompanyBrief };

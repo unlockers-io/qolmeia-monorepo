@@ -1,6 +1,6 @@
 import "#/lib/observability";
 
-import { DEFAULT_TEMPLATES } from "@repo/db/worker";
+import { DEFAULT_TEMPLATES } from "@repo/db/product-seed";
 import { env } from "cloudflare:workers";
 import { afterAll, beforeEach } from "vitest";
 

@@ -1,17 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  BRIEF_SCHEMA_VERSION,
-  briefCompleteness,
-  companyBriefSchema,
-  isBriefEmpty,
-  mergeBrief,
-  parseBrief,
-} from "./brief";
+import { briefCompleteness, briefPatchSchema, mergeBrief, parseBrief } from "./brief";
 
-describe("companyBriefSchema", () => {
+describe("briefPatchSchema", () => {
   it("validates a complete brief", () => {
-    const ok = companyBriefSchema.safeParse({
+    const ok = briefPatchSchema.safeParse({
       audience: "donos de cafeteria em SP",
       brand: { palette: "marrom + creme", voice: "acolhedora" },
       channels: ["instagram", "whatsapp"],
@@ -24,13 +17,13 @@ describe("companyBriefSchema", () => {
     expect(ok.success).toBe(true);
   });
 
-  it("partial schema accepts an empty brief during the debrief", () => {
-    const ok = companyBriefSchema.partial().safeParse({});
+  it("accepts an empty brief during the debrief", () => {
+    const ok = briefPatchSchema.safeParse({});
     expect(ok.success).toBe(true);
   });
 
   it("rejects an invalid channel", () => {
-    const result = companyBriefSchema.safeParse({
+    const result = briefPatchSchema.safeParse({
       channels: ["not-a-real-channel"],
     });
 
@@ -51,47 +44,23 @@ describe("mergeBrief", () => {
   it("fills in default locale and schemaVersion when neither side specifies", () => {
     const merged = mergeBrief({}, {});
     expect(merged.locale).toBe("pt-BR");
-    expect(merged.schemaVersion).toBe(BRIEF_SCHEMA_VERSION);
+    expect(merged.schemaVersion).toBe(1);
   });
 });
 
 describe("parseBrief", () => {
-  it("returns {} for null or empty input", () => {
+  it("returns {} for a missing brief", () => {
     expect(parseBrief(null)).toEqual({});
-    expect(parseBrief("")).toEqual({});
   });
 
-  it("returns {} for malformed JSON", () => {
-    expect(parseBrief("not json")).toEqual({});
+  it("returns {} for a brief that does not match the schema", () => {
+    expect(parseBrief({ channels: ["not-a-channel"] })).toEqual({});
   });
 
-  it("parses a valid brief JSON", () => {
-    const json = JSON.stringify({ industry: "SaaS", primaryGoal: "leads" });
-    const parsed = parseBrief(json);
+  it("parses a stored brief", () => {
+    const parsed = parseBrief({ industry: "SaaS", primaryGoal: "leads" });
     expect(parsed.industry).toBe("SaaS");
     expect(parsed.primaryGoal).toBe("leads");
-  });
-});
-
-describe("isBriefEmpty", () => {
-  it("treats an empty brief as empty", () => {
-    expect(isBriefEmpty(parseBrief(null))).toBe(true);
-    expect(isBriefEmpty({})).toBe(true);
-  });
-
-  it("treats schema defaults (locale/schemaVersion only) as empty", () => {
-    expect(isBriefEmpty({ locale: "pt-BR", schemaVersion: 1 })).toBe(true);
-  });
-
-  it("treats any meaningful field as non-empty", () => {
-    expect(isBriefEmpty({ industry: "alimentação" })).toBe(false);
-    expect(isBriefEmpty({ primaryGoal: "mais vendas" })).toBe(false);
-    expect(isBriefEmpty({ audience: "donos de cafeteria" })).toBe(false);
-    expect(isBriefEmpty({ brand: { voice: "acolhedora" } })).toBe(false);
-  });
-
-  it("ignores channels — they left the brief, so channels-only is still empty", () => {
-    expect(isBriefEmpty({ channels: ["instagram"] })).toBe(true);
   });
 });
 

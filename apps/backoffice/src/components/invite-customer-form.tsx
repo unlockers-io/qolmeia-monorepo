@@ -7,15 +7,12 @@ import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
-import type {
-  CustomerInvitationInput,
-  CustomerInvitationResponse,
-} from "@repo/worker-api/contracts";
+import { ApiError, describeRequestError } from "@repo/worker-api";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
-import { ApiError, apiSend, describeRequestError } from "@/lib/api-client";
+import { inviteCustomer } from "@/lib/backoffice-api";
 import { inviteCustomerSchema } from "@/lib/form-schemas";
 
 const CONFLICT = 409;
@@ -33,14 +30,9 @@ const InviteCustomerForm = ({ companyId }: { companyId: string }) => {
     },
     onSubmit: async ({ formApi, value }) => {
       setSubmitError(null);
-      const body: CustomerInvitationInput = { email: value.email };
 
       try {
-        const { invitation } = await apiSend<CustomerInvitationResponse>(
-          "POST",
-          `/companies/${companyId}/invitations`,
-          body,
-        );
+        const { invitation } = await inviteCustomer(companyId, value);
 
         toast.success(`Convite enviado para ${invitation.email}.`);
         formApi.reset();

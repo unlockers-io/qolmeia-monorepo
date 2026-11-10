@@ -1,3 +1,5 @@
+import { SignOutButton } from "@repo/app-shell/sign-out-button";
+import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
 import {
   Card,
   CardContent,
@@ -5,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { SignOutButton } from "@repo/ui/compositions/sign-out-button";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -31,7 +32,7 @@ const InvitationAction = async ({ params }: InvitationPageProps) => {
 const InvitationPage = (props: InvitationPageProps) => (
   <main
     className="flex min-h-dvh items-center justify-center bg-background px-4 py-12"
-    id="main-content"
+    id={MAIN_CONTENT_ID}
   >
     <Card className="w-full max-w-md">
       <CardHeader>

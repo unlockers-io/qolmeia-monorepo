@@ -2,16 +2,23 @@ import { Heading, Link, Text } from "react-email";
 
 import { Button } from "../components/button";
 import { Divider } from "../components/divider";
+import { formatDuration } from "../utils/duration";
 
 import { BaseLayout } from "./base-layout";
 
 type WelcomeEmailProps = {
+  expiresInSeconds: number;
   userEmail: string;
   username?: string;
   verificationUrl: string;
 };
 
-const WelcomeEmail = ({ userEmail, username, verificationUrl }: WelcomeEmailProps) => {
+const WelcomeEmail = ({
+  expiresInSeconds,
+  userEmail,
+  username,
+  verificationUrl,
+}: WelcomeEmailProps) => {
   return (
     <BaseLayout preview="Boas-vindas à Qolmeia. Confirme seu e-mail para começar.">
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
@@ -32,7 +39,7 @@ const WelcomeEmail = ({ userEmail, username, verificationUrl }: WelcomeEmailProp
 
       <Text className="m-0 mb-4 text-sm text-muted-foreground">
         Se você não criou uma conta na Qolmeia, pode ignorar este e-mail. O link de confirmação
-        expira em 24 horas.
+        expira em {formatDuration(expiresInSeconds)}.
       </Text>
 
       <Text className="m-0 mb-4 text-sm text-muted-foreground">

@@ -7,7 +7,7 @@ An AI marketing agency: each customer company gets a Team of AI agents that does
 ### Actors
 
 **Company**:
-A customer tenant. Its id (`companyId`) is the unit of isolation **for the customer surface**: the `/agents/<name>/<companyId>`, `/api/me/*` and `/api/teams/*` paths take `companyId` from the session and never trust it from the URL (ADR 0001). It is also the Durable Object instance id every agent is keyed by. Operators are cross-tenant and reach any Company by role, not by membership (ADR 0005).
+A customer tenant. Its id (`companyId`) is the unit of isolation **for the customer surface**: the `/agents/<name>/<companyId>` and `/api/me/*` paths take `companyId` from the session and never trust it from the URL (ADR 0001). It is also the Durable Object instance id every agent is keyed by. Operators are cross-tenant and reach any Company by role, not by membership (ADR 0005).
 _Avoid_: org, tenant, client
 
 **Account**:

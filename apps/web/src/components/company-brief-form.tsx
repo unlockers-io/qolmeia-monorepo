@@ -1,5 +1,6 @@
 "use client";
 
+import { maxLengthHint } from "@repo/app-shell/form-limits";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
@@ -8,56 +9,25 @@ import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
-import { MissingBriefBadge } from "@repo/ui/compositions/missing-brief-badge";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
-import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Skeleton } from "skullet/react";
-import { toast } from "sonner";
-
+import { describeRequestError } from "@repo/worker-api";
 import {
+  BRIEF_MAX_LENGTH,
+  briefCompleteness,
   type BriefPatch,
   type CompanyBrief,
-  type CompanyResponse,
-  fetchCompany,
-  patchCompanyBrief,
-} from "@/lib/company";
-import { BRIEF_MAX_LENGTH, companyBriefSchema } from "@/lib/form-schemas";
+} from "@repo/worker-api/brief";
+import type { CompanyResponse } from "@repo/worker-api/contracts";
+import { revalidateLogic, useForm, useSelector } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SkeletonBox } from "skullet/react";
+import { toast } from "sonner";
 
-const companyQueryKey = (companyId: string) => ["company", companyId] as const;
-const REQUIRED_COUNT = 6;
-
-const SAMPLE_COMPANY: CompanyResponse = {
-  company: {
-    brief: {
-      audience: "Famílias do bairro que buscam pães e bolos frescos para o café da manhã.",
-      brand: {
-        palette: "#B45309, creme",
-        references: "Padarias artesanais de bairro e cafés de esquina",
-        voice: "Acolhedor e próximo",
-      },
-      industry: "Padaria artesanal",
-      primaryGoal: "Aumentar as encomendas pelo Instagram",
-    },
-    id: "00000000-0000-4000-8000-000000000001",
-    slug: "padaria-pao-dourado",
-    status: "active",
-  },
-  completeness: {
-    filled: [
-      "audience",
-      "brand.palette",
-      "brand.references",
-      "brand.voice",
-      "industry",
-      "primaryGoal",
-    ],
-    isComplete: true,
-    missing: [],
-    percent: 100,
-  },
-};
+import { MissingBriefBadge } from "@/components/missing-brief-badge";
+import { fetchCompany, patchCompanyBrief } from "@/lib/company";
+import { companyBriefSchema } from "@/lib/form-schemas";
+import { queryKeys } from "@/lib/query-keys";
 
 type FormState = {
   audience: string;
@@ -112,7 +82,7 @@ const FIELDS = {
   { id: string; label: string; multiline: boolean; placeholder: string }
 >;
 
-const briefToForm = (brief: CompanyBrief): FormState => ({
+const briefToForm = (brief: Partial<CompanyBrief>): FormState => ({
   audience: brief.audience ?? "",
   industry: brief.industry ?? "",
   palette: brief.brand?.palette ?? "",
@@ -144,16 +114,6 @@ const buildPatch = (f: FormState): BriefPatch => {
 
   return patch;
 };
-
-const liveFilledCount = (f: FormState): number =>
-  [
-    f.industry.trim(),
-    f.primaryGoal.trim(),
-    f.audience.trim(),
-    f.voice.trim(),
-    f.palette.trim(),
-    f.references.trim(),
-  ].filter(Boolean).length;
 
 const MissingMark = ({ show }: { show: boolean }) =>
   show ? <MissingBriefBadge className="ml-2 align-middle">A preencher</MissingBriefBadge> : null;
@@ -202,18 +162,18 @@ const BriefField = ({ field, name }: BriefFieldProps) => {
         />
       )}
       <FieldDescription id={`${id}-description`}>
-        Até {BRIEF_MAX_LENGTH[name]} caracteres.
+        {maxLengthHint(BRIEF_MAX_LENGTH[name])}
       </FieldDescription>
       {isInvalid && <FormFieldError errors={field.state.meta.errors} id={`${id}-error`} />}
     </Field>
   );
 };
 
-type BriefCardProps = { companyId: string; initial: CompanyBrief };
+type BriefCardProps = { companyId: string; initial: Partial<CompanyBrief> };
 
 const BriefCard = ({ companyId, initial }: BriefCardProps) => {
   const queryClient = useQueryClient();
-  const queryKey = companyQueryKey(companyId);
+  const queryKey = queryKeys.company(companyId);
 
   const mutation = useMutation({
     mutationFn: (patch: BriefPatch) => patchCompanyBrief(patch),
@@ -240,9 +200,8 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
     validators: { onDynamic: companyBriefSchema },
   });
 
-  const filled = useSelector(form.store, (state) => liveFilledCount(state.values));
-  const percent = Math.round((filled / REQUIRED_COUNT) * 100);
-  const isComplete = filled === REQUIRED_COUNT;
+  const values = useSelector(form.store, (state) => state.values);
+  const { isComplete, percent } = briefCompleteness(buildPatch(values));
 
   return (
     <Card>
@@ -267,7 +226,11 @@ const BriefCard = ({ companyId, initial }: BriefCardProps) => {
           }}
         >
           <FormAlert
-            message={mutation.isError ? "Não foi possível salvar. Tente novamente." : null}
+            message={
+              mutation.isError
+                ? describeRequestError(mutation.error, "Não foi possível salvar. Tente novamente.")
+                : null
+            }
           />
           <div className="grid gap-5 sm:grid-cols-2">
             <form.Field name="industry">
@@ -309,24 +272,36 @@ type CompanyBriefFormProps = {
 };
 
 const CompanyBriefForm = ({ companyId, initialData }: CompanyBriefFormProps) => {
-  const { data } = useQuery({
+  const { data, isPending } = useQuery({
     initialData,
     meta: { errorToast: "Falha ao carregar dados da empresa" },
-    queryFn: fetchCompany,
-    queryKey: companyQueryKey(companyId),
+    queryFn: () => fetchCompany(),
+    queryKey: queryKeys.company(companyId),
   });
 
+  if (isPending || !data) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Sobre a empresa</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <SkeletonBox height={36} width="100%" />
+          <SkeletonBox height={80} width="100%" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Skeleton data={data} label="Carregando dados da empresa" sample={SAMPLE_COMPANY}>
-      {(company) => (
-        <BriefCard
-          companyId={companyId}
-          initial={company.company.brief}
-          key={JSON.stringify(company.company.brief)}
-        />
-      )}
-    </Skeleton>
+    <BriefCard
+      companyId={companyId}
+      initial={data.company.brief}
+      key={JSON.stringify(data.company.brief)}
+    />
   );
 };
 
-export { BriefCard, CompanyBriefForm, SAMPLE_COMPANY };
+export { CompanyBriefForm };

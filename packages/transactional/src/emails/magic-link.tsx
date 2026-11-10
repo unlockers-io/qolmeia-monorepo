@@ -2,16 +2,18 @@ import { Heading, Link, Text } from "react-email";
 
 import { Button } from "../components/button";
 import { Divider } from "../components/divider";
+import { formatDuration } from "../utils/duration";
 
 import { BaseLayout } from "./base-layout";
 
 type MagicLinkEmailProps = {
+  expiresInSeconds: number;
   url: string;
   userEmail: string;
   username?: string;
 };
 
-const MagicLinkEmail = ({ url, userEmail, username }: MagicLinkEmailProps) => {
+const MagicLinkEmail = ({ expiresInSeconds, url, userEmail, username }: MagicLinkEmailProps) => {
   return (
     <BaseLayout
       footerText="Você está recebendo este e-mail porque alguém pediu acesso à sua conta Qolmeia."
@@ -27,7 +29,7 @@ const MagicLinkEmail = ({ url, userEmail, username }: MagicLinkEmailProps) => {
 
       <Text className="m-0 mb-6 text-base text-pretty break-words text-muted-foreground">
         Clique no botão abaixo para entrar na sua conta Qolmeia. O link é válido por uma única vez e
-        expira em 15 minutos.
+        expira em {formatDuration(expiresInSeconds)}.
       </Text>
 
       <div className="mb-6">

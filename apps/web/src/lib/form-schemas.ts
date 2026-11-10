@@ -1,30 +1,9 @@
+import { maxLength } from "@repo/app-shell/form-limits";
+import { BRIEF_MAX_LENGTH } from "@repo/worker-api/brief";
+import { MEMBER_NAME_MAX_LENGTH, TEAM_SIZE_MAX } from "@repo/worker-api/contracts";
 import { z } from "zod";
 
-export const loginSchema = z.object({
-  email: z.email("E-mail inválido"),
-  password: z.string().min(1, "Informe sua senha"),
-});
-
-export const magicLinkSchema = loginSchema.extend({ password: z.string() });
-
-const maxLength = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max, `Use no máximo ${max.toLocaleString("pt-BR")} caracteres.`);
-
-export const hireSchema = z.object({ displayName: maxLength(80) });
-
-export const promptSchema = z.object({ prompt: maxLength(20_000) });
-
-export const BRIEF_MAX_LENGTH = {
-  audience: 500,
-  industry: 200,
-  palette: 200,
-  primaryGoal: 500,
-  references: 500,
-  voice: 200,
-} as const;
+export const hireSchema = z.object({ displayName: maxLength(MEMBER_NAME_MAX_LENGTH) });
 
 export const companyBriefSchema = z.object({
   audience: maxLength(BRIEF_MAX_LENGTH.audience),
@@ -36,5 +15,8 @@ export const companyBriefSchema = z.object({
 });
 
 export const confirmTeamSchema = z.object({
-  templateIds: z.array(z.string()).min(1, "Escolha pelo menos um especialista."),
+  templateIds: z
+    .array(z.string())
+    .min(1, "Escolha pelo menos um especialista.")
+    .max(TEAM_SIZE_MAX, `Escolha no máximo ${TEAM_SIZE_MAX} especialistas.`),
 });

@@ -1,10 +1,10 @@
 "use client";
 
+import { redirectFrom } from "@repo/auth/redirect-path";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { authClient } from "./auth-client";
-import { safeRedirectPath } from "./redirect-path";
 
 /**
  * Sends a visitor who already holds a valid session away from the sign-in pages, to the `from`
@@ -17,7 +17,7 @@ const SignedInRedirect = () => {
 
   useEffect(() => {
     if (data !== null) {
-      replace(safeRedirectPath(new URLSearchParams(window.location.search).get("from")));
+      replace(redirectFrom(window.location.search));
     }
   }, [data, replace]);
 

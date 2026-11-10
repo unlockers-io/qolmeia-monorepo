@@ -22,8 +22,8 @@ describe("Nav", () => {
     expect(screen.getByText("Salão da Maria")).toBeInTheDocument();
   });
 
-  it("links the logo home and falls back to 'Qolmeia' when the org name is null", () => {
-    render(<Nav dependencies={dependencies} orgName={null} />);
+  it("links the logo home", () => {
+    render(<Nav dependencies={dependencies} orgName="Salão" />);
     expect(screen.getByRole("link", { name: "Qolmeia" })).toHaveAttribute("href", "/");
   });
 

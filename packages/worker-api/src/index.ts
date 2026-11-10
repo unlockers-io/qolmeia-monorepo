@@ -1,5 +1,3 @@
-type FetchInit = Omit<RequestInit, "body" | "method">;
-
 type JsonRequestValue =
   | boolean
   | number
@@ -47,11 +45,10 @@ const describeRequestError = (error: unknown, fallback: string): string => {
   return STATUS_MESSAGES.get(error.status) ?? fallback;
 };
 
-const buildHeaders = (init?: FetchInit, contentType?: string): Headers => {
-  const headers = new Headers(init?.headers);
-  headers.set("Accept", "application/json");
+const jsonHeaders = (contentType?: string): Headers => {
+  const headers = new Headers({ Accept: "application/json" });
 
-  if (contentType !== undefined && contentType !== "" && !headers.has("Content-Type")) {
+  if (contentType !== undefined) {
     headers.set("Content-Type", contentType);
   }
 
@@ -73,94 +70,58 @@ const handleResponse = async <T>(res: Response): Promise<T> => {
 
 type SendMethod = "DELETE" | "PATCH" | "POST" | "PUT";
 
-type BrowserApi = {
-  apiGet: <T>(path: string, init?: FetchInit) => Promise<T>;
-  apiSend: <T>(
-    method: SendMethod,
-    path: string,
-    body?: JsonRequestValue,
-    init?: FetchInit,
-  ) => Promise<T>;
-  apiSendForm: <T>(path: string, formData: FormData, init?: FetchInit) => Promise<T>;
+const apiGet = async <T>(path: string): Promise<T> => {
+  const res = await fetch(path, { credentials: "include", headers: jsonHeaders(), method: "GET" });
+
+  return handleResponse<T>(res);
 };
 
-const createBrowserApi = (basePath = ""): BrowserApi => {
-  const url = (path: string): string => `${basePath}${path}`;
+const apiSend = async <T>(
+  method: SendMethod,
+  path: string,
+  body?: JsonRequestValue,
+): Promise<T> => {
+  const serialized = body === undefined ? undefined : JSON.stringify(body);
 
-  return {
-    apiGet: async <T>(path: string, init?: FetchInit): Promise<T> => {
-      const res = await fetch(url(path), {
-        ...init,
-        credentials: "include",
-        headers: buildHeaders(init),
-        method: "GET",
-      });
+  const res = await fetch(path, {
+    body: serialized,
+    credentials: "include",
+    headers: jsonHeaders(serialized === undefined ? undefined : "application/json"),
+    method,
+  });
 
-      return handleResponse<T>(res);
-    },
-    apiSend: async <T>(
-      method: SendMethod,
-      path: string,
-      body?: JsonRequestValue,
-      init?: FetchInit,
-    ): Promise<T> => {
-      const serialized = body === undefined ? undefined : JSON.stringify(body);
+  return handleResponse<T>(res);
+};
 
-      const res = await fetch(url(path), {
-        ...init,
-        body: serialized,
-        credentials: "include",
-        headers: buildHeaders(init, serialized === undefined ? undefined : "application/json"),
-        method,
-      });
+const apiSendForm = async <T>(path: string, formData: FormData): Promise<T> => {
+  const res = await fetch(path, {
+    body: formData,
+    credentials: "include",
+    headers: jsonHeaders(),
+    method: "POST",
+  });
 
-      return handleResponse<T>(res);
-    },
-    apiSendForm: async <T>(path: string, formData: FormData, init?: FetchInit): Promise<T> => {
-      const headers = buildHeaders(init);
-      headers.delete("Content-Type");
-
-      const res = await fetch(url(path), {
-        ...init,
-        body: formData,
-        credentials: "include",
-        headers,
-        method: "POST",
-      });
-
-      return handleResponse<T>(res);
-    },
-  };
+  return handleResponse<T>(res);
 };
 
 type ServerApiConfig = {
-  basePath?: string;
   baseUrl: string;
   readCookieHeader: () => Promise<string>;
 };
 
-type ServerApi = {
-  apiGetServer: <T>(path: string) => Promise<T>;
-};
-
-const createServerApi = (config: ServerApiConfig): ServerApi => ({
+const createServerApi = ({ baseUrl, readCookieHeader }: ServerApiConfig) => ({
   apiGetServer: async <T>(path: string): Promise<T> => {
-    const cookie = await config.readCookieHeader();
-    const headers = new Headers({ Accept: "application/json" });
+    const cookie = await readCookieHeader();
+    const headers = jsonHeaders();
 
     if (cookie !== "") {
       headers.set("Cookie", cookie);
     }
 
-    const res = await fetch(`${config.baseUrl}${config.basePath ?? ""}${path}`, {
-      cache: "no-store",
-      headers,
-    });
+    const res = await fetch(`${baseUrl}${path}`, { cache: "no-store", headers });
 
     return handleResponse<T>(res);
   },
 });
 
-export { ApiError, createBrowserApi, createServerApi, describeRequestError, handleResponse };
-
-export type { BrowserApi, FetchInit, ServerApi, ServerApiConfig };
+export { ApiError, apiGet, apiSend, apiSendForm, createServerApi, describeRequestError };

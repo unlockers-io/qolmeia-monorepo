@@ -10,7 +10,6 @@ const useFlueChat = createUseFlueChat((url) => {
   capturedUrl = url;
 
   return {
-    error: undefined,
     historyReady: true,
     messages: [],
     sendMessage: hookSendMessage,

@@ -1,7 +1,10 @@
 import { envAuthConfig } from "@repo/auth/env-config";
 import { createAuth } from "@repo/auth/server";
 import { prisma, seedProductDefaults } from "@repo/db";
+import { loopbackUrl } from "@repo/portless-env/apps";
 import { z } from "zod";
+
+import { correspondentIdFor, teamIdFor, workerIdFor } from "#/team/ids";
 
 const env = z
   .object({ BETTER_AUTH_SECRET: z.string().min(32), RESEND_API_KEY: z.string().optional() })
@@ -21,7 +24,7 @@ const CUSTOMER_PASSWORD = "Qolmeia-Dev-CustomerPass!";
 
 const auth = createAuth({
   ...envAuthConfig(),
-  fallbackBaseURL: "http://127.0.0.1:8787",
+  fallbackBaseURL: loopbackUrl("agents", "127.0.0.1"),
   prisma,
   resendApiKey: env.RESEND_API_KEY,
   secret: env.BETTER_AUTH_SECRET,
@@ -85,9 +88,9 @@ const seedProductCompany = async (): Promise<void> => {
   });
   await seedProductDefaults(prisma);
 
-  const correspondentId = `corr-${ORG_ID}`;
-  const workerId = `worker-tpl-designer-${ORG_ID}`;
-  const teamId = `team-${ORG_ID}`;
+  const correspondentId = correspondentIdFor(ORG_ID);
+  const workerId = workerIdFor("tpl-designer", ORG_ID);
+  const teamId = teamIdFor(ORG_ID);
   await prisma.agentInstance.createMany({
     data: [
       {
@@ -102,7 +105,6 @@ const seedProductCompany = async (): Promise<void> => {
         id: workerId,
         role: "worker",
         templateId: "tpl-designer",
-        templateVersion: 1,
       },
     ],
     skipDuplicates: true,
@@ -112,15 +114,9 @@ const seedProductCompany = async (): Promise<void> => {
     update: {},
     where: { companyId: ORG_ID },
   });
-  await prisma.teamMember.upsert({
-    create: { agentInstanceId: correspondentId, canDelegateTo: [workerId], teamId },
-    update: { canDelegateTo: [workerId] },
-    where: { teamId_agentInstanceId: { agentInstanceId: correspondentId, teamId } },
-  });
-  await prisma.teamMember.upsert({
-    create: { agentInstanceId: workerId, canDelegateTo: [], teamId },
-    update: {},
-    where: { teamId_agentInstanceId: { agentInstanceId: workerId, teamId } },
+  await prisma.teamMember.createMany({
+    data: [correspondentId, workerId].map((agentInstanceId) => ({ agentInstanceId, teamId })),
+    skipDuplicates: true,
   });
 };
 

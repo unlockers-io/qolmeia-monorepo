@@ -1,35 +1,29 @@
-import { applyPortlessUrls } from "@repo/portless-env";
-import type { NextConfig } from "next";
+import { createNextConfig } from "@repo/app-shell/next-config";
 
-applyPortlessUrls(["NEXT_PUBLIC_LANDING_URL", "NEXT_PUBLIC_WEB_APP_URL"]);
+export default createNextConfig(
+  { urlEnvs: ["NEXT_PUBLIC_LANDING_URL", "NEXT_PUBLIC_WEB_APP_URL"] },
+  {
+    allowedDevOrigins: ["qolmeia.landing.localhost", "*.qolmeia.landing.localhost", "*.vercel.app"],
+    cacheComponents: true,
 
-const nextConfig: NextConfig = {
-  allowedDevOrigins: ["qolmeia.landing.localhost", "*.qolmeia.landing.localhost", "*.vercel.app"],
-  cacheComponents: true,
+    experimental: {
+      turbopackRustReactCompiler: true,
+    },
 
-  experimental: {
-    exposeTestingApiInProductionBuild: process.env.EXPOSE_TESTING_API === "1",
-    instantInsights: { validationLevel: "manual-warning" },
-    turbopackRustReactCompiler: true,
+    headers: () =>
+      Promise.resolve([
+        {
+          headers: [
+            { key: "X-Frame-Options", value: "DENY" },
+            { key: "X-Content-Type-Options", value: "nosniff" },
+            { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          ],
+          source: "/:path*",
+        },
+      ]),
+
+    partialPrefetching: true,
+    reactCompiler: true,
+    transpilePackages: ["@repo/app-shell", "@repo/ui"],
   },
-
-  headers: () =>
-    Promise.resolve([
-      {
-        headers: [
-          { key: "X-Frame-Options", value: "DENY" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        ],
-        source: "/:path*",
-      },
-    ]),
-
-  partialPrefetching: true,
-  reactCompiler: true,
-  reactStrictMode: true,
-
-  transpilePackages: ["@repo/ui"],
-};
-
-export default nextConfig;
+);

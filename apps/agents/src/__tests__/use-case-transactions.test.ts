@@ -9,6 +9,7 @@ import { delegateTicket } from "#/ticket/delegation";
 const COMPANY_ID = "co_use_case_tx";
 const CORR_ID = `corr-${COMPANY_ID}`;
 const GUARDED_TABLES = ["activity_log", "memory_fact"] as const;
+const CUSTOMER = { surface: "customer", userId: "cust-1" } as const;
 
 const failInsertsInto = (table: (typeof GUARDED_TABLES)[number]) =>
   db(async (client) => {
@@ -55,7 +56,7 @@ describe("team confirm", () => {
     await expect(
       db((client) =>
         confirmTeam(env, client, {
-          actorId: "cust-1",
+          actor: CUSTOMER,
           companyId: COMPANY_ID,
           templateIds: ["tpl-designer", "tpl-redator"],
         }),
@@ -76,7 +77,7 @@ describe("team confirm", () => {
   it("commits the team, its activity entry and the brief facts together", async () => {
     await db((client) =>
       confirmTeam(env, client, {
-        actorId: "cust-1",
+        actor: CUSTOMER,
         companyId: COMPANY_ID,
         templateIds: ["tpl-designer", "tpl-redator"],
       }),
@@ -105,23 +106,22 @@ describe("hire", () => {
     await expect(
       db((client) =>
         hireMember(env, client, {
-          actorId: "cust-1",
+          actor: CUSTOMER,
           companyId: COMPANY_ID,
-          displayName: undefined,
           templateId: "tpl-designer",
         }),
       ),
     ).rejects.toThrow(/injected failure/v);
 
-    const [instances, correspondent] = await db((client) =>
+    const [instances, members] = await db((client) =>
       Promise.all([
         client.agentInstance.count({ where: { role: "worker" } }),
-        client.teamMember.findFirst({ where: { agentInstanceId: CORR_ID } }),
+        client.teamMember.findMany({ select: { agentInstanceId: true } }),
       ]),
     );
 
     expect(instances).toBe(0);
-    expect(correspondent?.canDelegateTo).toEqual([]);
+    expect(members).toEqual([{ agentInstanceId: CORR_ID }]);
   });
 });
 
@@ -131,8 +131,10 @@ describe("delegation", () => {
     await seedTeam(COMPANY_ID, [{ id: "wkr_tx_designer" }]);
   });
 
-  it("creates the ticket already linked to its Workflow", async () => {
-    vi.spyOn(env.WORKER_JOB, "create").mockResolvedValue({ id: "stub" } as WorkflowInstance);
+  it("creates the ticket and starts its Workflow under the ticket id", async () => {
+    const create = vi
+      .spyOn(env.WORKER_JOB, "create")
+      .mockResolvedValue({ id: "stub" } as WorkflowInstance);
 
     const result = await db((client) =>
       delegateTicket(env, client, {
@@ -145,11 +147,8 @@ describe("delegation", () => {
 
     expect(result).toMatchObject({ status: "queued" });
     const ticket = await db((client) => client.ticket.findFirst());
-    expect(ticket).toMatchObject({
-      agentInstanceId: "wkr_tx_designer",
-      status: "in_progress",
-      workflowId: ticket?.id,
-    });
+    expect(ticket).toMatchObject({ agentInstanceId: "wkr_tx_designer", status: "in_progress" });
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ id: ticket?.id }));
   });
 
   it("removes the ticket when the Workflow cannot be created", async () => {

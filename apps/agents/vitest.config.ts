@@ -1,5 +1,4 @@
 import { builtinModules } from "node:module";
-import path from "node:path";
 
 import { cloudflareTest } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
@@ -20,9 +19,6 @@ export default defineConfig({
       wrangler: { configPath: "./wrangler.jsonc", environment: "test" },
     }),
   ],
-  resolve: {
-    alias: { "@": path.join(import.meta.dirname, "src") },
-  },
   test: {
     deps: {
       optimizer: {

@@ -1,9 +1,22 @@
-import type { CompanyStatus } from "@repo/db/enums";
+import type { CompanyStatus, TicketStatus } from "@repo/db/enums";
+
+/** The two agents a Customer chats with, each mounted at `/agents/<name>/<companyId>`. */
+const CONVERSATION_AGENTS = ["correspondent", "planner"] as const;
+
+type ConversationAgent = (typeof CONVERSATION_AGENTS)[number];
+
+/** A Ticket in one of these keeps its Worker busy. */
+const OPEN_TICKET_STATUSES = [
+  "in_progress",
+  "awaiting_approval",
+] as const satisfies ReadonlyArray<TicketStatus>;
+
+type OpenTicketStatus = (typeof OPEN_TICKET_STATUSES)[number];
 
 type AgentDisplayStatus = "available" | "awaiting_approval" | "paused" | "working";
 
 type OpenTicketSlim = {
-  status: "awaiting_approval" | "in_progress";
+  status: OpenTicketStatus;
   summary: string;
   ticketId: string;
 };
@@ -18,7 +31,7 @@ type TeamMemberBase = {
 };
 
 type TeamMemberNonWorker = TeamMemberBase & {
-  role: "correspondent" | "planner";
+  role: ConversationAgent;
   templateId: null;
   templateName: null;
   workerKind: null;
@@ -61,18 +74,16 @@ type CompanyOverview = {
 
 type CompanyRoster = CompanyOverview & { members: ReadonlyArray<TeamMemberView> };
 
+export { CONVERSATION_AGENTS, OPEN_TICKET_STATUSES };
+
 export type {
   AgentDisplayStatus,
   CompanyOverview,
   CompanyRoster,
+  ConversationAgent,
   HireableTemplate,
   OpenTicketSlim,
-  TeamMemberBase,
-  TeamMemberDetailExtras,
+  OpenTicketStatus,
   TeamMemberDetailView,
-  TeamMemberNonWorker,
   TeamMemberView,
-  TeamMemberWorker,
 };
-
-export type { CompanyStatus } from "@repo/db/enums";

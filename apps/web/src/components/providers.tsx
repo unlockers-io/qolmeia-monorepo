@@ -5,6 +5,13 @@ import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-qu
 import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
+declare module "@tanstack/react-query" {
+  // oxlint-disable-next-line typescript/consistent-type-definitions -- module augmentation requires `interface`, not `type`
+  interface Register {
+    queryMeta: { errorToast?: string };
+  }
+}
+
 const Providers = ({ children }: { children: ReactNode }) => {
   const [client] = useState(() => {
     const lastToastedByQuery = new Map<string, string>();
@@ -20,7 +27,7 @@ const Providers = ({ children }: { children: ReactNode }) => {
         onError: (error, query) => {
           const prefix = query.meta?.errorToast;
 
-          if (typeof prefix !== "string") {
+          if (prefix === undefined) {
             return;
           }
 

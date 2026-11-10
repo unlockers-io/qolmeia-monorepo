@@ -1,19 +1,19 @@
 "use client";
 
+import type { TeamMemberView } from "@repo/worker-api/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { fetchTeam, subscribeTeamEvents, type TeamMemberView } from "@/lib/team";
+import { queryKeys } from "@/lib/query-keys";
+import { fetchTeam, subscribeTeamEvents } from "@/lib/team";
 
 const POLL_INTERVAL_MS = 30_000;
-
-const teamQueryKey = (companyId: string) => ["team", companyId] as const;
 
 type RosterStatus = "error" | "loading" | "ready";
 
 type UseTeamRosterResult = {
   error: Error | null;
-  members: Array<TeamMemberView>;
+  members: ReadonlyArray<TeamMemberView>;
   refetch: () => Promise<void>;
   status: RosterStatus;
 };
@@ -38,7 +38,7 @@ const rosterStatus = (query: { isError: boolean; isPending: boolean }): RosterSt
 const createUseTeamRoster = ({ fetchRoster, subscribeToTeamEvents }: TeamRosterDependencies) => {
   const useTeamRosterWithDependencies = (
     companyId: string,
-    initialData?: Array<TeamMemberView>,
+    initialData?: ReadonlyArray<TeamMemberView>,
   ): UseTeamRosterResult => {
     const queryClient = useQueryClient();
 
@@ -51,8 +51,8 @@ const createUseTeamRoster = ({ fetchRoster, subscribeToTeamEvents }: TeamRosterD
     } = useQuery({
       initialData,
       meta: { errorToast: "Falha ao sincronizar time" },
-      queryFn: fetchRoster,
-      queryKey: teamQueryKey(companyId),
+      queryFn: () => fetchRoster(),
+      queryKey: queryKeys.team(companyId),
       refetchInterval: POLL_INTERVAL_MS,
       refetchOnMount: initialData === undefined,
       refetchOnWindowFocus: true,
@@ -61,7 +61,7 @@ const createUseTeamRoster = ({ fetchRoster, subscribeToTeamEvents }: TeamRosterD
 
     useEffect(() => {
       const unsubscribe = subscribeToTeamEvents(() => {
-        void queryClient.invalidateQueries({ queryKey: teamQueryKey(companyId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.team(companyId) });
       });
 
       return () => {
@@ -89,6 +89,4 @@ const useTeamRoster = createUseTeamRoster({
   subscribeToTeamEvents: subscribeTeamEvents,
 });
 
-export { createUseTeamRoster, teamQueryKey, useTeamRoster };
-
-export type { TeamRosterDependencies };
+export { createUseTeamRoster, useTeamRoster };

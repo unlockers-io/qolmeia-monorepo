@@ -1,10 +1,11 @@
 "use client";
 
+import { describeRequestError } from "@repo/worker-api";
+import type { TeamMemberView } from "@repo/worker-api/contracts";
 import Link from "next/link";
 import { Skeleton } from "skullet/react";
 
 import { AgentCard } from "@/components/agent-card";
-import type { TeamMemberView } from "@/lib/team";
 import { useTeamRoster } from "@/lib/use-team-roster";
 
 const SAMPLE_TEAM: ReadonlyArray<TeamMemberView> = [
@@ -63,7 +64,11 @@ const TeamSidebarView = ({ error, members }: TeamSidebarViewProps) => (
     className="hidden w-75 flex-col gap-2.5 border-l border-border bg-card p-4.5 lg:flex"
   >
     <h2 className="mb-0.5 text-sm font-semibold">Seu Time</h2>
-    {error && <p className="text-xs text-destructive">Falha ao carregar o time: {error.message}</p>}
+    {error && (
+      <p className="text-xs text-destructive">
+        {describeRequestError(error, "Falha ao carregar o Time.")}
+      </p>
+    )}
     <Skeleton data={members} label="Carregando o time" sample={SAMPLE_TEAM}>
       {(list) => (
         <ul className="flex flex-col gap-2.5">
@@ -94,4 +99,4 @@ const TeamSidebar = ({ companyId }: TeamSidebarProps) => {
   return <TeamSidebarView error={error} members={status === "loading" ? null : members} />;
 };
 
-export { SAMPLE_TEAM, TeamSidebar, TeamSidebarView };
+export { TeamSidebar, TeamSidebarView };

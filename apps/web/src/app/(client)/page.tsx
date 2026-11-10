@@ -1,13 +1,15 @@
-import { ApiError } from "@repo/worker-api";
+import { apiGetServer } from "@repo/app-shell/server-api";
+import { CompanyStatus } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
-import { Chat, ChatLoading } from "@/components/chat";
+import { Chat, ChatSkeleton } from "@/components/chat";
 import { OnboardingActions } from "@/components/onboarding-actions";
 import { TeamSidebar, TeamSidebarView } from "@/components/team-sidebar";
-import { apiGetServer } from "@/lib/api-server";
 import { requireCustomer } from "@/lib/auth-helpers";
+import { fetchCompany } from "@/lib/company";
+import { fetchCatalogue } from "@/lib/team";
 
 export const metadata: Metadata = {
   title: "Chat",
@@ -15,31 +17,6 @@ export const metadata: Metadata = {
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
-
-type CompanyResponse = {
-  company: { id: string; slug: string; status: string };
-};
-
-type TemplatesResponse = {
-  templates: ReadonlyArray<{
-    description: string;
-    displayName: string;
-    id: string;
-    workerKind: string;
-  }>;
-};
-
-const getUnlessMissing = async <T,>(path: string): Promise<T | null> => {
-  try {
-    return await apiGetServer<T>(path);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return null;
-    }
-
-    throw error;
-  }
-};
 
 const ActiveChat = ({ chat, sidebar }: { chat: ReactNode; sidebar: ReactNode }) => (
   <div className="flex min-h-0 flex-1 bg-background" data-chat>
@@ -52,18 +29,17 @@ const ChatContent = async () => {
   const me = await requireCustomer();
   const companyId = me.org.id;
 
-  const companyRes = await getUnlessMissing<CompanyResponse>("/api/me/company");
-  const status = companyRes?.company.status ?? "onboarding";
+  const { company } = await fetchCompany(apiGetServer);
 
-  if (status === "onboarding") {
-    const templatesRes = await getUnlessMissing<TemplatesResponse>("/api/me/templates");
+  if (company.status === CompanyStatus.onboarding) {
+    const templates = await fetchCatalogue(apiGetServer);
 
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-background" data-chat>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <Chat agent="planner" companyId={companyId} />
         </div>
-        <OnboardingActions companyId={companyId} templates={templatesRes?.templates ?? []} />
+        <OnboardingActions templates={templates} />
       </div>
     );
   }
@@ -80,7 +56,7 @@ const ChatPage = () => (
   <Suspense
     fallback={
       <ActiveChat
-        chat={<ChatLoading agent="correspondent" />}
+        chat={<ChatSkeleton agent="correspondent" />}
         sidebar={<TeamSidebarView error={null} members={null} />}
       />
     }

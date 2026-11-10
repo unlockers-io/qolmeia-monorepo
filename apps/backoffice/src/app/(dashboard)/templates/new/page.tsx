@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { SkeletonSuspense } from "skullet/react";
+import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
 import { TemplateForm } from "@/components/template-form";
 import { requireOperator } from "@/lib/auth-helpers";
@@ -15,10 +16,17 @@ const NewTemplateContent = async () => {
   return <TemplateForm />;
 };
 
+const NewTemplateSkeleton = () => (
+  <div aria-hidden className="flex flex-col gap-6">
+    <SkeletonBox height={32} width={192} />
+    <SkeletonBox height={256} width="100%" />
+  </div>
+);
+
 const NewTemplatePage = () => (
-  <SkeletonSuspense label="Carregando formulário" skeleton={<TemplateForm />}>
+  <Suspense fallback={<NewTemplateSkeleton />}>
     <NewTemplateContent />
-  </SkeletonSuspense>
+  </Suspense>
 );
 
 export default NewTemplatePage;

@@ -1,5 +1,8 @@
 "use client";
 
+import type { FlueConversationMessage } from "@flue/sdk";
+import { agentAvatarClass, agentInitials, agentRoleLabel } from "@repo/app-shell/agent-avatar";
+import { AGENT_STATUS } from "@repo/app-shell/agent-status";
 import { Marker, MarkerContent, MarkerIcon } from "@repo/ui/components/marker";
 import { Message, MessageContent } from "@repo/ui/components/message";
 import {
@@ -11,27 +14,24 @@ import {
   MessageScrollerViewport,
 } from "@repo/ui/components/message-scroller";
 import { AssetImage } from "@repo/ui/compositions/asset-image";
+import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import { StatusPill } from "@repo/ui/compositions/status-pill";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import { agentAvatarClass } from "@repo/ui/lib/agent-avatar";
 import { cn } from "@repo/ui/lib/utils";
+import type { ConversationAgent, SkillId } from "@repo/worker-api/contracts";
 import { ArrowDown, ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "lucide-react";
-import type { ReactNode } from "react";
 import { Skeleton } from "skullet/react";
 
 import { ChatComposer } from "@/components/chat-composer";
-import type { ChatMessage, UseFlueChatResult } from "@/lib/use-flue-chat";
+import type { UseFlueChatResult } from "@/lib/use-flue-chat";
 import { useFlueChat } from "@/lib/use-flue-chat";
 
 type ChatProps = {
-  agent?: "correspondent" | "planner";
+  agent: ConversationAgent;
   companyId: string;
 };
-
-const PLANNER_KICKOFF =
-  "O cliente acabou de abrir o chat de onboarding. Cumprimente-o de forma calorosa e breve, diga em uma frase que você vai fazer algumas perguntas para entender o negócio dele, e já faça a primeira pergunta da entrevista.";
 
 const PLANNER_GREETING =
   "Oi! Vou fazer algumas perguntas para conhecer seu negócio e montar o time certo para você. Para começar: o que sua empresa faz e quem ela atende?";
@@ -47,45 +47,24 @@ const TOOL_ACTIVITY_LABELS = {
   rememberFact: "Anotando na memória…",
   saveAsset: "Salvando na biblioteca…",
   webSearch: "Pesquisando na web…",
-} satisfies Record<string, string>;
+} satisfies Partial<Record<SkillId, string>>;
 
 const toolActivityLabelByName = new Map<string, string>(Object.entries(TOOL_ACTIVITY_LABELS));
 
 const toolActivityLabel = (toolName: string): string =>
   toolActivityLabelByName.get(toolName) ?? "Trabalhando…";
 
-const isKickoffMessage = (message: ChatMessage): boolean =>
-  message.role === "user" &&
-  message.parts.some((part) => part.type === "text" && part.text === PLANNER_KICKOFF);
+const isChatMessage = (message: FlueConversationMessage): boolean => message.display === "visible";
 
-const isChatMessage = (message: ChatMessage): boolean => message.display === "visible";
+const hasVisibleContent = (message: FlueConversationMessage): boolean =>
+  message.parts.some(
+    (part) =>
+      part.type === "file" ||
+      (part.type === "text" && part.text.length > 0) ||
+      (part.type === "dynamic-tool" && part.state === "input-available"),
+  );
 
-const hasVisibleContent = (message: ChatMessage): boolean =>
-  message.parts.some((part) => {
-    switch (part.type) {
-      case "dynamic-tool": {
-        return part.state === "input-available";
-      }
-
-      case "file": {
-        return true;
-      }
-
-      case "text": {
-        return part.text.length > 0;
-      }
-
-      case "reasoning": {
-        return false;
-      }
-
-      default: {
-        return false;
-      }
-    }
-  });
-
-const MessageBubble = ({ message }: { message: ChatMessage }) => {
+const MessageBubble = ({ message }: { message: FlueConversationMessage }) => {
   const isUser = message.role === "user";
 
   return (
@@ -179,23 +158,7 @@ const MessageBubble = ({ message }: { message: ChatMessage }) => {
   );
 };
 
-type ChatEmptyStateProps = {
-  description: string;
-  icon: ReactNode;
-  title: string;
-};
-
-const ChatEmptyState = ({ description, icon, title }: ChatEmptyStateProps) => (
-  <div className="flex size-full flex-col items-center justify-center gap-3 p-8 text-center">
-    <div className="text-muted-foreground">{icon}</div>
-    <div className="space-y-1">
-      <h3 className="text-sm font-medium">{title}</h3>
-      <p className="max-w-md text-sm text-muted-foreground">{description}</p>
-    </div>
-  </div>
-);
-
-const AssistantAvatar = ({ agent }: { agent: "correspondent" | "planner" }) => (
+const AssistantAvatar = ({ agent }: { agent: ConversationAgent }) => (
   <div
     aria-hidden
     className={cn(
@@ -203,7 +166,7 @@ const AssistantAvatar = ({ agent }: { agent: "correspondent" | "planner" }) => (
       agentAvatarClass(agent, null),
     )}
   >
-    {agent === "planner" ? "P" : "C"}
+    {agentInitials(agentRoleLabel(agent, null))}
   </div>
 );
 
@@ -220,56 +183,44 @@ const PlannerGreeting = ({ scrollAnchor }: { scrollAnchor: boolean }) => (
   </MessageScrollerItem>
 );
 
-type ConversationProps = {
-  agent: "correspondent" | "planner";
-  messages: ReadonlyArray<ChatMessage>;
-};
-
-const Conversation = ({ agent, messages }: ConversationProps) => {
-  const visibleMessages = messages.filter(
-    (message) => !isKickoffMessage(message) && isChatMessage(message) && hasVisibleContent(message),
-  );
-
-  const showPlannerGreeting =
-    agent === "planner" && !messages.some((message) => isKickoffMessage(message));
-
-  const lastIndex = visibleMessages.length - 1;
-
-  if (!showPlannerGreeting && visibleMessages.length === 0) {
-    return (
-      <ChatEmptyState
-        description="Os agentes da Qolmeia respondem em segundos."
-        icon={<MessageSquare aria-hidden className="size-10" />}
-        title="Comece a conversa"
-      />
-    );
+const ChatHeader = ({ agent, thinking }: { agent: ConversationAgent; thinking: boolean }) => {
+  if (agent !== "correspondent") {
+    return <h1 className="sr-only">Conversa com o Planejador</h1>;
   }
 
+  const status = thinking
+    ? { ...AGENT_STATUS.working, label: "Respondendo…" }
+    : AGENT_STATUS.available;
+
   return (
-    <>
-      <Marker variant="separator">
-        <MarkerContent>Início da conversa</MarkerContent>
-      </Marker>
-      {showPlannerGreeting ? <PlannerGreeting scrollAnchor={visibleMessages.length === 0} /> : null}
-      {visibleMessages.map((message, index) => (
-        <MessageScrollerItem
-          key={message.id}
-          messageId={message.id}
-          scrollAnchor={index === lastIndex}
-        >
-          <Message align={message.role === "user" ? "end" : "start"}>
-            {message.role === "user" ? null : <AssistantAvatar agent={agent} />}
-            <MessageContent>
-              <MessageBubble message={message} />
-            </MessageContent>
-          </Message>
-        </MessageScrollerItem>
-      ))}
-    </>
+    <header className="flex h-13.5 flex-none items-center gap-3 border-b border-border bg-card px-6">
+      <span
+        aria-hidden
+        className={cn(
+          "flex size-8 flex-none items-center justify-center rounded-lg text-(length:--text-label) font-bold text-white",
+          agentAvatarClass(agent, null),
+        )}
+      >
+        {agentInitials(agentRoleLabel(agent, null))}
+      </span>
+      <div className="min-w-0">
+        <h1 className="font-display text-sm font-bold tracking-tight text-foreground">
+          {agentRoleLabel(agent, null)}
+        </h1>
+        <p className="text-xs text-muted-foreground">Seu ponto de contato</p>
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        <StatusPill label={status.label} pulse={status.pulse} tone={status.tone} />
+      </div>
+    </header>
   );
 };
 
-const sampleMessage = (id: string, role: "assistant" | "user", text: string): ChatMessage => ({
+const sampleMessage = (
+  id: string,
+  role: "assistant" | "user",
+  text: string,
+): FlueConversationMessage => ({
   display: "visible",
   id,
   parts: [{ state: "done", text, type: "text" }],
@@ -277,7 +228,7 @@ const sampleMessage = (id: string, role: "assistant" | "user", text: string): Ch
   role,
 });
 
-const SAMPLE_MESSAGES: ReadonlyArray<ChatMessage> = [
+const SAMPLE_MESSAGES: ReadonlyArray<FlueConversationMessage> = [
   sampleMessage(
     "sample-1",
     "user",
@@ -296,106 +247,124 @@ const SAMPLE_MESSAGES: ReadonlyArray<ChatMessage> = [
   ),
 ];
 
+const ChatSkeleton = ({ agent }: Pick<ChatProps, "agent">) => (
+  <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <ChatHeader agent={agent} thinking={false} />
+    <div className="min-h-0 flex-1 overflow-hidden p-4">
+      <Skeleton label="Carregando conversa" loading>
+        <div className="flex flex-col gap-6">
+          {SAMPLE_MESSAGES.map((message) => (
+            <Message align={message.role === "user" ? "end" : "start"} key={message.id}>
+              {message.role === "user" ? null : <AssistantAvatar agent={agent} />}
+              <MessageContent>
+                <MessageBubble message={message} />
+              </MessageContent>
+            </Message>
+          ))}
+        </div>
+      </Skeleton>
+    </div>
+    <div className="flex-none border-t border-border bg-card px-6 py-4">
+      <div className="h-16 rounded-xl border border-input bg-background" />
+    </div>
+  </div>
+);
+
 type ChatViewProps = Pick<ChatProps, "agent"> & {
   chat: UseFlueChatResult;
 };
 
 const ChatView = ({
-  agent: agentName = "correspondent",
+  agent: agentName,
   chat: { historyReady, messages, sendMessage, status },
 }: ChatViewProps) => {
+  const visibleMessages = messages.filter(
+    (message) => isChatMessage(message) && hasVisibleContent(message),
+  );
+
+  const showPlannerGreeting = agentName === "planner";
+
+  const hasConversation = showPlannerGreeting || visibleMessages.length > 0;
+
   const isThinking = status === "submitted" || status === "streaming";
-  const isCorrespondent = agentName === "correspondent";
+  const lastIndex = visibleMessages.length - 1;
+
+  if (!historyReady) {
+    return <ChatSkeleton agent={agentName} />;
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
-      {isCorrespondent ? (
-        <header className="flex h-13.5 flex-none items-center gap-3 border-b border-border bg-card px-6">
-          <span
-            aria-hidden
-            className="flex size-8 flex-none items-center justify-center rounded-lg bg-avatar-1 text-(length:--text-label) font-bold text-white"
-          >
-            C
-          </span>
-          <div className="min-w-0">
-            <h1 className="font-display text-sm font-bold tracking-tight text-foreground">
-              Correspondente
-            </h1>
-            <p className="text-xs text-muted-foreground">Seu ponto de contato</p>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <StatusPill
-              label={isThinking ? "Respondendo…" : "Disponível"}
-              pulse={isThinking}
-              tone={isThinking ? "info" : "success"}
-            />
-          </div>
-        </header>
-      ) : (
-        <h1 className="sr-only">Conversa com o Planejador</h1>
-      )}
+      <ChatHeader agent={agentName} thinking={isThinking} />
 
-      {historyReady ? (
-        <MessageScrollerProvider autoScroll defaultScrollPosition="end">
-          <MessageScroller className="flex-1">
-            <MessageScrollerViewport aria-label="Mensagens da conversa">
-              <MessageScrollerContent className="p-4">
-                <Conversation agent={agentName} messages={messages} />
-
-                {isThinking ? (
-                  <Marker className="pl-9">
-                    <LoadingSpinner className="size-4" />
-                    <MarkerContent>Um agente está respondendo…</MarkerContent>
+      <MessageScrollerProvider autoScroll defaultScrollPosition="end">
+        <MessageScroller className="flex-1">
+          <MessageScrollerViewport aria-label="Mensagens da conversa">
+            <MessageScrollerContent className="p-4">
+              {hasConversation ? (
+                <>
+                  <Marker variant="separator">
+                    <MarkerContent>Início da conversa</MarkerContent>
                   </Marker>
-                ) : null}
+                  {showPlannerGreeting ? (
+                    <PlannerGreeting scrollAnchor={visibleMessages.length === 0} />
+                  ) : null}
+                  {visibleMessages.map((message, index) => (
+                    <MessageScrollerItem
+                      key={message.id}
+                      messageId={message.id}
+                      scrollAnchor={index === lastIndex}
+                    >
+                      <Message align={message.role === "user" ? "end" : "start"}>
+                        {message.role === "user" ? null : <AssistantAvatar agent={agentName} />}
+                        <MessageContent>
+                          <MessageBubble message={message} />
+                        </MessageContent>
+                      </Message>
+                    </MessageScrollerItem>
+                  ))}
+                </>
+              ) : (
+                <EmptyState
+                  className="size-full"
+                  description="Os agentes da Qolmeia respondem em segundos."
+                  icon={<MessageSquare aria-hidden />}
+                  title="Comece a conversa"
+                />
+              )}
 
-                {status === "error" ? (
-                  <Marker className="pl-9">
-                    <span className="contents text-destructive">
-                      <MarkerIcon>
-                        <TriangleAlert aria-hidden />
-                      </MarkerIcon>
-                      <MarkerContent>Não foi possível enviar. Tente novamente.</MarkerContent>
-                    </span>
-                  </Marker>
-                ) : null}
-              </MessageScrollerContent>
-            </MessageScrollerViewport>
-            <MessageScrollerButton>
-              <ArrowDown aria-hidden />
-              <span className="sr-only">Ir para a mensagem mais recente</span>
-            </MessageScrollerButton>
-          </MessageScroller>
-        </MessageScrollerProvider>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-hidden p-4">
-          <MessageScrollerProvider>
-            <Skeleton label="Carregando conversa" loading>
-              <div className="flex flex-col gap-6">
-                <Conversation agent={agentName} messages={SAMPLE_MESSAGES} />
-              </div>
-            </Skeleton>
-          </MessageScrollerProvider>
-        </div>
-      )}
+              {isThinking ? (
+                <Marker className="pl-9">
+                  <LoadingSpinner className="size-4" />
+                  <MarkerContent>Um agente está respondendo…</MarkerContent>
+                </Marker>
+              ) : null}
 
-      <ChatComposer disabled={isThinking || !historyReady} onSend={sendMessage} status={status} />
+              {status === "error" ? (
+                <Marker className="pl-9">
+                  <span className="contents text-destructive">
+                    <MarkerIcon>
+                      <TriangleAlert aria-hidden />
+                    </MarkerIcon>
+                    <MarkerContent>Não foi possível enviar. Tente novamente.</MarkerContent>
+                  </span>
+                </Marker>
+              ) : null}
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+          <MessageScrollerButton>
+            <ArrowDown aria-hidden />
+            <span className="sr-only">Ir para a mensagem mais recente</span>
+          </MessageScrollerButton>
+        </MessageScroller>
+      </MessageScrollerProvider>
+
+      <ChatComposer onSend={sendMessage} status={status} />
     </div>
   );
 };
 
-const LOADING_CHAT: UseFlueChatResult = {
-  historyReady: false,
-  messages: [],
-  sendMessage: () => Promise.resolve(),
-  status: "ready",
-};
-
-const ChatLoading = ({ agent }: Pick<ChatProps, "agent">) => (
-  <ChatView agent={agent} chat={LOADING_CHAT} />
-);
-
-const ChatClient = ({ agent = "correspondent", companyId }: ChatProps) => {
+const ChatClient = ({ agent, companyId }: ChatProps) => {
   const chat = useFlueChat({ agent, companyId });
 
   return <ChatView agent={agent} chat={chat} />;
@@ -405,12 +374,12 @@ const Chat = (props: ChatProps) => {
   const ready = useClientReady();
 
   if (!ready) {
-    return <ChatLoading agent={props.agent} />;
+    return <ChatSkeleton agent={props.agent} />;
   }
 
   return <ChatClient {...props} />;
 };
 
-export { Chat, ChatLoading, ChatView, PLANNER_GREETING, PLANNER_KICKOFF };
+export { Chat, ChatSkeleton, ChatView, PLANNER_GREETING };
 
-export type { ChatProps, ChatViewProps };
+export type { ChatProps };

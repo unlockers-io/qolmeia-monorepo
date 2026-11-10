@@ -2,21 +2,21 @@
 
 import { Button } from "@repo/ui/components/button";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import type { ActivityEntry, ActivityResponse } from "@repo/worker-api/contracts";
+import { apiGet, describeRequestError } from "@repo/worker-api";
+import type { ActivityCategory, ActivityEntry } from "@repo/worker-api/contracts";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { ActivityRow } from "@/components/activity-row";
-import { apiGet, describeRequestError } from "@/lib/api-client";
+import { ACTIVITY_PAGE_SIZE, getActivity } from "@/lib/backoffice-api";
 
 type ActivityListProps = {
-  category?: string;
+  category: ActivityCategory | undefined;
   initial: ReadonlyArray<ActivityEntry>;
   now?: Date;
-  pageSize?: number;
 };
 
-const ActivityList = ({ category, initial, now, pageSize = 50 }: ActivityListProps) => {
+const ActivityList = ({ category, initial, now }: ActivityListProps) => {
   const [fetched, setFetched] = useState<ReadonlyArray<ActivityEntry>>([]);
   const [fetchExhausted, setFetchExhausted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ const ActivityList = ({ category, initial, now, pageSize = 50 }: ActivityListPro
 
   const seen = new Set(initial.map((item) => item.id));
   const rows = [...initial, ...fetched.filter((item) => !seen.has(item.id))];
-  const exhausted = fetchExhausted || initial.length < pageSize;
+  const exhausted = fetchExhausted || initial.length < ACTIVITY_PAGE_SIZE;
 
   const handleLoadMore = async () => {
     if (exhausted || loading) {
@@ -34,22 +34,16 @@ const ActivityList = ({ category, initial, now, pageSize = 50 }: ActivityListPro
     setLoading(true);
 
     try {
-      const earliest = rows.at(-1)?.createdAt;
-      const params = new URLSearchParams({ limit: String(pageSize) });
+      const next = await getActivity(apiGet, {
+        before: rows.at(-1)?.createdAt,
+        category,
+        limit: ACTIVITY_PAGE_SIZE,
+      });
 
-      if (earliest !== undefined) {
-        params.set("before", String(earliest));
-      }
-
-      if (category !== undefined && category !== "") {
-        params.set("category", category);
-      }
-
-      const next = await apiGet<ActivityResponse>(`/activity?${params.toString()}`);
       const fresh = next.items.filter((item) => !rows.some((existing) => existing.id === item.id));
       setFetched((prev) => [...prev, ...fresh]);
 
-      if (fresh.length < pageSize) {
+      if (fresh.length < ACTIVITY_PAGE_SIZE) {
         setFetchExhausted(true);
       }
     } catch (error) {

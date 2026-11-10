@@ -1,5 +1,6 @@
 "use client";
 
+import { maxLengthHint } from "@repo/app-shell/form-limits";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
@@ -9,13 +10,13 @@ import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import { ACTION_TYPES, type Template } from "@repo/worker-api/contracts";
-import { useId } from "react";
+import { ACTION_TYPES, TEMPLATE_MAX_LENGTH, type Template } from "@repo/worker-api/contracts";
 
 import { BackLink } from "@/components/back-link";
+import { TOGGLE_LABEL } from "@/lib/use-toggle-template-status";
 
 import { TemplateFormSkillPicker } from "./template-form-skill-picker";
-import { useTemplateForm } from "./use-template-form";
+import { type FieldKey, POLICY_LIST, useTemplateForm } from "./use-template-form";
 
 type TemplateFormProps = {
   initial?: Template;
@@ -24,8 +25,64 @@ type TemplateFormProps = {
 const fieldError = (message: string | undefined): [string] | undefined =>
   message !== undefined && message !== "" ? [message] : undefined;
 
+type TemplateFieldProps = {
+  autoComplete?: "off";
+  busy: boolean;
+  description: string;
+  error: string | undefined;
+  label: string;
+  multiline?: boolean;
+  name: FieldKey;
+  onChange: (name: FieldKey, value: string) => void;
+  placeholder?: string;
+  spellCheck?: false;
+  value: string;
+};
+
+const TemplateField = ({
+  autoComplete,
+  busy,
+  description,
+  error,
+  label,
+  multiline = false,
+  name,
+  onChange,
+  placeholder,
+  spellCheck,
+  value,
+}: TemplateFieldProps) => {
+  const control = {
+    "aria-describedby":
+      error === undefined ? `${name}-description` : `${name}-description ${name}-error`,
+    "aria-invalid": error !== undefined,
+    disabled: busy,
+    id: name,
+    name,
+    onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      onChange(name, event.target.value);
+    },
+    spellCheck,
+    value,
+  };
+
+  return (
+    <Field data-invalid={error !== undefined || undefined}>
+      <FieldLabel htmlFor={name}>{label}</FieldLabel>
+      {multiline ? (
+        <div className="font-mono">
+          <Textarea {...control} />
+        </div>
+      ) : (
+        <Input {...control} autoComplete={autoComplete} placeholder={placeholder} />
+      )}
+      <FieldDescription id={`${name}-description`}>{description}</FieldDescription>
+      <FormFieldError errors={fieldError(error)} id={`${name}-error`} />
+    </Field>
+  );
+};
+
 const TemplateForm = ({ initial }: TemplateFormProps) => {
-  const policiesFieldId = useId();
   const ready = useClientReady();
 
   const {
@@ -59,7 +116,7 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
             type="button"
             variant="outline"
           >
-            {initial.status === "retired" ? "Reativar" : "Desativar"}
+            {TOGGLE_LABEL[initial.status]}
           </Button>
         )}
       </header>
@@ -74,128 +131,71 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
         <Card>
           <CardContent className="flex flex-col gap-5">
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="displayName">Nome de exibição</FieldLabel>
-                <Input
-                  aria-describedby={
-                    errors.displayName === undefined ? undefined : "displayName-error"
-                  }
-                  aria-invalid={errors.displayName !== undefined}
-                  disabled={busy}
-                  id="displayName"
-                  name="displayName"
-                  onChange={(e) => {
-                    setField("displayName", e.target.value);
-                  }}
-                  value={values.displayName}
-                />
-                <FormFieldError errors={fieldError(errors.displayName)} id="displayName-error" />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="workerKind">Tipo (worker kind)</FieldLabel>
-                <Input
-                  aria-describedby={
-                    errors.workerKind === undefined ? undefined : "workerKind-error"
-                  }
-                  aria-invalid={errors.workerKind !== undefined}
-                  autoComplete="off"
-                  disabled={busy}
-                  id="workerKind"
-                  name="workerKind"
-                  onChange={(e) => {
-                    setField("workerKind", e.target.value);
-                  }}
-                  placeholder="seo-researcher"
-                  value={values.workerKind}
-                />
-                <FormFieldError errors={fieldError(errors.workerKind)} id="workerKind-error" />
-              </Field>
+              <TemplateField
+                busy={busy}
+                description={maxLengthHint(TEMPLATE_MAX_LENGTH.displayName)}
+                error={errors.displayName}
+                label="Nome de exibição"
+                name="displayName"
+                onChange={setField}
+                value={values.displayName}
+              />
+              <TemplateField
+                autoComplete="off"
+                busy={busy}
+                description={maxLengthHint(TEMPLATE_MAX_LENGTH.workerKind)}
+                error={errors.workerKind}
+                label="Tipo (worker kind)"
+                name="workerKind"
+                onChange={setField}
+                placeholder="seo-researcher"
+                value={values.workerKind}
+              />
             </div>
 
-            <Field>
-              <FieldLabel htmlFor="description">Descrição</FieldLabel>
-              <Input
-                aria-describedby={
-                  errors.description === undefined ? undefined : "description-error"
-                }
-                aria-invalid={errors.description !== undefined}
-                disabled={busy}
-                id="description"
-                name="description"
-                onChange={(e) => {
-                  setField("description", e.target.value);
-                }}
-                value={values.description}
-              />
-              <FormFieldError errors={fieldError(errors.description)} id="description-error" />
-            </Field>
+            <TemplateField
+              busy={busy}
+              description={maxLengthHint(TEMPLATE_MAX_LENGTH.description)}
+              error={errors.description}
+              label="Descrição"
+              name="description"
+              onChange={setField}
+              value={values.description}
+            />
 
-            <Field>
-              <FieldLabel htmlFor="systemPrompt">Prompt do sistema</FieldLabel>
-              <div className="font-mono">
-                <Textarea
-                  aria-describedby={
-                    errors.systemPrompt === undefined ? undefined : "systemPrompt-error"
-                  }
-                  aria-invalid={errors.systemPrompt !== undefined}
-                  disabled={busy}
-                  id="systemPrompt"
-                  name="systemPrompt"
-                  onChange={(e) => {
-                    setField("systemPrompt", e.target.value);
-                  }}
-                  value={values.systemPrompt}
-                />
-              </div>
-              <FormFieldError errors={fieldError(errors.systemPrompt)} id="systemPrompt-error" />
-            </Field>
+            <TemplateField
+              busy={busy}
+              description={maxLengthHint(TEMPLATE_MAX_LENGTH.systemPrompt)}
+              error={errors.systemPrompt}
+              label="Prompt do sistema"
+              multiline
+              name="systemPrompt"
+              onChange={setField}
+              value={values.systemPrompt}
+            />
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="model">Modelo (LLM)</FieldLabel>
-                <Input
-                  aria-describedby={errors.model === undefined ? undefined : "model-error"}
-                  aria-invalid={errors.model !== undefined}
-                  autoComplete="off"
-                  disabled={busy}
-                  id="model"
-                  name="model"
-                  onChange={(e) => {
-                    setField("model", e.target.value);
-                  }}
-                  placeholder="openai/gpt-6.1-sol"
-                  value={values.model}
-                />
-                <FormFieldError errors={fieldError(errors.model)} id="model-error" />
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="defaultActionType">Tipo de ação padrão</FieldLabel>
-                <Input
-                  aria-describedby={
-                    errors.defaultActionType === undefined
-                      ? "defaultActionType-description"
-                      : "defaultActionType-description defaultActionType-error"
-                  }
-                  aria-invalid={errors.defaultActionType !== undefined}
-                  autoComplete="off"
-                  disabled={busy}
-                  id="defaultActionType"
-                  name="defaultActionType"
-                  onChange={(e) => {
-                    setField("defaultActionType", e.target.value);
-                  }}
-                  value={values.defaultActionType}
-                />
-                <FieldDescription id="defaultActionType-description">
-                  Um destes: {ACTION_TYPES.join(", ")}.
-                </FieldDescription>
-                <FormFieldError
-                  errors={fieldError(errors.defaultActionType)}
-                  id="defaultActionType-error"
-                />
-              </Field>
+              <TemplateField
+                autoComplete="off"
+                busy={busy}
+                description={maxLengthHint(TEMPLATE_MAX_LENGTH.model)}
+                error={errors.model}
+                label="Modelo (LLM)"
+                name="model"
+                onChange={setField}
+                placeholder="openai/gpt-6.1-sol"
+                value={values.model}
+              />
+              <TemplateField
+                autoComplete="off"
+                busy={busy}
+                description={`Um destes: ${ACTION_TYPES.join(", ")}.`}
+                error={errors.defaultActionType}
+                label="Tipo de ação padrão"
+                name="defaultActionType"
+                onChange={setField}
+                value={values.defaultActionType}
+              />
             </div>
           </CardContent>
         </Card>
@@ -219,35 +219,17 @@ const TemplateForm = ({ initial }: TemplateFormProps) => {
 
         <Card>
           <CardContent>
-            <Field>
-              <FieldLabel htmlFor={policiesFieldId}>Políticas padrão (JSON)</FieldLabel>
-              <FieldDescription id={`${policiesFieldId}-description`}>
-                Objeto {`{ tipoDeAção: política }`}, com política require_approval, notify_only ou
-                auto_execute. Vazio = nenhuma política.
-              </FieldDescription>
-              <div className="font-mono">
-                <Textarea
-                  aria-describedby={
-                    errors.defaultPolicies === undefined
-                      ? `${policiesFieldId}-description`
-                      : `${policiesFieldId}-description ${policiesFieldId}-error`
-                  }
-                  aria-invalid={errors.defaultPolicies !== undefined}
-                  disabled={busy}
-                  id={policiesFieldId}
-                  name="defaultPolicies"
-                  onChange={(e) => {
-                    setField("defaultPolicies", e.target.value);
-                  }}
-                  spellCheck={false}
-                  value={values.defaultPolicies}
-                />
-              </div>
-              <FormFieldError
-                errors={fieldError(errors.defaultPolicies)}
-                id={`${policiesFieldId}-error`}
-              />
-            </Field>
+            <TemplateField
+              busy={busy}
+              description={`Objeto { tipoDeAção: política }, com política ${POLICY_LIST}. Vazio = nenhuma política.`}
+              error={errors.defaultPolicies}
+              label="Políticas padrão (JSON)"
+              multiline
+              name="defaultPolicies"
+              onChange={setField}
+              spellCheck={false}
+              value={values.defaultPolicies}
+            />
           </CardContent>
         </Card>
 

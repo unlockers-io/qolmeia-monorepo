@@ -1,10 +1,15 @@
 import type { Prisma, TicketStatus } from "@repo/db/worker";
-import type { ActionPolicy, ActionType, DecisionOutcome } from "@repo/worker-api/contracts";
+import type {
+  ActionPolicy,
+  ActionType,
+  DecisionOutcome,
+  ProposedOf,
+} from "@repo/worker-api/contracts";
 
 import { actionIdFor, canRevise, MAX_REVISIONS } from "#/action/action";
 import { recordActivity, type ActivityRecord } from "#/activity/log";
 import type { PrismaClient } from "#/lib/db";
-import type { JsonRecord } from "#/lib/records";
+import { emitTeamEvent, type TeamEventsEnv } from "#/team/events";
 
 type Verdict = "end" | "execute" | "revise";
 
@@ -29,28 +34,52 @@ const transitionTicket = async (
   await recordActivity(tx, transition.activity);
 };
 
-const proposeAction = (
+type ProposalInput = {
+  actionType: ActionType;
+  companyId: string;
+  feedback: string | null;
+  policy: ActionPolicy;
+  proposed: ProposedOf<ActionType>;
+  round: number;
+  summary: string;
+  ticketId: string;
+};
+
+const proposalActivity = (input: ProposalInput, id: string): ActivityRecord =>
+  input.round > 0
+    ? {
+        companyId: input.companyId,
+        payload: { feedback: input.feedback, revision: input.round },
+        refId: id,
+        refType: "action",
+        summary: `Entrega revisada (revisão ${input.round}) aguardando decisão.`,
+        type: "ACTION_REVISED",
+      }
+    : {
+        companyId: input.companyId,
+        payload: { actionId: id, summary: input.summary },
+        refId: id,
+        refType: "action",
+        summary: "Ação proposta aguardando decisão.",
+        type: "ACTION_PROPOSED",
+      };
+
+/** A gated Action waits for a Decision; any other clears to execute at once. */
+const proposeAction = async (
+  env: TeamEventsEnv,
   db: PrismaClient,
-  input: {
-    actionType: ActionType;
-    companyId: string;
-    feedback: string | null;
-    policy: ActionPolicy;
-    proposed: JsonRecord;
-    round: number;
-    summary: string;
-    ticketId: string;
-  },
-): Promise<{ id: string }> =>
-  db.$transaction(async (tx) => {
-    const id = actionIdFor(input.ticketId, input.round);
+  input: ProposalInput,
+): Promise<{ id: string }> => {
+  const id = actionIdFor(input.ticketId, input.round);
+  const gated = input.policy === "require_approval";
+
+  const created = await db.$transaction(async (tx) => {
     const existing = await tx.action.findUnique({ select: { id: true }, where: { id } });
 
     if (existing) {
-      return existing;
+      return false;
     }
 
-    const gated = input.policy === "require_approval";
     await tx.action.create({
       data: {
         actionType: input.actionType,
@@ -65,33 +94,23 @@ const proposeAction = (
 
     if (gated) {
       await transitionTicket(tx, {
-        activity:
-          input.round > 0
-            ? {
-                companyId: input.companyId,
-                payload: { feedback: input.feedback, revision: input.round },
-                refId: id,
-                refType: "action",
-                summary: `Entrega revisada (revisão ${input.round}) aguardando decisão.`,
-                type: "ACTION_REVISED",
-              }
-            : {
-                companyId: input.companyId,
-                payload: { actionId: id, summary: input.summary },
-                refId: id,
-                refType: "action",
-                summary: "Ação proposta aguardando decisão.",
-                type: "ACTION_PROPOSED",
-              },
+        activity: proposalActivity(input, id),
         status: "awaiting_approval",
         ticketId: input.ticketId,
       });
     }
 
-    return { id };
+    return true;
   });
 
-type DecisionInput = {
+  if (created && gated) {
+    await emitTeamEvent(env, { companyId: input.companyId, type: "team:status" });
+  }
+
+  return { id };
+};
+
+type DecisionRecord = {
   actionId: string;
   companyId: string;
   decidedByUserId: string;
@@ -115,7 +134,7 @@ const verdictOf = (decision: DecisionOutcome, round: number): Verdict => {
   return decision === "changes_requested" && canRevise(round) ? "revise" : "end";
 };
 
-const decisionActivity = (input: DecisionInput, verdict: Verdict): ActivityRecord => {
+const decisionActivity = (input: DecisionRecord, verdict: Verdict): ActivityRecord => {
   const ref = {
     actorId: input.decidedByUserId,
     companyId: input.companyId,
@@ -142,11 +161,15 @@ const decisionActivity = (input: DecisionInput, verdict: Verdict): ActivityRecor
   };
 };
 
-const recordDecision = (db: PrismaClient, input: DecisionInput): Promise<Verdict> =>
-  db.$transaction(async (tx) => {
-    const verdict = verdictOf(input.decision, input.round);
+const recordDecision = async (
+  env: TeamEventsEnv,
+  db: PrismaClient,
+  input: DecisionRecord,
+): Promise<Verdict> => {
+  const verdict = verdictOf(input.decision, input.round);
 
-    const decided = await tx.action.updateMany({
+  const decided = await db.$transaction(async (tx) => {
+    const { count } = await tx.action.updateMany({
       data: {
         decidedAt: new Date(),
         decidedByUserId: input.decidedByUserId,
@@ -156,7 +179,7 @@ const recordDecision = (db: PrismaClient, input: DecisionInput): Promise<Verdict
       where: { id: input.actionId, status: "pending" },
     });
 
-    if (decided.count > 0) {
+    if (count > 0) {
       await transitionTicket(tx, {
         activity: decisionActivity(input, verdict),
         status: TICKET_STATUS_BY_VERDICT[verdict],
@@ -164,8 +187,15 @@ const recordDecision = (db: PrismaClient, input: DecisionInput): Promise<Verdict
       });
     }
 
-    return verdict;
+    return count > 0;
   });
+
+  if (decided) {
+    await emitTeamEvent(env, { companyId: input.companyId, type: "team:status" });
+  }
+
+  return verdict;
+};
 
 type ExecutionInput = {
   actionId: string;
@@ -197,14 +227,18 @@ const executionActivity = (input: ExecutionInput): ActivityRecord => {
   };
 };
 
-const markExecuted = (db: PrismaClient, input: ExecutionInput): Promise<void> =>
-  db.$transaction(async (tx) => {
-    const executed = await tx.action.updateMany({
+const markExecuted = async (
+  env: TeamEventsEnv,
+  db: PrismaClient,
+  input: ExecutionInput,
+): Promise<void> => {
+  const executed = await db.$transaction(async (tx) => {
+    const { count } = await tx.action.updateMany({
       data: { status: "executed" },
       where: { id: input.actionId, status: "approved" },
     });
 
-    if (executed.count > 0) {
+    if (count > 0) {
       await transitionTicket(tx, {
         activity: executionActivity(input),
         status: "done",
@@ -212,7 +246,14 @@ const markExecuted = (db: PrismaClient, input: ExecutionInput): Promise<void> =>
         ticketId: input.ticketId,
       });
     }
+
+    return count > 0;
   });
+
+  if (executed) {
+    await emitTeamEvent(env, { companyId: input.companyId, type: "team:status" });
+  }
+};
 
 export { markExecuted, proposeAction, recordDecision };
 

@@ -6,24 +6,18 @@ import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { FormFieldError } from "@repo/ui/compositions/form-field-error";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { cn } from "@repo/ui/lib/utils";
-import { ApiError, describeRequestError } from "@repo/worker-api";
+import { describeRequestError } from "@repo/worker-api";
+import type { HireableTemplate } from "@repo/worker-api/contracts";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { confirmTeamSchema } from "@/lib/form-schemas";
-
-type Template = {
-  description: string;
-  displayName: string;
-  id: string;
-  workerKind: string;
-};
+import { confirmTeam } from "@/lib/team";
 
 type OnboardingActionsProps = {
-  companyId: string;
-  templates: ReadonlyArray<Template>;
+  templates: ReadonlyArray<HireableTemplate>;
 };
 
 const ERROR_ID = "onboarding-templates-error";
@@ -31,23 +25,11 @@ const ERROR_ID = "onboarding-templates-error";
 const toggle = (ids: ReadonlyArray<string>, id: string): Array<string> =>
   ids.includes(id) ? ids.filter((selected) => selected !== id) : [...ids, id];
 
-const confirmTeam = async (companyId: string, templateIds: ReadonlyArray<string>) => {
-  const response = await fetch(`/api/teams/${companyId}/confirm`, {
-    body: JSON.stringify({ templateIds }),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  });
-
-  if (!response.ok) {
-    throw new ApiError(response.status, await response.text());
-  }
-};
-
 type TemplateOptionProps = {
   checked: boolean;
   invalid: boolean;
   onToggle: () => void;
-  template: Template;
+  template: HireableTemplate;
 };
 
 const TemplateOption = ({ checked, invalid, onToggle, template }: TemplateOptionProps) => {
@@ -86,7 +68,7 @@ const TemplateOption = ({ checked, invalid, onToggle, template }: TemplateOption
   );
 };
 
-const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => {
+const OnboardingActions = ({ templates }: OnboardingActionsProps) => {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
@@ -100,7 +82,7 @@ const OnboardingActions = ({ companyId, templates }: OnboardingActionsProps) => 
       setSubmitError(null);
 
       try {
-        await confirmTeam(companyId, value.templateIds);
+        await confirmTeam(value);
       } catch (error) {
         setSubmitError(
           describeRequestError(error, "Não foi possível confirmar o Time. Tente de novo."),

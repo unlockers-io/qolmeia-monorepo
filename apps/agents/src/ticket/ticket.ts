@@ -1,8 +1,13 @@
-import type { Prisma, TicketStatus } from "@repo/db/worker";
-import type { AgentSummary, Template, Ticket, TicketListRow } from "@repo/worker-api/contracts";
+import type { Prisma } from "@repo/db/worker";
+import {
+  ticketResultSchema,
+  type AgentSummary,
+  type Template,
+  type Ticket,
+  type TicketListRow,
+} from "@repo/worker-api/contracts";
 
 import type { Db } from "#/lib/db";
-import { toRecordOrNull } from "#/lib/records";
 import { getTemplate } from "#/template/template";
 
 type InstanceWithTemplate = {
@@ -31,14 +36,13 @@ const ticketInclude = {
 
 const toTicket = (row: Prisma.TicketGetPayload<{ include: typeof ticketInclude }>): Ticket => ({
   agent: toAgentSummary(row.agentInstance),
-  agentInstanceId: row.agentInstanceId,
   brief: row.brief,
   companyId: row.companyId,
   companyName: row.company.name,
   id: row.id,
-  result: toRecordOrNull(row.result),
+  result: row.result === null ? null : ticketResultSchema.parse(row.result),
   status: row.status,
-  workflowId: row.workflowId,
+  title: row.title,
 });
 
 const loadTicket = async (db: Db, id: string): Promise<Ticket | null> => {
@@ -47,22 +51,16 @@ const loadTicket = async (db: Db, id: string): Promise<Ticket | null> => {
   return row ? toTicket(row) : null;
 };
 
-const listTickets = async (
-  db: Db,
-  options: { companyId?: string; limit?: number; status?: TicketStatus },
-): Promise<ReadonlyArray<TicketListRow>> => {
+const listTickets = async (db: Db, limit: number): Promise<ReadonlyArray<TicketListRow>> => {
   const rows = await db.ticket.findMany({
     include: ticketInclude,
     orderBy: { createdAt: "desc" },
-    take: Math.min(options.limit ?? 50, 200),
-    where: { companyId: options.companyId, status: options.status },
+    take: limit,
   });
 
   return rows.map((row) =>
     Object.assign(toTicket(row), {
       createdAt: row.createdAt.getTime(),
-      origin: row.origin,
-      title: row.title,
       updatedAt: row.updatedAt.getTime(),
     }),
   );
@@ -92,6 +90,12 @@ const loadInstanceWithTemplate = async (
   return { agentInstance, template };
 };
 
-export { agentSummarySelect, listTickets, loadInstanceWithTemplate, loadTicket, toAgentSummary };
-
-export type { InstanceWithTemplate };
+export {
+  agentSummarySelect,
+  listTickets,
+  loadInstanceWithTemplate,
+  loadTicket,
+  ticketInclude,
+  toAgentSummary,
+  toTicket,
+};

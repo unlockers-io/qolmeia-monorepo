@@ -3,14 +3,13 @@ import type { ReactNode } from "react";
 import { cn, isRenderable } from "../lib/utils";
 
 type EmptyStateProps = {
-  action?: ReactNode;
   className?: string;
   description?: ReactNode;
   icon?: ReactNode;
   title?: ReactNode;
 };
 
-const EmptyState = ({ action, className, description, icon, title }: EmptyStateProps) => (
+const EmptyState = ({ className, description, icon, title }: EmptyStateProps) => (
   <div
     className={cn(
       "flex flex-col items-center justify-center gap-3 px-6 py-12 text-center",
@@ -29,7 +28,6 @@ const EmptyState = ({ action, className, description, icon, title }: EmptyStateP
     {isRenderable(description) ? (
       <p className="max-w-md text-sm text-muted-foreground">{description}</p>
     ) : null}
-    {isRenderable(action) ? <div className="pt-2">{action}</div> : null}
   </div>
 );
 

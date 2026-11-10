@@ -1,3 +1,5 @@
+import type { PendingActionsResponse, TicketsResponse } from "@repo/worker-api/contracts";
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
@@ -27,12 +29,12 @@ const seedTenant = async (companyId: string, name: string, suffix: string) => {
 
 const propose = (companyId: string, ticketId: string, summary: string) =>
   db((client) =>
-    proposeAction(client, {
+    proposeAction(env, client, {
       actionType: "worker_deliverable",
       companyId,
       feedback: null,
       policy: "require_approval",
-      proposed: { summary },
+      proposed: { assetIds: [], summary },
       round: 0,
       summary,
       ticketId,
@@ -86,158 +88,41 @@ describe("backoffice auth gate", () => {
 });
 
 describe("backoffice listing endpoints", () => {
-  it("lists tickets across all tenants (camelCase shape + company label)", async () => {
+  it("lists tickets across all tenants with their agent and company", async () => {
     cookie = await signInAs(meStaff);
     const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/tickets");
-
-    const body = await res.json<{
-      items: Array<{
-        agentInstanceId: string;
-        companyId: string;
-        companyName: string;
-        createdAt: number;
-        id: string;
-        origin: string;
-        title: string;
-      }>;
-    }>();
+    const body = await res.json<TicketsResponse>();
 
     const ticket = body.items.find((t) => t.id === "tkt-bo-test");
-    expect(ticket).toBeTruthy();
-    expect(ticket?.agentInstanceId).toBe("agent-bo-test");
-    expect(ticket?.companyId).toBe(COMPANY_ID);
-    expect(ticket?.companyName).toBe("BO Test");
-    expect(ticket?.origin).toBe("delegation");
+    expect(ticket).toMatchObject({
+      agent: { name: "d", role: "worker", workerKind: "designer" },
+      companyId: COMPANY_ID,
+      companyName: "BO Test",
+      title: "b",
+    });
     expect(typeof ticket?.createdAt).toBe("number");
-    expect(ticket).not.toHaveProperty("agent_instance_id");
-    expect(ticket).not.toHaveProperty("created_at");
     expect(body.items.find((t) => t.id === "tkt-bo-other")).toBeTruthy();
   });
 
-  it("lists pending actions sorted by age (oldest first)", async () => {
-    await propose(COMPANY_ID, "tkt-bo-test", "x");
-    cookie = await signInAs(meStaff);
-
-    const res = await fetchWithCookie(
-      cookie,
-      "https://agents.test/api/backoffice/actions?status=pending&sort=age",
-    );
-
-    const body = await res.json<{
-      items: Array<{ actionType: string; ageSeconds: number }>;
-    }>();
-
-    expect(body.items.length).toBeGreaterThan(0);
-    expect(body.items[0]).toHaveProperty("ageSeconds");
-    expect(body.items[0]?.actionType).toBe("worker_deliverable");
-  });
-
-  it("lists ALL actions (no status filter) in camelCase", async () => {
-    await propose(COMPANY_ID, "tkt-bo-test", "y");
-    cookie = await signInAs(meStaff);
-    const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/actions");
-
-    const body = await res.json<{
-      items: Array<{
-        actionType: string;
-        companyId: string;
-        createdAt: number;
-        id: string;
-        ticketId: string;
-      }>;
-    }>();
-
-    expect(body.items.length).toBeGreaterThan(0);
-    const item = body.items[0];
-    expect(item?.actionType).toBeTruthy();
-    expect(item?.companyId).toBe(COMPANY_ID);
-    expect(typeof item?.createdAt).toBe("number");
-    expect(item).not.toHaveProperty("action_type");
-    expect(item).not.toHaveProperty("company_id");
-    expect(item).not.toHaveProperty("ticket_id");
-  });
-});
-
-describe("backoffice list routes span tenants and honor the ?companyId= filter", () => {
-  it("GET /tickets?companyId= narrows to that company; unfiltered spans all", async () => {
-    cookie = await signInAs(meStaff);
-
-    const filtered = await fetchWithCookie(
-      cookie,
-      `https://agents.test/api/backoffice/tickets?companyId=${OTHER_COMPANY_ID}`,
-    );
-
-    expect(filtered.status).toBe(200);
-
-    const filteredBody = await filtered.json<{
-      items: Array<{ companyId: string; id: string }>;
-    }>();
-
-    expect(filteredBody.items.find((t) => t.id === "tkt-bo-other")).toBeTruthy();
-    expect(filteredBody.items.every((t) => t.companyId === OTHER_COMPANY_ID)).toBe(true);
-
-    const all = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/tickets");
-    const allBody = await all.json<{ items: Array<{ id: string }> }>();
-    expect(allBody.items.find((t) => t.id === "tkt-bo-test")).toBeTruthy();
-    expect(allBody.items.find((t) => t.id === "tkt-bo-other")).toBeTruthy();
-  });
-
-  it("GET /actions?companyId= narrows to that company; unfiltered spans all", async () => {
+  it("lists the pending queue across tenants, oldest first, with each Action's age", async () => {
     await propose(COMPANY_ID, "tkt-bo-test", "mine");
     await propose(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
     cookie = await signInAs(meStaff);
 
-    const filtered = await fetchWithCookie(
-      cookie,
-      `https://agents.test/api/backoffice/actions?companyId=${OTHER_COMPANY_ID}`,
-    );
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/actions");
+    const body = await res.json<PendingActionsResponse>();
 
-    expect(filtered.status).toBe(200);
-    const filteredBody = await filtered.json<{ items: Array<{ companyId: string }> }>();
-    expect(filteredBody.items.length).toBeGreaterThan(0);
-    expect(filteredBody.items.every((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
-
-    const all = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/actions");
-    const allBody = await all.json<{ items: Array<{ companyId: string }> }>();
-    expect(allBody.items.some((a) => a.companyId === COMPANY_ID)).toBe(true);
-    expect(allBody.items.some((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
-  });
-
-  it("GET /activity?companyId= narrows to that company; unfiltered spans all", async () => {
-    await logExecuted(COMPANY_ID, "tkt-bo-test", "mine");
-    await logExecuted(OTHER_COMPANY_ID, "tkt-bo-other", "theirs");
-    cookie = await signInAs(meStaff);
-
-    const filtered = await fetchWithCookie(
-      cookie,
-      `https://agents.test/api/backoffice/activity?companyId=${OTHER_COMPANY_ID}`,
-    );
-
-    expect(filtered.status).toBe(200);
-    const filteredBody = await filtered.json<{ items: Array<{ companyId: string }> }>();
-    expect(filteredBody.items.length).toBeGreaterThan(0);
-    expect(filteredBody.items.every((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
-
-    const all = await fetchWithCookie(cookie, "https://agents.test/api/backoffice/activity");
-    const allBody = await all.json<{ items: Array<{ companyId: string }> }>();
-    expect(allBody.items.some((a) => a.companyId === COMPANY_ID)).toBe(true);
-    expect(allBody.items.some((a) => a.companyId === OTHER_COMPANY_ID)).toBe(true);
+    expect(body.items.map(({ companyId }) => companyId)).toEqual([COMPANY_ID, OTHER_COMPANY_ID]);
+    expect(body.items[0]).toMatchObject({
+      actionType: "worker_deliverable",
+      ageSeconds: expect.any(Number),
+      proposed: { assetIds: [], summary: "mine" },
+      status: "pending",
+    });
   });
 });
 
 describe("backoffice list query-param hardening", () => {
-  it("GET /tickets rejects an unknown status", async () => {
-    cookie = await signInAs(meStaff);
-
-    const res = await fetchWithCookie(
-      cookie,
-      "https://agents.test/api/backoffice/tickets?status=unknown",
-    );
-
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "invalid status" });
-  });
-
   it("GET /tickets ignores a non-numeric limit and clamps an oversized one", async () => {
     cookie = await signInAs(meStaff);
 
@@ -260,7 +145,7 @@ describe("backoffice list query-param hardening", () => {
     expect(oversizedBody.items.find((t) => t.id === "tkt-bo-test")).toBeTruthy();
   });
 
-  it("GET /activity ignores non-numeric limit, since, and before", async () => {
+  it("GET /activity ignores a non-numeric limit and before", async () => {
     await logExecuted(COMPANY_ID, "tkt-bo-test", "hardening");
     cookie = await signInAs(meStaff);
 
@@ -275,13 +160,25 @@ describe("backoffice list query-param hardening", () => {
 
     const badWindow = await fetchWithCookie(
       cookie,
-      "https://agents.test/api/backoffice/activity?since=abc&before=xyz",
+      "https://agents.test/api/backoffice/activity?before=xyz",
     );
 
     expect(badWindow.status).toBe(200);
     const badWindowBody = await badWindow.json<{ items: Array<{ summary: string }> }>();
     expect(badWindowBody.items.some((a) => a.summary === "hardening")).toBe(true);
   });
+});
+
+it.each(["tickets", "actions"])("answers an unknown %s id with a JSON 404", async (resource) => {
+  cookie = await signInAs(meStaff);
+
+  const res = await fetchWithCookie(
+    cookie,
+    `https://agents.test/api/backoffice/${resource}/does-not-exist`,
+  );
+
+  expect(res.status).toBe(404);
+  await expect(res.json()).resolves.toEqual({ error: "not found" });
 });
 
 describe("operator override decide", () => {

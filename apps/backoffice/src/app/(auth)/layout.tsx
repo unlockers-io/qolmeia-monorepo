@@ -1,3 +1,4 @@
+import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
 import { Logo } from "@repo/ui/compositions/logo";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -5,7 +6,7 @@ import type { ReactNode } from "react";
 const AuthLayout = ({ children }: { children: ReactNode }) => (
   <main
     className="flex min-h-dvh flex-col items-center justify-center bg-background px-4 py-12"
-    id="main-content"
+    id={MAIN_CONTENT_ID}
   >
     <div className="flex w-full max-w-md flex-col gap-6">
       <Link aria-label="Qolmeia" className="mx-auto transition-opacity hover:opacity-80" href="/">

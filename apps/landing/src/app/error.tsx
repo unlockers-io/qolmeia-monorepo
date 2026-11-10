@@ -1,25 +1,15 @@
 "use client";
 
+import { useErrorBoundary, type ErrorPageProps } from "@repo/app-shell/error-boundary";
 import { Button } from "@repo/ui/components/button";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
 import { RefreshCw } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 import { log } from "@/lib/observability-client";
 
-type RouteErrorProps = {
-  error: Error & { digest?: string };
-  retry: () => void;
-};
-
-const RouteError = ({ error, retry }: RouteErrorProps) => {
-  const headingRef = useRef<HTMLHeadingElement>(null);
+const RouteError = ({ error, retry }: ErrorPageProps) => {
+  const headingRef = useErrorBoundary(error, log, "Route error boundary");
   const ready = useClientReady();
-
-  useEffect(() => {
-    log.error({ digest: error.digest, error: error.message, message: "Route error boundary" });
-    headingRef.current?.focus();
-  }, [error]);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 py-32 text-center sm:px-8">

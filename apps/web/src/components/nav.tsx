@@ -1,31 +1,14 @@
 "use client";
 
+import { matchesRoute } from "@repo/app-shell/match-route";
+import { SignOutButton } from "@repo/app-shell/sign-out-button";
 import { Logo } from "@repo/ui/compositions/logo";
-import { SignOutButton } from "@repo/ui/compositions/sign-out-button";
 import { cn } from "@repo/ui/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 
-type NavItem = {
-  href: string;
-  label: string;
-};
-
-const NAV_ITEMS: ReadonlyArray<NavItem> = [
-  { href: "/", label: "Chat" },
-  { href: "/empresa", label: "Empresa" },
-  { href: "/assets", label: "Assets" },
-  { href: "/activity", label: "Atividade" },
-];
-
-const isActive = (pathname: string, href: string): boolean => {
-  if (href === "/") {
-    return pathname === "/";
-  }
-
-  return pathname === href || pathname.startsWith(`${href}/`);
-};
+import { NAV_ROUTES } from "@/lib/routes";
 
 const getInitials = (name: string): string =>
   name
@@ -36,7 +19,7 @@ const getInitials = (name: string): string =>
     .join("") || "Q";
 
 type NavProps = {
-  orgName: string | null;
+  orgName: string;
 };
 
 type NavDependencies = {
@@ -46,7 +29,6 @@ type NavDependencies = {
 
 const NavView = ({ dependencies, orgName }: NavProps & { dependencies: NavDependencies }) => {
   const { pathname, SignOutControl } = dependencies;
-  const org = orgName ?? "Qolmeia";
 
   return (
     <header
@@ -62,8 +44,8 @@ const NavView = ({ dependencies, orgName }: NavProps & { dependencies: NavDepend
       </Link>
       <nav className="order-3 -mx-4 w-nav-bleed overflow-x-auto border-t border-border px-4 py-2 md:order-2 md:mx-0 md:w-auto md:border-0 md:p-0">
         <ul className="flex min-w-max items-center gap-1">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(pathname, item.href);
+          {NAV_ROUTES.map((item) => {
+            const active = matchesRoute(pathname, item.href);
 
             return (
               <li key={item.href}>
@@ -87,13 +69,13 @@ const NavView = ({ dependencies, orgName }: NavProps & { dependencies: NavDepend
       <div className="order-2 ml-auto flex items-center gap-3 md:order-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="hidden truncate text-sm font-semibold text-foreground sm:inline">
-            {org}
+            {orgName}
           </span>
           <span
             aria-hidden
             className="flex size-7.5 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white navigation-avatar"
           >
-            {getInitials(org)}
+            {getInitials(orgName)}
           </span>
         </div>
         <SignOutControl className="min-h-11" />

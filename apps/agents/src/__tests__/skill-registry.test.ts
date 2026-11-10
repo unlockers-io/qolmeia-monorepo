@@ -1,5 +1,5 @@
 import type { ToolDefinition } from "@flue/runtime";
-import { DEFAULT_TEMPLATES } from "@repo/db/worker";
+import { DEFAULT_TEMPLATES } from "@repo/db/product-seed";
 import { asSchema, type JSONSchema7 } from "ai";
 import { env } from "cloudflare:workers";
 import * as v from "valibot";
@@ -7,13 +7,13 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { db } from "#/__tests__/fixtures";
-import { buildFlueTools } from "#/lib/skill-tool";
 import { delegateToWorkerSkill } from "#/skills/delegate-to-worker";
+import { buildFlueTools } from "#/skills/flue-tools";
 import {
   buildSkillTools,
-  isKnownSkill,
   listSkillCatalog,
   loadDisabledSkillIds,
+  skillsFor,
 } from "#/skills/registry";
 import type { SkillContext } from "#/skills/skill";
 
@@ -53,22 +53,23 @@ const flueFields = (input: ToolDefinition["input"]): Fields =>
   );
 
 const flueToolIds = (skillIds: ReadonlyArray<string>, disabled: ReadonlyArray<string>) =>
-  buildFlueTools(ctx, skillIds, disabled).map(({ name }) => name);
+  buildFlueTools(ctx, skillsFor(skillIds), disabled).map(({ name }) => name);
 
 const aiToolIds = (skillIds: ReadonlyArray<string>, disabled: ReadonlyArray<string>) =>
-  Object.keys(buildSkillTools(ctx, skillIds, disabled));
+  Object.keys(buildSkillTools(ctx, skillsFor(skillIds), disabled));
 
 describe("skill definitions", () => {
   const catalog = listSkillCatalog();
   const skillIds = catalog.map(({ id }) => id);
 
   it("give the Flue agents, the AI SDK, and the backoffice catalog one contract", async () => {
-    const flueTools = buildFlueTools(ctx, skillIds, []);
-    const aiTools = buildSkillTools(ctx, skillIds, []);
+    const skills = skillsFor(skillIds);
+    const flueTools = buildFlueTools(ctx, skills, []);
+    const aiTools = buildSkillTools(ctx, skills, []);
     expect(flueTools.map(({ name }) => name)).toEqual(skillIds);
     expect(Object.keys(aiTools)).toEqual(skillIds);
 
-    for (const entry of catalog) {
+    for (const [index, entry] of catalog.entries()) {
       const flueTool = flueTools.find(({ name }) => name === entry.id);
       const aiTool = aiTools[entry.id];
 
@@ -77,8 +78,8 @@ describe("skill definitions", () => {
       }
 
       expect(entry.displayName).not.toBe("");
-      expect(flueTool.description).toBe(entry.description);
-      expect(aiTool.description).toBe(entry.description);
+      expect(flueTool.description).toBe(skills[index]?.description);
+      expect(aiTool.description).toBe(skills[index]?.description);
 
       expect(flueFields(flueTool.input)).toEqual(
         jsonSchemaFields(await asSchema(aiTool.inputSchema).jsonSchema),
@@ -94,12 +95,11 @@ describe("skill definitions", () => {
 
   it("every seeded template references only known skills", () => {
     const templateSkillIds = DEFAULT_TEMPLATES.flatMap(({ skillIds: ids }) => ids);
-    expect(templateSkillIds.filter((id) => !isKnownSkill(id))).toEqual([]);
+    expect(() => skillsFor(templateSkillIds)).not.toThrow();
   });
 
-  it("throws on an unknown skill id in both adapters", () => {
-    expect(() => buildFlueTools(ctx, ["nope-not-a-skill"], [])).toThrow(/unknown skill id/v);
-    expect(() => buildSkillTools(ctx, ["nope-not-a-skill"], [])).toThrow(/unknown skill id/v);
+  it("throws on an unknown template skill id", () => {
+    expect(() => skillsFor(["nope-not-a-skill"])).toThrow(/unknown skill id/v);
   });
 });
 

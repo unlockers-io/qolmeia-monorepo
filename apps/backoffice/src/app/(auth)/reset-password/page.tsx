@@ -3,7 +3,8 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@repo/
 import { cn } from "@repo/ui/lib/utils";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SkeletonSuspense } from "skullet/react";
+import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
 import { ResetPasswordForm } from "./reset-password-form";
 
@@ -47,9 +48,9 @@ const ResetPassword = async ({ searchParams }: Props) => {
 };
 
 const ResetPasswordPage = ({ searchParams }: Props) => (
-  <SkeletonSuspense label="Carregando formulário" skeleton={<ResetPasswordForm token="" />}>
+  <Suspense fallback={<SkeletonBox height={320} radius="0.75rem" width="100%" />}>
     <ResetPassword searchParams={searchParams} />
-  </SkeletonSuspense>
+  </Suspense>
 );
 
 export default ResetPasswordPage;

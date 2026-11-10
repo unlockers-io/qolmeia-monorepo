@@ -45,6 +45,16 @@ describe("GET /api/me/team", () => {
   });
 });
 
+describe("GET /api/me/team/events", () => {
+  it("streams the Company's team events as SSE", async () => {
+    cookie = await signInAs(meCustomer);
+    const res = await fetchWithCookie(cookie, "https://agents.test/api/me/team/events");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/event-stream/v);
+    await res.body?.cancel();
+  });
+});
+
 describe("GET /api/me/catalogue", () => {
   it("returns active worker templates with hiredCount", async () => {
     cookie = await signInAs(meCustomer);
@@ -160,6 +170,22 @@ describe("PATCH /api/me/team/members/:id", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ member: { hasPromptOverride: boolean } }>();
     expect(body.member.hasPromptOverride).toBe(false);
+  });
+
+  it("400 on a whitespace-only name", async () => {
+    cookie = await signInAs(meCustomer);
+
+    const res = await fetchWithCookie(
+      cookie,
+      `https://agents.test/api/me/team/members/${WORKER_ID}`,
+      {
+        body: JSON.stringify({ displayName: "   " }),
+        headers: { "content-type": "application/json" },
+        method: "PATCH",
+      },
+    );
+
+    expect(res.status).toBe(400);
   });
 
   it("404 when the member doesn't belong to the company", async () => {

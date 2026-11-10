@@ -2,17 +2,25 @@ import { Heading, Link, Text } from "react-email";
 
 import { Button } from "../components/button";
 import { Divider } from "../components/divider";
+import { formatDuration } from "../utils/duration";
 
 import { BaseLayout } from "./base-layout";
 
 type ChangeEmailProps = {
   changeUrl: string;
   currentEmail: string;
+  expiresInSeconds: number;
   newEmail: string;
   username?: string;
 };
 
-const ChangeEmail = ({ changeUrl, currentEmail, newEmail, username }: ChangeEmailProps) => {
+const ChangeEmail = ({
+  changeUrl,
+  currentEmail,
+  expiresInSeconds,
+  newEmail,
+  username,
+}: ChangeEmailProps) => {
   return (
     <BaseLayout preview="Confirme o novo e-mail da sua conta Qolmeia.">
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
@@ -36,7 +44,7 @@ const ChangeEmail = ({ changeUrl, currentEmail, newEmail, username }: ChangeEmai
 
       <Text className="m-0 mb-4 text-sm text-muted-foreground">
         Se você não pediu essa troca, ignore este e-mail: nada muda e sua conta continua com
-        {currentEmail}. O link de confirmação expira em 24 horas.
+        {currentEmail}. O link de confirmação expira em {formatDuration(expiresInSeconds)}.
       </Text>
 
       <Divider spacing="sm" />

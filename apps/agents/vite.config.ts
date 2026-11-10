@@ -1,6 +1,7 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { flue, flueWorkerConfig } from "@flue/vite";
 import { applyPortlessUrls } from "@repo/portless-env";
+import { apps } from "@repo/portless-env/apps";
 import { defineConfig } from "vite";
 import zodCompiler from "zod-compiler/vite";
 
@@ -40,6 +41,6 @@ export default defineConfig(({ command }) => {
     environments: {
       worker_bees: { optimizeDeps: { entries: ["src/app.ts", "src/cloudflare.ts"] } },
     },
-    server: { allowedHosts: [".localhost"], host: "127.0.0.1", port: 8787 },
+    server: { allowedHosts: [".localhost"], host: "127.0.0.1", port: apps.agents.port },
   };
 });

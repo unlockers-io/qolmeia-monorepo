@@ -8,8 +8,8 @@ const ACTIVITY_FOREIGN_KEY = /activity_log_company_id_fkey|Foreign key constrain
 
 const record = (entry: ActivityRecord) => db((client) => recordActivity(client, entry));
 
-const list = (since?: number) =>
-  db((client) => listActivity(client, { companyId: COMPANY_ID, since }));
+const list = (before?: number) =>
+  db((client) => listActivity(client, { before, companyId: COMPANY_ID }));
 
 beforeEach(async () => {
   await seedCompany({ id: COMPANY_ID, name: "Activity Test" });
@@ -27,10 +27,10 @@ describe("recordActivity + listActivity", () => {
     const items = await list();
     expect(
       items.find((item) => item.summary === "Coisa aconteceu" && item.type === "ACTION_EXECUTED"),
-    ).toMatchObject({ companyName: "Activity Test", refId: "action-roundtrip-1" });
+    ).toMatchObject({ companyName: "Activity Test", summary: "Coisa aconteceu" });
   });
 
-  it("filters by since", async () => {
+  it("filters by before", async () => {
     await record({
       companyId: COMPANY_ID,
       refId: "action-old",
@@ -50,9 +50,9 @@ describe("recordActivity + listActivity", () => {
       summary: "nova",
       type: "ACTION_PROPOSED",
     });
-    const recent = await list((old?.createdAt ?? 0) + 1);
-    expect(recent.find((item) => item.type === "ACTION_PROPOSED")).toBeTruthy();
-    expect(recent.find((item) => item.type === "ACTION_EXECUTED")).toBeUndefined();
+    const earlier = await list((old?.createdAt ?? 0) + 1);
+    expect(earlier.find((item) => item.type === "ACTION_EXECUTED")).toBeTruthy();
+    expect(earlier.find((item) => item.type === "ACTION_PROPOSED")).toBeUndefined();
   });
 
   it("propagates write failures to the caller", async () => {

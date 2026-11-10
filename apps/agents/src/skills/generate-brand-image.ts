@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { AssetOutput } from "#/action/action-type";
 import { withDb } from "#/lib/db";
 import { generateImage, type ImagePromptPart } from "#/lib/models";
 import { assetReference, readBrandReferences, storeAsset } from "#/library/assets";
@@ -51,7 +52,7 @@ const parseDataUrl = (url: string): { bytes: Uint8Array; mime: string } | null =
   return { bytes: Uint8Array.fromBase64(b64), mime };
 };
 
-type GenerateResult = { assetId: string; deliverable: true; url: string } | { error: string };
+type GenerateResult = AssetOutput | { error: string };
 
 const generateBrandImageSkill = defineSkill({
   description:

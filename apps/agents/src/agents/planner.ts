@@ -1,22 +1,13 @@
 "use agent";
 
-import {
-  type AgentProps,
-  useAgentStart,
-  useModel,
-  usePersistentState,
-  useTool,
-} from "@flue/runtime";
-import { plannerIdFor } from "@repo/worker-api/contracts";
-import { env } from "cloudflare:workers";
+import type { AgentProps } from "@flue/runtime";
 
-import { withDb } from "#/lib/db";
-import { CONVERSATION_MODEL } from "#/lib/models";
-import { buildFlueTools } from "#/lib/skill-tool";
-import { loadDisabledSkillIds } from "#/skills/registry";
-import type { SkillContext } from "#/skills/skill";
+import { useConversationAgent } from "#/conversation/agent";
+import { extractBriefSkill } from "#/skills/extract-brief";
+import { proposeTeamSkill } from "#/skills/propose-team";
+import { plannerIdFor } from "#/team/ids";
 
-const PLANNER_SKILLS = ["extractBrief", "proposeTeam"];
+const PLANNER_SKILLS = [extractBriefSkill, proposeTeamSkill];
 
 const PLANNER_INSTRUCTIONS = `Você é o Planejador da Qolmeia, o agente que faz a entrevista inicial com um novo cliente para entender o negócio dele. Fale português do Brasil, de forma natural e curiosa, como uma conversa de descoberta de uma agência de marketing.
 
@@ -29,27 +20,11 @@ Sua missão tem duas etapas:
 O cliente confirma fora do chat (botão na UI). Quando isso acontecer, o Correspondente assume; você fica em standby para um futuro re-plano se ele quiser ajustar o Time.`;
 
 export function PlannerV2({ id }: AgentProps): string {
-  const [disabledSkillIds, setDisabledSkillIds] = usePersistentState<ReadonlyArray<string>>(
-    "disabledSkillIds",
-    [],
-  );
-
-  useAgentStart(async () => {
-    setDisabledSkillIds(await withDb(env, loadDisabledSkillIds));
-  });
-
-  useModel(CONVERSATION_MODEL, { thinkingLevel: "low" });
-
-  const ctx: SkillContext = {
+  useConversationAgent({
     agentInstanceId: plannerIdFor(id),
     companyId: id,
-    deliverableFolder: "customer",
-    env,
-  };
-
-  for (const skillTool of buildFlueTools(ctx, PLANNER_SKILLS, disabledSkillIds)) {
-    useTool(skillTool);
-  }
+    skills: PLANNER_SKILLS,
+  });
 
   return PLANNER_INSTRUCTIONS;
 }

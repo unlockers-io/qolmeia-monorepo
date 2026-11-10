@@ -1,7 +1,8 @@
-import { z } from "zod";
+import { OPEN_TICKET_STATUSES } from "@repo/worker-api/contracts";
 
 import type { PrismaClient } from "#/lib/db";
 import { emitTeamEvent } from "#/team/events";
+import { correspondentIdFor } from "#/team/ids";
 
 type DelegationInput = {
   brief: string;
@@ -10,61 +11,44 @@ type DelegationInput = {
   workerKind: string;
 };
 
-type DelegationResult =
-  | { error: string }
-  | { status: "queued"; ticketId: string; workflowId: string };
+type DelegationResult = { error: string } | { status: "queued"; ticketId: string };
 
 type WorkerCandidate = { busyCount: number; id: string };
 
-const delegationTargetsSchema = z.array(z.string());
-
-const pickWorker = (
-  candidates: ReadonlyArray<WorkerCandidate>,
-  allowed: ReadonlyArray<string>,
-): WorkerCandidate | undefined => {
-  const allowedIds = new Set(allowed);
-  const eligible = candidates.filter((candidate) => allowedIds.has(candidate.id));
-  const idle = eligible.filter((candidate) => candidate.busyCount === 0);
-  const pool = idle.length > 0 ? idle : eligible;
+const pickWorker = (candidates: ReadonlyArray<WorkerCandidate>): WorkerCandidate | undefined => {
+  const idle = candidates.filter((candidate) => candidate.busyCount === 0);
+  const pool = idle.length > 0 ? idle : candidates;
 
   return pool.at(Date.now() % Math.max(pool.length, 1));
 };
 
+/** The Company's Correspondent delegates to any active Worker of the requested kind. */
 const findWorker = async (
   db: PrismaClient,
   input: DelegationInput,
 ): Promise<{ error: string } | WorkerCandidate> => {
-  const [candidates, delegator] = await Promise.all([
-    db.agentInstance.findMany({
-      select: {
-        _count: {
-          select: { tickets: { where: { status: { in: ["in_progress", "awaiting_approval"] } } } },
-        },
-        id: true,
-      },
-      where: {
-        companyId: input.companyId,
-        role: "worker",
-        status: "active",
-        template: { status: "active", workerKind: input.workerKind },
-      },
-    }),
-    db.teamMember.findFirst({
-      select: { canDelegateTo: true },
-      where: { agentInstanceId: input.delegatorId },
-    }),
-  ]);
-
-  if (candidates.length === 0) {
-    return { error: `Nenhum especialista do tipo "${input.workerKind}" no Time desta empresa.` };
+  if (input.delegatorId !== correspondentIdFor(input.companyId)) {
+    return { error: `Você não tem permissão para delegar para "${input.workerKind}".` };
   }
 
-  const worker = pickWorker(
-    candidates.map((candidate) => ({ busyCount: candidate._count.tickets, id: candidate.id })),
-    delegationTargetsSchema.safeParse(delegator?.canDelegateTo).data ?? [],
-  );
+  const candidates = await db.agentInstance.findMany({
+    select: {
+      _count: { select: { tickets: { where: { status: { in: [...OPEN_TICKET_STATUSES] } } } } },
+      id: true,
+    },
+    where: {
+      companyId: input.companyId,
+      role: "worker",
+      status: "active",
+      template: { status: "active", workerKind: input.workerKind },
+    },
+  });
 
-  return worker ?? { error: `Você não tem permissão para delegar para "${input.workerKind}".` };
+  return (
+    pickWorker(candidates.map(({ _count, id }) => ({ busyCount: _count.tickets, id }))) ?? {
+      error: `Nenhum especialista do tipo "${input.workerKind}" no Time desta empresa.`,
+    }
+  );
 };
 
 const delegateTicket = async (
@@ -88,7 +72,6 @@ const delegateTicket = async (
       origin: "delegation",
       status: "in_progress",
       title: input.brief.slice(0, 80),
-      workflowId: ticketId,
     },
   });
 
@@ -102,13 +85,9 @@ const delegateTicket = async (
     throw error;
   }
 
-  await emitTeamEvent(env, {
-    companyId: input.companyId,
-    reason: "ticket_changed",
-    type: "team:status",
-  });
+  await emitTeamEvent(env, { companyId: input.companyId, type: "team:status" });
 
-  return { status: "queued", ticketId, workflowId: ticketId };
+  return { status: "queued", ticketId };
 };
 
 export { delegateTicket };

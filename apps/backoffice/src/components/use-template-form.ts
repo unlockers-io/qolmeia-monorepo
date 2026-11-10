@@ -1,9 +1,17 @@
+import { maxLength } from "@repo/app-shell/form-limits";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
+import { apiGet, describeRequestError } from "@repo/worker-api";
 import {
   ACTION_TYPES,
-  type ActionPolicy,
+  ActionPolicy,
+  type ActionType,
+  actionTypeSchema,
+  DEFAULT_ACTION_TYPE,
+  type SkillId,
+  TEMPLATE_MAX_LENGTH,
   type Template,
   type TemplateInput,
+  templateInputSchema,
 } from "@repo/worker-api/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -11,61 +19,53 @@ import { useId, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { describeRequestError } from "@/lib/api-client";
 import {
   createTemplate,
-  fetchSkillCatalog,
-  setTemplateStatus,
+  getSkillCatalog,
+  isSkillId,
   templateKeys,
   updateTemplate,
-} from "@/lib/templates-api";
+} from "@/lib/backoffice-api";
+import { useToggleTemplateStatus } from "@/lib/use-toggle-template-status";
 
-type FieldKey =
-  | "defaultActionType"
-  | "defaultPolicies"
-  | "description"
-  | "displayName"
-  | "model"
-  | "systemPrompt"
-  | "workerKind";
+const ACTION_TYPE_LIST = ACTION_TYPES.join(", ");
 
-const ACTION_POLICIES = [
-  "auto_execute",
-  "notify_only",
-  "require_approval",
-] as const satisfies ReadonlyArray<ActionPolicy>;
+const POLICY_LIST = new Intl.ListFormat("pt-BR", { type: "disjunction" }).format(
+  Object.values(ActionPolicy),
+);
 
-const actionTypeSchema = z.enum(ACTION_TYPES, {
-  error: `Use um destes tipos: ${ACTION_TYPES.join(", ")}.`,
-});
+const policiesSchema = templateInputSchema.shape.defaultPolicies;
 
-const policiesRecordSchema = z.partialRecord(actionTypeSchema, z.enum(ACTION_POLICIES));
+const isActionType = (value: unknown): value is ActionType =>
+  actionTypeSchema.safeParse(value).success;
 
 const formSchema = z.object({
-  defaultActionType: actionTypeSchema,
+  defaultActionType: z.custom<ActionType>(
+    isActionType,
+    `Use um destes tipos: ${ACTION_TYPE_LIST}.`,
+  ),
   defaultPolicies: z
     .string()
     .trim()
-    .refine(
-      (raw) => {
-        if (raw === "") {
-          return true;
-        }
+    .refine((raw) => {
+      if (raw === "") {
+        return true;
+      }
 
-        try {
-          return policiesRecordSchema.safeParse(JSON.parse(raw)).success;
-        } catch {
-          return false;
-        }
-      },
-      `Use um objeto { tipoDeAção: política } com ${ACTION_TYPES.join(", ")} e require_approval, notify_only ou auto_execute.`,
-    ),
-  description: z.string().trim().min(1, "Informe uma descrição."),
-  displayName: z.string().trim().min(1, "Informe o nome de exibição."),
-  model: z.string().trim().min(1, "Informe o modelo."),
-  systemPrompt: z.string().trim().min(1, "Informe o prompt do sistema."),
-  workerKind: z.string().trim().min(1, "Informe o tipo (worker kind)."),
+      try {
+        return policiesSchema.safeParse(JSON.parse(raw)).success;
+      } catch {
+        return false;
+      }
+    }, `Use um objeto { tipoDeAção: política } com ${ACTION_TYPE_LIST} e ${POLICY_LIST}.`),
+  description: maxLength(TEMPLATE_MAX_LENGTH.description).min(1, "Informe uma descrição."),
+  displayName: maxLength(TEMPLATE_MAX_LENGTH.displayName).min(1, "Informe o nome de exibição."),
+  model: maxLength(TEMPLATE_MAX_LENGTH.model).min(1, "Informe o modelo."),
+  systemPrompt: maxLength(TEMPLATE_MAX_LENGTH.systemPrompt).min(1, "Informe o prompt do sistema."),
+  workerKind: maxLength(TEMPLATE_MAX_LENGTH.workerKind).min(1, "Informe o tipo (worker kind)."),
 });
+
+type FieldKey = keyof z.infer<typeof formSchema>;
 
 const isFieldKey = (key: PropertyKey | undefined): key is FieldKey =>
   typeof key === "string" && key in formSchema.shape;
@@ -91,11 +91,11 @@ const parsePolicies = (raw: string): TemplateInput["defaultPolicies"] => {
     return {};
   }
 
-  return policiesRecordSchema.parse(JSON.parse(trimmed));
+  return policiesSchema.parse(JSON.parse(trimmed));
 };
 
 const EMPTY_FORM_VALUES: Record<FieldKey, string> = {
-  defaultActionType: "worker_deliverable",
+  defaultActionType: DEFAULT_ACTION_TYPE,
   defaultPolicies: "{}",
   description: "",
   displayName: "",
@@ -125,12 +125,16 @@ const useTemplateForm = (initial: Template | undefined) => {
   const isEdit = initial !== undefined;
 
   const [values, setValues] = useState(() => toFormValues(initial));
-  const [skillIds, setSkillIds] = useState<ReadonlyArray<string>>(initial?.skillIds ?? []);
+
+  const [skillIds, setSkillIds] = useState<Array<SkillId>>(() =>
+    (initial?.skillIds ?? []).filter(isSkillId),
+  );
+
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const errors = submitAttempted ? fieldErrors(values) : {};
 
-  const { data: skillsData, isError: skillsFailed } = useQuery({
-    queryFn: fetchSkillCatalog,
+  const { data: skillCatalog, isError: skillsFailed } = useQuery({
+    queryFn: () => getSkillCatalog(apiGet),
     queryKey: templateKeys.skills,
     staleTime: 5 * 60_000,
   });
@@ -145,26 +149,14 @@ const useTemplateForm = (initial: Template | undefined) => {
     },
   });
 
-  const statusMutation = useMutation({
-    mutationFn: (status: Template["status"]) => setTemplateStatus(initial?.id ?? "", status),
-    onError: (error) => {
-      toast.error(describeRequestError(error, "Não foi possível alterar o status."));
-    },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: templateKeys.all });
-      toast.success(
-        data.template.status === "retired" ? "Modelo desativado." : "Modelo reativado.",
-      );
-      router.refresh();
-    },
-  });
+  const toggleStatus = useToggleTemplateStatus();
 
   const setField = (key: FieldKey, value: string) => {
     saveMutation.reset();
     setValues((prev) => ({ ...prev, [key]: value }));
   };
 
-  const toggleSkill = (id: string) => {
+  const toggleSkill = (id: SkillId) => {
     saveMutation.reset();
     setSkillIds((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
@@ -197,7 +189,11 @@ const useTemplateForm = (initial: Template | undefined) => {
       return;
     }
 
-    statusMutation.mutate(initial.status === "retired" ? "active" : "retired");
+    toggleStatus.mutate(initial, {
+      onSuccess: () => {
+        router.refresh();
+      },
+    });
   };
 
   const busy = saveMutation.isPending;
@@ -207,7 +203,7 @@ const useTemplateForm = (initial: Template | undefined) => {
       ? null
       : describeRequestError(saveMutation.error, "Não foi possível salvar o modelo.");
 
-  const skills = skillsData?.items ?? (skillsFailed ? [] : null);
+  const skills = skillCatalog ?? (skillsFailed ? [] : null);
   const editLabel = isEdit ? "Salvar alterações" : "Criar modelo";
   const submitLabel = busy ? "Salvando…" : editLabel;
 
@@ -220,7 +216,7 @@ const useTemplateForm = (initial: Template | undefined) => {
     setField,
     skillIds,
     skills,
-    statusPending: statusMutation.isPending,
+    statusPending: toggleStatus.isPending,
     submitError,
     submitLabel,
     toggleSkill,
@@ -228,4 +224,6 @@ const useTemplateForm = (initial: Template | undefined) => {
   };
 };
 
-export { useTemplateForm };
+export { POLICY_LIST, useTemplateForm };
+
+export type { FieldKey };

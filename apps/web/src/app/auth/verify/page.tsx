@@ -1,4 +1,5 @@
-import { safeRedirectPath } from "@repo/app-shell/redirect-path";
+import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
+import { safeRedirectPath } from "@repo/auth/redirect-path";
 import {
   Card,
   CardContent,
@@ -50,7 +51,7 @@ const VerifyContent = async ({ searchParams }: VerifyPageProps) => {
 const VerifyPage = (props: VerifyPageProps) => (
   <main
     className="flex min-h-dvh items-center justify-center bg-background px-4 py-12"
-    id="main-content"
+    id={MAIN_CONTENT_ID}
   >
     <div className="w-full max-w-md">
       <Suspense fallback={null}>

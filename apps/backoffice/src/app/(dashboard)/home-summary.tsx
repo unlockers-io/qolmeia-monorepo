@@ -1,5 +1,10 @@
 import { cn } from "@repo/ui/lib/utils";
-import type { ActionListRow, CompanyRoster, TicketListRow } from "@repo/worker-api/contracts";
+import {
+  type CompanyRoster,
+  OPEN_TICKET_STATUSES,
+  type PendingAction,
+  type TicketListRow,
+} from "@repo/worker-api/contracts";
 import Link from "next/link";
 
 import { formatDurationSeconds } from "@/lib/format";
@@ -42,15 +47,13 @@ const SummaryItem = ({ emphasis = false, href, label, sub, value }: SummaryItemP
   );
 };
 
-const OPEN_STATUSES = new Set(["in_progress", "open", "awaiting_approval"]);
-
 const startOfMonth = (now: Date): number =>
   new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
 const PendingSummary = ({
   pending,
 }: {
-  pending: ReadonlyArray<Pick<ActionListRow, "ageSeconds">> | null;
+  pending: ReadonlyArray<Pick<PendingAction, "ageSeconds">> | null;
 }) => {
   const pendingCount = pending?.length ?? null;
   const oldestPendingAge = pending?.[0]?.ageSeconds;
@@ -77,7 +80,9 @@ type TicketSummaryProps = {
 
 const TicketSummary = ({ now, tickets }: TicketSummaryProps) => {
   const monthStart = startOfMonth(now);
-  const openTickets = tickets?.filter((ticket) => OPEN_STATUSES.has(ticket.status)).length ?? null;
+
+  const openTickets =
+    tickets?.filter((ticket) => OPEN_TICKET_STATUSES.includes(ticket.status)).length ?? null;
 
   const doneThisMonth =
     tickets?.filter((ticket) => ticket.status === "done" && ticket.updatedAt >= monthStart)
@@ -117,4 +122,4 @@ const CompanySummary = ({
   );
 };
 
-export { CompanySummary, PendingSummary, TicketSummary };
+export { CompanySummary, PendingSummary, TicketSummary, UNAVAILABLE };

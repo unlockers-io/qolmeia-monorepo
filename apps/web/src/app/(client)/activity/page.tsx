@@ -1,14 +1,19 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { PageContainer } from "@repo/ui/compositions/page-container";
 import { PageHeader } from "@repo/ui/compositions/page-header";
 import { cn } from "@repo/ui/lib/utils";
+import {
+  type ActivityCategory,
+  activityCategoryOf,
+  type CustomerActivityEntry,
+} from "@repo/worker-api/contracts";
 import { Activity, CircleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { SkeletonSuspense } from "skullet/react";
 
-import { apiGetServer } from "@/lib/api-server";
-import type { ListResponse } from "@/lib/api-types";
+import { fetchActivity } from "@/lib/activity";
 import { log } from "@/lib/observability";
 
 export const metadata: Metadata = {
@@ -18,18 +23,9 @@ export const metadata: Metadata = {
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
 
-type ActivityRow = {
-  createdAt: string;
-  id: string;
-  summary: string;
-  type: string;
-};
-
-const loadActivity = async (): Promise<ReadonlyArray<ActivityRow> | null> => {
+const loadActivity = async (): Promise<ReadonlyArray<CustomerActivityEntry> | null> => {
   try {
-    const result = await apiGetServer<ListResponse<ActivityRow>>("/api/me/activity?limit=50");
-
-    return result.items;
+    return await fetchActivity(apiGetServer);
   } catch (error) {
     log.error({ error, message: "activity: failed to load" });
 
@@ -39,18 +35,22 @@ const loadActivity = async (): Promise<ReadonlyArray<ActivityRow> | null> => {
 
 type Category = { dot: string; label: string };
 
-const CATEGORIES: ReadonlyArray<{ category: Category; prefix: string }> = [
-  { category: { dot: "bg-primary", label: "Aprovação" }, prefix: "ACTION_" },
-  { category: { dot: "bg-info", label: "Pedido" }, prefix: "TICKET_" },
-  { category: { dot: "bg-worker-surface-foreground", label: "Especialista" }, prefix: "WORKER_" },
-  { category: { dot: "bg-success", label: "Time" }, prefix: "TEAM_" },
-  { category: { dot: "bg-muted-foreground", label: "Agente" }, prefix: "MEMBER_" },
-];
+const CATEGORY = {
+  ACTION: { dot: "bg-primary", label: "Aprovação" },
+  CUSTOMER: { dot: "bg-warning", label: "Cliente" },
+  MEMBER: { dot: "bg-muted-foreground", label: "Agente" },
+  TEAM: { dot: "bg-success", label: "Time" },
+  TICKET: { dot: "bg-info", label: "Pedido" },
+  WORKER: { dot: "bg-worker-surface-foreground", label: "Especialista" },
+} satisfies Record<ActivityCategory, Category>;
 
 const OTHER: Category = { dot: "bg-muted-foreground", label: "Atividade" };
 
-const categoryOf = (type: string): Category =>
-  CATEGORIES.find(({ prefix }) => type.startsWith(prefix))?.category ?? OTHER;
+const categoryOf = (type: string): Category => {
+  const category = activityCategoryOf(type);
+
+  return category === null ? OTHER : CATEGORY[category];
+};
 
 const DAY = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long", year: "numeric" });
 const TIME = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -74,11 +74,11 @@ const dayLabel = (date: Date, now: Date): string => {
   return key === DAY_KEY.format(yesterday) ? "Ontem" : DAY.format(date);
 };
 
-type DayGroup = { label: string; rows: ReadonlyArray<ActivityRow> };
+type DayGroup = { label: string; rows: ReadonlyArray<CustomerActivityEntry> };
 
-const groupByDay = (rows: ReadonlyArray<ActivityRow>): ReadonlyArray<DayGroup> => {
+const groupByDay = (rows: ReadonlyArray<CustomerActivityEntry>): ReadonlyArray<DayGroup> => {
   const now = new Date();
-  const groups = new Map<string, Array<ActivityRow>>();
+  const groups = new Map<string, Array<CustomerActivityEntry>>();
 
   for (const row of rows) {
     const label = dayLabel(new Date(row.createdAt), now);
@@ -112,7 +112,9 @@ const ActivityFeed = ({ groups }: { groups: ReadonlyArray<DayGroup> }) => (
                       <p className="text-sm leading-relaxed text-foreground">{row.summary}</p>
                       <p className="text-xs text-muted-foreground">
                         {category.label} ·{" "}
-                        <time dateTime={row.createdAt}>{TIME.format(new Date(row.createdAt))}</time>
+                        <time dateTime={new Date(row.createdAt).toISOString()}>
+                          {TIME.format(new Date(row.createdAt))}
+                        </time>
                       </p>
                     </div>
                   </li>
@@ -165,19 +167,19 @@ const SAMPLE_GROUPS: ReadonlyArray<DayGroup> = [
     label: "Hoje",
     rows: [
       {
-        createdAt: "2026-01-01T14:32:00.000Z",
+        createdAt: Date.parse("2026-01-01T14:32:00.000Z"),
         id: "sample-1",
         summary: "Designer entregou 3 opções de post para o lançamento da coleção de verão",
         type: "WORKER_DELIVERABLE_READY",
       },
       {
-        createdAt: "2026-01-01T13:05:00.000Z",
+        createdAt: Date.parse("2026-01-01T13:05:00.000Z"),
         id: "sample-2",
         summary: "Pedido aberto: carrossel para o Instagram",
         type: "TICKET_CREATED",
       },
       {
-        createdAt: "2026-01-01T11:48:00.000Z",
+        createdAt: Date.parse("2026-01-01T11:48:00.000Z"),
         id: "sample-3",
         summary: "Entrega aprovada pela equipe Qolmeia",
         type: "ACTION_APPROVED",

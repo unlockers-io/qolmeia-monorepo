@@ -5,8 +5,7 @@ import type { Generation } from "#/action/action-type";
 import type { JobContext } from "#/jobs/worker-job-steps";
 import { withDb } from "#/lib/db";
 import { languageModel } from "#/lib/models";
-import { buildSkillTools, loadDisabledSkillIds } from "#/skills/registry";
-import { resolveSystemPrompt } from "#/team/resolve-system-prompt";
+import { buildSkillTools, loadDisabledSkillIds, skillsFor } from "#/skills/registry";
 import { loadInstanceWithTemplate, loadTicket } from "#/ticket/ticket";
 
 type ChatMessage = { content: string; role: "assistant" | "user" };
@@ -67,12 +66,12 @@ const generateDeliverable = async (
 
   const tools = buildSkillTools(
     { agentInstanceId: agentInstance.id, companyId, deliverableFolder: "agent", env },
-    template.skillIds,
+    skillsFor(template.skillIds),
     disabledSkillIds,
   );
 
   const result = await generateText({
-    instructions: resolveSystemPrompt(agentInstance, template),
+    instructions: agentInstance.promptOverride ?? template.systemPrompt,
     messages: buildRevisionMessages(
       ticket.brief,
       revision?.priorSummary ?? null,

@@ -1,19 +1,16 @@
+import { activeMembership, type Surface } from "@repo/auth/roles";
 import { log } from "@repo/observability";
 import type { ResolvedSession } from "@repo/observability/auth";
-import {
-  activeMembership,
-  type MeOrg,
-  type MeResponse,
-  type MeUser,
-  type OrgRole,
-  type Surface,
-} from "@repo/worker-api/contracts";
+import type { MeOrg, MeResponse, MeUser, OrgRole } from "@repo/worker-api/contracts";
 import { isAPIError } from "better-auth/api";
 
 import type { WorkerAuth } from "#/lib/auth";
 import type { Db } from "#/lib/db";
 
-type Identity = { companyId: string; role: OrgRole; userId: string };
+type Identity = { companyId: string; role: OrgRole; surface: Surface; userId: string };
+
+/** Who a use case acts for: the signed-in user, on the surface they called. */
+type Actor = Pick<Identity, "surface" | "userId">;
 
 type Unresolved = { kind: "signed-out" } | { kind: "unavailable" };
 
@@ -115,17 +112,26 @@ const resolveIdentity = async (
     return result;
   }
 
-  const [org] = surfaces.flatMap((surface) => activeMembership(result.me.orgs, surface) ?? []);
+  const [match] = surfaces.flatMap((surface) => {
+    const org = activeMembership(result.me.orgs, surface);
 
-  return org === undefined
+    return org === null ? [] : [{ org, surface }];
+  });
+
+  return match === undefined
     ? { kind: "forbidden" }
     : {
         authSession: result.authSession,
-        identity: { companyId: org.id, role: org.role, userId: result.me.user.id },
+        identity: {
+          companyId: match.org.id,
+          role: match.org.role,
+          surface: match.surface,
+          userId: result.me.user.id,
+        },
         kind: "signed-in",
       };
 };
 
 export { readMe, resolveIdentity };
 
-export type { Identity, IdentityResult };
+export type { Actor, Identity, IdentityResult };

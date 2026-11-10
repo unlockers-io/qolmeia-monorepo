@@ -13,13 +13,10 @@ type SendEmail = typeof sendEmail;
 
 type MailerConfig = {
   apiKey: string;
-  defaultReplyTo?: string;
-  from?: string;
 };
 
-const DEFAULT_FROM = "Qolmeia <noreply@email.qolmeia.com>";
-
 type WelcomePayload = {
+  expiresInSeconds: number;
   userEmail: string;
   userId: string;
   username?: string;
@@ -35,8 +32,7 @@ type SignUpAttemptPayload = {
 };
 
 type PasswordResetPayload = {
-  browserInfo?: string;
-  ipAddress?: string;
+  expiresInSeconds: number;
   resetUrl: string;
   userEmail: string;
   userId: string;
@@ -46,12 +42,14 @@ type PasswordResetPayload = {
 type ChangeEmailPayload = {
   changeUrl: string;
   currentEmail: string;
+  expiresInSeconds: number;
   newEmail: string;
   userId: string;
   username?: string;
 };
 
 type MagicLinkPayload = {
+  expiresInSeconds: number;
   url: string;
   userEmail: string;
   userId?: string;
@@ -61,6 +59,7 @@ type MagicLinkPayload = {
 type InvitationPayload = {
   acceptUrl: string;
   companyName: string;
+  expiresInSeconds: number;
   userEmail: string;
   userId?: string;
 };
@@ -90,34 +89,44 @@ const TEMPLATES: TemplateRegistry = {
   "change-email-confirmation": ({
     changeUrl,
     currentEmail,
+    expiresInSeconds,
     newEmail,
     username,
   }: ChangeEmailPayload) => ({
     subject: "Confirme a troca de e-mail da sua conta Qolmeia",
-    template: React.createElement(ChangeEmail, { changeUrl, currentEmail, newEmail, username }),
+    template: React.createElement(ChangeEmail, {
+      changeUrl,
+      currentEmail,
+      expiresInSeconds,
+      newEmail,
+      username,
+    }),
     to: currentEmail,
   }),
-  invitation: ({ acceptUrl, companyName, userEmail }: InvitationPayload) => ({
+  invitation: ({ acceptUrl, companyName, expiresInSeconds, userEmail }: InvitationPayload) => ({
     subject: `Seu convite para a ${companyName} na Qolmeia`,
-    template: React.createElement(InvitationEmail, { acceptUrl, companyName, userEmail }),
+    template: React.createElement(InvitationEmail, {
+      acceptUrl,
+      companyName,
+      expiresInSeconds,
+      userEmail,
+    }),
     to: userEmail,
   }),
-  "magic-link": ({ url, userEmail, username }: MagicLinkPayload) => ({
+  "magic-link": ({ expiresInSeconds, url, userEmail, username }: MagicLinkPayload) => ({
     subject: "Seu link de acesso à Qolmeia",
-    template: React.createElement(MagicLinkEmail, { url, userEmail, username }),
+    template: React.createElement(MagicLinkEmail, { expiresInSeconds, url, userEmail, username }),
     to: userEmail,
   }),
   "password-reset": ({
-    browserInfo,
-    ipAddress,
+    expiresInSeconds,
     resetUrl,
     userEmail,
     username,
   }: PasswordResetPayload) => ({
     subject: "Redefina sua senha da Qolmeia",
     template: React.createElement(PasswordResetEmail, {
-      browserInfo,
-      ipAddress,
+      expiresInSeconds,
       resetUrl,
       userEmail,
       username,
@@ -139,9 +148,14 @@ const TEMPLATES: TemplateRegistry = {
     }),
     to: userEmail,
   }),
-  welcome: ({ userEmail, username, verificationUrl }: WelcomePayload) => ({
+  welcome: ({ expiresInSeconds, userEmail, username, verificationUrl }: WelcomePayload) => ({
     subject: `Boas-vindas à Qolmeia${username !== undefined && username !== "" ? `, ${username}` : ""}! Confirme seu e-mail`,
-    template: React.createElement(WelcomeEmail, { userEmail, username, verificationUrl }),
+    template: React.createElement(WelcomeEmail, {
+      expiresInSeconds,
+      userEmail,
+      username,
+      verificationUrl,
+    }),
     to: userEmail,
   }),
 };
@@ -155,8 +169,6 @@ const createTransactionalEmailSender =
 
     return send({
       apiKey: config.apiKey,
-      defaultReplyTo: config.defaultReplyTo,
-      from: config.from !== undefined && config.from !== "" ? config.from : DEFAULT_FROM,
       subject,
       tags: [
         { name: "type", value: email.type },
@@ -171,6 +183,6 @@ const createTransactionalEmailSender =
 
 const sendTransactionalEmail = createTransactionalEmailSender(sendEmail);
 
-export type { MailerConfig, TransactionalEmail };
+export type { MailerConfig };
 
 export { createTransactionalEmailSender, sendTransactionalEmail };

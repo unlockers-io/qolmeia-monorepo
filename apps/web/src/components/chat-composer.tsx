@@ -20,7 +20,7 @@ import type { ChangeEvent, ClipboardEvent, KeyboardEvent, SubmitEvent } from "re
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { apiSendForm } from "@/lib/api-client";
+import { uploadAccept, uploadChatFile, uploadRefusal } from "@/lib/library";
 
 type UploadState = "uploading" | "error" | "done";
 
@@ -31,16 +31,6 @@ type Attachment = {
   state: UploadState;
   url: string;
 };
-
-type UploadResponse = {
-  assetId: string;
-  mime: string;
-  size: number;
-  url: string;
-};
-
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const ALLOWED_UPLOAD_MIME = ["image/gif", "image/jpeg", "image/png", "image/webp"];
 
 const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
   if (event.nativeEvent.isComposing) {
@@ -53,13 +43,24 @@ const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
   }
 };
 
+const SubmitIcon = ({ busy, failed }: { busy: boolean; failed: boolean }) => {
+  if (busy) {
+    return <LoadingSpinner className="size-4" />;
+  }
+
+  return failed ? (
+    <X aria-hidden className="size-4" />
+  ) : (
+    <CornerDownLeft aria-hidden className="size-4" />
+  );
+};
+
 type ChatComposerProps = {
-  disabled: boolean;
   onSend: (message: { files: Array<FileUIPart>; text: string }) => Promise<void>;
   status: ChatStatus;
 };
 
-const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
+const ChatComposer = ({ onSend, status }: ChatComposerProps) => {
   const submittingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [input, setInput] = useState("");
@@ -68,6 +69,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const isReplying = status === "submitted" || status === "streaming";
   const isUploading = attachments.some((attachment) => attachment.state === "uploading");
   const readyAttachments = attachments.filter((attachment) => attachment.state === "done");
 
@@ -78,14 +80,10 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   const uploadFile = async (file: File) => {
     setSendError(null);
 
-    if (!ALLOWED_UPLOAD_MIME.includes(file.type)) {
-      toast.error("Formato não suportado. Use PNG, JPG, WEBP ou GIF.");
+    const refusal = uploadRefusal(file, "chat");
 
-      return;
-    }
-
-    if (file.size > MAX_UPLOAD_BYTES) {
-      toast.error("Imagem grande demais (máx 10 MB).");
+    if (refusal !== null) {
+      toast.error(refusal);
 
       return;
     }
@@ -97,15 +95,13 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
     ]);
 
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const result = await apiSendForm<UploadResponse>("/api/me/uploads", form);
+      const result = await uploadChatFile(file);
       setAttachments((current) =>
         current.map((attachment) =>
           attachment.id === tempId
             ? {
                 id: result.assetId,
-                mediaType: result.mime,
+                mediaType: result.mimeType,
                 name: file.name,
                 state: "done",
                 url: result.url,
@@ -166,7 +162,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
     event.preventDefault();
     const text = input.trim();
 
-    if (disabled || isUploading || submittingRef.current) {
+    if (isReplying || isUploading || submittingRef.current) {
       return;
     }
 
@@ -186,7 +182,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
     setSendError(null);
 
     try {
-      await onSend({ files, text: text || " " });
+      await onSend({ files, text });
       setInput("");
       setAttachments([]);
       const el = textareaRef.current;
@@ -203,18 +199,10 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
   };
 
   const canSend =
-    !disabled &&
+    !isReplying &&
     !isUploading &&
     !submitting &&
     (input.trim().length > 0 || readyAttachments.length > 0);
-
-  let submitIcon = <CornerDownLeft aria-hidden className="size-4" />;
-
-  if (submitting || status === "submitted" || status === "streaming") {
-    submitIcon = <LoadingSpinner className="size-4" />;
-  } else if (status === "error") {
-    submitIcon = <X aria-hidden className="size-4" />;
-  }
 
   return (
     <div className="flex-none border-t border-border bg-card px-6 py-4">
@@ -226,7 +214,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
       >
         <FormAlert message={sendError} />
         <input
-          accept={ALLOWED_UPLOAD_MIME.join(",")}
+          accept={uploadAccept("chat")}
           aria-label="Anexar imagem"
           className="sr-only"
           disabled={submitting}
@@ -293,7 +281,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
         <div className="flex items-center justify-end gap-2">
           <Button
             aria-label="Anexar imagem"
-            disabled={disabled || isUploading || submitting}
+            disabled={isReplying || isUploading || submitting}
             onClick={handleAttachClick}
             size="icon"
             type="button"
@@ -306,7 +294,7 @@ const ChatComposer = ({ disabled, onSend, status }: ChatComposerProps) => {
             )}
           </Button>
           <Button aria-label="Enviar" disabled={!canSend} size="icon" type="submit">
-            {submitIcon}
+            <SubmitIcon busy={submitting || isReplying} failed={status === "error"} />
           </Button>
         </div>
       </form>

@@ -1,3 +1,4 @@
+import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { Skeleton } from "skullet/react";
@@ -22,7 +23,7 @@ const ClientLayout = ({ children }: { children: ReactNode }) => (
     >
       <NavData />
     </Suspense>
-    <main className="flex min-h-0 flex-1 flex-col" id="main-content">
+    <main className="flex min-h-0 flex-1 flex-col" id={MAIN_CONTENT_ID}>
       {children}
     </main>
   </div>

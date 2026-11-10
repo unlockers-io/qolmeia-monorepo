@@ -1,5 +1,6 @@
+import type { Surface } from "@repo/auth/roles";
 import { ApiError } from "@repo/worker-api";
-import type { MeOrg, MeResponse, Surface } from "@repo/worker-api/contracts";
+import type { MeOrg, MeResponse } from "@repo/worker-api/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { createSessionHelpers, type AppLogger } from "./session";

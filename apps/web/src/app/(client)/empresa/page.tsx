@@ -1,11 +1,14 @@
+import { apiGetServer } from "@repo/app-shell/server-api";
+import { PageContainer } from "@repo/ui/compositions/page-container";
 import type { Metadata } from "next";
-import { SkeletonSuspense } from "skullet/react";
+import { Suspense } from "react";
+import { SkeletonBox } from "skullet/react";
 
-import { EmpresaClient, EmpresaSample } from "@/components/empresa-client";
-import { apiGetServer } from "@/lib/api-server";
+import { EmpresaClient } from "@/components/empresa-client";
 import { requireCustomer } from "@/lib/auth-helpers";
-import type { BrandAsset, CompanyResponse } from "@/lib/company";
-import type { HireableTemplate, TeamMemberView } from "@/lib/team";
+import { fetchCompany } from "@/lib/company";
+import { fetchBrandAssets } from "@/lib/library";
+import { fetchCatalogue, fetchTeam } from "@/lib/team";
 
 export const metadata: Metadata = {
   title: "Minha empresa",
@@ -18,27 +21,37 @@ const EmpresaContent = async () => {
   const me = await requireCustomer();
 
   const [company, brandAssets, members, catalogue] = await Promise.allSettled([
-    apiGetServer<CompanyResponse>("/api/me/company"),
-    apiGetServer<{ items: Array<BrandAsset> }>("/api/me/brand-assets"),
-    apiGetServer<{ members: Array<TeamMemberView> }>("/api/me/team"),
-    apiGetServer<{ templates: Array<HireableTemplate> }>("/api/me/catalogue"),
+    fetchCompany(apiGetServer),
+    fetchBrandAssets(apiGetServer),
+    fetchTeam(apiGetServer),
+    fetchCatalogue(apiGetServer),
   ]);
 
   return (
     <EmpresaClient
       companyId={me.org.id}
-      initialBrandAssets={brandAssets.status === "fulfilled" ? brandAssets.value.items : undefined}
-      initialCatalogue={catalogue.status === "fulfilled" ? catalogue.value.templates : undefined}
+      initialBrandAssets={brandAssets.status === "fulfilled" ? brandAssets.value : undefined}
+      initialCatalogue={catalogue.status === "fulfilled" ? catalogue.value : undefined}
       initialCompany={company.status === "fulfilled" ? company.value : undefined}
-      initialMembers={members.status === "fulfilled" ? members.value.members : undefined}
+      initialMembers={members.status === "fulfilled" ? members.value : undefined}
     />
   );
 };
 
+const EmpresaSkeleton = () => (
+  <PageContainer aria-hidden>
+    <div className="flex flex-col gap-4">
+      <SkeletonBox height={32} width={224} />
+      <SkeletonBox height={160} width="100%" />
+      <SkeletonBox height={160} width="100%" />
+    </div>
+  </PageContainer>
+);
+
 const EmpresaPage = () => (
-  <SkeletonSuspense label="Carregando sua empresa" skeleton={<EmpresaSample />}>
+  <Suspense fallback={<EmpresaSkeleton />}>
     <EmpresaContent />
-  </SkeletonSuspense>
+  </Suspense>
 );
 
 export default EmpresaPage;

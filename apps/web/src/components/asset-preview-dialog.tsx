@@ -13,14 +13,15 @@ import { AssetImage } from "@repo/ui/compositions/asset-image";
 import { DialogCloseButton } from "@repo/ui/compositions/dialog-close-button";
 import { MarkdownResponse } from "@repo/ui/compositions/markdown-response";
 import { cn } from "@repo/ui/lib/utils";
+import type { LibraryAsset } from "@repo/worker-api/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { Skeleton } from "skullet/react";
 
-import type { WebChatAsset } from "@/lib/api-types";
+import { queryKeys } from "@/lib/query-keys";
 
 type AssetPreviewDialogProps = {
-  asset: WebChatAsset | null;
+  asset: LibraryAsset | null;
   onClose: () => void;
 };
 
@@ -56,7 +57,7 @@ const AssetPreviewDialog = ({ asset, onClose }: AssetPreviewDialogProps) => {
 
       return res.text();
     },
-    queryKey: ["asset-text", asset?.id],
+    queryKey: queryKeys.assetText(asset?.id),
     staleTime: 5 * 60 * 1000,
   });
 

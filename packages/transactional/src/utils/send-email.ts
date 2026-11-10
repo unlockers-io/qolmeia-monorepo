@@ -4,19 +4,6 @@ import { z } from "zod";
 
 import { createResendClient } from "../client";
 
-// Resend allows RFC 5322 "Name <email>" for from/reply-to; z.email() is bare-only so extract the bracketed address.
-const senderAddressSchema = z.string().refine(
-  (val) => {
-    const wrapped = /^.+<(?<address>[^<>\s]+)>$/v.exec(val);
-    const email = wrapped?.groups?.address ?? val;
-
-    return z.email().safeParse(email).success;
-  },
-  { message: "Must be a valid email or 'Display Name <email>' format" },
-);
-
-const emailOrListSchema = z.union([z.email(), z.array(z.email())]);
-
 const resendErrorSchema = z.object({
   message: z.string().optional(),
   name: z.string().optional(),
@@ -28,46 +15,26 @@ const emailTagSchema = z.object({
 });
 
 const emailConfigSchema = z.object({
-  bcc: emailOrListSchema.optional(),
-  cc: emailOrListSchema.optional(),
-  from: senderAddressSchema.default("Qolmeia <noreply@email.qolmeia.com>"),
-  replyTo: senderAddressSchema.optional(),
   subject: z.string(),
   tags: z.array(emailTagSchema).optional(),
-  to: emailOrListSchema,
+  to: z.email(),
 });
 
-type EmailConfig = z.input<typeof emailConfigSchema>;
-
-type SendEmailOptions = EmailConfig & {
+type SendEmailOptions = z.input<typeof emailConfigSchema> & {
   apiKey: string;
-  defaultReplyTo?: string;
   template: ReactElement;
-};
-
-type PreparedEmailPayload = {
-  bcc?: EmailConfig["bcc"];
-  cc?: EmailConfig["cc"];
-  from: string;
-  html: string;
-  replyTo?: string;
-  subject: string;
-  tags?: EmailConfig["tags"];
-  text: string;
-  to: EmailConfig["to"];
 };
 
 type ResendClient = ReturnType<typeof createResendClient>;
 
 type EmailClient = {
-  batch: Pick<ResendClient["batch"], "send">;
   emails: Pick<ResendClient["emails"], "send">;
 };
 
 type EmailClientFactory = (apiKey: string) => EmailClient;
 
 const sendEmail = async (
-  { apiKey, defaultReplyTo, template, ...config }: SendEmailOptions,
+  { apiKey, template, ...config }: SendEmailOptions,
   createClient: EmailClientFactory = createResendClient,
 ) => {
   if (!apiKey) {
@@ -84,14 +51,8 @@ const sendEmail = async (
     ]);
 
     const result = await resend.emails.send({
-      bcc: validatedConfig.bcc,
-      cc: validatedConfig.cc,
-      from: validatedConfig.from,
+      from: "Qolmeia <noreply@email.qolmeia.com>",
       html,
-      replyTo:
-        validatedConfig.replyTo !== undefined && validatedConfig.replyTo !== ""
-          ? validatedConfig.replyTo
-          : defaultReplyTo,
       subject: validatedConfig.subject,
       tags: validatedConfig.tags,
       text,
@@ -119,96 +80,6 @@ const sendEmail = async (
   }
 };
 
-const sendBatchEmails = async (
-  emails: Array<SendEmailOptions>,
-  apiKey: string,
-  defaultReplyTo?: string,
-  createClient: EmailClientFactory = createResendClient,
-) => {
-  if (!apiKey) {
-    throw new Error("API key is required for sending emails");
-  }
-
-  if (emails.length > 100) {
-    throw new Error("Batch size cannot exceed 100 emails");
-  }
-
-  try {
-    const resend = createClient(apiKey);
-
-    const settledBatchData = await Promise.allSettled(
-      emails.map(async ({ template, ...config }) => {
-        const validatedConfig = emailConfigSchema.parse(config);
-
-        const [html, text] = await Promise.all([
-          render(template),
-          render(template, { plainText: true }),
-        ]);
-
-        return {
-          bcc: validatedConfig.bcc,
-          cc: validatedConfig.cc,
-          from: validatedConfig.from,
-          html,
-          replyTo:
-            validatedConfig.replyTo !== undefined && validatedConfig.replyTo !== ""
-              ? validatedConfig.replyTo
-              : defaultReplyTo,
-          subject: validatedConfig.subject,
-          tags: validatedConfig.tags,
-          text,
-          to: validatedConfig.to,
-        };
-      }),
-    );
-
-    const batchData: Array<PreparedEmailPayload> = [];
-    const rejectionReasons: Array<unknown> = [];
-    const rejectionMessages: Array<string> = [];
-
-    settledBatchData.forEach((result, index) => {
-      if (result.status === "fulfilled") {
-        batchData.push(result.value);
-
-        return;
-      }
-
-      rejectionReasons.push(result.reason);
-
-      const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
-      rejectionMessages.push(`email index ${index}: ${reason}`);
-    });
-
-    if (rejectionReasons.length > 0) {
-      throw new AggregateError(
-        rejectionReasons,
-        `Failed to prepare ${rejectionReasons.length} email(s): ${rejectionMessages.join("; ")}`,
-      );
-    }
-
-    const result = await resend.batch.send(batchData);
-
-    if (result.error) {
-      const error = resendErrorSchema.safeParse(result.error).data;
-      throw new Error(
-        `Resend failed to queue batch: ${error?.name ?? "unknown_error"} - ${error?.message ?? "No message"}`,
-      );
-    }
-
-    return {
-      data: result.data,
-      error: null,
-      success: true,
-    };
-  } catch (error) {
-    return {
-      data: null,
-      error: error instanceof Error ? error.message : "Failed to send batch emails",
-      success: false,
-    };
-  }
-};
-
 const previewEmail = async (template: ReactElement) => {
   const [html, text] = await Promise.all([render(template), render(template, { plainText: true })]);
 
@@ -218,6 +89,6 @@ const previewEmail = async (template: ReactElement) => {
   };
 };
 
-export { sendEmail, sendBatchEmails, previewEmail };
+export { sendEmail, previewEmail };
 
 export type { EmailClient, EmailClientFactory };

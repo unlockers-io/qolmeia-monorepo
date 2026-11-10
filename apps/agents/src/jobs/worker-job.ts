@@ -3,7 +3,7 @@ import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloud
 
 import type { Generation } from "#/action/action-type";
 import type { Verdict } from "#/action/approval";
-import { decisionEventType, type DecisionEvent } from "#/jobs/decision";
+import { decisionEventType, type DecisionEvent } from "#/action/decision";
 import { generateDeliverable, type Revision } from "#/jobs/worker-job-generate";
 import { notifyCustomer } from "#/jobs/worker-job-notify";
 import {
@@ -77,7 +77,7 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
 
         if (verdict !== "execute") {
           await step.do(`notify-decision-${round}`, () =>
-            notifyCustomer(job, proposal.actionId, verdict),
+            notifyCustomer(job, proposal.actionId, { verdict }),
           );
         }
 
@@ -94,9 +94,12 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
         }
       }
 
-      await step.do(`execute-${round}`, (): Promise<void> => executeAction(job, proposal));
+      const result = await step.do(`execute-${round}`, (): Promise<string> =>
+        executeAction(job, proposal),
+      );
+
       await step.do(`notify-executed-${round}`, () =>
-        notifyCustomer(job, proposal.actionId, "execute"),
+        notifyCustomer(job, proposal.actionId, { result, verdict: "execute" }),
       );
 
       return finish({ actionId: proposal.actionId, outcome: "executed", revisions: round });
@@ -106,4 +109,4 @@ class WorkerJobWorkflow extends WorkflowEntrypoint<Env, WorkerJobParams> {
 
 export { WorkerJobWorkflow };
 
-export type { WorkerJobParams, WorkerJobResult };
+export type { WorkerJobParams };

@@ -1,25 +1,19 @@
+import { AssetKind, AssetVisibility } from "@repo/db/worker";
 import { z } from "zod";
 
+import type { AssetOutput } from "#/action/action-type";
 import { withDb } from "#/lib/db";
 import { listAssets, readAssetText, storeAsset, type AssetSummary } from "#/library/assets";
 import { defineSkill } from "#/skills/skill";
 
-const ASSET_KINDS = [
-  "audio",
-  "brand_asset",
-  "generated_image",
-  "knowledge_doc",
-  "user_upload",
-] as const;
-
 const listAssetsInputSchema = z.object({
   folder: z
-    .enum(["agent", "customer"])
+    .enum(AssetVisibility)
     .optional()
     .describe(
       "Filtrar por pasta: 'customer' (entregas/uploads do cliente) ou 'agent' (material de trabalho). Omita para ver as duas.",
     ),
-  kind: z.enum(ASSET_KINDS).optional().describe("Filtrar por tipo. Omita para listar tudo."),
+  kind: z.enum(AssetKind).optional().describe("Filtrar por tipo. Omita para listar tudo."),
 });
 
 const listAssetsSkill = defineSkill({
@@ -61,7 +55,7 @@ const readAssetSkill = defineSkill({
 const saveAssetInputSchema = z.object({
   content: z.string().min(1).describe("O conteúdo do arquivo (texto/markdown/SVG)."),
   folder: z
-    .enum(["agent", "customer"])
+    .enum(AssetVisibility)
     .optional()
     .describe(
       "'customer' (default) = entrega que o cliente vê na biblioteca; 'agent' = material de trabalho interno (rascunhos, recortes) que o cliente não vê.",
@@ -77,10 +71,7 @@ const saveAssetSkill = defineSkill({
   description:
     "Salva um documento de texto na biblioteca da empresa. Use 'customer' para uma entrega final que o cliente deve ver, ou 'agent' para material de trabalho interno.",
   displayName: "Salvar arquivo",
-  async execute(
-    { content, folder, mime, name },
-    ctx,
-  ): Promise<{ assetId: string; deliverable: boolean }> {
+  async execute({ content, folder, mime, name }, ctx): Promise<AssetOutput> {
     const deliverable = (folder ?? "customer") === "customer";
 
     const { id: assetId } = await withDb(ctx.env, (db) =>

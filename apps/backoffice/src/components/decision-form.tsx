@@ -1,17 +1,19 @@
 "use client";
 
+import { formatCount, maxLengthMessage } from "@repo/app-shell/form-limits";
 import { Button } from "@repo/ui/components/button";
 import { Textarea } from "@repo/ui/components/textarea";
 import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { cn } from "@repo/ui/lib/utils";
-import type { ActionsResponse, DecisionOutcome } from "@repo/worker-api/contracts";
+import { apiGet, describeRequestError } from "@repo/worker-api";
+import { type DecisionOutcome, FEEDBACK_MAX_LENGTH } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
-import { apiGet, apiSend, describeRequestError } from "@/lib/api-client";
+import { decide, getPendingActions } from "@/lib/backoffice-api";
 
 type DecisionFormProps = {
   actionId: string;
@@ -53,8 +55,6 @@ const SUBMIT_LABEL = {
   rejected: "Rejeitar ação",
 } satisfies Record<DecisionOutcome, string>;
 
-const MAX_FEEDBACK = 2000;
-
 const SUCCESS_COPY = {
   approved: "Aprovado. O especialista vai executar.",
   changes_requested: "Ajustes pedidos. O especialista vai revisar.",
@@ -67,8 +67,8 @@ const submitLabel = (decision: DecisionOutcome | null): string =>
 const feedbackError = (feedback: string, required: boolean): string | null => {
   const length = feedback.trim().length;
 
-  if (length > MAX_FEEDBACK) {
-    return `Use no máximo ${MAX_FEEDBACK} caracteres.`;
+  if (length > FEEDBACK_MAX_LENGTH) {
+    return maxLengthMessage(FEEDBACK_MAX_LENGTH);
   }
 
   if (required && length === 0) {
@@ -80,7 +80,7 @@ const feedbackError = (feedback: string, required: boolean): string | null => {
 
 const nextPendingId = async (currentId: string): Promise<string | null> => {
   try {
-    const { items } = await apiGet<ActionsResponse>("/actions?status=pending");
+    const { items } = await getPendingActions(apiGet);
 
     return items.find((item) => item.id !== currentId)?.id ?? null;
   } catch {
@@ -206,7 +206,7 @@ const FeedbackField = ({ decision, error, onChange, required, value }: FeedbackF
         </span>
       </span>
       <span className="text-xs text-muted-foreground tabular-nums">
-        {value.length}/{MAX_FEEDBACK}
+        {formatCount(value.trim().length)}/{formatCount(FEEDBACK_MAX_LENGTH)}
       </span>
     </label>
     <Textarea
@@ -260,10 +260,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
     setSubmitError(null);
 
     try {
-      await apiSend("POST", `/actions/${actionId}/decide`, {
-        decision,
-        feedback: feedback.trim() || undefined,
-      });
+      await decide(actionId, { decision, feedback: feedback.trim() || undefined });
       const nextId = await nextPendingId(actionId);
       toast.success(
         nextId === null ? SUCCESS_COPY[decision] : `${SUCCESS_COPY[decision]} Abrindo a próxima.`,

@@ -59,7 +59,7 @@ describe("operator REST", () => {
   it.each(["OWNER", "STAFF"] as const)("admits %s across tenants", async (role) => {
     await seedCompany({ id: COMPANY_ID });
     const cookie = await signInAs({ orgId: QOLMEIA_ORG_ID, role });
-    const res = await call(`/api/backoffice/tickets?companyId=${COMPANY_ID}`, cookie);
+    const res = await call("/api/backoffice/tickets", cookie);
     expect(res.status).toBe(200);
   });
 
@@ -101,17 +101,6 @@ describe("customer REST", () => {
 
     const res = await call("/api/me/company", cookie);
     expect(await res.json()).toMatchObject({ company: { id: COMPANY_ID } });
-  });
-
-  it("refuses a team confirm for another tenant's path", async () => {
-    const cookie = await signInAs({ orgId: COMPANY_ID, role: "CUSTOMER" });
-
-    const status = await statusOf(`/api/teams/${OTHER_COMPANY_ID}/confirm`, cookie, {
-      body: JSON.stringify({ templateIds: ["tpl-designer"] }),
-      method: "POST",
-    });
-
-    expect(status).toBe(403);
   });
 });
 

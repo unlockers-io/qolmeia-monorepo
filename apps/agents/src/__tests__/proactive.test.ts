@@ -7,43 +7,26 @@ import {
   PROACTIVE_INTERVAL_MS,
   proactiveGate,
   recordProactiveSuggestion,
-} from "#/lib/proactive";
-import { runProactiveSweep } from "#/scheduled";
+  runProactiveSweep,
+} from "#/proactive/proactive";
 
 const COMPANY_ID = "co_proactive_test";
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 describe("proactiveGate", () => {
   const now = 1_000_000_000_000;
 
-  it("skips when the brief is incomplete", () => {
-    const gate = proactiveGate({ isComplete: false, lastSuggestedAt: null, now });
-    expect(gate.ok).toBe(false);
-    expect(gate.reason).toBe("brief incomplete");
+  it("skips when suggested within the window", () => {
+    expect(proactiveGate(now - (PROACTIVE_INTERVAL_MS - 1000), now)).toBe(false);
   });
 
-  it("skips when suggested within the weekly window", () => {
-    const gate = proactiveGate({
-      isComplete: true,
-      lastSuggestedAt: now - (PROACTIVE_INTERVAL_MS - 1000),
-      now,
-    });
-
-    expect(gate.ok).toBe(false);
-    expect(gate.reason).toBe("suggested recently");
+  it("allows when never suggested", () => {
+    expect(proactiveGate(null, now)).toBe(true);
   });
 
-  it("allows when complete and never suggested", () => {
-    expect(proactiveGate({ isComplete: true, lastSuggestedAt: null, now }).ok).toBe(true);
-  });
-
-  it("allows again once the weekly window has passed", () => {
-    const gate = proactiveGate({
-      isComplete: true,
-      lastSuggestedAt: now - (PROACTIVE_INTERVAL_MS + 1000),
-      now,
-    });
-
-    expect(gate.ok).toBe(true);
+  it("allows the next weekly run even when it fires a little early", () => {
+    expect(proactiveGate(now - (WEEK_MS - 30_000), now)).toBe(true);
   });
 });
 
@@ -83,7 +66,7 @@ describe("runProactiveSweep", () => {
       id: "co_proactive_b",
       status: "onboarding",
     });
-    const result = await runProactiveSweep(env);
+    const result = await runProactiveSweep(env, Date.now());
     expect(result).toEqual({ errored: 0, skipped: 0, suggested: 0 });
   });
 });

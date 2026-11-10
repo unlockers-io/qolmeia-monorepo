@@ -2,16 +2,23 @@ import { Heading, Link, Text } from "react-email";
 
 import { Button } from "../components/button";
 import { Divider } from "../components/divider";
+import { formatDuration } from "../utils/duration";
 
 import { BaseLayout } from "./base-layout";
 
 type InvitationEmailProps = {
   acceptUrl: string;
   companyName: string;
+  expiresInSeconds: number;
   userEmail: string;
 };
 
-const InvitationEmail = ({ acceptUrl, companyName, userEmail }: InvitationEmailProps) => {
+const InvitationEmail = ({
+  acceptUrl,
+  companyName,
+  expiresInSeconds,
+  userEmail,
+}: InvitationEmailProps) => {
   return (
     <BaseLayout
       footerText="Você está recebendo este e-mail porque a equipe Qolmeia convidou este endereço."
@@ -24,7 +31,7 @@ const InvitationEmail = ({ acceptUrl, companyName, userEmail }: InvitationEmailP
       <Text className="m-0 mb-6 text-base text-pretty break-words text-muted-foreground">
         A equipe Qolmeia convidou você para acessar o time de agentes da{" "}
         <strong>{companyName}</strong>. Clique no botão abaixo e entre com este e-mail para aceitar.
-        O convite expira em 7 dias.
+        O convite expira em {formatDuration(expiresInSeconds)}.
       </Text>
 
       <div className="mb-6">

@@ -4,11 +4,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./enums": "./src/enums.ts",
+    "./product-seed": "./src/product-seed.ts",
     "./worker": "./src/worker.ts"
   },
   "scripts": {
     "clean": "rm -rf .turbo && rm -rf node_modules",
-    "lint": "oxlint src",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

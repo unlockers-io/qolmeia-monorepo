@@ -1,7 +1,7 @@
 import { Children, isValidElement } from "react";
 import { describe, expect, it } from "vitest";
 
-import { parseFont, svgText } from "./index";
+import { svgText } from "./index";
 
 const positions = (text: string, width: number) => {
   const group = svgText(text, { color: "currentColor", size: 24, width, x: 0, y: 40 });
@@ -38,11 +38,5 @@ describe("svgText", () => {
 
   it("produces no glyphs for empty text", () => {
     expect(positions("   ", 200)).toEqual([]);
-  });
-});
-
-describe("parseFont", () => {
-  it("rejects corrupt font data", () => {
-    expect(() => parseFont(Buffer.from("invalid font"))).toThrow("Unknown font format");
   });
 });

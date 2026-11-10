@@ -5,29 +5,44 @@ import type { NextConfig } from "next";
 import { agentsServerUrl } from "./agents-url";
 
 type AppConfig = {
-  /** env var that holds this app's public URL */
-  publicUrlEnv: UrlEnvKey;
+  /** env vars holding this app's own URLs */
+  urlEnvs: ReadonlyArray<UrlEnvKey>;
   /** Worker routes the browser reaches through this origin, besides /api/auth */
-  workerPaths: ReadonlyArray<string>;
+  workerPaths?: ReadonlyArray<string>;
+};
+
+const workerRewrites = (workerPaths: ReadonlyArray<string>): NextConfig["rewrites"] => {
+  const agentsUrl = agentsServerUrl();
+
+  return () =>
+    Promise.resolve(
+      ["/api/auth/:path*", ...workerPaths].map((source) => ({
+        destination: `${agentsUrl}${source}`,
+        source,
+      })),
+    );
 };
 
 /**
- * The browser only talks to this app's origin, so the session cookie stays host-only on it.
- * `next build` bakes AGENTS_INTERNAL_URL into the rewrites.
+ * `appConfig` holds the settings the fleet standard checks in each app's own next.config.ts.
+ * An app with Worker paths sends the browser only to its own origin, so the session cookie stays
+ * host-only on it; `next build` bakes AGENTS_INTERNAL_URL into the rewrites.
  */
-const createNextConfig = ({ publicUrlEnv, workerPaths }: AppConfig): NextConfig => {
-  applyPortlessUrls(["AGENTS_INTERNAL_URL", publicUrlEnv]);
-  const agentsUrl = agentsServerUrl();
+const createNextConfig = (
+  { urlEnvs, workerPaths = [] }: AppConfig,
+  appConfig: NextConfig,
+): NextConfig => {
+  const rewritesWorker = workerPaths.length > 0;
+  applyPortlessUrls(rewritesWorker ? ["AGENTS_INTERNAL_URL", ...urlEnvs] : urlEnvs);
 
   return {
-    rewrites: () =>
-      Promise.resolve(
-        ["/api/auth/:path*", ...workerPaths].map((source) => ({
-          destination: `${agentsUrl}${source}`,
-          source,
-        })),
-      ),
-
+    ...appConfig,
+    experimental: {
+      instantInsights: { validationLevel: "manual-warning" },
+      ...appConfig.experimental,
+    },
+    reactStrictMode: true,
+    rewrites: rewritesWorker ? workerRewrites(workerPaths) : undefined,
     turbopack: {
       rules: {
         "*.{ts,tsx}": {
