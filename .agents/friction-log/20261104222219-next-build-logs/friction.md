@@ -1,6 +1,7 @@
 ---
 title: 'next build logs "failed to load" errors for /activity, /assets and the backoffice home on a clean build'
 severity: 'minor'
+issue: 'unlockers-io/qolmeia-monorepo#268'
 ---
 
 ### Expected Behavior
