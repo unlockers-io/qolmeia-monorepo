@@ -21,13 +21,13 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@better-auth/core": "^1.7.6",
+    "@better-auth/core": "^1.7.20",
     "@repo/db": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/portless-env": "workspace:*",
     "@repo/transactional": "workspace:*",
-    "better-auth": "^1.7.6",
-    "zod": "^4.6.5"
+    "better-auth": "^1.7.20",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@repo/config-vitest": "workspace:*",
