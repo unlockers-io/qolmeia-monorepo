@@ -38,10 +38,10 @@ const LoginPage = () => (
       <Logo className="h-8 w-auto self-start" />
 
       <div>
-        <h1 className="mt-4 max-w-(--container-measure-30) font-display text-3xl font-semibold tracking-tight text-balance lg:text-5xl">
+        <h1 className="mt-4 max-w-measure-30 font-display text-3xl font-semibold tracking-tight text-balance lg:text-5xl">
           Um time inteiro, na mesma conversa.
         </h1>
-        <p className="mt-5 max-w-(--container-measure-body) text-lg text-pretty text-muted-foreground max-lg:hidden">
+        <p className="mt-5 max-w-measure-body text-lg text-pretty text-muted-foreground max-lg:hidden">
           Crie materiais de marca, organize campanhas e acompanhe o trabalho com os agentes da
           Qolmeia.
         </p>
@@ -52,7 +52,7 @@ const LoginPage = () => (
                 <Icon aria-hidden="true" className="size-4 h-lh shrink-0 text-primary" />
                 {label}
               </dt>
-              <dd className="mt-1 ml-7 max-w-(--container-measure-footer) text-muted-foreground">
+              <dd className="mt-1 ml-7 max-w-measure-footer text-muted-foreground">
                 {description}
               </dd>
             </div>

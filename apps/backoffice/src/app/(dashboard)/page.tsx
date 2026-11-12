@@ -59,7 +59,7 @@ const RecentEventsList = ({ items, now }: { items: ReadonlyArray<RecentEvent>; n
         <li className="flex gap-2.75 border-b border-border py-2.5 last:border-b-0" key={row.id}>
           <span aria-hidden className={cn("mt-1.5 size-1.75 shrink-0 rounded-full", style.dot)} />
           <div className="min-w-0">
-            <p className="text-(length:--text-label) leading-snug text-foreground">{row.summary}</p>
+            <p className="text-label leading-snug text-foreground">{row.summary}</p>
             <p className="mt-0.75 text-xs text-muted-foreground">
               {row.companyName} · {style.label} · {formatRelative(row.createdAt, now)}
             </p>
@@ -127,7 +127,7 @@ const PendingApprovals = ({ pending }: { pending: ReadonlyArray<PendingRow> | nu
               {agentInitials(action.agent.name)}
             </span>
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate text-(length:--text-label-lg) font-semibold text-foreground">
+              <span className="truncate text-label-lg font-semibold text-foreground">
                 {ACTION_TYPE_VIEWS[action.actionType].label}
               </span>
               <span className="truncate text-xs text-muted-foreground">
@@ -164,9 +164,7 @@ const HomeView = ({ companies, now, pending, recentEvents, tickets }: HomeViewPr
     <div className="grid gap-3.5 lg:grid-cols-approval">
       <Card className="gap-0 overflow-hidden p-0">
         <div className="flex items-center border-b border-border px-4.5 py-3.75">
-          <h2 className="text-(length:--text-body-sm) font-bold text-foreground">
-            Próximas aprovações
-          </h2>
+          <h2 className="text-body-sm font-bold text-foreground">Próximas aprovações</h2>
           <Link
             className="ml-auto rounded-sm py-2 text-(length:--text-label-sm) font-semibold text-primary transition-colors outline-none hover:text-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50"
             href="/approvals"
@@ -179,9 +177,7 @@ const HomeView = ({ companies, now, pending, recentEvents, tickets }: HomeViewPr
 
       <Card className="gap-0 overflow-hidden p-0">
         <div className="border-b border-border px-4.5 py-3.75">
-          <h2 className="text-(length:--text-body-sm) font-bold text-foreground">
-            Eventos recentes
-          </h2>
+          <h2 className="text-body-sm font-bold text-foreground">Eventos recentes</h2>
         </div>
         {recentEvents}
       </Card>

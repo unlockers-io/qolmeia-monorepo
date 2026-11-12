@@ -27,7 +27,7 @@ const ActivityRow = ({ now, row }: ActivityRowProps) => {
         >
           {style.label}
         </span>
-        <span className="order-last w-full text-sm text-foreground md:order-none md:w-auto md:min-w-0 md:flex-1 md:truncate">
+        <span className="order-last w-full text-sm text-foreground md:order-0 md:w-auto md:min-w-0 md:flex-1 md:truncate">
           {row.summary}
         </span>
         <span className="text-xs whitespace-nowrap text-muted-foreground md:shrink-0">
