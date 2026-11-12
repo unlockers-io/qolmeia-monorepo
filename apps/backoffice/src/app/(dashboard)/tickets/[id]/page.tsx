@@ -148,7 +148,7 @@ const TicketDetailsCard = ({ relatedAction, ticket }: TicketDetailsCardProps) =>
       <div className="mb-3 font-mono text-xs tracking-wide text-muted-foreground uppercase">
         Detalhes
       </div>
-      <div className="flex flex-col gap-2.5 text-(length:--text-label)">
+      <div className="flex flex-col gap-2.5 text-label">
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground">Empresa</span>
           <span className="truncate font-semibold text-foreground">{ticket.companyName}</span>
@@ -193,7 +193,7 @@ const TicketDetailsCard = ({ relatedAction, ticket }: TicketDetailsCardProps) =>
               aria-hidden
               className={cn("size-2 shrink-0 rounded-full", STEP_DOT[relatedAction.status])}
             />
-            <span className="min-w-0 flex-1 truncate text-(length:--text-label) font-semibold text-foreground">
+            <span className="min-w-0 flex-1 truncate text-label font-semibold text-foreground">
               {ACTION_TYPE_VIEWS[relatedAction.actionType].label}
             </span>
             <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />

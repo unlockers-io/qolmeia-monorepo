@@ -68,7 +68,7 @@ const TicketsCard = ({ items, now }: TicketsCardProps) => (
                     <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
                       Empresa
                     </span>
-                    <span className="block truncate text-(length:--text-label) text-foreground/70">
+                    <span className="block truncate text-label text-foreground/70">
                       {ticket.companyName}
                     </span>
                   </div>
@@ -86,7 +86,7 @@ const TicketsCard = ({ items, now }: TicketsCardProps) => (
                       >
                         {agentInitials(ticket.agent.name)}
                       </span>
-                      <span className="truncate text-(length:--text-label) text-foreground/70">
+                      <span className="truncate text-label text-foreground/70">
                         {ticket.agent.name}
                       </span>
                     </div>

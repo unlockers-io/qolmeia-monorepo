@@ -22,7 +22,7 @@ type SummaryItemProps = {
 const SummaryItem = ({ emphasis = false, href, label, sub, value }: SummaryItemProps) => {
   const content = (
     <>
-      <dt className="text-(length:--text-label) text-muted-foreground">{label}</dt>
+      <dt className="text-label text-muted-foreground">{label}</dt>
       <dd
         className={cn(
           "mt-1 text-2xl font-semibold tracking-tight tabular-nums",

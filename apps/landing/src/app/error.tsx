@@ -21,7 +21,7 @@ const RouteError = ({ error, retry }: ErrorPageProps) => {
         >
           Algo deu errado
         </h1>
-        <p className="max-w-(--container-measure-footer) text-base text-pretty text-muted-foreground">
+        <p className="max-w-measure-footer text-base text-pretty text-muted-foreground">
           Não conseguimos carregar esta página. Tente novamente e, se o problema continuar, volte em
           alguns minutos.
         </p>

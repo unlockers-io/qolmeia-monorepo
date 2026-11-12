@@ -56,7 +56,7 @@ const ApprovalDetailView = ({ decision, detail, now }: ApprovalDetailViewProps) 
       <header className="flex flex-wrap items-start gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-(length:--text-heading)">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-heading">
               {TITLE[action.status]}
             </h1>
             <span className="font-mono text-xs text-muted-foreground">{action.id}</span>

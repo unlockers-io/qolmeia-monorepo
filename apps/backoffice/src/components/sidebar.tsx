@@ -198,14 +198,12 @@ const SidebarView = ({
           <div className="flex items-center gap-2.5 px-1.5">
             <span
               aria-hidden
-              className="flex size-8.5 shrink-0 items-center justify-center rounded-panel bg-foreground text-(length:--text-label) font-bold text-background"
+              className="flex size-8.5 shrink-0 items-center justify-center rounded-panel bg-foreground text-label font-bold text-background"
             >
               {agentInitials(user.name)}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-(length:--text-label) font-bold text-foreground">
-                {user.name}
-              </p>
+              <p className="truncate text-label font-bold text-foreground">{user.name}</p>
               <p className="truncate text-xs text-muted-foreground" title={user.email}>
                 {user.email}
               </p>
