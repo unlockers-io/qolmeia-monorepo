@@ -202,6 +202,8 @@ const operatorMemberPatchSchema = z.union([
 
 type CompaniesResponse = { companies: ReadonlyArray<CompanyRoster> };
 
+type CompanyCreatedResponse = { company: { id: string; name: string; slug: string } };
+
 type TemplatesResponse = { items: ReadonlyArray<Template> };
 
 type TemplateResponse = { template: Template };
@@ -233,6 +235,7 @@ export type {
   ActivityResponse,
   AgentSummary,
   CompaniesResponse,
+  CompanyCreatedResponse,
   CoverageOption,
   CoverageResponse,
   CustomerInvitation,

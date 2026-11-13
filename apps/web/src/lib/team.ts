@@ -1,22 +1,19 @@
-import { apiGet, apiSend } from "@repo/worker-api";
+import { apiCall, type ApiGet } from "@repo/worker-api";
 import {
-  type CatalogueResponse,
   type ConfirmTeamResponse,
   type confirmTeamInputSchema,
   type HireableTemplate,
   type hireInputSchema,
-  type MemberDetailResponse,
-  type MemberResponse,
   type memberPatchSchema,
   TEAM_EVENT_TYPES,
   type TeamMemberDetailView,
   type TeamMemberView,
-  type TeamResponse,
 } from "@repo/worker-api/contracts";
+import { CUSTOMER } from "@repo/worker-api/endpoints";
 import type { z } from "zod";
 
-const fetchTeam = async (get: typeof apiGet = apiGet): Promise<ReadonlyArray<TeamMemberView>> => {
-  const { members } = await get<TeamResponse>("/api/me/team");
+const fetchTeam = async (get: ApiGet = apiCall): Promise<ReadonlyArray<TeamMemberView>> => {
+  const { members } = await get(CUSTOMER.team);
 
   return members;
 };
@@ -64,7 +61,7 @@ const openSharedSource = (): void => {
     return;
   }
 
-  const source = new EventSource("/api/me/team/events", { withCredentials: true });
+  const source = new EventSource(CUSTOMER.teamEvents.path, { withCredentials: true });
   sharedTeamEvents.source = source;
   source.addEventListener("open", () => {
     sharedTeamEvents.failedAttempts = 0;
@@ -111,19 +108,17 @@ const subscribeTeamEvents = (onEvent: () => void): (() => void) | null => {
   };
 };
 
-const fetchCatalogue = async (
-  get: typeof apiGet = apiGet,
-): Promise<ReadonlyArray<HireableTemplate>> => {
-  const { templates } = await get<CatalogueResponse>("/api/me/catalogue");
+const fetchCatalogue = async (get: ApiGet = apiCall): Promise<ReadonlyArray<HireableTemplate>> => {
+  const { templates } = await get(CUSTOMER.catalogue);
 
   return templates;
 };
 
 const confirmTeam = (input: z.input<typeof confirmTeamInputSchema>): Promise<ConfirmTeamResponse> =>
-  apiSend<ConfirmTeamResponse>("POST", "/api/me/team/confirm", input);
+  apiCall(CUSTOMER.confirmTeam, { body: input });
 
 const hireMember = async (input: z.input<typeof hireInputSchema>): Promise<TeamMemberView> => {
-  const { member } = await apiSend<MemberResponse>("POST", "/api/me/team/hire", input);
+  const { member } = await apiCall(CUSTOMER.hireMember, { body: input });
 
   return member;
 };
@@ -132,22 +127,21 @@ const patchMember = async (
   id: string,
   patch: z.input<typeof memberPatchSchema>,
 ): Promise<TeamMemberView> => {
-  const { member } = await apiSend<MemberResponse>("PATCH", `/api/me/team/members/${id}`, patch);
+  const { member } = await apiCall(CUSTOMER.patchMember, { body: patch, params: { id } });
 
   return member;
 };
 
 const fetchMemberDetail = async (id: string): Promise<TeamMemberDetailView> => {
-  const { member } = await apiGet<MemberDetailResponse>(`/api/me/team/members/${id}`);
+  const { member } = await apiCall(CUSTOMER.member, { params: { id } });
 
   return member;
 };
 
 const setPaused = async (id: string, paused: boolean): Promise<TeamMemberView> => {
-  const { member } = await apiSend<MemberResponse>(
-    "POST",
-    `/api/me/team/members/${id}/${paused ? "pause" : "resume"}`,
-  );
+  const { member } = await apiCall(paused ? CUSTOMER.pauseMember : CUSTOMER.resumeMember, {
+    params: { id },
+  });
 
   return member;
 };

@@ -5,7 +5,7 @@ import { Card } from "@repo/ui/components/card";
 import { EmptyState } from "@repo/ui/compositions/empty-state";
 import { StatusPill, type StatusTone } from "@repo/ui/compositions/status-pill";
 import { cn } from "@repo/ui/lib/utils";
-import { apiGet } from "@repo/worker-api";
+import { apiCall } from "@repo/worker-api";
 import type { Template, TemplateStatus } from "@repo/worker-api/contracts";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -186,7 +186,7 @@ const TemplatesListSkeleton = () => (
 
 const TemplatesList = () => {
   const { data, isError } = useQuery({
-    queryFn: () => getTemplates(apiGet),
+    queryFn: () => getTemplates(apiCall),
     queryKey: templateKeys.all,
   });
 

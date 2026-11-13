@@ -2,7 +2,7 @@
 
 import { Button } from "@repo/ui/components/button";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
-import { apiGet, describeRequestError } from "@repo/worker-api";
+import { apiCall, describeRequestError } from "@repo/worker-api";
 import type { ActivityCategory, ActivityEntry } from "@repo/worker-api/contracts";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -34,7 +34,7 @@ const ActivityList = ({ category, initial, now }: ActivityListProps) => {
     setLoading(true);
 
     try {
-      const next = await getActivity(apiGet, {
+      const next = await getActivity(apiCall, {
         before: rows.at(-1)?.createdAt,
         category,
         limit: ACTIVITY_PAGE_SIZE,

@@ -7,7 +7,7 @@ import { ClientReadyForm } from "@repo/ui/compositions/client-ready-form";
 import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { cn } from "@repo/ui/lib/utils";
-import { apiGet, describeRequestError } from "@repo/worker-api";
+import { apiCall, describeRequestError } from "@repo/worker-api";
 import { type DecisionOutcome, FEEDBACK_MAX_LENGTH } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
@@ -80,7 +80,7 @@ const feedbackError = (feedback: string, required: boolean): string | null => {
 
 const nextPendingId = async (currentId: string): Promise<string | null> => {
   try {
-    const { items } = await getPendingActions(apiGet);
+    const { items } = await getPendingActions(apiCall);
 
     return items.find((item) => item.id !== currentId)?.id ?? null;
   } catch {

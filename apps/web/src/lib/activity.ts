@@ -1,10 +1,11 @@
-import { apiGet } from "@repo/worker-api";
-import type { CustomerActivityEntry, CustomerActivityResponse } from "@repo/worker-api/contracts";
+import { apiCall, type ApiGet } from "@repo/worker-api";
+import type { CustomerActivityEntry } from "@repo/worker-api/contracts";
+import { CUSTOMER } from "@repo/worker-api/endpoints";
 
 const fetchActivity = async (
-  get: typeof apiGet = apiGet,
+  get: ApiGet = apiCall,
 ): Promise<ReadonlyArray<CustomerActivityEntry>> => {
-  const { items } = await get<CustomerActivityResponse>("/api/me/activity?limit=50");
+  const { items } = await get(CUSTOMER.activity, { query: { limit: 50 } });
 
   return items;
 };

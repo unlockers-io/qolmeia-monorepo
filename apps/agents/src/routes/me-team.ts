@@ -1,16 +1,8 @@
-import {
-  confirmTeamInputSchema,
-  hireInputSchema,
-  memberPatchSchema,
-  type ConfirmTeamResponse,
-  type MemberDetailResponse,
-  type MemberResponse,
-  type TeamResponse,
-} from "@repo/worker-api/contracts";
+import { CUSTOMER } from "@repo/worker-api/endpoints";
 import { type Context, Hono } from "hono";
 
 import type { IdentityEnv } from "#/identity/gates";
-import { jsonBody } from "#/lib/validate";
+import { answer } from "#/lib/endpoint";
 import { confirmTeam } from "#/team/confirm";
 import { subscribeTeamEvents } from "#/team/events";
 import { hireMember, setMemberStatus, updateMember } from "#/team/members";
@@ -19,84 +11,68 @@ import { getMemberDetail, getTeamRoster } from "#/team/roster";
 /** Mounted by the customer router, which gates it. */
 const teamRoutes = new Hono<IdentityEnv>();
 
-teamRoutes.get("/", async (c) => {
-  const body: TeamResponse = { members: await getTeamRoster(c.var.db, c.var.session.companyId) };
+answer(teamRoutes, CUSTOMER.team, async (c) => ({
+  members: await getTeamRoster(c.var.db, c.var.session.companyId),
+}));
 
-  return c.json(body);
-});
+answer(teamRoutes, CUSTOMER.teamEvents, (c) => subscribeTeamEvents(c.env, c.var.session.companyId));
 
-teamRoutes.get("/events", (c) => subscribeTeamEvents(c.env, c.var.session.companyId));
-
-teamRoutes.post("/confirm", jsonBody(confirmTeamInputSchema), async (c) => {
+answer(teamRoutes, CUSTOMER.confirmTeam, async (c, { body }) => {
   const { session } = c.var;
 
-  const body: ConfirmTeamResponse = {
+  return {
     team: await confirmTeam(c.env, c.var.db, {
       actor: session,
       companyId: session.companyId,
-      templateIds: c.req.valid("json").templateIds,
+      templateIds: body.templateIds,
     }),
   };
-
-  return c.json(body);
 });
 
-teamRoutes.post("/hire", jsonBody(hireInputSchema), async (c) => {
+answer(teamRoutes, CUSTOMER.hireMember, async (c, { body }) => {
   const { session } = c.var;
 
-  const body: MemberResponse = {
+  return {
     member: await hireMember(c.env, c.var.db, {
-      ...c.req.valid("json"),
+      ...body,
       actor: session,
       companyId: session.companyId,
     }),
   };
-
-  return c.json(body);
 });
 
-teamRoutes.get("/members/:id", async (c) => {
-  const body: MemberDetailResponse = {
-    member: await getMemberDetail(c.var.db, c.var.session.companyId, c.req.param("id")),
-  };
+answer(teamRoutes, CUSTOMER.member, async (c, { params }) => ({
+  member: await getMemberDetail(c.var.db, c.var.session.companyId, params.id),
+}));
 
-  return c.json(body);
-});
-
-teamRoutes.patch("/members/:id", jsonBody(memberPatchSchema), async (c) => {
+answer(teamRoutes, CUSTOMER.patchMember, async (c, { body, params }) => {
   const { session } = c.var;
 
-  const body: MemberResponse = {
+  return {
     member: await updateMember(c.env, c.var.db, {
-      ...c.req.valid("json"),
+      ...body,
       actor: session,
-      agentInstanceId: c.req.param("id"),
+      agentInstanceId: params.id,
       companyId: session.companyId,
     }),
   };
-
-  return c.json(body);
 });
 
 const setStatus = async (
   c: Context<IdentityEnv>,
   agentInstanceId: string,
   status: "active" | "paused",
-): Promise<Response> => {
-  const body: MemberResponse = {
-    member: await setMemberStatus(c.env, c.var.db, {
-      actor: c.var.session,
-      agentInstanceId,
-      companyId: c.var.session.companyId,
-      status,
-    }),
-  };
+) => ({
+  member: await setMemberStatus(c.env, c.var.db, {
+    actor: c.var.session,
+    agentInstanceId,
+    companyId: c.var.session.companyId,
+    status,
+  }),
+});
 
-  return c.json(body);
-};
+answer(teamRoutes, CUSTOMER.pauseMember, (c, { params }) => setStatus(c, params.id, "paused"));
 
-teamRoutes.post("/members/:id/pause", (c) => setStatus(c, c.req.param("id"), "paused"));
-
-teamRoutes.post("/members/:id/resume", (c) => setStatus(c, c.req.param("id"), "active"));
+answer(teamRoutes, CUSTOMER.resumeMember, (c, { params }) => setStatus(c, params.id, "active"));
 
 export { teamRoutes };

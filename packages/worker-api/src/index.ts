@@ -1,11 +1,6 @@
-type JsonRequestValue =
-  | boolean
-  | number
-  | string
-  | null
-  | undefined
-  | ReadonlyArray<JsonRequestValue>
-  | { readonly [key: string]: JsonRequestValue };
+import type { z } from "zod";
+
+import type { Endpoint, NoQuery, ParamsOf, PathParams, QueryOf, ResponseOf } from "./endpoints";
 
 class ApiError extends Error {
   body: string;
@@ -45,63 +40,103 @@ const describeRequestError = (error: unknown, fallback: string): string => {
   return STATUS_MESSAGES.get(error.status) ?? fallback;
 };
 
-const jsonHeaders = (contentType?: string): Headers => {
-  const headers = new Headers({ Accept: "application/json" });
+type ParamsPart<Target extends Endpoint> = [PathParams<Target["path"]>] extends [never]
+  ? object
+  : { params: ParamsOf<Target> };
 
-  if (contentType !== undefined) {
-    headers.set("Content-Type", contentType);
-  }
+/** A body is only serialized, so callers may pass readonly values. */
+type Immutable<Value> =
+  Value extends ReadonlyArray<infer Item>
+    ? ReadonlyArray<Immutable<Item>>
+    : Value extends object
+      ? { readonly [Key in keyof Value]: Immutable<Value[Key]> }
+      : Value;
 
-  return headers;
+type BodyPart<Target extends Endpoint> = Target["body"] extends z.ZodType
+  ? { body: Immutable<z.input<Target["body"]>> }
+  : Target["body"] extends "form"
+    ? { body: FormData }
+    : object;
+
+type QueryPart<Target extends Endpoint> = [QueryOf<Target>] extends [NoQuery]
+  ? object
+  : { query?: QueryOf<Target> };
+
+type RequestOf<Target extends Endpoint> = ParamsPart<Target> & BodyPart<Target> & QueryPart<Target>;
+
+/** The request argument is optional when the endpoint takes no path parameter and no body. */
+type RequestArgs<Target extends Endpoint> =
+  Partial<RequestOf<Target>> extends RequestOf<Target>
+    ? [request?: RequestOf<Target>]
+    : [request: RequestOf<Target>];
+
+type ApiCall<Target extends Endpoint = Endpoint> = <Called extends Target>(
+  endpoint: Called,
+  ...args: RequestArgs<Called>
+) => Promise<ResponseOf<Called>>;
+
+type ApiGet = ApiCall<Endpoint<unknown, "GET">>;
+
+type RequestParts = {
+  body?: FormData | object;
+  params?: Record<string, string>;
+  query?: Record<string, number | string | undefined>;
 };
 
-const handleResponse = async <T>(res: Response): Promise<T> => {
+const partsOf = (args: ReadonlyArray<object | undefined>): RequestParts => args[0] ?? {};
+
+const urlOf = ({ path }: Endpoint, { params = {}, query = {} }: RequestParts): string => {
+  const resolved = path.replaceAll(/:(?<name>\w+)/gv, (_match, name: string) =>
+    encodeURIComponent(params[name] ?? ""),
+  );
+
+  const search = new URLSearchParams(
+    Object.entries(query).flatMap(([name, value]) =>
+      value === undefined ? [] : [[name, String(value)]],
+    ),
+  ).toString();
+
+  return search === "" ? resolved : `${resolved}?${search}`;
+};
+
+const initOf = ({ method }: Endpoint, { body }: RequestParts, cookie = ""): RequestInit => {
+  const headers = new Headers({ Accept: "application/json" });
+
+  if (cookie !== "") {
+    headers.set("Cookie", cookie);
+  }
+
+  if (body === undefined || body instanceof FormData) {
+    return { body, headers, method };
+  }
+
+  headers.set("Content-Type", "application/json");
+
+  return { body: JSON.stringify(body), headers, method };
+};
+
+const readResponse = async <Target extends Endpoint>(
+  res: Response,
+): Promise<ResponseOf<Target>> => {
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new ApiError(res.status, body);
   }
 
-  const body: unknown = res.status === 204 ? null : await res.json();
-
-  // SAFETY: Callers bind T to the contract of the first-party route they request; 204 routes bind it to null.
-  // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped and callers own the route contract
-  return body as T;
+  // SAFETY: The Worker types each handler's answer with the same endpoint the caller passes.
+  // oxlint-disable-next-line no-unsafe-type-assertion -- Response.json() is untyped; the endpoint is the contract
+  return (await res.json()) as ResponseOf<Target>;
 };
 
-type SendMethod = "DELETE" | "PATCH" | "POST" | "PUT";
+const apiCall: ApiCall = async (endpoint, ...args) => {
+  const request = partsOf(args);
 
-const apiGet = async <T>(path: string): Promise<T> => {
-  const res = await fetch(path, { credentials: "include", headers: jsonHeaders(), method: "GET" });
-
-  return handleResponse<T>(res);
-};
-
-const apiSend = async <T>(
-  method: SendMethod,
-  path: string,
-  body?: JsonRequestValue,
-): Promise<T> => {
-  const serialized = body === undefined ? undefined : JSON.stringify(body);
-
-  const res = await fetch(path, {
-    body: serialized,
+  const res = await fetch(urlOf(endpoint, request), {
+    ...initOf(endpoint, request),
     credentials: "include",
-    headers: jsonHeaders(serialized === undefined ? undefined : "application/json"),
-    method,
   });
 
-  return handleResponse<T>(res);
-};
-
-const apiSendForm = async <T>(path: string, formData: FormData): Promise<T> => {
-  const res = await fetch(path, {
-    body: formData,
-    credentials: "include",
-    headers: jsonHeaders(),
-    method: "POST",
-  });
-
-  return handleResponse<T>(res);
+  return readResponse<typeof endpoint>(res);
 };
 
 type ServerApiConfig = {
@@ -109,19 +144,21 @@ type ServerApiConfig = {
   readCookieHeader: () => Promise<string>;
 };
 
-const createServerApi = ({ baseUrl, readCookieHeader }: ServerApiConfig) => ({
-  apiGetServer: async <T>(path: string): Promise<T> => {
-    const cookie = await readCookieHeader();
-    const headers = jsonHeaders();
+type ServerApi = { apiGetServer: ApiGet };
 
-    if (cookie !== "") {
-      headers.set("Cookie", cookie);
-    }
+const createServerApi = ({ baseUrl, readCookieHeader }: ServerApiConfig): ServerApi => ({
+  apiGetServer: async (endpoint, ...args) => {
+    const request = partsOf(args);
 
-    const res = await fetch(`${baseUrl}${path}`, { cache: "no-store", headers });
+    const res = await fetch(`${baseUrl}${urlOf(endpoint, request)}`, {
+      ...initOf(endpoint, request, await readCookieHeader()),
+      cache: "no-store",
+    });
 
-    return handleResponse<T>(res);
+    return readResponse<typeof endpoint>(res);
   },
 });
 
-export { ApiError, apiGet, apiSend, apiSendForm, createServerApi, describeRequestError };
+export { ApiError, apiCall, createServerApi, describeRequestError };
+
+export type { ApiGet };

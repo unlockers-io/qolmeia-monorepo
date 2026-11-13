@@ -55,14 +55,14 @@ app.use("*", dbPerRequest);
 
 app.route("/api/auth", authRoutes);
 
-app.route("/api/signup", signupRoutes);
+app.route("/", signupRoutes);
 
-app.route("/api/backoffice", backofficeRoutes);
+app.route("/", backofficeRoutes);
 
 // The customer router's gate also matches `/api/me` itself, so the identity route answers first.
-app.route("/api/me", identityRoutes);
+app.route("/", identityRoutes);
 
-app.route("/api/me", customerRoutes);
+app.route("/", customerRoutes);
 
 app.route("/assets", assetsRoutes);
 
