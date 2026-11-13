@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { db, entitle, seedCompany, seedTeam, seedTicket } from "#/__tests__/fixtures";
-import { MemberNotFoundError } from "#/team/errors";
 import { getCatalogue, getMemberDetail, getTeamRoster, listTeamRosters } from "#/team/roster";
 
 const COMPANY_ID = "co_roster_test";
@@ -188,9 +187,9 @@ describe("getMemberDetail", () => {
     expect(detail.promptOverrideUpdatedAt).toBeNull();
   });
 
-  it("throws MemberNotFoundError when the instance doesn't belong to that company", async () => {
+  it("refuses with 404 when the instance doesn't belong to that company", async () => {
     await expect(
       db((client) => getMemberDetail(client, OTHER_COMPANY_ID, WORKER_ID)),
-    ).rejects.toThrow(MemberNotFoundError);
+    ).rejects.toMatchObject({ message: "not found", status: 404 });
   });
 });

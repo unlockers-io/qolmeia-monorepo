@@ -22,17 +22,13 @@ const customerRoutes = new Hono<IdentityEnv>();
 
 customerRoutes.use("/api/me/*", requireCustomer);
 
-answer(customerRoutes, CUSTOMER.company, async (c) => {
-  const company = await getCompany(c.var.db, c.var.session.companyId);
+answer(customerRoutes, CUSTOMER.company, async (c) =>
+  companyResponse(await getCompany(c.var.db, c.var.session.companyId)),
+);
 
-  return company ? companyResponse(company) : c.json({ error: "company not found" }, 404);
-});
-
-answer(customerRoutes, CUSTOMER.patchCompany, async (c, { body }) => {
-  const company = await updateBrief(c.var.db, c.var.session.companyId, body);
-
-  return company ? companyResponse(company) : c.json({ error: "company not found" }, 404);
-});
+answer(customerRoutes, CUSTOMER.patchCompany, async (c, { body }) =>
+  companyResponse(await updateBrief(c.var.db, c.var.session.companyId, body)),
+);
 
 answer(customerRoutes, CUSTOMER.catalogue, async (c) => ({
   templates: await getCatalogue(c.var.db, c.var.session.companyId),

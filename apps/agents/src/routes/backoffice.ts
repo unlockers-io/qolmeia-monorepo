@@ -35,14 +35,9 @@ answer(backofficeRoutes, BACKOFFICE.tickets, async (c, { query }) => ({
 }));
 
 answer(backofficeRoutes, BACKOFFICE.ticket, async (c, { params }) => {
-  const { db } = c.var;
-  const ticket = await loadTicket(db, params.id);
+  const ticket = await loadTicket(c.var.db, params.id);
 
-  if (!ticket) {
-    return c.json({ error: "not found" }, 404);
-  }
-
-  return { actions: await listTicketActions(db, params.id), ticket };
+  return { actions: await listTicketActions(c.var.db, params.id), ticket };
 });
 
 answer(backofficeRoutes, BACKOFFICE.pendingActions, async (c) => {
@@ -51,11 +46,9 @@ answer(backofficeRoutes, BACKOFFICE.pendingActions, async (c) => {
   return { items: await listPendingActions(db, await getCoverage(db, c.var.session.userId)) };
 });
 
-answer(backofficeRoutes, BACKOFFICE.action, async (c, { params }) => {
-  const detail = await getActionDetail(c.var.db, params.id);
-
-  return detail ?? c.json({ error: "not found" }, 404);
-});
+answer(backofficeRoutes, BACKOFFICE.action, (c, { params }) =>
+  getActionDetail(c.var.db, params.id),
+);
 
 answer(backofficeRoutes, BACKOFFICE.decide, async (c, { body, params }) => {
   await submitDecision(c.env, c.var.db, params.id, {
@@ -148,26 +141,20 @@ answer(backofficeRoutes, BACKOFFICE.templates, async (c) => ({
   items: await listAllTemplates(c.var.db),
 }));
 
-answer(backofficeRoutes, BACKOFFICE.template, async (c, { params }) => {
-  const template = await getTemplate(c.var.db, params.id);
-
-  return template ? { template } : c.json({ error: "not found" }, 404);
-});
+answer(backofficeRoutes, BACKOFFICE.template, async (c, { params }) => ({
+  template: await getTemplate(c.var.db, params.id),
+}));
 
 answer(backofficeRoutes, BACKOFFICE.createTemplate, async (c, { body }) => ({
   template: await createTemplate(c.var.db, body),
 }));
 
-answer(backofficeRoutes, BACKOFFICE.updateTemplate, async (c, { body, params }) => {
-  const template = await updateTemplate(c.var.db, params.id, body);
+answer(backofficeRoutes, BACKOFFICE.updateTemplate, async (c, { body, params }) => ({
+  template: await updateTemplate(c.var.db, params.id, body),
+}));
 
-  return template ? { template } : c.json({ error: "not found" }, 404);
-});
-
-answer(backofficeRoutes, BACKOFFICE.setTemplateStatus, async (c, { body, params }) => {
-  const template = await setTemplateStatus(c.var.db, params.id, body.status);
-
-  return template ? { template } : c.json({ error: "not found" }, 404);
-});
+answer(backofficeRoutes, BACKOFFICE.setTemplateStatus, async (c, { body, params }) => ({
+  template: await setTemplateStatus(c.var.db, params.id, body.status),
+}));
 
 export { backofficeRoutes };

@@ -4,14 +4,7 @@ import type { TeamMemberView } from "@repo/worker-api/contracts";
 import { recordActivity } from "#/activity/log";
 import type { Actor } from "#/identity/identity";
 import type { Db, PrismaClient } from "#/lib/db";
-import {
-  MemberNotFoundError,
-  MemberNotPausableError,
-  MemberPromptNotEditableError,
-  TeamNotConfirmedError,
-  TemplateNotFoundError,
-  TemplateRetiredError,
-} from "#/team/errors";
+import { DomainError, notFound } from "#/lib/errors";
 import { emitTeamEvent, type TeamEventsEnv } from "#/team/events";
 import { getTeamMember, nextDisplayName } from "#/team/roster";
 
@@ -41,7 +34,7 @@ const changeRoster = async (
     const view = await getTeamMember(tx, companyId, await change(tx));
 
     if (!view) {
-      throw new MemberNotFoundError();
+      throw notFound();
     }
 
     return view;
@@ -58,7 +51,7 @@ const lockTeam = async (tx: Prisma.TransactionClient, companyId: string): Promis
     SELECT id FROM team WHERE company_id = ${companyId} FOR UPDATE`;
 
   if (team === undefined) {
-    throw new TeamNotConfirmedError();
+    throw new DomainError(409, "team not confirmed");
   }
 
   return team.id;
@@ -78,11 +71,11 @@ const hireMember = (
     });
 
     if (!template) {
-      throw new TemplateNotFoundError(input.templateId);
+      throw notFound(`template ${input.templateId} not found`);
     }
 
     if (template.status !== "active") {
-      throw new TemplateRetiredError(input.templateId);
+      throw new DomainError(409, `template ${input.templateId} is retired`);
     }
 
     const teamId = await lockTeam(tx, input.companyId);
@@ -133,7 +126,7 @@ const findMember = async (
   });
 
   if (!member) {
-    throw new MemberNotFoundError();
+    throw notFound();
   }
 
   return member;
@@ -148,7 +141,7 @@ const setMemberStatus = (
     const member = await findMember(tx, input);
 
     if (member.role !== "worker") {
-      throw new MemberNotPausableError(member.role);
+      throw new DomainError(409, `cannot pause/resume a ${member.role}`);
     }
 
     await tx.agentInstance.update({
@@ -232,7 +225,7 @@ const updateMember = (
     const { displayName, promptOverride } = input;
 
     if (promptOverride !== undefined && member.role !== "worker") {
-      throw new MemberPromptNotEditableError(member.role);
+      throw new DomainError(409, `cannot edit the prompt of a ${member.role}`);
     }
 
     if (displayName !== undefined) {

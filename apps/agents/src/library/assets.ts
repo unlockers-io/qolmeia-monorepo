@@ -3,6 +3,7 @@ import { MODEL_IMAGE_TYPES } from "@repo/worker-api/contracts";
 
 import type { Identity } from "#/identity/identity";
 import type { Db } from "#/lib/db";
+import { notFound } from "#/lib/errors";
 import { toRecordOrNull, type JsonRecord } from "#/lib/records";
 
 type AssetSummary = {
@@ -248,9 +249,23 @@ const deleteAssets = async (
   return rows.length;
 };
 
+const deleteBrandAsset = async (
+  env: LibraryEnv,
+  db: Db,
+  companyId: string,
+  id: string,
+): Promise<void> => {
+  const deleted = await deleteAssets(env, db, companyId, { ids: [id], kind: "brand_asset" });
+
+  if (deleted === 0) {
+    throw notFound();
+  }
+};
+
 export {
   assetReference,
   deleteAssets,
+  deleteBrandAsset,
   listAssets,
   openAsset,
   promoteAssets,

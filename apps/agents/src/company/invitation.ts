@@ -3,7 +3,7 @@ import type { CustomerInvitation } from "@repo/worker-api/contracts";
 import { recordActivity } from "#/activity/log";
 import type { WorkerAuth } from "#/lib/auth";
 import type { PrismaClient } from "#/lib/db";
-import { DomainError } from "#/lib/errors";
+import { DomainError, notFound } from "#/lib/errors";
 
 type InviteCustomerInput = { companyId: string; email: string; inviterId: string };
 
@@ -26,7 +26,7 @@ const inviteCustomer = async (
   ]);
 
   if (company === null) {
-    throw new DomainError(404, "not found");
+    throw notFound();
   }
 
   if (membership !== null) {

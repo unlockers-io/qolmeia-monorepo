@@ -11,6 +11,7 @@ import {
 
 import { ACTION_TYPE_MODULES } from "#/action/action-types";
 import type { Db } from "#/lib/db";
+import { notFound } from "#/lib/errors";
 import { agentSummarySelect, ticketInclude, toAgentSummary, toTicket } from "#/ticket/ticket";
 
 const MAX_REVISIONS = 3;
@@ -77,14 +78,14 @@ const listTicketActions = async (db: Db, ticketId: string): Promise<ReadonlyArra
   return rows.map(toAction);
 };
 
-const getActionDetail = async (db: Db, actionId: string): Promise<ActionDetailResponse | null> => {
+const getActionDetail = async (db: Db, actionId: string): Promise<ActionDetailResponse> => {
   const row = await db.action.findUnique({
     include: { ...actionInclude, ticket: { include: ticketInclude } },
     where: { id: actionId },
   });
 
   if (!row) {
-    return null;
+    throw notFound();
   }
 
   const [rounds, decidedByName] = await Promise.all([

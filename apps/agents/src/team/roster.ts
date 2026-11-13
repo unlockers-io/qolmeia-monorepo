@@ -10,7 +10,7 @@ import {
 
 import type { ActivityEvent } from "#/activity/types";
 import type { Db } from "#/lib/db";
-import { MemberNotFoundError } from "#/team/errors";
+import { notFound } from "#/lib/errors";
 import { listEntitledTemplates } from "#/template/template";
 
 const rosterInclude = {
@@ -155,7 +155,7 @@ const getMemberDetail = async (
   });
 
   if (!row) {
-    throw new MemberNotFoundError();
+    throw notFound();
   }
 
   const edited = await db.activityLog.findFirst({

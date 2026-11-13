@@ -8,6 +8,7 @@ import {
 import type { CompanyOverview, CompanyResponse } from "@repo/worker-api/contracts";
 
 import type { Db, PrismaClient } from "#/lib/db";
+import { notFound } from "#/lib/errors";
 
 type Company = CompanyResponse["company"];
 
@@ -23,17 +24,23 @@ const toCompany = (row: Prisma.CompanyGetPayload<{ select: typeof companySelect 
   brief: parseBrief(row.brief),
 });
 
-const getCompany = async (db: Db, id: string): Promise<Company | null> => {
+const companyNotFound = () => notFound("company not found");
+
+const getCompany = async (db: Db, id: string): Promise<Company> => {
   const row = await db.company.findUnique({ select: companySelect, where: { id } });
 
-  return row ? toCompany(row) : null;
+  if (!row) {
+    throw companyNotFound();
+  }
+
+  return toCompany(row);
 };
 
 const updateBrief = (
   db: PrismaClient,
   companyId: string,
   updates: Partial<CompanyBrief>,
-): Promise<Company | null> =>
+): Promise<Company> =>
   db.$transaction(async (tx) => {
     const locked = await tx.$queryRaw<Array<{ brief: Prisma.JsonValue }>>`
       SELECT brief FROM company WHERE id = ${companyId} FOR UPDATE`;
@@ -41,7 +48,7 @@ const updateBrief = (
     const current = locked.at(0);
 
     if (current === undefined) {
-      return null;
+      throw companyNotFound();
     }
 
     const row = await tx.company.update({

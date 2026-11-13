@@ -17,6 +17,7 @@ import type { JsonRecord } from "#/lib/records";
 import {
   assetReference,
   deleteAssets,
+  deleteBrandAsset,
   listAssets,
   storeAsset,
   type AssetRecord,
@@ -152,12 +153,9 @@ answer(libraryRoutes, CUSTOMER.uploadBrandAsset, async (c) => {
 });
 
 answer(libraryRoutes, CUSTOMER.deleteBrandAsset, async (c, { params }) => {
-  const deleted = await deleteAssets(c.env, c.var.db, c.var.session.companyId, {
-    ids: [params.id],
-    kind: "brand_asset",
-  });
+  await deleteBrandAsset(c.env, c.var.db, c.var.session.companyId, params.id);
 
-  return deleted === 0 ? c.json({ error: "not found" }, 404) : { ok: true };
+  return { ok: true };
 });
 
 export { libraryRoutes };
