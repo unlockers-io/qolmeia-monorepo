@@ -188,7 +188,7 @@ Executing runs the action type's executor, which moves the deliverable's files t
 ### 3.4 Data model (Postgres + Prisma)
 
 `company`, `agent_instance`, `template`, `skill` (operator kill-switch: `enabled` only),
-`company_template_entitlement`, `team`, `team_member`,
+`company_template_entitlement`, `team`,
 `ticket`, `action`, `activity_log`, `memory_fact`, `operator_assignment`, and `asset` (kinds:
 `generated_image`, `knowledge_doc`, `audio`, `brand_asset`, `user_upload`; customer/agent visibility;
 SHA-256 deduplication).
