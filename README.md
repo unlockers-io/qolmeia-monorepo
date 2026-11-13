@@ -5,7 +5,8 @@ Monorepo for Qolmeia, an agent platform where each customer Company gets a Team 
 The complete shipped-feature inventory lives in [`docs/FEATURES.md`](docs/FEATURES.md), with screenshots
 and product flows in [`docs/PRODUCT_MAP.md`](docs/PRODUCT_MAP.md). Architecture details live in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and local setup is in
-[`docs/LOCAL_DEV.md`](docs/LOCAL_DEV.md).
+[`docs/LOCAL_DEV.md`](docs/LOCAL_DEV.md). Decisions that are still open are in
+[`docs/open-decisions.md`](docs/open-decisions.md).
 
 ## Apps
 

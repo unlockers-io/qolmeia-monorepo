@@ -37,6 +37,8 @@ Important local variables:
 | `apps/web/.env`         | optional `AGENTS_INTERNAL_URL`                                                                    |
 | `apps/backoffice/.env`  | optional `AGENTS_INTERNAL_URL`                                                                    |
 
+A `.dev.vars` copied before `MAIL_TRANSPORT` existed has neither that line nor `RESEND_API_KEY`: add `MAIL_TRANSPORT=outbox`, or every e-mail the Worker sends fails (magic links, verification, password reset, invitations).
+
 The Next apps rewrite `/api/auth/*`, `/api/me/*`, `/api/backoffice/*`, `/agents/*`, and `/assets/:id` to the Worker so cookies stay first-party in development. They hold no database URL and no auth secret.
 
 ## 4. Initialize Data

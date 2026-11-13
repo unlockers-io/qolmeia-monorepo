@@ -149,9 +149,39 @@ DATABASE_URL=postgresql://... pnpm --filter=@repo/db db:seed
 The seed upserts templates with `update: {}`, so it never overwrites an
 Operator's edits; a change to an existing template needs a guarded SQL update.
 
-On an existing database, read each PR's deploy steps for the order: a push that
-adds columns goes before the Worker that reads them, and a push that drops
-columns (`--accept-data-loss`) goes after the Worker that stopped reading them.
+**Schema changes on an existing database.** Nothing pushes the schema on deploy:
+Workers Builds deploys the Worker and Vercel deploys the three Next apps, and
+neither runs `prisma db push`. Every change to `packages/db/prisma/schema.prisma`
+is applied by hand, and the Worker's Prisma client names every column the schema
+declares, so the order decides whether production keeps answering:
+
+- **Adding** a table or column: push first, then merge. A Worker that reads a
+  column the database lacks fails on every query of that table. Open the PR,
+  push its schema to production
+  (`DATABASE_URL=postgresql://... pnpm --filter=@repo/db db:push` from the PR
+  head), then merge. A new column that existing rows need a value in is added
+  nullable or with a default, backfilled, and only then read.
+- **Dropping** a table or column: merge first, wait for the `worker-bees`
+  Workers Builds deploy of the merge commit to succeed, then drop. Until then
+  the deployed Worker still selects the column. Back up what is dropped, and
+  write the statements with Prisma instead of by hand:
+
+  ```bash
+  # DATABASE_URL points at a Postgres that holds the schema before the change.
+  pnpm --filter=@repo/db exec prisma migrate diff \
+    --from-config-datasource --to-schema prisma/schema.prisma --script
+  ```
+
+  Run the output on production in one transaction. `prisma db push
+--accept-data-loss` applies the same statements without showing them first.
+
+- **Removing an enum value, or changing a type or a default**: check that no
+  row holds the old value before the Worker with the smaller schema deploys
+  ([`open-decisions.md`](./open-decisions.md) §1 has the queries for the values
+  nothing writes today).
+
+To confirm a change is complete, run the same `prisma migrate diff` against
+production without `--script`: it prints "No difference detected".
 [`model-upgrade.md`](./model-upgrade.md) records the Qwen3 memory-index cutover.
 
 ### 4e. Deploy
@@ -282,5 +312,7 @@ For the initial setup:
 
 ## 9. Still open
 
+- Product and data decisions that are not made yet are in
+  [`open-decisions.md`](./open-decisions.md).
 - Hyperdrive cannot verify Railway's certificate and keeps `sslmode=require`
   (ADR 0010).
