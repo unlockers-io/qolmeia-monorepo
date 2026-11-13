@@ -103,6 +103,6 @@ const generateDeliverable = async (
   return { outputs, summary };
 };
 
-export { buildRevisionMessages, generateDeliverable };
+export { generateDeliverable };
 
 export type { Revision };
