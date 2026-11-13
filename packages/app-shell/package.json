@@ -11,7 +11,6 @@
     "./auth-schemas": "./src/auth-schemas.ts",
     "./document": "./src/document.tsx",
     "./document-metadata": "./src/document-metadata.ts",
-    "./error-boundary": "./src/error-boundary.ts",
     "./form-limits": "./src/form-limits.ts",
     "./global-error": "./src/global-error.tsx",
     "./match-route": "./src/match-route.ts",
