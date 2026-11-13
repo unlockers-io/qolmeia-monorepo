@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { db, entitle, seedCompany, seedTeam } from "#/__tests__/fixtures";
 import type { Actor } from "#/identity/identity";
 import { hireMember, setMemberStatus, updateMember } from "#/team/members";
+import { getTeamRoster } from "#/team/roster";
 
 const COMPANY_ID = "co_hire_test";
 const CORR_ID = `corr-${COMPANY_ID}`;
@@ -48,15 +49,14 @@ beforeEach(async () => {
 });
 
 describe("hireMember", () => {
-  it("creates a new agent_instance and puts it on the team", async () => {
+  it("creates a new agent_instance and puts it on the roster", async () => {
     const member = await hire();
     expect(member.displayName).toBe("Designer");
     expect(member.role).toBe("worker");
     expect(member.templateId).toBe("tpl-designer");
 
-    await expect(
-      db((client) => client.teamMember.count({ where: { agentInstanceId: member.id } })),
-    ).resolves.toBe(1);
+    const roster = await db((client) => getTeamRoster(client, COMPANY_ID));
+    expect(roster.map(({ id }) => id)).toContain(member.id);
   });
 
   it("allows multi-hire of the same template with auto-numbered name", async () => {

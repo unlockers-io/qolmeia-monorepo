@@ -166,6 +166,12 @@ importers:
       '@repo/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@repo/config-next':
+        specifier: workspace:*
+        version: link:../../packages/config-next
+      '@repo/identity':
+        specifier: workspace:*
+        version: link:../../packages/identity
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -245,6 +251,12 @@ importers:
       '@repo/app-shell':
         specifier: workspace:*
         version: link:../../packages/app-shell
+      '@repo/config-next':
+        specifier: workspace:*
+        version: link:../../packages/config-next
+      '@repo/identity':
+        specifier: workspace:*
+        version: link:../../packages/identity
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -312,6 +324,12 @@ importers:
       '@repo/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@repo/config-next':
+        specifier: workspace:*
+        version: link:../../packages/config-next
+      '@repo/identity':
+        specifier: workspace:*
+        version: link:../../packages/identity
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -452,6 +470,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../db
+      '@repo/identity':
+        specifier: workspace:*
+        version: link:../identity
       '@repo/observability':
         specifier: workspace:*
         version: link:../observability
@@ -489,6 +510,22 @@ importers:
       vitest:
         specifier: ^5.0.1
         version: 5.0.4(@opentelemetry/api@1.9.0)(@types/node@26.6.2)(@vitest/coverage-v8@5.0.4)(jsdom@30.1.1(@noble/hashes@2.3.0))(vite@8.3.7(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
+
+  packages/config-next:
+    dependencies:
+      '@repo/portless-env':
+        specifier: workspace:*
+        version: link:../portless-env
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../config-typescript
+      next:
+        specifier: ^16.4.6
+        version: 16.4.6(@opentelemetry/api@1.9.0)(@playwright/test@1.63.0)(@types/node@26.6.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
 
   packages/config-typescript: {}
 
@@ -559,6 +596,15 @@ importers:
       vitest:
         specifier: ^5.0.1
         version: 5.0.4(@opentelemetry/api@1.9.0)(@types/node@26.6.2)(@vitest/coverage-v8@5.0.4)(jsdom@30.1.1(@noble/hashes@2.3.0))(vite@8.3.7(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
+
+  packages/identity:
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../config-typescript
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
 
   packages/observability:
     dependencies:
@@ -645,9 +691,12 @@ importers:
 
   packages/transactional:
     dependencies:
+      '@repo/identity':
+        specifier: workspace:*
+        version: link:../identity
       resend:
         specifier: ^6.29.0
-        version: 6.38.0(@react-email/render@2.1.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))
+        version: 6.29.0(@react-email/render@2.1.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -6199,8 +6248,8 @@ packages:
   reselect@5.2.0:
     resolution: {integrity: sha512-AgZ3UOZm3YndfrJ4OYjgrT7bmCm/1iqkjvEfH/oYjzh6PD2qw4QuT3jjnXIrpdt4MTpMXclMT3lXbmRY+XRakw==}
 
-  resend@6.38.0:
-    resolution: {integrity: sha512-+t1bz6unmYcyYrLqrZtkn73ODZhUgKJTViuRf+a4ewgo3mT/Bpg64WkBtAVQlXQcmUkeuorO1eLAd2+1h4jgNQ==}
+  resend@6.29.0:
+    resolution: {integrity: sha512-A/0YZRetK5P6aXbUOoJg0pCowkjeu4ts0p/ojIhpTZh15Qtbneqo76QPvvASPltdbMbDkH7msMAfOBFk8YXLnw==}
     engines: {node: '>=20'}
     peerDependencies:
       '@react-email/render': '*'
@@ -12575,7 +12624,7 @@ snapshots:
 
   reselect@5.2.0: {}
 
-  resend@6.38.0(@react-email/render@2.1.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)):
+  resend@6.29.0(@react-email/render@2.1.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)):
     dependencies:
       postal-mime: 2.7.6
       standardwebhooks: 1.1.1

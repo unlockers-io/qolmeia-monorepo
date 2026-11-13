@@ -1,4 +1,3 @@
-/** Agent and team row ids are derived from the Company. */
 const correspondentIdFor = (companyId: string): string => `corr-${companyId}`;
 
 const plannerIdFor = (companyId: string): string => `planner-${companyId}`;

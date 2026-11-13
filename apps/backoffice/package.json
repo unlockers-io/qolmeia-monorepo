@@ -16,6 +16,8 @@
   "dependencies": {
     "@repo/app-shell": "workspace:*",
     "@repo/auth": "workspace:*",
+    "@repo/config-next": "workspace:*",
+    "@repo/identity": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/worker-api": "workspace:*",

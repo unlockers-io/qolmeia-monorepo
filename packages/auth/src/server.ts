@@ -1,4 +1,5 @@
 import { isLoopbackHost } from "@better-auth/core/utils/host";
+import { slug } from "@repo/identity";
 import { log } from "@repo/observability";
 import { sendTransactionalEmail } from "@repo/transactional";
 import type { Transport } from "@repo/transactional/transport";
@@ -12,9 +13,8 @@ import type { BetterAuthPlugin } from "better-auth/types";
 import { CLIENT_IP_HEADER } from "./client-ip";
 import { LINK_LIFETIME_SECONDS } from "./link-lifetimes";
 import { customerInvitations, organizationOptions } from "./organization";
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "./password";
+import { PASSWORD_LENGTH } from "./policy";
 import { safeRedirectPath } from "./redirect-path";
-import { AUTH_COOKIE_PREFIX } from "./session-cookie";
 import { countOperators, createSignupGuard, type OperatorCounter } from "./signup";
 
 const isLinkOrigin = (origin: URL, trustedOrigins: ReadonlyArray<string>): boolean =>
@@ -107,7 +107,7 @@ export const createAuth = (config: AuthConfig) => {
     },
 
     advanced: {
-      cookiePrefix: AUTH_COOKIE_PREFIX,
+      cookiePrefix: slug,
       defaultCookieAttributes: {
         httpOnly: true,
         sameSite: "lax" as const,
@@ -130,8 +130,8 @@ export const createAuth = (config: AuthConfig) => {
 
     emailAndPassword: {
       enabled: true,
-      maxPasswordLength: PASSWORD_MAX_LENGTH,
-      minPasswordLength: PASSWORD_MIN_LENGTH,
+      maxPasswordLength: PASSWORD_LENGTH.max,
+      minPasswordLength: PASSWORD_LENGTH.min,
       onExistingUserSignUp: async ({ user }, request) => {
         const origin = request?.headers.get("origin") ?? "";
 

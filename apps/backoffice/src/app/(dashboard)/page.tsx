@@ -18,10 +18,10 @@ import type { ReactNode } from "react";
 import { SkeletonSuspense } from "skullet/react";
 
 import { ACTION_TYPE_VIEWS } from "@/components/action-types";
+import { SectionError } from "@/components/section-error";
 import { activityStyle } from "@/lib/activity-category";
 import { getActivity, getCompanies, getPendingActions, getTickets } from "@/lib/backoffice-api";
 import { formatDurationSeconds, formatRelative } from "@/lib/format";
-import { log } from "@/lib/observability";
 
 import { CompanySummary, PendingSummary, TicketSummary, UNAVAILABLE } from "./home-summary";
 
@@ -29,16 +29,6 @@ export const metadata: Metadata = { title: "Início" };
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
-
-const loadRecentEvents = async (): Promise<ActivityResponse | null> => {
-  try {
-    return await getActivity(apiGetServer, { category: undefined, limit: 8 });
-  } catch (error) {
-    log.error({ error, message: "home: failed to load recent activity" });
-
-    return null;
-  }
-};
 
 const LoadError = ({ what }: { what: string }) => (
   <EmptyState
@@ -70,12 +60,16 @@ const RecentEventsList = ({ items, now }: { items: ReadonlyArray<RecentEvent>; n
   </ul>
 );
 
-const RecentEvents = async ({ activity }: { activity: Promise<ActivityResponse | null> }) => {
-  const response = await activity;
+type RecentActivity = Promise<[PromiseSettledResult<ActivityResponse>]>;
 
-  if (response === null) {
-    return <LoadError what="os eventos" />;
+const RecentEvents = async ({ activity }: { activity: RecentActivity }) => {
+  const [settled] = await activity;
+
+  if (settled.status === "rejected") {
+    throw new Error("home: failed to load recent activity", { cause: settled.reason });
   }
+
+  const response = settled.value;
 
   if (response.items.length === 0) {
     return (
@@ -271,7 +265,10 @@ const SAMPLE_COMPANIES: HomeViewProps["companies"] = [
 const SAMPLE_RECENT_EVENTS = <RecentEventsList items={SAMPLE_EVENTS} now={SAMPLE_NOW} />;
 
 const HomeContent = async () => {
-  const activity = loadRecentEvents();
+  // Starts with the page's other requests; settled so a failure is thrown inside the section's boundary.
+  const activity = Promise.allSettled([
+    getActivity(apiGetServer, { category: undefined, limit: 8 }),
+  ]);
 
   const [pendingRes, ticketsRes, companiesRes] = await Promise.allSettled([
     getPendingActions(apiGetServer),
@@ -290,9 +287,11 @@ const HomeContent = async () => {
       now={now}
       pending={pending}
       recentEvents={
-        <SkeletonSuspense label="Carregando eventos" skeleton={SAMPLE_RECENT_EVENTS}>
-          <RecentEvents activity={activity} />
-        </SkeletonSuspense>
+        <SectionError what="os eventos">
+          <SkeletonSuspense label="Carregando eventos" skeleton={SAMPLE_RECENT_EVENTS}>
+            <RecentEvents activity={activity} />
+          </SkeletonSuspense>
+        </SectionError>
       }
       tickets={tickets}
     />

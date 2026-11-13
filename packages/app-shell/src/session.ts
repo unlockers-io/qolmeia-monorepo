@@ -1,6 +1,7 @@
 import { activeMembership, type Surface } from "@repo/auth/roles";
 import { ApiError } from "@repo/worker-api";
 import type { MeOrg, MeResponse, MeUser } from "@repo/worker-api/contracts";
+import { ME } from "@repo/worker-api/endpoints";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { cache } from "react";
 
@@ -27,11 +28,7 @@ const UNAUTHORIZED = 401;
  * The Worker answers /api/me; a 401 means signed out. Anything else that fails is an outage,
  * thrown so the route's error boundary renders instead of signing the visitor out.
  */
-const createSessionHelpers = ({
-  log,
-  readMe = () => apiGetServer<MeResponse>("/api/me"),
-  surface,
-}: SessionConfig) => {
+const createSessionHelpers = ({ log, readMe = () => apiGetServer(ME), surface }: SessionConfig) => {
   const fetchMe = cache(async (): Promise<MeResponse> => {
     try {
       return await readMe();

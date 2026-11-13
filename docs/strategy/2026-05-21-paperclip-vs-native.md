@@ -412,5 +412,4 @@ After that, the paths diverge.
 
 - Earlier research: `docs/research/2026-05-20-paperclip-and-multica.md` (§5 has the "concepts to replicate" matrix)
 - Current architecture: `docs/ARCHITECTURE.md` (post-restructure final review)
-- Visual baseline: `docs/architecture/current-state-2026-05-21.md` (Mermaid diagrams)
 - Paperclip plugin SDK docs: https://paperclip.ing (the LLM Wiki plugin walkthrough is the best worked example)

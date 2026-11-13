@@ -9,12 +9,12 @@ import {
   activityCategoryOf,
   type CustomerActivityEntry,
 } from "@repo/worker-api/contracts";
-import { Activity, CircleAlert } from "lucide-react";
+import { Activity } from "lucide-react";
 import type { Metadata } from "next";
 import { SkeletonSuspense } from "skullet/react";
 
+import { SectionError } from "@/components/section-error";
 import { fetchActivity } from "@/lib/activity";
-import { log } from "@/lib/observability";
 
 export const metadata: Metadata = {
   title: "Atividade",
@@ -22,16 +22,6 @@ export const metadata: Metadata = {
 
 /** @public Next.js app-router reads the instant segment config via the module loader */
 export const instant = true;
-
-const loadActivity = async (): Promise<ReadonlyArray<CustomerActivityEntry> | null> => {
-  try {
-    return await fetchActivity(apiGetServer);
-  } catch (error) {
-    log.error({ error, message: "activity: failed to load" });
-
-    return null;
-  }
-};
 
 type Category = { dot: string; label: string };
 
@@ -129,21 +119,7 @@ const ActivityFeed = ({ groups }: { groups: ReadonlyArray<DayGroup> }) => (
 );
 
 const ActivityContent = async () => {
-  const rows = await loadActivity();
-
-  if (rows === null) {
-    return (
-      <Card>
-        <CardContent>
-          <EmptyState
-            description="Não foi possível carregar a atividade agora. Atualize a página em instantes."
-            icon={<CircleAlert aria-hidden />}
-            title="Atividade indisponível"
-          />
-        </CardContent>
-      </Card>
-    );
-  }
+  const rows = await fetchActivity(apiGetServer);
 
   if (rows.length === 0) {
     return (
@@ -194,12 +170,14 @@ const ActivityPage = () => (
       description="O que o seu Time fez: pedidos, entregas, aprovações e mudanças na equipe."
       title="Atividade"
     />
-    <SkeletonSuspense
-      label="Carregando atividade"
-      skeleton={<ActivityFeed groups={SAMPLE_GROUPS} />}
-    >
-      <ActivityContent />
-    </SkeletonSuspense>
+    <SectionError framed what="a atividade">
+      <SkeletonSuspense
+        label="Carregando atividade"
+        skeleton={<ActivityFeed groups={SAMPLE_GROUPS} />}
+      >
+        <ActivityContent />
+      </SkeletonSuspense>
+    </SectionError>
   </PageContainer>
 );
 

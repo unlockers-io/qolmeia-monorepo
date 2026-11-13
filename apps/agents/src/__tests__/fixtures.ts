@@ -63,12 +63,6 @@ const seedTeam = async (companyId: string, workers: ReadonlyArray<WorkerSeed> = 
       })),
     });
     await client.team.create({ data: { companyId, confirmedAt: new Date(), id: teamId } });
-    await client.teamMember.createMany({
-      data: [correspondentId, ...workers.map(({ id }) => id)].map((agentInstanceId) => ({
-        agentInstanceId,
-        teamId,
-      })),
-    });
   });
 
   return { correspondentId, teamId };

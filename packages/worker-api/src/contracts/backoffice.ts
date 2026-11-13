@@ -28,12 +28,6 @@ type WireValue =
 
 type WireObject = Readonly<Record<string, WireValue>>;
 
-/**
- * The Worker and both Next apps share these wire shapes. Closed-set fields use
- * Prisma enums so schema changes fail typechecking instead of silently drifting
- * between producers and consumers.
- */
-
 type AgentSummary = {
   name: string;
   role: AgentRole;
@@ -202,6 +196,8 @@ const operatorMemberPatchSchema = z.union([
 
 type CompaniesResponse = { companies: ReadonlyArray<CompanyRoster> };
 
+type CompanyCreatedResponse = { company: { id: string; name: string; slug: string } };
+
 type TemplatesResponse = { items: ReadonlyArray<Template> };
 
 type TemplateResponse = { template: Template };
@@ -233,6 +229,7 @@ export type {
   ActivityResponse,
   AgentSummary,
   CompaniesResponse,
+  CompanyCreatedResponse,
   CoverageOption,
   CoverageResponse,
   CustomerInvitation,

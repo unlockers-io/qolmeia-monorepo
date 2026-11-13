@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-import { cn, isRenderable } from "../lib/utils";
+import { isRenderable } from "../lib/is-renderable";
+import { cn } from "../lib/utils";
 
 type EmptyStateProps = {
   className?: string;

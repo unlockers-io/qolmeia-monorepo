@@ -10,6 +10,7 @@ import {
 import { z } from "zod";
 
 import type { Db } from "#/lib/db";
+import { notFound } from "#/lib/errors";
 
 const storedRecordSchema = z.record(z.string(), z.unknown());
 
@@ -41,10 +42,14 @@ const toTemplate = (row: AgentTemplate): Template => ({
   workerKind: row.workerKind,
 });
 
-const getTemplate = async (db: Db, id: string): Promise<Template | null> => {
+const getTemplate = async (db: Db, id: string): Promise<Template> => {
   const row = await db.agentTemplate.findUnique({ where: { id } });
 
-  return row ? toTemplate(row) : null;
+  if (!row) {
+    throw notFound();
+  }
+
+  return toTemplate(row);
 };
 
 const listAllTemplates = async (db: Db): Promise<ReadonlyArray<Template>> => {
@@ -77,27 +82,19 @@ const createTemplate = async (db: Db, input: TemplateInput): Promise<Template> =
     }),
   );
 
-const updateTemplate = async (
-  db: Db,
-  id: string,
-  input: TemplateInput,
-): Promise<Template | null> => {
-  const result = await db.agentTemplate.updateMany({
+const updateTemplate = async (db: Db, id: string, input: TemplateInput): Promise<Template> => {
+  await db.agentTemplate.updateMany({
     data: { ...input, skillIds: [...input.skillIds] },
     where: { id },
   });
 
-  return result.count > 0 ? getTemplate(db, id) : null;
+  return getTemplate(db, id);
 };
 
-const setTemplateStatus = async (
-  db: Db,
-  id: string,
-  status: TemplateStatus,
-): Promise<Template | null> => {
-  const result = await db.agentTemplate.updateMany({ data: { status }, where: { id } });
+const setTemplateStatus = async (db: Db, id: string, status: TemplateStatus): Promise<Template> => {
+  await db.agentTemplate.updateMany({ data: { status }, where: { id } });
 
-  return result.count > 0 ? getTemplate(db, id) : null;
+  return getTemplate(db, id);
 };
 
 export {

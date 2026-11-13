@@ -7,7 +7,7 @@
     "./client": "./src/client.ts",
     "./client-ip": "./src/client-ip.ts",
     "./env-config": "./src/env-config.ts",
-    "./password": "./src/password.ts",
+    "./policy": "./src/policy.ts",
     "./redirect-path": "./src/redirect-path.ts",
     "./roles": "./src/roles.ts",
     "./server": "./src/server.ts",
@@ -23,6 +23,7 @@
   "dependencies": {
     "@better-auth/core": "^1.7.20",
     "@repo/db": "workspace:*",
+    "@repo/identity": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/portless-env": "workspace:*",
     "@repo/transactional": "workspace:*",

@@ -1,27 +1,23 @@
 import {
   BRAND_CATEGORIES,
-  deleteAssetsInputSchema,
   UPLOAD_POLICIES,
   type UploadTarget,
   type BrandAsset,
-  type BrandAssetResponse,
-  type BrandAssetsResponse,
   type BrandCategory,
-  type DeleteAssetsResponse,
-  type LibraryAssetsResponse,
-  type UploadResponse,
 } from "@repo/worker-api/contracts";
+import { CUSTOMER } from "@repo/worker-api/endpoints";
 import { type Context, Hono } from "hono";
 import { z } from "zod";
 
 import type { IdentityEnv } from "#/identity/gates";
+import { answer } from "#/lib/endpoint";
 import { DomainError } from "#/lib/errors";
 import { parsePositiveInt } from "#/lib/pagination";
 import type { JsonRecord } from "#/lib/records";
-import { jsonBody } from "#/lib/validate";
 import {
   assetReference,
   deleteAssets,
+  deleteBrandAsset,
   listAssets,
   storeAsset,
   type AssetRecord,
@@ -99,13 +95,13 @@ const storeImageUpload = async (
 /** Mounted by the customer router, which gates it. */
 const libraryRoutes = new Hono<IdentityEnv>();
 
-libraryRoutes.get("/assets", async (c) => {
+answer(libraryRoutes, CUSTOMER.assets, async (c, { query }) => {
   const rows = await listAssets(c.var.db, c.var.session.companyId, {
-    limit: parsePositiveInt(c.req.query("limit"), 100, 200),
+    limit: parsePositiveInt(query.limit, 100, 200),
     visibility: "customer",
   });
 
-  const body: LibraryAssetsResponse = {
+  return {
     items: rows.map((row) => ({
       createdAt: row.createdAt,
       id: row.id,
@@ -116,69 +112,50 @@ libraryRoutes.get("/assets", async (c) => {
       url: assetReference(row.id),
     })),
   };
-
-  return c.json(body);
 });
 
-libraryRoutes.post("/assets/delete", jsonBody(deleteAssetsInputSchema), async (c) => {
-  const body: DeleteAssetsResponse = {
-    deleted: await deleteAssets(c.env, c.var.db, c.var.session.companyId, {
-      ids: c.req.valid("json").ids,
-      visibility: "customer",
-    }),
-  };
+answer(libraryRoutes, CUSTOMER.deleteAssets, async (c, { body }) => ({
+  deleted: await deleteAssets(c.env, c.var.db, c.var.session.companyId, {
+    ids: body.ids,
+    visibility: "customer",
+  }),
+}));
 
-  return c.json(body);
-});
-
-libraryRoutes.post("/uploads", async (c) => {
+answer(libraryRoutes, CUSTOMER.uploadChatFile, async (c) => {
   const { file } = await readImageUpload(c, "chat");
   const asset = await storeImageUpload(c, file, "user_upload");
 
-  const body: UploadResponse = {
+  return {
     assetId: asset.id,
     mimeType: asset.mime,
     size: asset.bytes,
     url: assetReference(asset.id),
   };
-
-  return c.json(body);
 });
 
-libraryRoutes.get("/brand-assets", async (c) => {
+answer(libraryRoutes, CUSTOMER.brandAssets, async (c) => {
   const rows = await listAssets(c.var.db, c.var.session.companyId, {
     kind: "brand_asset",
     limit: 200,
   });
 
-  const body: BrandAssetsResponse = { items: rows.map(toBrandAsset) };
-
-  return c.json(body);
+  return { items: rows.map(toBrandAsset) };
 });
 
-libraryRoutes.post("/brand-assets", async (c) => {
+answer(libraryRoutes, CUSTOMER.uploadBrandAsset, async (c) => {
   const { file, form } = await readImageUpload(c, "brand");
 
   const asset = await storeImageUpload(c, file, "brand_asset", {
     category: brandCategorySchema.safeParse(form.get("category")).data ?? OTHER_CATEGORY,
   });
 
-  const body: BrandAssetResponse = { asset: toBrandAsset(asset) };
-
-  return c.json(body);
+  return { asset: toBrandAsset(asset) };
 });
 
-libraryRoutes.delete("/brand-assets/:id", async (c) => {
-  const deleted = await deleteAssets(c.env, c.var.db, c.var.session.companyId, {
-    ids: [c.req.param("id")],
-    kind: "brand_asset",
-  });
+answer(libraryRoutes, CUSTOMER.deleteBrandAsset, async (c, { params }) => {
+  await deleteBrandAsset(c.env, c.var.db, c.var.session.companyId, params.id);
 
-  if (deleted === 0) {
-    return c.json({ error: "not found" }, 404);
-  }
-
-  return c.json({ ok: true });
+  return { ok: true };
 });
 
 export { libraryRoutes };

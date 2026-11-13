@@ -1,74 +1,45 @@
-import { type apiGet, apiSend } from "@repo/worker-api";
+import { apiCall, type ApiGet } from "@repo/worker-api";
 import {
-  type ActionDetailResponse,
   type ActivityCategory,
-  type ActivityResponse,
-  type CompaniesResponse,
-  type CoverageResponse,
-  type CustomerInvitationResponse,
   type DecisionInput,
   type invitationInputSchema,
-  type MemberDetailResponse,
   type OperatorCoverage,
   type operatorMemberPatchSchema,
-  type PendingActionsResponse,
   SKILL_IDS,
-  type SkillCatalogResponse,
   type SkillId,
   type TemplateInput,
-  type TemplateResponse,
-  type TemplatesResponse,
   type TemplateStatus,
-  type TicketDetailResponse,
-  type TicketsResponse,
 } from "@repo/worker-api/contracts";
+import { BACKOFFICE } from "@repo/worker-api/endpoints";
 import { z } from "zod";
 
-type Get = typeof apiGet;
-
 const ACTIVITY_PAGE_SIZE = 50;
-
-const COVERAGE_PATH = "/api/backoffice/assignments/me";
-
-const TEMPLATES_PATH = "/api/backoffice/templates";
 
 const templateKeys = {
   all: ["templates"] as const,
   skills: ["template-skills"] as const,
 };
 
-const memberPath = (companyId: string, memberId: string): string =>
-  `/api/backoffice/teams/${companyId}/members/${memberId}`;
+const getTickets = (get: ApiGet, limit: number) => get(BACKOFFICE.tickets, { query: { limit } });
 
-const actionPath = (id: string): string => `/api/backoffice/actions/${id}`;
+const getTicket = (get: ApiGet, id: string) => get(BACKOFFICE.ticket, { params: { id } });
 
-const templatePath = (id: string): string => `${TEMPLATES_PATH}/${id}`;
+const getPendingActions = (get: ApiGet) => get(BACKOFFICE.pendingActions);
 
-const getTickets = (get: Get, limit: number) =>
-  get<TicketsResponse>(`/api/backoffice/tickets?limit=${limit}`);
-
-const getTicket = (get: Get, id: string) =>
-  get<TicketDetailResponse>(`/api/backoffice/tickets/${id}`);
-
-const getPendingActions = (get: Get) => get<PendingActionsResponse>("/api/backoffice/actions");
-
-const getAction = (get: Get, id: string) => get<ActionDetailResponse>(actionPath(id));
+const getAction = (get: ApiGet, id: string) => get(BACKOFFICE.action, { params: { id } });
 
 const decide = (id: string, input: DecisionInput) =>
-  apiSend("POST", `${actionPath(id)}/decide`, input);
+  apiCall(BACKOFFICE.decide, { body: input, params: { id } });
 
-const getCompanies = (get: Get) => get<CompaniesResponse>("/api/backoffice/companies");
+const getCompanies = (get: ApiGet) => get(BACKOFFICE.companies);
 
 const inviteCustomer = (companyId: string, input: z.input<typeof invitationInputSchema>) =>
-  apiSend<CustomerInvitationResponse>(
-    "POST",
-    `/api/backoffice/companies/${companyId}/invitations`,
-    input,
-  );
+  apiCall(BACKOFFICE.inviteCustomer, { body: input, params: { companyId } });
 
-const getCoverage = (get: Get) => get<CoverageResponse>(COVERAGE_PATH);
+const getCoverage = (get: ApiGet) => get(BACKOFFICE.coverage);
 
-const saveCoverage = (coverage: OperatorCoverage) => apiSend("PUT", COVERAGE_PATH, coverage);
+const saveCoverage = (coverage: OperatorCoverage) =>
+  apiCall(BACKOFFICE.saveCoverage, { body: coverage });
 
 type ActivityQuery = {
   before?: number;
@@ -76,51 +47,39 @@ type ActivityQuery = {
   limit: number;
 };
 
-const getActivity = (get: Get, { before, category, limit }: ActivityQuery) => {
-  const query = new URLSearchParams({ limit: String(limit) });
+const getActivity = (get: ApiGet, query: ActivityQuery) => get(BACKOFFICE.activity, { query });
 
-  if (before !== undefined) {
-    query.set("before", String(before));
-  }
-
-  if (category !== undefined) {
-    query.set("category", category);
-  }
-
-  return get<ActivityResponse>(`/api/backoffice/activity?${query.toString()}`);
-};
-
-const getMember = (get: Get, companyId: string, memberId: string) =>
-  get<MemberDetailResponse>(memberPath(companyId, memberId));
+const getMember = (get: ApiGet, companyId: string, memberId: string) =>
+  get(BACKOFFICE.member, { params: { companyId, id: memberId } });
 
 const patchMember = (
   companyId: string,
   memberId: string,
   patch: z.input<typeof operatorMemberPatchSchema>,
-) => apiSend<MemberDetailResponse>("PATCH", memberPath(companyId, memberId), patch);
+) => apiCall(BACKOFFICE.patchMember, { body: patch, params: { companyId, id: memberId } });
 
 const skillIdSchema = z.enum(SKILL_IDS);
 
 const isSkillId = (id: string): id is SkillId => skillIdSchema.safeParse(id).success;
 
-const getSkillCatalog = async (get: Get) => {
-  const { items } = await get<SkillCatalogResponse>("/api/backoffice/skills");
+const getSkillCatalog = async (get: ApiGet) => {
+  const { items } = await get(BACKOFFICE.skills);
 
   return items;
 };
 
-const getTemplates = (get: Get) => get<TemplatesResponse>(TEMPLATES_PATH);
+const getTemplates = (get: ApiGet) => get(BACKOFFICE.templates);
 
-const getTemplate = (get: Get, id: string) => get<TemplateResponse>(templatePath(id));
+const getTemplate = (get: ApiGet, id: string) => get(BACKOFFICE.template, { params: { id } });
 
 const createTemplate = (input: TemplateInput) =>
-  apiSend<TemplateResponse>("POST", TEMPLATES_PATH, input);
+  apiCall(BACKOFFICE.createTemplate, { body: input });
 
 const updateTemplate = (id: string, input: TemplateInput) =>
-  apiSend<TemplateResponse>("PATCH", templatePath(id), input);
+  apiCall(BACKOFFICE.updateTemplate, { body: input, params: { id } });
 
 const setTemplateStatus = (id: string, status: TemplateStatus) =>
-  apiSend<TemplateResponse>("PATCH", `${templatePath(id)}/status`, { status });
+  apiCall(BACKOFFICE.setTemplateStatus, { body: { status }, params: { id } });
 
 export {
   ACTIVITY_PAGE_SIZE,

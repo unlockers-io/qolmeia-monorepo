@@ -13,7 +13,6 @@ type ConversationAgent = {
   skills: ReadonlyArray<Skill>;
 };
 
-/** What every agent a Customer chats with shares: the model, the skill kill switch, and the skills. */
 const useConversationAgent = ({ agentInstanceId, companyId, skills }: ConversationAgent): void => {
   const [disabledSkillIds, setDisabledSkillIds] = usePersistentState<ReadonlyArray<string>>(
     "disabledSkillIds",

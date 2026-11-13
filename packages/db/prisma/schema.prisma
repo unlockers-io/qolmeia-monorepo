@@ -26,13 +26,8 @@ enum OrgRole {
   CUSTOMER
 }
 
-// Closed sets the application already enumerates in TypeScript. They were bare
-// String columns read through a coercion that silently rewrote any unrecognised
-// value to a default, so a bad write surfaced as a valid-looking wrong state
-// (an `executed` action reappearing as `pending`, an asset defaulting to
-// customer-visible). Columns that operators genuinely extend at runtime
-// (worker_kind, action_type, activity_log.type, ticket.origin, memory_fact.kind)
-// stay String on purpose.
+// Columns that operators extend at runtime (worker_kind, action_type,
+// activity_log.type, ticket.origin, memory_fact.kind) stay String on purpose.
 
 enum CompanyStatus {
   onboarding

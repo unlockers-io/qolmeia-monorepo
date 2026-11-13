@@ -2,12 +2,15 @@
 
 import { Button } from "@repo/ui/components/button";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
+import { useErrorReport } from "@repo/ui/hooks/use-error-report";
+import type { ErrorBoundaryProps, ReportError } from "@repo/ui/hooks/use-error-report";
 
-import { useErrorBoundary, type ErrorBoundaryProps } from "./error-boundary";
 import { MAIN_CONTENT_ID } from "./skip-link";
 
-const RouteError = ({ error, log, retry }: ErrorBoundaryProps) => {
-  const headingRef = useErrorBoundary(error, log, "Route error boundary");
+type ErrorReportProps = ErrorBoundaryProps & { report: ReportError };
+
+const RouteError = ({ error, report, retry }: ErrorReportProps) => {
+  const headingRef = useErrorReport(error, report);
   const ready = useClientReady();
 
   return (
@@ -31,3 +34,5 @@ const RouteError = ({ error, log, retry }: ErrorBoundaryProps) => {
 };
 
 export { RouteError };
+
+export type { ErrorReportProps };

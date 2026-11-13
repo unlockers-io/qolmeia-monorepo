@@ -8,6 +8,7 @@ import {
 } from "@repo/worker-api/contracts";
 
 import type { Db } from "#/lib/db";
+import { notFound } from "#/lib/errors";
 import { getTemplate } from "#/template/template";
 
 type InstanceWithTemplate = {
@@ -45,10 +46,14 @@ const toTicket = (row: Prisma.TicketGetPayload<{ include: typeof ticketInclude }
   title: row.title,
 });
 
-const loadTicket = async (db: Db, id: string): Promise<Ticket | null> => {
+const loadTicket = async (db: Db, id: string): Promise<Ticket> => {
   const row = await db.ticket.findUnique({ include: ticketInclude, where: { id } });
 
-  return row ? toTicket(row) : null;
+  if (!row) {
+    throw notFound();
+  }
+
+  return toTicket(row);
 };
 
 const listTickets = async (db: Db, limit: number): Promise<ReadonlyArray<TicketListRow>> => {
@@ -81,13 +86,7 @@ const loadInstanceWithTemplate = async (
     throw new Error(`agent_instance ${agentInstanceId} is not linked to a template`);
   }
 
-  const template = await getTemplate(db, templateId);
-
-  if (!template) {
-    throw new Error(`template ${templateId} not found`);
-  }
-
-  return { agentInstance, template };
+  return { agentInstance, template: await getTemplate(db, templateId) };
 };
 
 export {

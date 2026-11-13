@@ -2,18 +2,19 @@ import "@/styles/globals.css";
 
 import { AppDocument } from "@repo/app-shell/document";
 import { documentMetadata } from "@repo/app-shell/document-metadata";
+import { displayName, origins } from "@repo/identity";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { Providers } from "@/components/providers";
 
-const metadataBase = URL.parse(process.env.WEB_APP_URL ?? "") ?? new URL("https://app.qolmeia.com");
+const metadataBase = URL.parse(process.env.WEB_APP_URL ?? "") ?? new URL(origins.web);
 
 export const metadata: Metadata = {
   ...documentMetadata,
-  authors: [{ name: "Qolmeia" }],
+  authors: [{ name: displayName }],
   category: "technology",
-  creator: "Qolmeia",
+  creator: displayName,
   description:
     "Converse com os agentes de IA da Qolmeia para criar materiais de marca, agendar campanhas e acompanhar o trabalho em tempo real.",
   keywords: ["qolmeia", "chat", "ai", "clientes"],
@@ -21,11 +22,11 @@ export const metadata: Metadata = {
   openGraph: {
     description: "Chat com os agentes de IA da Qolmeia.",
     locale: "pt_BR",
-    siteName: "Qolmeia",
+    siteName: displayName,
     title: "Qolmeia · Chat",
     type: "website",
   },
-  publisher: "Qolmeia",
+  publisher: displayName,
   robots: {
     follow: false,
     index: false,

@@ -2,7 +2,7 @@ import type { DecisionInput } from "@repo/worker-api/contracts";
 
 import { canRequestChanges } from "#/action/action";
 import type { Db } from "#/lib/db";
-import { DomainError } from "#/lib/errors";
+import { DomainError, notFound } from "#/lib/errors";
 
 type DecisionEvent = DecisionInput & { decidedByUserId: string };
 
@@ -21,7 +21,7 @@ const submitDecision = async (
   });
 
   if (!action) {
-    throw new DomainError(404, "not found");
+    throw notFound();
   }
 
   if (action.status !== "pending") {

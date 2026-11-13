@@ -5,8 +5,8 @@ import { recordActivity } from "#/activity/log";
 import { getCompany } from "#/company/company";
 import type { Actor } from "#/identity/identity";
 import type { PrismaClient } from "#/lib/db";
+import { notFound } from "#/lib/errors";
 import { insertFacts, type NewFact } from "#/memory/memory";
-import { CompanyNotFoundError, TemplateNotFoundError } from "#/team/errors";
 import { emitTeamEvent } from "#/team/events";
 import { correspondentIdFor, teamIdFor, workerIdFor } from "#/team/ids";
 import { listEntitledTemplates } from "#/template/template";
@@ -47,17 +47,15 @@ const confirmTeam = async (
   const workerIds = templateIds.map((templateId) => workerIdFor(templateId, companyId));
 
   await db.$transaction(async (tx) => {
-    const company = await getCompany(tx, companyId);
+    const [company, templates] = await Promise.all([
+      getCompany(tx, companyId),
+      listEntitledTemplates(tx, companyId, templateIds),
+    ]);
 
-    if (!company) {
-      throw new CompanyNotFoundError();
-    }
-
-    const templates = await listEntitledTemplates(tx, companyId, templateIds);
     const missing = templateIds.find((id) => !templates.some((template) => template.id === id));
 
     if (missing !== undefined) {
-      throw new TemplateNotFoundError(missing);
+      throw notFound(`template ${missing} not found`);
     }
 
     const existing = await tx.team.findUnique({
@@ -90,10 +88,6 @@ const confirmTeam = async (
         role: "worker" as const,
         templateId: template.id,
       })),
-      skipDuplicates: true,
-    });
-    await tx.teamMember.createMany({
-      data: [correspondentId, ...workerIds].map((agentInstanceId) => ({ agentInstanceId, teamId })),
       skipDuplicates: true,
     });
     await tx.company.update({ data: { status: "active" }, where: { id: companyId } });

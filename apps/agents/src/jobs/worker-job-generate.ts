@@ -48,10 +48,6 @@ const generateDeliverable = async (
     ]),
   );
 
-  if (ticket === null) {
-    throw new Error(`ticket ${ticketId} not properly seeded`);
-  }
-
   log.info({
     agentInstanceId,
     brief: ticket.brief,
@@ -107,6 +103,6 @@ const generateDeliverable = async (
   return { outputs, summary };
 };
 
-export { buildRevisionMessages, generateDeliverable };
+export { generateDeliverable };
 
 export type { Revision };

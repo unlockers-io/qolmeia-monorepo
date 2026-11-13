@@ -1,6 +1,6 @@
 import { maxLength } from "@repo/app-shell/form-limits";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
-import { apiGet, describeRequestError } from "@repo/worker-api";
+import { apiCall, describeRequestError } from "@repo/worker-api";
 import {
   ACTION_TYPES,
   ActionPolicy,
@@ -134,7 +134,7 @@ const useTemplateForm = (initial: Template | undefined) => {
   const errors = submitAttempted ? fieldErrors(values) : {};
 
   const { data: skillCatalog, isError: skillsFailed } = useQuery({
-    queryFn: () => getSkillCatalog(apiGet),
+    queryFn: () => getSkillCatalog(apiCall),
     queryKey: templateKeys.skills,
     staleTime: 5 * 60_000,
   });

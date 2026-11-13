@@ -4,22 +4,23 @@ import { createElement } from "react";
 import geist from "./fonts/geist.json" with { type: "json" };
 
 const parseFont = (data: Buffer): Font => {
-  const face = create(data);
+  const font = create(data);
 
-  if (!("layout" in face)) {
+  if (!("layout" in font)) {
     throw new TypeError("Social images require a single font face");
   }
 
-  return face;
+  return font;
 };
 
-const font = parseFont(Buffer.from(geist.base64, "base64"));
-
-const LINE_HEIGHT = 1.2;
+const fontData = Buffer.from(geist.base64, "base64");
+const defaultFont = parseFont(fontData);
 
 type SvgTextOptions = {
   anchor?: "start" | "middle" | "end";
   color: string;
+  font?: Font;
+  lineHeight?: number;
   size: number;
   tracking?: number;
   width?: number;
@@ -31,7 +32,17 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 const svgText = (
   text: string,
-  { anchor = "start", color, size, tracking = 0, width, x, y }: SvgTextOptions,
+  {
+    anchor = "start",
+    color,
+    font = defaultFont,
+    lineHeight = 1.2,
+    size,
+    tracking = 0,
+    width,
+    x,
+    y,
+  }: SvgTextOptions,
 ) => {
   const scale = size / font.unitsPerEm;
 
@@ -84,7 +95,7 @@ const svgText = (
       }
 
       const glyphX = cursor + position.xOffset * scale;
-      const glyphY = y + lineIndex * size * LINE_HEIGHT - position.yOffset * scale;
+      const glyphY = y + lineIndex * size * lineHeight - position.yOffset * scale;
       cursor += position.xAdvance * scale + tracking;
 
       return createElement("path", {
@@ -98,4 +109,4 @@ const svgText = (
   return createElement("g", { fill: color }, paths);
 };
 
-export { svgText };
+export { parseFont, svgText };

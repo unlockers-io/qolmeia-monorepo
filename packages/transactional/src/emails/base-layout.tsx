@@ -1,7 +1,8 @@
+import { displayName, origins } from "@repo/identity";
 import * as React from "react";
 import { Body, Container, Head, Html, Link, Preview, Section, Tailwind, Text } from "react-email";
 
-import { QolmeiaLogo } from "../components/qolmeia-logo";
+import { Logo } from "../components/logo";
 import { tailwindConfig } from "../styles/theme";
 
 const LOCALE = "pt-BR";
@@ -14,7 +15,7 @@ type BaseLayoutProps = {
 
 const BaseLayout = ({
   children,
-  footerText = "Você está recebendo este e-mail porque tem uma conta na Qolmeia.",
+  footerText = `Você está recebendo este e-mail porque tem uma conta na ${displayName}.`,
   preview,
 }: BaseLayoutProps) => {
   const currentYear = new Date().getFullYear();
@@ -32,8 +33,8 @@ const BaseLayout = ({
         <Body className="m-0 bg-muted p-4 font-sans" lang={LOCALE}>
           <Container className="mx-auto w-full max-w-150 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
             <Section className="border-b border-border bg-card px-6 py-6 text-center">
-              <Link className="inline-block no-underline" href="https://qolmeia.com">
-                <QolmeiaLogo />
+              <Link className="inline-block no-underline" href={origins.apex}>
+                <Logo />
               </Link>
             </Section>
 
@@ -47,14 +48,15 @@ const BaseLayout = ({
               <Text className="mb-4 text-sm text-muted-foreground">
                 <Link
                   className="text-sm font-semibold text-foreground no-underline"
-                  href="https://qolmeia.com"
+                  href={origins.apex}
                 >
-                  Visite a Qolmeia
+                  {`Visite a ${displayName}`}
                 </Link>
               </Text>
 
               <Text className="m-0 text-xs text-muted-foreground">
-                © {currentYear} Qolmeia. Todos os direitos reservados.
+                © {currentYear}
+                {` ${displayName}. Todos os direitos reservados.`}
               </Text>
             </Section>
           </Container>

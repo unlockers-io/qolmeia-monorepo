@@ -1,4 +1,5 @@
 import { createNextConfig } from "@repo/app-shell/next-config";
+import { baseNextConfig } from "@repo/config-next";
 
 export default createNextConfig(
   {
@@ -6,28 +7,9 @@ export default createNextConfig(
     workerPaths: ["/api/me", "/api/me/:path+", "/agents/:path*", "/assets/:id"],
   },
   {
-    allowedDevOrigins: ["qolmeia.web.localhost", "*.qolmeia.web.localhost", "*.vercel.app"],
-    cacheComponents: true,
-
-    experimental: {
+    ...baseNextConfig("web", {
       exposeTestingApiInProductionBuild: process.env.EXPOSE_TESTING_API === "1",
-      turbopackRustReactCompiler: true,
-    },
-
-    headers: () =>
-      Promise.resolve([
-        {
-          headers: [
-            { key: "X-Frame-Options", value: "DENY" },
-            { key: "X-Content-Type-Options", value: "nosniff" },
-            { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          ],
-          source: "/:path*",
-        },
-      ]),
-
-    partialPrefetching: true,
-    reactCompiler: true,
+    }),
     transpilePackages: ["@repo/app-shell", "@repo/ui", "@repo/worker-api"],
   },
 );
