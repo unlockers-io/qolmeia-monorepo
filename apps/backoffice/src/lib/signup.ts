@@ -1,7 +1,7 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
-import type { SignupState } from "@repo/worker-api/contracts";
+import { SIGNUP } from "@repo/worker-api/endpoints";
 import { cache } from "react";
 
-const getSignupState = cache((): Promise<SignupState> => apiGetServer<SignupState>("/api/signup"));
+const getSignupState = cache(() => apiGetServer(SIGNUP));
 
 export { getSignupState };

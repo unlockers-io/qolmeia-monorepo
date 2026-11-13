@@ -1,16 +1,13 @@
-import { apiGet, apiSend, apiSendForm } from "@repo/worker-api";
+import { apiCall, type ApiGet } from "@repo/worker-api";
 import {
   type BrandAsset,
-  type BrandAssetResponse,
-  type BrandAssetsResponse,
   type BrandCategory,
-  type DeleteAssetsResponse,
   type LibraryAsset,
-  type LibraryAssetsResponse,
   UPLOAD_POLICIES,
   type UploadResponse,
   type UploadTarget,
 } from "@repo/worker-api/contracts";
+import { CUSTOMER } from "@repo/worker-api/endpoints";
 
 const BYTES_PER_MB = 1024 * 1024;
 
@@ -62,25 +59,21 @@ const uploadChatFile = (file: File): Promise<UploadResponse> => {
   const form = new FormData();
   form.append("file", file);
 
-  return apiSendForm<UploadResponse>("/api/me/uploads", form);
+  return apiCall(CUSTOMER.uploadChatFile, { body: form });
 };
 
 const deleteAssets = async (ids: ReadonlyArray<string>): Promise<void> => {
-  await apiSend<DeleteAssetsResponse>("POST", "/api/me/assets/delete", { ids });
+  await apiCall(CUSTOMER.deleteAssets, { body: { ids } });
 };
 
-const fetchLibraryAssets = async (
-  get: typeof apiGet = apiGet,
-): Promise<ReadonlyArray<LibraryAsset>> => {
-  const { items } = await get<LibraryAssetsResponse>("/api/me/assets?limit=200");
+const fetchLibraryAssets = async (get: ApiGet = apiCall): Promise<ReadonlyArray<LibraryAsset>> => {
+  const { items } = await get(CUSTOMER.assets, { query: { limit: 200 } });
 
   return items;
 };
 
-const fetchBrandAssets = async (
-  get: typeof apiGet = apiGet,
-): Promise<ReadonlyArray<BrandAsset>> => {
-  const { items } = await get<BrandAssetsResponse>("/api/me/brand-assets");
+const fetchBrandAssets = async (get: ApiGet = apiCall): Promise<ReadonlyArray<BrandAsset>> => {
+  const { items } = await get(CUSTOMER.brandAssets);
 
   return items;
 };
@@ -89,13 +82,13 @@ const uploadBrandAsset = async (file: File, category: BrandCategory): Promise<Br
   const form = new FormData();
   form.append("file", file);
   form.append("category", category);
-  const { asset } = await apiSendForm<BrandAssetResponse>("/api/me/brand-assets", form);
+  const { asset } = await apiCall(CUSTOMER.uploadBrandAsset, { body: form });
 
   return asset;
 };
 
 const deleteBrandAsset = async (id: string): Promise<void> => {
-  await apiSend("DELETE", `/api/me/brand-assets/${id}`);
+  await apiCall(CUSTOMER.deleteBrandAsset, { params: { id } });
 };
 
 export {

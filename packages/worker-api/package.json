@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./brief": "./src/brief.ts",
-    "./contracts": "./src/contracts/index.ts"
+    "./contracts": "./src/contracts/index.ts",
+    "./endpoints": "./src/endpoints.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

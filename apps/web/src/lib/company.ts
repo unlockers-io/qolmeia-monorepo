@@ -1,11 +1,11 @@
-import { apiGet, apiSend } from "@repo/worker-api";
+import { apiCall, type ApiGet } from "@repo/worker-api";
 import type { BriefPatch } from "@repo/worker-api/brief";
 import type { CompanyResponse } from "@repo/worker-api/contracts";
+import { CUSTOMER } from "@repo/worker-api/endpoints";
 
-const fetchCompany = (get: typeof apiGet = apiGet): Promise<CompanyResponse> =>
-  get<CompanyResponse>("/api/me/company");
+const fetchCompany = (get: ApiGet = apiCall): Promise<CompanyResponse> => get(CUSTOMER.company);
 
 const patchCompanyBrief = (patch: BriefPatch): Promise<CompanyResponse> =>
-  apiSend<CompanyResponse>("PATCH", "/api/me/company", patch);
+  apiCall(CUSTOMER.patchCompany, { body: patch });
 
 export { fetchCompany, patchCompanyBrief };
