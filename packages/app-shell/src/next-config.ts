@@ -24,7 +24,7 @@ const workerRewrites = (workerPaths: ReadonlyArray<string>): NextConfig["rewrite
 };
 
 /**
- * `appConfig` holds the settings the fleet standard checks in each app's own next.config.ts.
+ * `appConfig` is the app's own config: the base from `@repo/config-next` and what the app adds.
  * An app with Worker paths sends the browser only to its own origin, so the session cookie stays
  * host-only on it; `next build` bakes AGENTS_INTERNAL_URL into the rewrites.
  */
@@ -42,7 +42,6 @@ const createNextConfig = (
       instantInsights: { validationLevel: "manual-warning" },
       ...appConfig.experimental,
     },
-    reactStrictMode: true,
     rewrites: rewritesWorker ? workerRewrites(workerPaths) : undefined,
     turbopack: {
       rules: {
