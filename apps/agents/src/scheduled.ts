@@ -4,7 +4,6 @@ import { runProactiveSweep } from "#/proactive/proactive";
 
 type ScheduledHandler = (env: Env, scheduledTime: number) => Promise<void>;
 
-/** Mirrors `triggers.crons` in wrangler.jsonc. */
 const SCHEDULES = new Map<string, ScheduledHandler>([
   [
     "* * * * *",
@@ -30,4 +29,6 @@ const runScheduled = async (controller: ScheduledController, env: Env): Promise<
   await handler(env, controller.scheduledTime);
 };
 
-export { runScheduled };
+const SCHEDULED_CRONS: ReadonlyArray<string> = [...SCHEDULES.keys()];
+
+export { runScheduled, SCHEDULED_CRONS };
