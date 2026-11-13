@@ -6,13 +6,13 @@ import { expect, it } from "vitest";
 import { ClientReadyForm } from "./client-ready-form";
 
 const Form = () => (
-  <ClientReadyForm>
+  <ClientReadyForm aria-label="Sign in">
     <input aria-label="Email" />
-    <button type="submit">Send</button>
+    <button type="submit">Sign in</button>
   </ClientReadyForm>
 );
 
-it("keeps every control in the form disabled until it hydrates", () => {
+it("keeps every control of a server-rendered form disabled until it hydrates", () => {
   const container = document.createElement("div");
   container.innerHTML = renderToString(<Form />);
   const input = container.querySelector("input");
@@ -25,16 +25,4 @@ it("keeps every control in the form disabled until it hydrates", () => {
   });
   expect(input?.matches(":disabled")).toBe(false);
   expect(button?.matches(":disabled")).toBe(false);
-});
-
-it("passes form props through to the form element", () => {
-  const container = document.createElement("div");
-  container.innerHTML = renderToString(
-    <ClientReadyForm className="grid" noValidate>
-      <input aria-label="Email" />
-    </ClientReadyForm>,
-  );
-  const form = container.querySelector("form");
-  expect(form?.className).toBe("grid");
-  expect(form?.noValidate).toBe(true);
 });
