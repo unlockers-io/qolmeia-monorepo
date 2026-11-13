@@ -20,7 +20,6 @@ type Generation = { outputs: ReadonlyArray<ToolOutput>; summary: string };
 
 type ExecutionContext = { companyId: string; db: Db };
 
-/** `read` parses a stored payload with the type's contract schema; `execute` runs on it. */
 type ActionTypeModule<Type extends ActionType> = {
   defaultPolicy: ActionPolicy;
   execute: (ctx: ExecutionContext, proposed: Prisma.JsonValue) => Promise<string>;
