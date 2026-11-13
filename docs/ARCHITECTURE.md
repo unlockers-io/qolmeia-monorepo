@@ -86,7 +86,7 @@ Schema in [`packages/db/prisma/schema.prisma`](../packages/db/prisma/schema.pris
 | `template`                     | System-defined agent blueprint. `worker_kind`, `system_prompt`, `model` (OpenRouter id), `skill_ids`, `default_action_type`, `default_policies`, `status`.                                                                                     |
 | `company_template_entitlement` | Which templates a company may hire.                                                                                                                                                                                                            |
 | `agent_instance`               | A hired agent for a company. `role: correspondent \| planner \| worker`, `template_id`, `prompt_override?`, `status`.                                                                                                                          |
-| `team` / `team_member`         | The confirmed roster. The Correspondent delegates to the company's active workers; `team_member.can_delegate_to` is no longer read.                                                                                                            |
+| `team`                         | Marks the Company's team as confirmed and is the row a hire locks. The roster is `agent_instance` by Company; `team_member` is no longer written or read.                                                                                      |
 | `ticket`                       | A unit of delegated work. `status: open \| in_progress \| awaiting_approval \| blocked \| done \| cancelled \| rejected`, `origin`, `brief`, `result`; `workflow_id` is no longer read or written (the Workflow instance id is the ticket id). |
 | `action`                       | The effect a Ticket proposes, one per round (id `<ticketId>-r<round>`). `action_type`, `policy`, `proposed` (JSON), `status: pending \| approved \| changes_requested \| rejected \| executed`, decision fields.                               |
 | `memory_fact`                  | Long-term agent memory: the authority for a fact. `kind`, `content`; its vector lives in Vectorize.                                                                                                                                            |
@@ -164,7 +164,7 @@ The customer reaches the Correspondent over the **web chat only**: the Flue agen
 1. **Invitation and sign-in**: an Operator invites the Customer's e-mail; the link opens `/convite/<id>` on the web app, which signs the visitor in and accepts the invitation, creating the `CUSTOMER` membership. Better Auth on the Worker, reached through the app's `/api/auth/*` rewrite, issues a host-only cookie on that app.
 2. **Client opens**: `requireCustomer` → `/api/me`, answered by the Worker's identity module.
 3. **`status === "onboarding"`**: customer chats the **Planner**; it calls `extractBrief` + `proposeTeam`, then surfaces "Confirmar Time".
-4. **Customer confirms**: `POST /api/me/team/confirm` materialises `team` + `team_member`, flips `company.status = active`, and seeds Correspondent memory (`remember`), all in one transaction.
+4. **Customer confirms**: `POST /api/me/team/confirm` materialises `team` and the chosen Workers' `agent_instance` rows, flips `company.status = active`, and seeds Correspondent memory (`remember`), all in one transaction.
 5. **`status === "active"`**: customer chats the **Correspondent**, which `delegateToWorker`s.
 6. The **delegation + approval flow** of §8 runs; the deliverable lands back in chat.
 

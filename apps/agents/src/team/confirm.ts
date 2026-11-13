@@ -90,10 +90,6 @@ const confirmTeam = async (
       })),
       skipDuplicates: true,
     });
-    await tx.teamMember.createMany({
-      data: [correspondentId, ...workerIds].map((agentInstanceId) => ({ agentInstanceId, teamId })),
-      skipDuplicates: true,
-    });
     await tx.company.update({ data: { status: "active" }, where: { id: companyId } });
 
     if (reconfirm) {

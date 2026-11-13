@@ -46,15 +46,13 @@ const changeRoster = async (
 };
 
 /** Holds the team row until commit, so concurrent hires pick distinct display names. */
-const lockTeam = async (tx: Prisma.TransactionClient, companyId: string): Promise<string> => {
+const lockTeam = async (tx: Prisma.TransactionClient, companyId: string): Promise<void> => {
   const [team] = await tx.$queryRaw<Array<{ id: string }>>`
     SELECT id FROM team WHERE company_id = ${companyId} FOR UPDATE`;
 
   if (team === undefined) {
     throw new DomainError(409, "team not confirmed");
   }
-
-  return team.id;
 };
 
 const hireMember = (
@@ -78,7 +76,7 @@ const hireMember = (
       throw new DomainError(409, `template ${input.templateId} is retired`);
     }
 
-    const teamId = await lockTeam(tx, input.companyId);
+    await lockTeam(tx, input.companyId);
 
     const existing = await tx.agentInstance.findMany({
       select: { displayName: true },
@@ -102,7 +100,6 @@ const hireMember = (
         templateId: template.id,
       },
     });
-    await tx.teamMember.create({ data: { agentInstanceId, teamId } });
     await recordActivity(tx, {
       actorId: input.actor.userId,
       companyId: input.companyId,

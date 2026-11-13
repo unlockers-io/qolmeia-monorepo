@@ -114,10 +114,6 @@ const seedProductCompany = async (): Promise<void> => {
     update: {},
     where: { companyId: ORG_ID },
   });
-  await prisma.teamMember.createMany({
-    data: [correspondentId, workerId].map((agentInstanceId) => ({ agentInstanceId, teamId })),
-    skipDuplicates: true,
-  });
 };
 
 const main = async () => {
