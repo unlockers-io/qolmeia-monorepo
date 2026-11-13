@@ -27,6 +27,7 @@
     "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@repo/transactional": "workspace:*",
     "@repo/worker-api": "workspace:*",
     "ai": "^7.0.113",
     "better-auth": "^1.7.20",

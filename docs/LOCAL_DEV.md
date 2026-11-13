@@ -31,11 +31,11 @@ cp apps/agents/.dev.vars.example apps/agents/.dev.vars
 
 Important local variables:
 
-| File                    | Variables                                                                                           |
-| ----------------------- | --------------------------------------------------------------------------------------------------- |
-| `apps/agents/.dev.vars` | `BETTER_AUTH_SECRET`, `OPENROUTER_API_KEY`, `DATABASE_URL` (seed script), optional `RESEND_API_KEY` |
-| `apps/web/.env`         | optional `AGENTS_INTERNAL_URL`                                                                      |
-| `apps/backoffice/.env`  | optional `AGENTS_INTERNAL_URL`                                                                      |
+| File                    | Variables                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `apps/agents/.dev.vars` | `BETTER_AUTH_SECRET`, `OPENROUTER_API_KEY`, `DATABASE_URL` (seed script), `MAIL_TRANSPORT=outbox` |
+| `apps/web/.env`         | optional `AGENTS_INTERNAL_URL`                                                                    |
+| `apps/backoffice/.env`  | optional `AGENTS_INTERNAL_URL`                                                                    |
 
 The Next apps rewrite `/api/auth/*`, `/api/me/*`, `/api/backoffice/*`, `/agents/*`, and `/assets/:id` to the Worker so cookies stay first-party in development. They hold no database URL and no auth secret.
 
@@ -85,7 +85,7 @@ Seeded accounts:
 | Backoffice | OWNER    | `operator@qolmeia.dev` | `Qolmeia-Dev-OperatorPass!` |
 | Client     | CUSTOMER | `customer@qolmeia.dev` | `Qolmeia-Dev-CustomerPass!` |
 
-The client login also offers magic links. Without `RESEND_API_KEY` the Worker logs every magic-link and password-reset URL; open it as-is. The seed only sets a password when it creates the user, so an account first created through a magic link has none.
+The client login also offers magic links. With `MAIL_TRANSPORT=outbox` (the `.dev.vars.example` default) the Worker sends nothing: every e-mail is filed as JSON in the `qolmeia-outbox` directory under the system temp directory, and the newest file holds the magic-link, verification or password-reset URL; open it as-is. The seed only sets a password when it creates the user, so an account first created through a magic link has none.
 
 portless prefixes each URL with the checkout's branch name in a git worktree (e.g. `https://<branch>.qolmeia.web.localhost:1355`); `portless get qolmeia.web` prints it. Node clients need `NODE_EXTRA_CA_CERTS=~/.portless/ca.pem` to trust it.
 

@@ -24,7 +24,42 @@
         "name": "Generate the worker-bees binding types",
         "run": "pnpm --filter worker-bees cf-typegen"
       },
-      { "run": "pnpm db:push" }
+      {
+        "run": "pnpm db:push"
+      }
+    ]
+  },
+  "e2e": {
+    "env": {
+      "DATABASE_URL": "postgresql://test:test@localhost:5432/test",
+      "PGAPPNAME": "qolmeia:ci:e2e",
+      "BETTER_AUTH_SECRET": "test-secret-minimum-32-characters-long-for-e2e",
+      "EXPOSE_TESTING_API": "1",
+      "WEB_APP_URL": "http://127.0.0.1:3001"
+    },
+    "services": {
+      "postgres": {
+        "image": "postgres:18-alpine",
+        "env": {
+          "POSTGRES_USER": "test",
+          "POSTGRES_PASSWORD": "test",
+          "POSTGRES_DB": "test"
+        },
+        "ports": ["5432:5432"],
+        "options": "--health-cmd \"pg_isready -U test -d test\" --health-interval 1s --health-timeout 5s --health-retries 30"
+      }
+    },
+    "setup": [
+      {
+        "run": "pnpm db:push"
+      },
+      {
+        "name": "Configure the Worker",
+        "run": "{\n  echo \"ASSETS_SIGNING_KEY=e2e-assets-signing-key\"\n  echo \"BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET\"\n  echo \"OPENROUTER_API_KEY=e2e-unused\"\n  echo \"TRUSTED_ORIGINS=http://127.0.0.1:3000,http://127.0.0.1:3001\"\n  echo \"WEB_APP_URL=$WEB_APP_URL\"\n  echo \"WORKER_PUBLIC_URL=http://127.0.0.1:8787\"\n} > apps/agents/.dev.vars\n"
+      },
+      {
+        "run": "pnpm build --filter=backoffice --filter=web --filter=landing"
+      }
     ]
   }
 }

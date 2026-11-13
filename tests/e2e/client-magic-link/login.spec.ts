@@ -1,10 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 import { webUrl } from "../../../playwright.config";
-import { extractLink, waitForEmail } from "../helpers/resend";
+import { extractLink, waitForEmail } from "../helpers/mail";
 import { makeTestEmail } from "../helpers/test-email";
-
-test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
 test.describe("Client magic-link login", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
@@ -26,8 +24,6 @@ test.describe("Client magic-link login", () => {
       subject: /link|acesso|magic|sign.?in/iu,
       to: email,
     });
-
-    expect(mail.last_event).not.toBe("bounced");
 
     const verifyUrl = extractLink(mail, /\/api\/auth\/magic-link\/verify/u);
     expect(verifyUrl.startsWith(`${webUrl}/api/auth/magic-link/verify`)).toBe(true);

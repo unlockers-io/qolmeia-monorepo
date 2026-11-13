@@ -1,8 +1,8 @@
 import { isLoopbackHost } from "@better-auth/core/utils/host";
 import { slug } from "@repo/identity";
 import { log } from "@repo/observability";
-import type { MailerConfig } from "@repo/transactional";
 import { sendTransactionalEmail } from "@repo/transactional";
+import type { Transport } from "@repo/transactional/transport";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { magicLink } from "better-auth/plugins/magic-link";
@@ -42,34 +42,19 @@ export const linkOnRequestOrigin = (
   return new URL(`${link.pathname}${link.search}`, requestOrigin.origin).toString();
 };
 
-const mailerFor = (resendApiKey: string | undefined): MailerConfig | null =>
-  resendApiKey !== undefined && resendApiKey !== "" ? { apiKey: resendApiKey } : null;
-
 type CustomerInvitationEmail = {
   acceptUrl: string;
   companyName: string;
   email: string;
-  resendApiKey?: string;
+  transport: Transport;
 };
 
 const sendCustomerInvitation = async ({
   acceptUrl,
   companyName,
   email,
-  resendApiKey,
+  transport,
 }: CustomerInvitationEmail): Promise<boolean> => {
-  const mailer = mailerFor(resendApiKey);
-
-  if (!mailer) {
-    log.info({
-      message: "auth: invitation link (no Resend key)",
-      url: acceptUrl,
-      userEmail: email,
-    });
-
-    return true;
-  }
-
   const result = await sendTransactionalEmail(
     {
       acceptUrl,
@@ -78,7 +63,7 @@ const sendCustomerInvitation = async ({
       type: "invitation",
       userEmail: email,
     },
-    mailer,
+    transport,
   );
 
   if (!result.success) {
@@ -94,8 +79,8 @@ type AuthConfig = {
   fallbackBaseURL: string;
   prisma: OperatorCounter;
   rateLimitEnabled?: boolean;
-  resendApiKey?: string;
   secret: string;
+  transport: Transport;
   trustedOrigins?: Array<string>;
   useSecureCookies?: boolean;
 };
@@ -107,13 +92,11 @@ export const createAuth = (config: AuthConfig) => {
     fallbackBaseURL,
     prisma,
     rateLimitEnabled = false,
-    resendApiKey,
     secret,
+    transport,
     trustedOrigins = [],
     useSecureCookies = false,
   } = config;
-
-  const mailer = mailerFor(resendApiKey);
 
   return betterAuth({
     account: {
@@ -149,55 +132,41 @@ export const createAuth = (config: AuthConfig) => {
       enabled: true,
       maxPasswordLength: PASSWORD_LENGTH.max,
       minPasswordLength: PASSWORD_LENGTH.min,
-      onExistingUserSignUp: mailer
-        ? async ({ user }, request) => {
-            const origin = request?.headers.get("origin") ?? "";
-
-            const result = await sendTransactionalEmail(
-              {
-                resetPasswordUrl: `${origin}/recover`,
-                signInUrl: `${origin}/login`,
-                type: "sign-up-attempt",
-                userEmail: user.email,
-                userId: user.id,
-                username: user.name,
-              },
-              mailer,
-            );
-
-            if (!result.success) {
-              log.error({
-                error: result.error,
-                message: "auth: failed to send sign-up attempt email",
-              });
-            }
-          }
-        : undefined,
-      requireEmailVerification: Boolean(mailer),
-      resetPasswordTokenExpiresIn: LINK_LIFETIME_SECONDS.passwordReset,
-      sendResetPassword: async ({ url, user }, request) => {
-        const resetUrl = linkOnRequestOrigin(url, request?.headers, trustedOrigins);
-
-        if (!mailer) {
-          log.info({
-            message: "auth: password-reset link (no Resend key)",
-            url: resetUrl,
-            userEmail: user.email,
-          });
-
-          return;
-        }
+      onExistingUserSignUp: async ({ user }, request) => {
+        const origin = request?.headers.get("origin") ?? "";
 
         const result = await sendTransactionalEmail(
           {
+            resetPasswordUrl: `${origin}/recover`,
+            signInUrl: `${origin}/login`,
+            type: "sign-up-attempt",
+            userEmail: user.email,
+            userId: user.id,
+            username: user.name,
+          },
+          transport,
+        );
+
+        if (!result.success) {
+          log.error({
+            error: result.error,
+            message: "auth: failed to send sign-up attempt email",
+          });
+        }
+      },
+      requireEmailVerification: true,
+      resetPasswordTokenExpiresIn: LINK_LIFETIME_SECONDS.passwordReset,
+      sendResetPassword: async ({ url, user }, request) => {
+        const result = await sendTransactionalEmail(
+          {
             expiresInSeconds: LINK_LIFETIME_SECONDS.passwordReset,
-            resetUrl,
+            resetUrl: linkOnRequestOrigin(url, request?.headers, trustedOrigins),
             type: "password-reset",
             userEmail: user.email,
             userId: user.id,
             username: user.name,
           },
-          mailer,
+          transport,
         );
 
         if (!result.success) {
@@ -233,16 +202,6 @@ export const createAuth = (config: AuthConfig) => {
           trustedOrigins,
         );
 
-        if (!mailer) {
-          log.info({
-            message: "auth: verification link (no Resend key)",
-            url: verificationUrl,
-            userEmail: user.email,
-          });
-
-          return;
-        }
-
         const result = await sendTransactionalEmail(
           {
             expiresInSeconds: LINK_LIFETIME_SECONDS.emailVerification,
@@ -252,7 +211,7 @@ export const createAuth = (config: AuthConfig) => {
             username: user.name,
             verificationUrl,
           },
-          mailer,
+          transport,
         );
 
         if (!result.success) {
@@ -270,22 +229,14 @@ export const createAuth = (config: AuthConfig) => {
       magicLink({
         expiresIn: LINK_LIFETIME_SECONDS.magicLink,
         sendMagicLink: async ({ email, url }, ctx) => {
-          const link = linkOnRequestOrigin(url, ctx?.headers, trustedOrigins);
-
-          if (!mailer) {
-            log.info({ message: "auth: magic-link (no Resend key)", url: link, userEmail: email });
-
-            return;
-          }
-
           const result = await sendTransactionalEmail(
             {
               expiresInSeconds: LINK_LIFETIME_SECONDS.magicLink,
               type: "magic-link",
-              url: link,
+              url: linkOnRequestOrigin(url, ctx?.headers, trustedOrigins),
               userEmail: email,
             },
-            mailer,
+            transport,
           );
 
           if (!result.success) {
@@ -328,10 +279,6 @@ export const createAuth = (config: AuthConfig) => {
       changeEmail: {
         enabled: true,
         sendChangeEmailConfirmation: async ({ newEmail, url, user }, request) => {
-          if (!mailer) {
-            return;
-          }
-
           const result = await sendTransactionalEmail(
             {
               changeUrl: linkOnRequestOrigin(url, request?.headers, trustedOrigins),
@@ -342,7 +289,7 @@ export const createAuth = (config: AuthConfig) => {
               userId: user.id,
               username: user.name,
             },
-            mailer,
+            transport,
           );
 
           if (!result.success) {

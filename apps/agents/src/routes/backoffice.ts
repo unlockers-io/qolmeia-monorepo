@@ -12,6 +12,7 @@ import { createOrganization } from "#/company/organization";
 import { requireOperator, type IdentityEnv } from "#/identity/gates";
 import { createWorkerAuth } from "#/lib/auth";
 import { answer } from "#/lib/endpoint";
+import { mailTransport } from "#/lib/mail";
 import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
 import { getCoverage, getCoverageOptions, setCoverage } from "#/operator/assignment";
 import { listSkillCatalog } from "#/skills/registry";
@@ -98,7 +99,7 @@ answer(backofficeRoutes, BACKOFFICE.inviteCustomer, async (c, { body, params }) 
     acceptUrl: `${c.env.WEB_APP_URL}/convite/${invitation.id}`,
     companyName,
     email: invitation.email,
-    resendApiKey: c.env.RESEND_API_KEY,
+    transport: mailTransport(c.env),
   });
 
   return sent ? { invitation } : c.json({ error: "invitation email failed" }, 502);

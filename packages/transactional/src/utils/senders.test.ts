@@ -7,19 +7,12 @@ import { MagicLinkEmail } from "../emails/magic-link";
 import { PasswordResetEmail } from "../emails/password-reset";
 import { SignUpAttemptEmail } from "../emails/sign-up-attempt";
 import { WelcomeEmail } from "../emails/welcome";
+import type { Transport } from "../transport";
 
-import { previewEmail, sendEmail, type EmailClientFactory } from "./send-email";
-import { createTransactionalEmailSender } from "./senders";
+import { previewEmail } from "./send-email";
+import { sendTransactionalEmail } from "./senders";
 
-const sendMock = vi.fn();
-
-const createClient: EmailClientFactory = () => ({
-  emails: { send: sendMock },
-});
-
-const sendTransactionalEmail = createTransactionalEmailSender((options) =>
-  sendEmail(options, createClient),
-);
+const sendMock = vi.fn<Transport>();
 
 describe("WelcomeEmail render", () => {
   it("includes the verification URL and Qolmeia branding", async () => {
@@ -146,7 +139,7 @@ describe("InvitationEmail render", () => {
 describe("sendTransactionalEmail", () => {
   beforeEach(() => {
     sendMock.mockReset();
-    sendMock.mockResolvedValue({ data: { id: "test" }, error: null });
+    sendMock.mockResolvedValue({ data: { id: "test" }, error: null, headers: null });
   });
 
   it("routes a welcome payload to the user with type and userId tags", async () => {
@@ -159,7 +152,7 @@ describe("sendTransactionalEmail", () => {
         username: "Pedro",
         verificationUrl: "https://app.qolmeia.com/verify?token=abc",
       },
-      { apiKey: "re_test" },
+      sendMock,
     );
 
     expect(result.success).toBe(true);
@@ -185,7 +178,7 @@ describe("sendTransactionalEmail", () => {
         url: "https://app.qolmeia.com/auth/magic?token=mlk-123",
         userEmail: "user@example.com",
       },
-      { apiKey: "re_test" },
+      sendMock,
     );
 
     expect(result.success).toBe(true);
@@ -210,7 +203,7 @@ describe("sendTransactionalEmail", () => {
         type: "change-email-confirmation",
         userId: "user_1",
       },
-      { apiKey: "re_test" },
+      sendMock,
     );
 
     expect(result.success).toBe(true);
@@ -232,7 +225,7 @@ describe("sendTransactionalEmail", () => {
         type: "invitation",
         userEmail: "cliente@example.com",
       },
-      { apiKey: "re_test" },
+      sendMock,
     );
 
     expect(result.success).toBe(true);

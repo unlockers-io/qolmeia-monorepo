@@ -4,14 +4,15 @@ import { createAuth } from "@repo/auth/server";
 import { Hono } from "hono";
 
 import type { DbVariables, PrismaClient } from "#/lib/db";
+import { mailTransport } from "#/lib/mail";
 
 const createWorkerAuth = (env: Env, db: PrismaClient) =>
   createAuth({
     ...envAuthConfig(),
     fallbackBaseURL: env.WORKER_PUBLIC_URL,
     prisma: db,
-    resendApiKey: env.RESEND_API_KEY,
     secret: env.BETTER_AUTH_SECRET,
+    transport: mailTransport(env),
   });
 
 type WorkerAuth = ReturnType<typeof createWorkerAuth>;
