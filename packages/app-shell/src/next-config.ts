@@ -37,6 +37,7 @@ const createNextConfig = (
 
   return {
     ...appConfig,
+    agentRules: false,
     experimental: {
       instantInsights: { validationLevel: "manual-warning" },
       ...appConfig.experimental,
