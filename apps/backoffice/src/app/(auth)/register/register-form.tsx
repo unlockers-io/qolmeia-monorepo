@@ -8,9 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ca
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Suspense, use, useState } from "react";
-import { toast } from "sonner";
 
 import { AuthFormCard } from "@/app/(auth)/auth-form-card";
 import { NAME_MAX_LENGTH, NAME_MIN_LENGTH, registerSchema } from "@/lib/form-schemas";
@@ -39,7 +37,6 @@ const LoginLink = ({ searchParams }: Props) => {
 };
 
 const RegisterForm = ({ searchParams }: Props) => {
-  const { push, refresh } = useRouter();
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -53,12 +50,11 @@ const RegisterForm = ({ searchParams }: Props) => {
     onSubmit: async ({ value }) => {
       setSubmitError(null);
       const { from } = await searchParams;
-      const redirectTo = safeRedirectPath(from);
 
       const outcome = await authRequest(
         () =>
           authClient.signUp.email({
-            callbackURL: redirectTo,
+            callbackURL: safeRedirectPath(from),
             email: value.email,
             name: value.name,
             password: value.password,
@@ -72,17 +68,7 @@ const RegisterForm = ({ searchParams }: Props) => {
         return;
       }
 
-      const token = outcome.result.data?.token ?? null;
-
-      if (token === null || token === "") {
-        setSentToEmail(value.email);
-
-        return;
-      }
-
-      toast.success("Conta criada. Bem-vindo à Qolmeia!");
-      push(redirectTo);
-      refresh();
+      setSentToEmail(value.email);
     },
     onSubmitInvalid: ({ formApi }) => {
       focusFirstInvalidField(formApi.formId);

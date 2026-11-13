@@ -1,5 +1,6 @@
 import type { CustomerInvitationResponse, MeResponse } from "@repo/worker-api/contracts";
-import { beforeEach, describe, expect, it } from "vitest";
+import { env } from "cloudflare:workers";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { db, seedCompany } from "#/__tests__/fixtures";
 import { fetchWithCookie, signIn, signInAs } from "#/__tests__/sign-in";
@@ -42,7 +43,30 @@ const emailOf = (userId: string) => `${userId}@qolmeia.test`;
 
 let operator = "";
 
+const outbox: Array<unknown> = [];
+
+const outboxAnswering = (answer: () => Response) => {
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
+
+    if (request.url !== env.MAIL_OUTBOX_URL) {
+      throw new Error(`unexpected fetch to ${request.url}`);
+    }
+
+    outbox.push(await request.json());
+
+    return answer();
+  });
+};
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 beforeEach(async () => {
+  outbox.length = 0;
+  outboxAnswering(() => Response.json({ data: { id: "outbox" }, error: null, headers: null }));
+
   for (const { id, name } of [
     { id: COMPANY_ID, name: "Padaria Nova" },
     { id: OTHER_COMPANY_ID, name: "Outra" },
@@ -82,6 +106,20 @@ describe("POST /api/backoffice/companies/:companyId/invitations", () => {
       companyId: COMPANY_ID,
       refId: invitation.id,
     });
+    expect(outbox).toEqual([
+      expect.objectContaining({
+        html: expect.stringContaining(`${WEB_ORIGIN}/convite/${invitation.id}`),
+        subject: "Seu convite para a Padaria Nova na Qolmeia",
+        to: "cliente@example.com",
+      }),
+    ]);
+  });
+
+  it("answers 502 when the invitation e-mail cannot be sent", async () => {
+    vi.restoreAllMocks();
+    outboxAnswering(() => new Response("outbox unavailable", { status: 500 }));
+
+    expect(await statusOf(invite(operator, "cliente@example.com"))).toBe(502);
   });
 
   it("refuses a Customer with 403", async () => {

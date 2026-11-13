@@ -1,10 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 import { backofficeUrl } from "../../../playwright.config";
-import { extractLink, waitForEmail } from "../helpers/resend";
-import { makeTestEmail, makeTestUsername } from "../helpers/test-email";
-
-test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
+import { verificationLink } from "../fixtures/verification.fixture";
+import { makeTestEmail } from "../helpers/test-email";
 
 test.use({
   extraHTTPHeaders: { Origin: backofficeUrl },
@@ -17,11 +15,10 @@ test.describe("Sign-up email verification", () => {
   }, testInfo) => {
     const since = Date.now();
     const email = makeTestEmail(testInfo);
-    const username = makeTestUsername(email);
     const password = "SecurePassword1!";
 
     const signUp = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
-      data: { email, name: "Verify Me", password, username },
+      data: { email, name: "Verify Me", password },
     });
 
     expect([200, 201]).toContain(signUp.status());
@@ -33,15 +30,11 @@ test.describe("Sign-up email verification", () => {
 
     expect(preSignIn.status()).not.toBe(200);
 
-    const mail = await waitForEmail({
+    const verifyUrl = await verificationLink({
       sinceMs: since,
       subject: /boas-vindas/iu,
       to: email,
     });
-
-    expect(mail.last_event).not.toBe("bounced");
-
-    const verifyUrl = extractLink(mail, /\/api\/auth\/verify-email\?token=/u);
 
     const verifyResponse = await request.get(verifyUrl, {
       failOnStatusCode: false,

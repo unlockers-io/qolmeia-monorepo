@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { render } from "react-email";
 import { z } from "zod";
 
-import { createResendClient } from "../client";
+import type { Transport } from "../transport";
 
 const resendErrorSchema = z.object({
   message: z.string().optional(),
@@ -21,36 +21,20 @@ const emailConfigSchema = z.object({
 });
 
 type SendEmailOptions = z.input<typeof emailConfigSchema> & {
-  apiKey: string;
   template: ReactElement;
+  transport: Transport;
 };
 
-type ResendClient = ReturnType<typeof createResendClient>;
-
-type EmailClient = {
-  emails: Pick<ResendClient["emails"], "send">;
-};
-
-type EmailClientFactory = (apiKey: string) => EmailClient;
-
-const sendEmail = async (
-  { apiKey, template, ...config }: SendEmailOptions,
-  createClient: EmailClientFactory = createResendClient,
-) => {
-  if (!apiKey) {
-    throw new Error("API key is required for sending emails");
-  }
-
+const sendEmail = async ({ template, transport, ...config }: SendEmailOptions) => {
   try {
     const validatedConfig = emailConfigSchema.parse(config);
-    const resend = createClient(apiKey);
 
     const [html, text] = await Promise.all([
       render(template),
       render(template, { plainText: true }),
     ]);
 
-    const result = await resend.emails.send({
+    const result = await transport({
       from: "Qolmeia <noreply@email.qolmeia.com>",
       html,
       subject: validatedConfig.subject,
@@ -62,7 +46,7 @@ const sendEmail = async (
     if (result.error) {
       const error = resendErrorSchema.safeParse(result.error).data;
       throw new Error(
-        `Resend failed to queue email: ${error?.name ?? "unknown_error"} - ${error?.message ?? "No message"}`,
+        `Failed to queue email: ${error?.name ?? "unknown_error"} - ${error?.message ?? "No message"}`,
       );
     }
 
@@ -90,5 +74,3 @@ const previewEmail = async (template: ReactElement) => {
 };
 
 export { sendEmail, previewEmail };
-
-export type { EmailClient, EmailClientFactory };

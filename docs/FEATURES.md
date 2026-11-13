@@ -15,8 +15,8 @@ see [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ### 1.1 Access and authentication
 
-- **Magic-link sign-in** for customers, with email delivery through Resend in configured
-  environments and link logging in local development.
+- **Magic-link sign-in** for customers, with email delivery through Resend and a file
+  outbox in local development.
 - **Email verification callback** at `/auth/verify`, including safe callback-path validation.
 - **Invitations**: a Customer joins a Company through an Operator's e-mailed invitation. The link
   opens `/convite/<id>`, which sends a signed-out visitor through the login and back, then accepts
