@@ -22,6 +22,7 @@
     "./proxy": "./src/proxy.ts",
     "./root-layout": "./src/root-layout.ts",
     "./route-error": "./src/route-error.tsx",
+    "./section-error": "./src/section-error.tsx",
     "./server-api": "./src/server-api.ts",
     "./session": "./src/session.ts",
     "./sign-out-button": "./src/sign-out-button.tsx",
