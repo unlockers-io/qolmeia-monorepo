@@ -1,21 +1,6 @@
-const apps = {
-  agents: { name: "qolmeia.agents", port: 8787 },
-  backoffice: { name: "qolmeia.backoffice", port: 3000 },
-  landing: { name: "qolmeia.landing", port: 3002 },
-  web: { name: "qolmeia.web", port: 3001 },
-} as const;
+import { apps, urlEnv } from "@repo/portless-env/registry";
 
 type App = keyof typeof apps;
-
-const urlEnv = {
-  AGENTS_INTERNAL_URL: ["agents"],
-  BACKOFFICE_URL: ["backoffice"],
-  CORS_ORIGINS: ["web", "backoffice"],
-  NEXT_PUBLIC_LANDING_URL: ["landing"],
-  NEXT_PUBLIC_WEB_APP_URL: ["web"],
-  WEB_APP_URL: ["web"],
-  WORKER_PUBLIC_URL: ["agents"],
-} as const satisfies Record<string, ReadonlyArray<App>>;
 
 type UrlEnvKey = keyof typeof urlEnv;
 
@@ -47,14 +32,14 @@ const localHostPatterns = [
 ];
 
 export {
-  apps,
   canonicalHostname,
   canonicalUrl,
   canonicalUrls,
   localHostPatterns,
   loopbackOrigins,
   loopbackUrl,
-  urlEnv,
 };
+
+export { apps, urlEnv } from "@repo/portless-env/registry";
 
 export type { App, UrlEnvKey };
