@@ -20,8 +20,11 @@ describe("getCompany", () => {
     });
   });
 
-  it("returns null for an unknown id", async () => {
-    await expect(db((client) => getCompany(client, "missing"))).resolves.toBeNull();
+  it("refuses an unknown id with 404", async () => {
+    await expect(db((client) => getCompany(client, "missing"))).rejects.toMatchObject({
+      message: "company not found",
+      status: 404,
+    });
   });
 });
 
@@ -33,7 +36,7 @@ describe("updateBrief", () => {
       db((client) => updateBrief(client, COMPANY_ID, { brand: { voice: "Caloroso" } })),
     ]);
     const company = await db((client) => getCompany(client, COMPANY_ID));
-    expect(company?.brief).toMatchObject({
+    expect(company.brief).toMatchObject({
       audience: "Vizinhos",
       brand: { voice: "Caloroso" },
       industry: "Padaria",
@@ -41,9 +44,9 @@ describe("updateBrief", () => {
     });
   });
 
-  it("returns null for an unknown company", async () => {
+  it("refuses an unknown company with 404", async () => {
     await expect(
       db((client) => updateBrief(client, "missing", { audience: "x" })),
-    ).resolves.toBeNull();
+    ).rejects.toMatchObject({ message: "company not found", status: 404 });
   });
 });

@@ -29,7 +29,7 @@ const proposeTeamSkill = defineSkill({
       Promise.all([listEntitledTemplates(db, ctx.companyId), getCompany(db, ctx.companyId)]),
     );
 
-    const brief = company?.brief ?? {};
+    const { brief } = company;
     const industry = typeof brief.industry === "string" ? brief.industry : "";
 
     const candidates: ReadonlyArray<TeamCandidate> = templates.map((t) => ({

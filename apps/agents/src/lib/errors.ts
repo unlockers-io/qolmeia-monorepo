@@ -10,4 +10,6 @@ class DomainError extends Error {
   }
 }
 
-export { DomainError };
+const notFound = (message = "not found"): DomainError => new DomainError(404, message);
+
+export { DomainError, notFound };

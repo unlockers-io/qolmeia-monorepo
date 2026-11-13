@@ -9,13 +9,9 @@ const extractBriefSkill = defineSkill({
     "Atualiza o brief da empresa com o que você acabou de aprender na conversa. Envie apenas os campos que mudaram; campos não enviados são preservados. Chame conforme a conversa evolui.",
   displayName: "Atualizar brief",
   async execute(updates, ctx): Promise<{ brief: Partial<CompanyBrief> }> {
-    const row = await withDb(ctx.env, (db) => updateBrief(db, ctx.companyId, updates));
+    const { brief } = await withDb(ctx.env, (db) => updateBrief(db, ctx.companyId, updates));
 
-    if (!row) {
-      throw new Error(`company ${ctx.companyId} not found`);
-    }
-
-    return { brief: row.brief };
+    return { brief };
   },
   id: "extractBrief",
   inputSchema: briefPatchSchema,
