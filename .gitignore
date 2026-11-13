@@ -14,12 +14,6 @@ coverage
 out/
 build
 next-env.d.ts
-# Written and re-added on every `next dev` by generate-agent-files.js. The
-# repo's own agent docs live at the root; these copies are Next's, not ours.
-apps/backoffice/AGENTS.md
-apps/backoffice/CLAUDE.md
-apps/web/AGENTS.md
-apps/web/CLAUDE.md
 
 # build
 dist/
