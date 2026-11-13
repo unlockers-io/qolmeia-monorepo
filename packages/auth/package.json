@@ -7,7 +7,7 @@
     "./client": "./src/client.ts",
     "./client-ip": "./src/client-ip.ts",
     "./env-config": "./src/env-config.ts",
-    "./password": "./src/password.ts",
+    "./policy": "./src/policy.ts",
     "./redirect-path": "./src/redirect-path.ts",
     "./roles": "./src/roles.ts",
     "./server": "./src/server.ts",
