@@ -72,7 +72,7 @@ describe("committed memory publication", () => {
       client.$transaction(async (tx) => {
         await tx.$executeRawUnsafe("SET LOCAL lock_timeout = '500ms'");
         await tx.memoryFact.updateMany({
-          data: { salience: 0.7 },
+          data: { kind: "audience" },
           where: { companyId: COMPANY_ID },
         });
         expect(await tx.team.count()).toBe(1);

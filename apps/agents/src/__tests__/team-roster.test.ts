@@ -40,7 +40,6 @@ beforeEach(async () => {
         id: OTHER_WORKER_ID,
         role: "worker",
         templateId: "tpl-designer",
-        templateVersion: 1,
       },
     }),
   );

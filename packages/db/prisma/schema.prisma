@@ -230,8 +230,6 @@ model Company {
   id        String        @id
   name      String
   slug      String        @unique
-  timezone  String        @default("America/Sao_Paulo")
-  locale    String        @default("pt-BR")
   status    CompanyStatus @default(onboarding)
   brief     Json?
   createdAt DateTime      @default(now()) @map("created_at")
@@ -260,7 +258,6 @@ model AgentTemplate {
   skillIds          Json           @map("skill_ids")
   defaultPolicies   Json           @map("default_policies")
   status            TemplateStatus @default(active)
-  version           Int            @default(1)
   defaultActionType String         @default("worker_deliverable") @map("default_action_type")
   createdAt         DateTime       @default(now()) @map("created_at")
   updatedAt         DateTime       @updatedAt @map("updated_at")
@@ -294,22 +291,19 @@ model CompanyTemplateEntitlement {
 }
 
 model AgentInstance {
-  id              String              @id
-  companyId       String              @map("company_id")
-  role            AgentRole
-  templateId      String?             @map("template_id")
-  templateVersion Int?                @map("template_version")
-  displayName     String              @map("display_name")
-  modelOverride   String?             @map("model_override")
-  status          AgentInstanceStatus @default(active)
-  promptOverride  String?             @map("prompt_override") @db.Text
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
-  company         Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  template        AgentTemplate?      @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  id             String              @id
+  companyId      String              @map("company_id")
+  role           AgentRole
+  templateId     String?             @map("template_id")
+  displayName    String              @map("display_name")
+  status         AgentInstanceStatus @default(active)
+  promptOverride String?             @map("prompt_override") @db.Text
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  company        Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  template       AgentTemplate?      @relation(fields: [templateId], references: [id], onDelete: Restrict)
 
   memoryFacts MemoryFact[]
-  memberships TeamMember[]
   tickets     Ticket[]
 
   @@index([companyId, role, status])
@@ -317,45 +311,28 @@ model AgentInstance {
 }
 
 model Team {
-  id          String       @id
-  companyId   String       @unique @map("company_id")
-  confirmedAt DateTime?    @map("confirmed_at")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  members     TeamMember[]
+  id          String    @id
+  companyId   String    @unique @map("company_id")
+  confirmedAt DateTime? @map("confirmed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("team")
-}
-
-model TeamMember {
-  teamId          String        @map("team_id")
-  agentInstanceId String        @map("agent_instance_id")
-  canDelegateTo   Json          @default("[]") @map("can_delegate_to")
-  team            Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  agentInstance   AgentInstance @relation(fields: [agentInstanceId], references: [id], onDelete: Cascade)
-
-  @@id([teamId, agentInstanceId])
-  @@index([agentInstanceId])
-  @@map("team_member")
 }
 
 model Ticket {
   id              String        @id
   companyId       String        @map("company_id")
   agentInstanceId String        @map("agent_instance_id")
-  parentTicketId  String?       @map("parent_ticket_id")
   title           String
   brief           String        @db.Text
   status          TicketStatus  @default(open)
   origin          String
-  workflowId      String?       @map("workflow_id")
   result          Json?
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
   company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   agentInstance   AgentInstance @relation(fields: [agentInstanceId], references: [id], onDelete: Restrict)
-  parentTicket    Ticket?       @relation("TicketTree", fields: [parentTicketId], references: [id], onDelete: SetNull)
-  childTickets    Ticket[]      @relation("TicketTree")
   actions         Action[]
 
   @@index([companyId, agentInstanceId, status])
@@ -404,7 +381,6 @@ model MemoryFact {
   agentInstanceId String        @map("agent_instance_id")
   kind            String
   content         String        @db.Text
-  salience        Float         @default(0.5)
   indexedAt       DateTime?     @map("indexed_at")
   createdAt       DateTime      @default(now()) @map("created_at")
   company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
