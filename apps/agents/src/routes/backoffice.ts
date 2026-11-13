@@ -31,6 +31,7 @@ import { inviteCustomer } from "#/company/invitation";
 import { createOrganization } from "#/company/organization";
 import { requireOperator, type IdentityEnv } from "#/identity/gates";
 import { createWorkerAuth } from "#/lib/auth";
+import { mailTransport } from "#/lib/mail";
 import { parsePositiveInt, parseTimestamp } from "#/lib/pagination";
 import { jsonBody } from "#/lib/validate";
 import { getCoverage, getCoverageOptions, setCoverage } from "#/operator/assignment";
@@ -157,7 +158,7 @@ backofficeRoutes.post(
       acceptUrl: `${c.env.WEB_APP_URL}/convite/${invitation.id}`,
       companyName,
       email: invitation.email,
-      resendApiKey: c.env.RESEND_API_KEY,
+      transport: mailTransport(c.env),
     });
 
     if (!sent) {

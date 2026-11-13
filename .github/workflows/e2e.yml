@@ -28,8 +28,6 @@ jobs:
       # defaults to the Worker's vite dev server on 127.0.0.1:8787 and is
       # baked into the build output by `next build`.
       WEB_APP_URL: http://127.0.0.1:3001
-      RESEND_API_KEY: re_e2e_stub
-      RESEND_BASE_URL: http://127.0.0.1:3999
     services:
       postgres:
         image: postgres:18-alpine
@@ -82,8 +80,6 @@ jobs:
             echo "ASSETS_SIGNING_KEY=e2e-assets-signing-key"
             echo "BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET"
             echo "OPENROUTER_API_KEY=e2e-unused"
-            echo "RESEND_API_KEY=$RESEND_API_KEY"
-            echo "RESEND_BASE_URL=$RESEND_BASE_URL"
             echo "TRUSTED_ORIGINS=http://127.0.0.1:3000,http://127.0.0.1:3001"
             echo "WEB_APP_URL=$WEB_APP_URL"
             echo "WORKER_PUBLIC_URL=http://127.0.0.1:8787"

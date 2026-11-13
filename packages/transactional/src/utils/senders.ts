@@ -6,14 +6,9 @@ import { MagicLinkEmail } from "../emails/magic-link";
 import { PasswordResetEmail } from "../emails/password-reset";
 import { SignUpAttemptEmail } from "../emails/sign-up-attempt";
 import { WelcomeEmail } from "../emails/welcome";
+import type { Transport } from "../transport";
 
 import { sendEmail } from "./send-email";
-
-type SendEmail = typeof sendEmail;
-
-type MailerConfig = {
-  apiKey: string;
-};
 
 type WelcomePayload = {
   expiresInSeconds: number;
@@ -163,26 +158,21 @@ const TEMPLATES: TemplateRegistry = {
 const buildEmail = <Type extends EmailType>(type: Type, payload: PayloadByType[Type]): EmailBuild =>
   TEMPLATES[type](payload);
 
-const createTransactionalEmailSender =
-  (send: SendEmail) => (email: TransactionalEmail, config: MailerConfig) => {
-    const { subject, template, to } = buildEmail(email.type, email);
+const sendTransactionalEmail = (email: TransactionalEmail, transport: Transport) => {
+  const { subject, template, to } = buildEmail(email.type, email);
 
-    return send({
-      apiKey: config.apiKey,
-      subject,
-      tags: [
-        { name: "type", value: email.type },
-        ...(email.userId !== undefined && email.userId !== ""
-          ? [{ name: "userId", value: email.userId }]
-          : []),
-      ],
-      template,
-      to,
-    });
-  };
+  return sendEmail({
+    subject,
+    tags: [
+      { name: "type", value: email.type },
+      ...(email.userId !== undefined && email.userId !== ""
+        ? [{ name: "userId", value: email.userId }]
+        : []),
+    ],
+    template,
+    to,
+    transport,
+  });
+};
 
-const sendTransactionalEmail = createTransactionalEmailSender(sendEmail);
-
-export type { MailerConfig };
-
-export { createTransactionalEmailSender, sendTransactionalEmail };
+export { sendTransactionalEmail };

@@ -12,6 +12,8 @@ export default defineConfig({
       miniflare: {
         bindings: {
           BETTER_AUTH_SECRET: "vitest-better-auth-secret-of-at-least-32-chars",
+          MAIL_OUTBOX_URL: "http://outbox.test/",
+          MAIL_TRANSPORT: "outbox",
           OPENROUTER_API_KEY: "test-openrouter-key",
         },
         hyperdrives: { HYPERDRIVE: testDatabaseUrl },

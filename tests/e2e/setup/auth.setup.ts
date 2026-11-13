@@ -4,7 +4,7 @@ import { expect, test as setup } from "@playwright/test";
 
 import { backofficeUrl } from "../../../playwright.config";
 import { E2E_USER_EMAIL } from "../fixtures/e2e-user";
-import { verification } from "../fixtures/verification.fixture";
+import { verificationLink } from "../fixtures/verification.fixture";
 
 const TEST_USER = {
   email: E2E_USER_EMAIL,
@@ -15,27 +15,31 @@ const TEST_USER = {
 setup("create and authenticate test user", async ({ page, request }) => {
   await mkdir("tests/e2e/.auth", { recursive: true });
 
-  const signUpResponse = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
-    data: {
-      email: TEST_USER.email,
-      name: TEST_USER.name,
-      password: TEST_USER.password,
-    },
-    headers: { Origin: backofficeUrl },
-  });
+  const sinceMs = Date.now();
 
-  expect([200, 201, 409, 422]).toContain(signUpResponse.status());
+  const requestSignIn = () =>
+    request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
+      data: { email: TEST_USER.email, password: TEST_USER.password },
+      failOnStatusCode: false,
+      headers: { Origin: backofficeUrl },
+    });
 
-  if (process.env.RESEND_API_KEY) {
-    const { url } = await verification.forVerifyEmail(TEST_USER.email);
-    const verified = await request.get(url, { failOnStatusCode: false, maxRedirects: 0 });
+  let signIn = await requestSignIn();
+
+  if (!signIn.ok()) {
+    const signUpResponse = await request.post(`${backofficeUrl}/api/auth/sign-up/email`, {
+      data: TEST_USER,
+      headers: { Origin: backofficeUrl },
+    });
+
+    expect(signUpResponse.status()).toBe(200);
+
+    const link = await verificationLink({ sinceMs, subject: /boas-vindas/iu, to: TEST_USER.email });
+    const verified = await request.get(link, { failOnStatusCode: false, maxRedirects: 0 });
     expect(verified.status()).toBe(302);
-  }
 
-  const signIn = await request.post(`${backofficeUrl}/api/auth/sign-in/email`, {
-    data: { email: TEST_USER.email, password: TEST_USER.password },
-    headers: { Origin: backofficeUrl },
-  });
+    signIn = await requestSignIn();
+  }
 
   expect(signIn.status()).toBe(200);
 

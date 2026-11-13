@@ -87,16 +87,11 @@ export default defineConfig({
   webServer: process.env.CI
     ? [
         {
-          command: "node tests/e2e/support/resend-stub.ts",
-          stderr: "pipe",
-          stdout: "pipe",
-          url: `${process.env.RESEND_BASE_URL}/emails`,
-        },
-        {
           command: "pnpm --filter worker-bees exec vite dev",
           env: {
             CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
               process.env.DATABASE_URL ?? "",
+            MAIL_TRANSPORT: "outbox",
           },
           stderr: "pipe",
           stdout: "pipe",
