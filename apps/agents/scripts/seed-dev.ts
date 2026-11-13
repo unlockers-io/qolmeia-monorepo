@@ -1,14 +1,23 @@
-import { envAuthConfig } from "@repo/auth/env-config";
+import { authEnv, envAuthConfig } from "@repo/auth/env-config";
 import { createAuth } from "@repo/auth/server";
-import { prisma, seedProductDefaults } from "@repo/db";
+import { createPrismaClient, seedProductDefaults } from "@repo/db";
 import { loopbackUrl } from "@repo/portless-env/apps";
+import { createTransport } from "@repo/transactional/transport";
 import { z } from "zod";
 
 import { correspondentIdFor, teamIdFor, workerIdFor } from "#/team/ids";
 
 const env = z
-  .object({ BETTER_AUTH_SECRET: z.string().min(32), RESEND_API_KEY: z.string().optional() })
+  .object({
+    ...authEnv.shape,
+    BETTER_AUTH_SECRET: z.string().min(32),
+    DATABASE_URL: z.string().min(1),
+    MAIL_TRANSPORT: z.string().optional(),
+    RESEND_API_KEY: z.string().optional(),
+  })
   .parse(process.env);
+
+const prisma = createPrismaClient(env.DATABASE_URL);
 
 const ORG_ID = "cmpg10ke30000147uj4gpeadb";
 const ORG_NAME = "Qolmeia Dev";
@@ -23,11 +32,11 @@ const CUSTOMER_NAME = "Cliente Demo";
 const CUSTOMER_PASSWORD = "Qolmeia-Dev-CustomerPass!";
 
 const auth = createAuth({
-  ...envAuthConfig(),
+  ...envAuthConfig(env),
   fallbackBaseURL: loopbackUrl("agents", "127.0.0.1"),
   prisma,
-  resendApiKey: env.RESEND_API_KEY,
   secret: env.BETTER_AUTH_SECRET,
+  transport: createTransport({ apiKey: env.RESEND_API_KEY, transport: env.MAIL_TRANSPORT }),
 });
 
 const upsertOrg = async () => {
@@ -65,6 +74,8 @@ const upsertUser = async (
   if (!result.user.id) {
     throw new Error(`Better Auth signUpEmail returned no user id for ${email}`);
   }
+
+  await prisma.user.update({ data: { emailVerified: true }, where: { id: result.user.id } });
 
   return { created: true, userId: result.user.id };
 };

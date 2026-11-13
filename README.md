@@ -87,4 +87,4 @@ pnpm build
 | Backoffice | OWNER    | `operator@qolmeia.dev` | `Qolmeia-Dev-OperatorPass!` |
 | Client     | CUSTOMER | `customer@qolmeia.dev` | `Qolmeia-Dev-CustomerPass!` |
 
-The client login also offers magic links. Without `RESEND_API_KEY`, the Worker logs every magic-link and password-reset URL; open it as-is.
+The client login also offers magic links. With `MAIL_TRANSPORT=outbox` (the `.dev.vars.example` default) the Worker sends nothing: every e-mail is filed as JSON in the `qolmeia-outbox` directory under the system temp directory, and the newest file holds the magic-link, verification or password-reset URL; open it as-is.

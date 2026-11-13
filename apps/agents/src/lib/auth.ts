@@ -1,17 +1,19 @@
 import { withClientIp } from "@repo/auth/client-ip";
-import { envAuthConfig } from "@repo/auth/env-config";
+import { authEnv, envAuthConfig } from "@repo/auth/env-config";
 import { createAuth } from "@repo/auth/server";
 import { Hono } from "hono";
 
 import type { DbVariables, PrismaClient } from "#/lib/db";
+import { mailTransport } from "#/lib/mail";
 
 const createWorkerAuth = (env: Env, db: PrismaClient) =>
   createAuth({
-    ...envAuthConfig(),
+    // Vite replaces process.env.NODE_ENV at build; it is not a binding.
+    ...envAuthConfig(authEnv.parse({ ...env, NODE_ENV: process.env.NODE_ENV })),
     fallbackBaseURL: env.WORKER_PUBLIC_URL,
     prisma: db,
-    resendApiKey: env.RESEND_API_KEY,
     secret: env.BETTER_AUTH_SECRET,
+    transport: mailTransport(env),
   });
 
 type WorkerAuth = ReturnType<typeof createWorkerAuth>;

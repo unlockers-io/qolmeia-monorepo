@@ -1,8 +1,11 @@
-import { prisma } from "@repo/db";
-import { beforeAll, describe, expect, it } from "vitest";
+import { createPrismaClient } from "@repo/db";
+import type { Transport } from "@repo/transactional/transport";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createAuth, linkOnRequestOrigin } from "./server";
 import type { AuthConfig } from "./server";
+
+const prisma = createPrismaClient(process.env.DATABASE_URL ?? "");
 
 type Plugin = NonNullable<AuthConfig["extraPlugins"]>[number];
 
@@ -11,6 +14,7 @@ const baseConfig = {
   fallbackBaseURL: "http://127.0.0.1:8787",
   prisma,
   secret: "test-secret-minimum-32-characters-long",
+  transport: vi.fn<Transport>(),
   trustedOrigins: [
     "http://localhost:3000",
     "http://localhost:3001",
@@ -101,14 +105,8 @@ describe("Auth Server Configuration", () => {
     );
   });
 
-  it("should require email verification when Resend is configured", () => {
-    const verifyingAuth = createAuth({ ...baseConfig, resendApiKey: "re_test_key" });
-    expect(verifyingAuth.options.emailAndPassword?.requireEmailVerification).toBe(true);
-  });
-
-  it("should NOT require email verification when Resend is absent", () => {
-    const noResendAuth = createAuth(baseConfig);
-    expect(noResendAuth.options.emailAndPassword?.requireEmailVerification).toBe(false);
+  it("should require email verification", () => {
+    expect(auth.options.emailAndPassword?.requireEmailVerification).toBe(true);
   });
 
   it("authenticates by cookie alone, with no bearer plugin", () => {
@@ -171,13 +169,8 @@ describe("Auth Server Configuration", () => {
     expect(trusted).toContain("http://127.0.0.1:3000");
   });
 
-  it("should always define reset password handler (no-op when resendApiKey is absent)", () => {
+  it("should define the reset password handler", () => {
     expect(auth.options.emailAndPassword?.sendResetPassword).toBeDefined();
-  });
-
-  it("should configure reset password email when resendApiKey is provided", () => {
-    const emailAuth = createAuth({ ...baseConfig, resendApiKey: "re_test_key" });
-    expect(emailAuth.options.emailAndPassword?.sendResetPassword).toBeDefined();
   });
 
   it("should expire sessions after 7 days", () => {
@@ -195,13 +188,8 @@ describe("Auth Server Configuration", () => {
     expect(plugins.some((p) => p.id === "test-plugin")).toBe(true);
   });
 
-  it("should always define verification email handler (no-op when resendApiKey is absent)", () => {
+  it("should define the verification email handler", () => {
     expect(auth.options.emailVerification?.sendVerificationEmail).toBeDefined();
-  });
-
-  it("should configure verification email when resendApiKey is provided", () => {
-    const emailAuth = createAuth({ ...baseConfig, resendApiKey: "re_test_key" });
-    expect(emailAuth.options.emailVerification?.sendVerificationEmail).toBeDefined();
   });
 
   it("enables autoSignInAfterVerification so the verification link is the login", () => {

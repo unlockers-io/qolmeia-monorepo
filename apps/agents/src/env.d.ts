@@ -8,6 +8,8 @@ declare global {
     EXA_API_KEY?: string;
     FIRECRAWL_API_KEY?: string;
     FIRECRAWL_BASE_URL?: string;
+    MAIL_OUTBOX_URL?: string;
+    MAIL_TRANSPORT?: string;
     OPENROUTER_API_KEY: string;
     RESEND_API_KEY?: string;
     TEAM_EVENTS: DurableObjectNamespace<TeamEvents>;
@@ -23,6 +25,8 @@ declare global {
       EXA_API_KEY?: string;
       FIRECRAWL_API_KEY?: string;
       FIRECRAWL_BASE_URL?: string;
+      MAIL_OUTBOX_URL?: string;
+      MAIL_TRANSPORT?: string;
       OPENROUTER_API_KEY: string;
       RESEND_API_KEY?: string;
       TEAM_EVENTS: DurableObjectNamespace<TeamEvents>;

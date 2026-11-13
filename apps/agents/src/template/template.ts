@@ -9,7 +9,7 @@ import {
 } from "@repo/worker-api/contracts";
 import { z } from "zod";
 
-import type { Db } from "#/lib/db";
+import type { Db, PrismaClient } from "#/lib/db";
 import { notFound } from "#/lib/errors";
 
 const storedRecordSchema = z.record(z.string(), z.unknown());
@@ -75,12 +75,26 @@ const listEntitledTemplates = async (
   return rows.map(toTemplate);
 };
 
-const createTemplate = async (db: Db, input: TemplateInput): Promise<Template> =>
-  toTemplate(
-    await db.agentTemplate.create({
+/** Every Company is entitled to every active Template, so one that becomes active reaches them all. */
+const entitleEveryCompany = async (tx: Prisma.TransactionClient, templateId: string) => {
+  const companies = await tx.company.findMany({ select: { id: true } });
+
+  await tx.companyTemplateEntitlement.createMany({
+    data: companies.map(({ id: companyId }) => ({ companyId, templateId })),
+    skipDuplicates: true,
+  });
+};
+
+const createTemplate = (db: PrismaClient, input: TemplateInput): Promise<Template> =>
+  db.$transaction(async (tx) => {
+    const row = await tx.agentTemplate.create({
       data: { ...input, id: `tpl-${crypto.randomUUID()}`, skillIds: [...input.skillIds] },
-    }),
-  );
+    });
+
+    await entitleEveryCompany(tx, row.id);
+
+    return toTemplate(row);
+  });
 
 const updateTemplate = async (db: Db, id: string, input: TemplateInput): Promise<Template> => {
   await db.agentTemplate.updateMany({
@@ -91,11 +105,20 @@ const updateTemplate = async (db: Db, id: string, input: TemplateInput): Promise
   return getTemplate(db, id);
 };
 
-const setTemplateStatus = async (db: Db, id: string, status: TemplateStatus): Promise<Template> => {
-  await db.agentTemplate.updateMany({ data: { status }, where: { id } });
+const setTemplateStatus = (
+  db: PrismaClient,
+  id: string,
+  status: TemplateStatus,
+): Promise<Template> =>
+  db.$transaction(async (tx) => {
+    const { count } = await tx.agentTemplate.updateMany({ data: { status }, where: { id } });
 
-  return getTemplate(db, id);
-};
+    if (count > 0 && status === "active") {
+      await entitleEveryCompany(tx, id);
+    }
+
+    return getTemplate(tx, id);
+  });
 
 export {
   createTemplate,

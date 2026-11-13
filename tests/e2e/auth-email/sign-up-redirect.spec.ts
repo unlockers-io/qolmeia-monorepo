@@ -1,11 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 import { backofficeUrl } from "../../../playwright.config";
-import { extractLink, waitForEmail } from "../helpers/resend";
+import { verificationLink } from "../fixtures/verification.fixture";
 import { makeTestEmail } from "../helpers/test-email";
 import { BackofficeRegisterPage } from "../pages/backoffice-register.page";
-
-test.skip(!process.env.RESEND_API_KEY, "needs RESEND_API_KEY (test mode)");
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -32,15 +30,12 @@ test.describe("Sign-up with redirect context", () => {
       timeout: 10_000,
     });
 
-    const mail = await waitForEmail({
+    const verifyUrl = await verificationLink({
       sinceMs: since,
       subject: /boas-vindas/iu,
       to: email,
     });
 
-    expect(mail.last_event).not.toBe("bounced");
-
-    const verifyUrl = extractLink(mail, /\/api\/auth\/verify-email\?token=/u);
     expect(new URL(verifyUrl).searchParams.get("callbackURL")).toBe(`${backofficeUrl}${fromPath}`);
 
     const verifyResponse = await request.get(verifyUrl, {

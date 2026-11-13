@@ -129,7 +129,7 @@ Schema pushes keep using the `postgres` connection string.
 
 ```bash
 wrangler secret put BETTER_AUTH_SECRET      # openssl rand -base64 48; changing it ends every session
-wrangler secret put RESEND_API_KEY          # auth emails; unset, the Worker logs each link instead
+wrangler secret put RESEND_API_KEY          # required: without it every auth and invitation e-mail fails
 wrangler secret put TRUSTED_PROXY_SECRET    # openssl rand -hex 32; MUST match both Vercel projects
 wrangler secret put OPENROUTER_API_KEY
 wrangler secret put EXA_API_KEY             # optional (webSearch skill)

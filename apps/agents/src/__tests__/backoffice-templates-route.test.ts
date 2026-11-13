@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { db, seedCompany } from "#/__tests__/fixtures";
 import { fetchWithCookie, signInAs, type Persona } from "#/__tests__/sign-in";
+import { createOrganization } from "#/company/organization";
+import { getCatalogue } from "#/team/roster";
 
 type JsonBody =
   | boolean
@@ -139,6 +142,34 @@ describe("backoffice template CRUD", () => {
     expect(restored.status).toBe(200);
     const restoredBody = await restored.json<{ template: Template }>();
     expect(restoredBody.template.status).toBe("active");
+  });
+
+  it("offers a new template to every existing company", async () => {
+    await seedCompany({ id: "co_tpl_existing" });
+
+    const res = await post(validBody);
+    const { template } = await res.json<{ template: Template }>();
+
+    const catalogue = await db((client) => getCatalogue(client, "co_tpl_existing"));
+    expect(catalogue.map(({ id }) => id)).toContain(template.id);
+  });
+
+  it("offers a restored template to a company created while it was retired", async () => {
+    const res = await post(validBody);
+    const { template } = await res.json<{ template: Template }>();
+    await patch(`/templates/${template.id}/status`, { status: "retired" });
+
+    const company = await db((client) =>
+      createOrganization(client, { name: "Depois", slug: "co-tpl-later" }),
+    );
+
+    const retired = await db((client) => getCatalogue(client, company.id));
+    expect(retired.map(({ id }) => id)).not.toContain(template.id);
+
+    await patch(`/templates/${template.id}/status`, { status: "active" });
+
+    const restored = await db((client) => getCatalogue(client, company.id));
+    expect(restored.map(({ id }) => id)).toContain(template.id);
   });
 
   it("rejects an invalid status with 400", async () => {
