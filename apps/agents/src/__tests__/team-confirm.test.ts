@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { db, entitle, seedCompany } from "#/__tests__/fixtures";
 import { confirmTeam } from "#/team/confirm";
 import { hireMember } from "#/team/members";
+import { getTeamRoster } from "#/team/roster";
 
 const COMPANY_ID = "co_team_test";
 const CORR_ID = `corr-${COMPANY_ID}`;
@@ -15,22 +16,15 @@ const CUSTOMER = { surface: "customer", userId: "cust-1" } as const;
 const confirm = (templateIds: ReadonlyArray<string> = ["tpl-designer"]) =>
   db((client) => confirmTeam(env, client, { actor: CUSTOMER, companyId: COMPANY_ID, templateIds }));
 
-const teamMemberIds = async () => {
-  const members = await db((client) =>
-    client.teamMember.findMany({
-      orderBy: { agentInstanceId: "asc" },
-      select: { agentInstanceId: true },
-      where: { teamId: TEAM_ID },
-    }),
-  );
+const rosterIds = async () => {
+  const members = await db((client) => getTeamRoster(client, COMPANY_ID));
 
-  return members.map(({ agentInstanceId }) => agentInstanceId);
+  return members.map(({ id }) => id).toSorted();
 };
 
 const counts = () =>
   db(async (client) => ({
     instances: await client.agentInstance.count({ where: { companyId: COMPANY_ID } }),
-    members: await client.teamMember.count({ where: { teamId: TEAM_ID } }),
     teams: await client.team.count({ where: { companyId: COMPANY_ID } }),
   }));
 
@@ -44,7 +38,7 @@ beforeEach(async () => {
 });
 
 describe("confirmTeam", () => {
-  it("inserts team + correspondent + workers + team_member rows atomically", async () => {
+  it("inserts team + correspondent + workers atomically", async () => {
     const result = await confirm();
     expect(result).toEqual({ correspondentId: CORR_ID, teamId: TEAM_ID, workerIds: [WORKER_ID] });
 
@@ -66,9 +60,9 @@ describe("confirmTeam", () => {
     ]);
   });
 
-  it("puts the Correspondent and every Worker on the team", async () => {
+  it("puts the Correspondent and every Worker on the roster", async () => {
     await confirm();
-    await expect(teamMemberIds()).resolves.toEqual([CORR_ID, WORKER_ID]);
+    await expect(rosterIds()).resolves.toEqual([CORR_ID, WORKER_ID].toSorted());
   });
 
   it("flips the company status to active", async () => {
@@ -84,14 +78,14 @@ describe("confirmTeam", () => {
   it("is idempotent — re-running with the same templateIds doesn't duplicate", async () => {
     await confirm();
     await confirm();
-    await expect(counts()).resolves.toEqual({ instances: 2, members: 2, teams: 1 });
+    await expect(counts()).resolves.toEqual({ instances: 2, teams: 1 });
   });
 
   it("rejects templates the company is not entitled to and writes nothing", async () => {
     await expect(confirm(["tpl-designer", "tpl-redator"])).rejects.toThrow(
       /template tpl-redator not found/v,
     );
-    await expect(counts()).resolves.toEqual({ instances: 0, members: 0, teams: 0 });
+    await expect(counts()).resolves.toEqual({ instances: 0, teams: 0 });
 
     const company = await db((client) =>
       client.company.findUnique({ select: { status: true }, where: { id: COMPANY_ID } }),
@@ -164,7 +158,7 @@ describe("confirmTeam", () => {
 
     await confirm();
 
-    await expect(teamMemberIds()).resolves.toEqual([CORR_ID, WORKER_ID, hired.id].toSorted());
+    await expect(rosterIds()).resolves.toEqual([CORR_ID, WORKER_ID, hired.id].toSorted());
     await expect(
       db((client) => client.memoryFact.count({ where: { companyId: COMPANY_ID } })),
     ).resolves.toBe(3);

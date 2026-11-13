@@ -113,15 +113,9 @@ describe("hire", () => {
       ),
     ).rejects.toThrow(/injected failure/v);
 
-    const [instances, members] = await db((client) =>
-      Promise.all([
-        client.agentInstance.count({ where: { role: "worker" } }),
-        client.teamMember.findMany({ select: { agentInstanceId: true } }),
-      ]),
-    );
-
-    expect(instances).toBe(0);
-    expect(members).toEqual([{ agentInstanceId: CORR_ID }]);
+    await expect(
+      db((client) => client.agentInstance.count({ where: { role: "worker" } })),
+    ).resolves.toBe(0);
   });
 });
 
