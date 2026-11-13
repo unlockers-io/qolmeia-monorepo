@@ -283,6 +283,7 @@ describe("WorkerJobWorkflow", () => {
     const revise = await decide(first, "changes_requested", "Use tons de verde.");
     expect(revise.status).toBe(200);
     await instance.waitForStepResult({ name: "propose-1" });
+    expect(prompts[1]).toContain("Entrega pronta.");
     expect(prompts[1]).toContain("Use tons de verde.");
     await expect(ticketRow("tkt-revise")).resolves.toMatchObject({ status: "awaiting_approval" });
 
@@ -303,6 +304,17 @@ describe("WorkerJobWorkflow", () => {
     const assets = await assetsByName();
     expect(assets.get("entrega-0.md")?.visibility).toBe("agent");
     expect(assets.get("entrega-1.md")?.visibility).toBe("customer");
+  });
+
+  it("starts the revision from the brief alone when the Operator left no feedback", async () => {
+    await gateDesigner();
+    await using instance = await startJob("tkt-revise-silent");
+    await instance.waitForStepResult({ name: "propose-0" });
+
+    const revise = await decide(actionIdFor("tkt-revise-silent", 0), "changes_requested");
+    expect(revise.status).toBe(200);
+    await instance.waitForStepResult({ name: "propose-1" });
+    expect(prompts[1]).toBe(prompts[0]);
   });
 
   it("ends the Ticket when changes are requested past the revision cap", async () => {

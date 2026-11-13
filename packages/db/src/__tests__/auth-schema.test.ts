@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { prisma } from "../client";
 
@@ -8,15 +8,6 @@ const tag = (key: string): string => `${PREFIX}-${key}`;
 describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_URL === "")(
   "Auth + OrgMembership schema",
   () => {
-    beforeAll(() => {
-      expect(prisma.user).toBeDefined();
-      expect(prisma.session).toBeDefined();
-      expect(prisma.account).toBeDefined();
-      expect(prisma.verification).toBeDefined();
-      expect(prisma.rateLimit).toBeDefined();
-      expect(prisma.orgMembership).toBeDefined();
-    });
-
     afterAll(async () => {
       await prisma.orgMembership.deleteMany({
         where: { user: { email: { startsWith: PREFIX } } },

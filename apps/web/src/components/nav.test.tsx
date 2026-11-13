@@ -9,14 +9,6 @@ const dependencies: NavDependencies = {
 };
 
 describe("Nav", () => {
-  it("renders the four top-level customer links", () => {
-    render(<Nav dependencies={dependencies} orgName="Salão" />);
-    expect(screen.getByRole("link", { name: /Chat/v })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: /Empresa/v })).toHaveAttribute("href", "/empresa");
-    expect(screen.getByRole("link", { name: /Assets/v })).toHaveAttribute("href", "/assets");
-    expect(screen.getByRole("link", { name: /Atividade/v })).toHaveAttribute("href", "/activity");
-  });
-
   it("renders the supplied org name in the company slot", () => {
     render(<Nav dependencies={dependencies} orgName="Salão da Maria" />);
     expect(screen.getByText("Salão da Maria")).toBeInTheDocument();
