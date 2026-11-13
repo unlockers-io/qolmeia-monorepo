@@ -1,9 +1,10 @@
+# Written by `standy sync` from the saas template and `.github/ci/policy.json`. Change those, never this file.
 name: Check
 on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: 1 4 * * 1
+    - cron: 31 4 * * 1
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -20,16 +21,12 @@ jobs:
       postgres:
         image: postgres:18-alpine
         env:
-          POSTGRES_USER: qolmeia
-          POSTGRES_PASSWORD: qolmeia
           POSTGRES_DB: qolmeia_test
+          POSTGRES_PASSWORD: qolmeia
+          POSTGRES_USER: qolmeia
         ports:
           - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U qolmeia -d qolmeia_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+        options: --health-cmd "pg_isready -U qolmeia -d qolmeia_test" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -69,8 +66,8 @@ jobs:
       # Type-aware linting resolves generated Prisma client types.
       - if: ${{ !cancelled() }}
         run: pnpm turbo db:generate
-      # worker-bees types its bindings from the gitignored worker-configuration.d.ts.
-      - if: ${{ !cancelled() }}
+      - name: Generate the worker-bees binding types
+        if: ${{ !cancelled() }}
         run: pnpm --filter worker-bees cf-typegen
       - if: ${{ !cancelled() }}
         run: pnpm db:push
