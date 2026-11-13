@@ -11,7 +11,7 @@ This document does not propose changes to Phase 5. It feeds future phase plannin
 
 ## 1. Why this document exists
 
-Qolmeia is a Telegram-first AI agency that serves businesses. Phase 5 (`docs/superpowers/specs/2026-05-20-qolmeia-multi-agent-architecture-design.md`) introduces a multi-agent backend with templates, instances, skills, connectors, bindings, and an approval queue.
+Qolmeia is a Telegram-first AI agency that serves businesses. Phase 5 introduces a multi-agent backend with templates, instances, skills, connectors, bindings, and an approval queue.
 
 Two open-source projects solve adjacent problems with similar primitives:
 
