@@ -1,6 +1,6 @@
 const FALLBACK_PATH = "/";
 
-const ANCHOR_ORIGIN = "https://qolmeia.invalid";
+const ANCHOR_ORIGIN = "https://anchor.invalid";
 
 const FROM_PARAM = "from";
 

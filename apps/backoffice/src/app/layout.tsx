@@ -2,19 +2,19 @@ import "@/styles/globals.css";
 
 import { AppDocument } from "@repo/app-shell/document";
 import { documentMetadata } from "@repo/app-shell/document-metadata";
+import { displayName, origins } from "@repo/identity";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { Providers } from "@/components/providers";
 
-const metadataBase =
-  URL.parse(process.env.BACKOFFICE_URL ?? "") ?? new URL("https://admin.qolmeia.com");
+const metadataBase = URL.parse(process.env.BACKOFFICE_URL ?? "") ?? new URL(origins.backoffice);
 
 export const metadata: Metadata = {
   ...documentMetadata,
-  authors: [{ name: "Qolmeia" }],
+  authors: [{ name: displayName }],
   category: "technology",
-  creator: "Qolmeia",
+  creator: displayName,
   description:
     "Painel operacional da Qolmeia. Atenda clientes com agentes de IA, aprove ações sensíveis e acompanhe a atividade do seu negócio em tempo real.",
   icons: {
@@ -25,11 +25,11 @@ export const metadata: Metadata = {
   openGraph: {
     description: "Painel operacional da Qolmeia.",
     locale: "pt_BR",
-    siteName: "Qolmeia",
+    siteName: displayName,
     title: "Qolmeia · Backoffice",
     type: "website",
   },
-  publisher: "Qolmeia",
+  publisher: displayName,
   robots: {
     follow: false,
     index: false,

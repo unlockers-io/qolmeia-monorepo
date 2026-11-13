@@ -1,4 +1,5 @@
 import { isLoopbackHost } from "@better-auth/core/utils/host";
+import { slug } from "@repo/identity";
 import { log } from "@repo/observability";
 import type { MailerConfig } from "@repo/transactional";
 import { sendTransactionalEmail } from "@repo/transactional";
@@ -14,7 +15,6 @@ import { LINK_LIFETIME_SECONDS } from "./link-lifetimes";
 import { customerInvitations, organizationOptions } from "./organization";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "./password";
 import { safeRedirectPath } from "./redirect-path";
-import { AUTH_COOKIE_PREFIX } from "./session-cookie";
 import { countOperators, createSignupGuard, type OperatorCounter } from "./signup";
 
 const isLinkOrigin = (origin: URL, trustedOrigins: ReadonlyArray<string>): boolean =>
@@ -124,7 +124,7 @@ export const createAuth = (config: AuthConfig) => {
     },
 
     advanced: {
-      cookiePrefix: AUTH_COOKIE_PREFIX,
+      cookiePrefix: slug,
       defaultCookieAttributes: {
         httpOnly: true,
         sameSite: "lax" as const,
