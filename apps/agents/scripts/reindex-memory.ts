@@ -1,4 +1,4 @@
-import { prisma } from "@repo/db";
+import { createPrismaClient } from "@repo/db";
 import { z } from "zod";
 
 import {
@@ -13,8 +13,11 @@ const config = z
   .object({
     CLOUDFLARE_ACCOUNT_ID: z.string().min(1),
     CLOUDFLARE_API_TOKEN: z.string().min(1),
+    DATABASE_URL: z.string().min(1),
   })
   .parse(process.env);
+
+const prisma = createPrismaClient(config.DATABASE_URL);
 
 const base = `https://api.cloudflare.com/client/v4/accounts/${config.CLOUDFLARE_ACCOUNT_ID}`;
 const indexPath = `/vectorize/v2/indexes/${MEMORY_INDEX}`;

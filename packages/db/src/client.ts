@@ -2,12 +2,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "./generated/prisma/client";
 
-declare global {
-  var prisma: PrismaClient | undefined;
-}
-
-const searchPathSchema = (databaseUrl: string | undefined): string | undefined => {
-  if (databaseUrl === undefined || !URL.canParse(databaseUrl)) {
+const searchPathSchema = (databaseUrl: string): string | undefined => {
+  if (!URL.canParse(databaseUrl)) {
     return undefined;
   }
 
@@ -16,31 +12,17 @@ const searchPathSchema = (databaseUrl: string | undefined): string | undefined =
   return schema === null || schema === "" ? undefined : schema;
 };
 
-const assertDatabaseUrl = () => {
-  const url = process.env.DATABASE_URL;
-
-  if (url === undefined || url.trim() === "") {
-    throw new Error(
-      "DATABASE_URL is not set. Set it in the environment; packages/db/.env.example has the local value.",
-    );
+const createPrismaClient = (databaseUrl: string): PrismaClient => {
+  // node-postgres reads a blank connection string as absent and connects to libpq's defaults.
+  if (databaseUrl.trim() === "") {
+    throw new Error("createPrismaClient needs a database URL and got a blank one.");
   }
-};
 
-class PrismaPgRequiringUrl extends PrismaPg {
-  override async connect() {
-    assertDatabaseUrl();
+  const schema = searchPathSchema(databaseUrl);
 
-    return super.connect();
-  }
-}
-
-const createPrismaClient = (): PrismaClient => {
-  const connectionString = process.env.DATABASE_URL;
-  const schema = searchPathSchema(connectionString);
-
-  const adapter = new PrismaPgRequiringUrl(
+  const adapter = new PrismaPg(
     {
-      connectionString,
+      connectionString: databaseUrl,
       options: schema === undefined ? undefined : `-c search_path=${schema}`,
     },
     { schema },
@@ -49,10 +31,6 @@ const createPrismaClient = (): PrismaClient => {
   return new PrismaClient({ adapter });
 };
 
-export const prisma = globalThis.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.prisma = prisma;
-}
+export { createPrismaClient };
 
 export * from "./generated/prisma/client";

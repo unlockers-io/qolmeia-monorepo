@@ -1,4 +1,4 @@
-import { prisma } from "@repo/db";
+import { prisma } from "../helpers/database";
 
 import { E2E_USER_EMAIL } from "./e2e-user";
 
