@@ -64,7 +64,6 @@ const proposalActivity = (input: ProposalInput, id: string): ActivityRecord =>
         type: "ACTION_PROPOSED",
       };
 
-/** A gated Action waits for a Decision; any other clears to execute at once. */
 const proposeAction = async (
   env: TeamEventsEnv,
   db: PrismaClient,

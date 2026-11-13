@@ -11,7 +11,6 @@ const ACTION_TYPE_MODULES: ActionTypeModules = {
   worker_deliverable: workerDeliverable,
 };
 
-/** An Action type absent from the Template's `defaultPolicies` takes the type's own default. */
 const resolvePolicy = (
   actionType: ActionType,
   template: Pick<Template, "defaultPolicies">,

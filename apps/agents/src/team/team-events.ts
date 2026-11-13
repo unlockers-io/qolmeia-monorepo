@@ -3,7 +3,6 @@ import { DurableObject } from "cloudflare:workers";
 
 const encoder = new TextEncoder();
 
-/** One instance per Company fans its team events out to every open SSE subscriber. */
 class TeamEvents extends DurableObject<Env> {
   readonly #subscribers = new Set<ReadableStreamDefaultController<Uint8Array>>();
 

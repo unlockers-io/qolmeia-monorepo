@@ -28,12 +28,6 @@ type WireValue =
 
 type WireObject = Readonly<Record<string, WireValue>>;
 
-/**
- * The Worker and both Next apps share these wire shapes. Closed-set fields use
- * Prisma enums so schema changes fail typechecking instead of silently drifting
- * between producers and consumers.
- */
-
 type AgentSummary = {
   name: string;
   role: AgentRole;
