@@ -297,7 +297,6 @@ A: Yes — that's the routines feature. The owner picks which scheduled jobs run
 ## References for engineers
 
 - Technical deep dive: `docs/ARCHITECTURE.md` (844 lines, 20 sections)
-- Visual diagrams: `docs/architecture/current-state-2026-05-21.md` (10 Mermaid diagrams)
 - Strategy for the next 3 weeks: `docs/strategy/2026-05-21-paperclip-vs-native.md`
 - Original research informing the design: `docs/research/2026-05-20-paperclip-and-multica.md`
 
