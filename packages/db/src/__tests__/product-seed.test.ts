@@ -1,11 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
-import { prisma } from "../client";
+import { createPrismaClient } from "../client";
+import type { PrismaClient } from "../client";
 import { seedProductDefaults } from "../product-seed";
 
 describe.skipIf(process.env.DATABASE_URL === undefined || process.env.DATABASE_URL === "")(
   "product defaults",
   () => {
+    let prisma: PrismaClient;
+
+    beforeAll(() => {
+      prisma = createPrismaClient(process.env.DATABASE_URL ?? "");
+    });
+
     it("preserves operator edits to shipped templates and is idempotent", async () => {
       const rollback = new Error("rollback seed test");
       await expect(

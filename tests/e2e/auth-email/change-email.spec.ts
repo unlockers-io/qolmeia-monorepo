@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { prisma } from "@repo/db";
 
 import { backofficeUrl } from "../../../playwright.config";
 import { verificationLink } from "../fixtures/verification.fixture";
+import { prisma } from "../helpers/database";
 import { makeTestEmail } from "../helpers/test-email";
 
 test.use({

@@ -1,9 +1,11 @@
-import { prisma } from "@repo/db";
+import { createPrismaClient } from "@repo/db";
 import type { Transport } from "@repo/transactional/transport";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createAuth, linkOnRequestOrigin } from "./server";
 import type { AuthConfig } from "./server";
+
+const prisma = createPrismaClient(process.env.DATABASE_URL ?? "");
 
 type Plugin = NonNullable<AuthConfig["extraPlugins"]>[number];
 
