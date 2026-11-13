@@ -1,12 +1,14 @@
 "use client";
 
 import { RouteError } from "@repo/app-shell/route-error";
-import type { ComponentProps } from "react";
+import type { BoundaryError, ErrorBoundaryProps } from "@repo/ui/hooks/use-error-report";
 
 import { log } from "@/lib/observability-client";
 
-const ClientError = (props: Omit<ComponentProps<typeof RouteError>, "log">) => (
-  <RouteError {...props} log={log} />
-);
+const report = (error: BoundaryError) => {
+  log.error({ digest: error.digest, error: error.message, message: "Route error boundary" });
+};
+
+const ClientError = (props: ErrorBoundaryProps) => <RouteError {...props} report={report} />;
 
 export default ClientError;

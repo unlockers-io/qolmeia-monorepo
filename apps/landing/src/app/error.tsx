@@ -1,14 +1,19 @@
 "use client";
 
-import { useErrorBoundary, type ErrorPageProps } from "@repo/app-shell/error-boundary";
 import { Button } from "@repo/ui/components/button";
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
+import { useErrorReport } from "@repo/ui/hooks/use-error-report";
+import type { BoundaryError, ErrorBoundaryProps } from "@repo/ui/hooks/use-error-report";
 import { RefreshCw } from "lucide-react";
 
 import { log } from "@/lib/observability-client";
 
-const RouteError = ({ error, retry }: ErrorPageProps) => {
-  const headingRef = useErrorBoundary(error, log, "Route error boundary");
+const report = (error: BoundaryError) => {
+  log.error({ digest: error.digest, error: error.message, message: "Route error boundary" });
+};
+
+const RouteError = ({ error, retry }: ErrorBoundaryProps) => {
+  const headingRef = useErrorReport(error, report);
   const ready = useClientReady();
 
   return (

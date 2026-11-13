@@ -1,15 +1,16 @@
 "use client";
 
 import { useClientReady } from "@repo/ui/hooks/use-client-ready";
+import { useErrorReport } from "@repo/ui/hooks/use-error-report";
 
-import { useErrorBoundary, type ErrorBoundaryProps } from "./error-boundary";
 import styles from "./global-error.module.css";
+import type { ErrorReportProps } from "./route-error";
 import { MAIN_CONTENT_ID } from "./skip-link";
 
-type GlobalErrorProps = ErrorBoundaryProps & { subject: string };
+type GlobalErrorProps = ErrorReportProps & { subject: string };
 
-const GlobalError = ({ error, log, retry, subject }: GlobalErrorProps) => {
-  const headingRef = useErrorBoundary(error, log, "Global error boundary");
+const GlobalError = ({ error, report, retry, subject }: GlobalErrorProps) => {
+  const headingRef = useErrorReport(error, report);
   const ready = useClientReady();
 
   return (
