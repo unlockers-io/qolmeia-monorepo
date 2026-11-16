@@ -19,6 +19,13 @@ export default defineConfig({
       },
     },
     {
+      files: ["packages/ui/src/components/badge.tsx"],
+      rules: {
+        "perfectionist/sort-jsx-props": "off",
+        "perfectionist/sort-objects": "off",
+      },
+    },
+    {
       files: ["apps/agents/src/team/errors.ts"],
       rules: {
         "max-classes-per-file": "off",

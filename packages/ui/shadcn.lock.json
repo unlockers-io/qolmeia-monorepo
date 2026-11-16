@@ -20,7 +20,7 @@
     "src/components/badge.tsx": {
       "registry": "@shadcn/badge",
       "registrySha256": "ccc20021cdcbf0fb23c0d4d28f1da4adde8e51ba59f4b11dd2722ed97a5ee3a4",
-      "sha256": "d9c8c594347e767ecf480cec1add4c3b33d7a0f41956b2fcaf94505026dd9f5a"
+      "sha256": "99ced74312f20c69e5ed1928ad884772fcaad03e24ed92f307dfbc3846d7e738"
     },
     "src/components/button.tsx": {
       "registry": "@shadcn/button",
