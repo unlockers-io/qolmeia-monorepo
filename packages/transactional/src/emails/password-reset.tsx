@@ -12,6 +12,7 @@ type PasswordResetEmailProps = {
   resetUrl: string;
   userEmail: string;
   username?: string;
+  year: number;
 };
 
 const PasswordResetEmail = ({
@@ -19,9 +20,10 @@ const PasswordResetEmail = ({
   resetUrl,
   userEmail,
   username,
+  year,
 }: PasswordResetEmailProps) => {
   return (
-    <BaseLayout preview="Redefina sua senha da Qolmeia">
+    <BaseLayout preview="Redefina sua senha da Qolmeia" year={year}>
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
         Redefina sua senha
       </Heading>

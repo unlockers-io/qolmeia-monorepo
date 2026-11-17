@@ -11,15 +11,15 @@ type BaseLayoutProps = {
   children: React.ReactNode;
   footerText?: string;
   preview: string;
+  year: number;
 };
 
 const BaseLayout = ({
   children,
   footerText = `Você está recebendo este e-mail porque tem uma conta na ${displayName}.`,
   preview,
+  year,
 }: BaseLayoutProps) => {
-  const currentYear = new Date().getFullYear();
-
   return (
     <Html lang={LOCALE}>
       <Tailwind config={tailwindConfig}>
@@ -55,7 +55,7 @@ const BaseLayout = ({
               </Text>
 
               <Text className="m-0 text-xs text-muted-foreground">
-                © {currentYear}
+                © {year}
                 {` ${displayName}. Todos os direitos reservados.`}
               </Text>
             </Section>

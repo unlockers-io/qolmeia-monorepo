@@ -11,6 +11,7 @@ type WelcomeEmailProps = {
   userEmail: string;
   username?: string;
   verificationUrl: string;
+  year: number;
 };
 
 const WelcomeEmail = ({
@@ -18,9 +19,10 @@ const WelcomeEmail = ({
   userEmail,
   username,
   verificationUrl,
+  year,
 }: WelcomeEmailProps) => {
   return (
-    <BaseLayout preview="Boas-vindas à Qolmeia. Confirme seu e-mail para começar.">
+    <BaseLayout preview="Boas-vindas à Qolmeia. Confirme seu e-mail para começar." year={year}>
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
         Boas-vindas à Qolmeia.
       </Heading>

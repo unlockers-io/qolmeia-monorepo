@@ -76,18 +76,15 @@ type TransactionalEmail = {
 
 type EmailBuild = { subject: string; template: React.ReactElement; to: string };
 
-type TemplateBuilder<P> = (payload: P) => EmailBuild;
+type TemplateBuilder<P> = (payload: P, year: number) => EmailBuild;
 
 type TemplateRegistry = { [Type in EmailType]: TemplateBuilder<PayloadByType[Type]> };
 
 const TEMPLATES: TemplateRegistry = {
-  "change-email-confirmation": ({
-    changeUrl,
-    currentEmail,
-    expiresInSeconds,
-    newEmail,
-    username,
-  }: ChangeEmailPayload) => ({
+  "change-email-confirmation": (
+    { changeUrl, currentEmail, expiresInSeconds, newEmail, username }: ChangeEmailPayload,
+    year: number,
+  ) => ({
     subject: "Confirme a troca de e-mail da sua conta Qolmeia",
     template: React.createElement(ChangeEmail, {
       changeUrl,
@@ -95,71 +92,90 @@ const TEMPLATES: TemplateRegistry = {
       expiresInSeconds,
       newEmail,
       username,
+      year,
     }),
     to: currentEmail,
   }),
-  invitation: ({ acceptUrl, companyName, expiresInSeconds, userEmail }: InvitationPayload) => ({
+  invitation: (
+    { acceptUrl, companyName, expiresInSeconds, userEmail }: InvitationPayload,
+    year: number,
+  ) => ({
     subject: `Seu convite para a ${companyName} na Qolmeia`,
     template: React.createElement(InvitationEmail, {
       acceptUrl,
       companyName,
       expiresInSeconds,
       userEmail,
+      year,
     }),
     to: userEmail,
   }),
-  "magic-link": ({ expiresInSeconds, url, userEmail, username }: MagicLinkPayload) => ({
+  "magic-link": (
+    { expiresInSeconds, url, userEmail, username }: MagicLinkPayload,
+    year: number,
+  ) => ({
     subject: "Seu link de acesso à Qolmeia",
-    template: React.createElement(MagicLinkEmail, { expiresInSeconds, url, userEmail, username }),
+    template: React.createElement(MagicLinkEmail, {
+      expiresInSeconds,
+      url,
+      userEmail,
+      username,
+      year,
+    }),
     to: userEmail,
   }),
-  "password-reset": ({
-    expiresInSeconds,
-    resetUrl,
-    userEmail,
-    username,
-  }: PasswordResetPayload) => ({
+  "password-reset": (
+    { expiresInSeconds, resetUrl, userEmail, username }: PasswordResetPayload,
+    year: number,
+  ) => ({
     subject: "Redefina sua senha da Qolmeia",
     template: React.createElement(PasswordResetEmail, {
       expiresInSeconds,
       resetUrl,
       userEmail,
       username,
+      year,
     }),
     to: userEmail,
   }),
-  "sign-up-attempt": ({
-    resetPasswordUrl,
-    signInUrl,
-    userEmail,
-    username,
-  }: SignUpAttemptPayload) => ({
+  "sign-up-attempt": (
+    { resetPasswordUrl, signInUrl, userEmail, username }: SignUpAttemptPayload,
+    year: number,
+  ) => ({
     subject: "Tentativa de cadastro com o seu e-mail na Qolmeia",
     template: React.createElement(SignUpAttemptEmail, {
       resetPasswordUrl,
       signInUrl,
       userEmail,
       username,
+      year,
     }),
     to: userEmail,
   }),
-  welcome: ({ expiresInSeconds, userEmail, username, verificationUrl }: WelcomePayload) => ({
+  welcome: (
+    { expiresInSeconds, userEmail, username, verificationUrl }: WelcomePayload,
+    year: number,
+  ) => ({
     subject: `Boas-vindas à Qolmeia${username !== undefined && username !== "" ? `, ${username}` : ""}! Confirme seu e-mail`,
     template: React.createElement(WelcomeEmail, {
       expiresInSeconds,
       userEmail,
       username,
       verificationUrl,
+      year,
     }),
     to: userEmail,
   }),
 };
 
-const buildEmail = <Type extends EmailType>(type: Type, payload: PayloadByType[Type]): EmailBuild =>
-  TEMPLATES[type](payload);
+const buildEmail = <Type extends EmailType>(
+  type: Type,
+  payload: PayloadByType[Type],
+  year: number,
+): EmailBuild => TEMPLATES[type](payload, year);
 
 const sendTransactionalEmail = (email: TransactionalEmail, transport: Transport) => {
-  const { subject, template, to } = buildEmail(email.type, email);
+  const { subject, template, to } = buildEmail(email.type, email, new Date().getFullYear());
 
   return sendEmail({
     subject,

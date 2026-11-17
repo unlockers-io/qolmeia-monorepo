@@ -12,6 +12,7 @@ type SignUpAttemptEmailProps = {
   signInUrl: string;
   userEmail: string;
   username?: string;
+  year: number;
 };
 
 const SignUpAttemptEmail = ({
@@ -19,9 +20,10 @@ const SignUpAttemptEmail = ({
   signInUrl,
   userEmail,
   username,
+  year,
 }: SignUpAttemptEmailProps) => {
   return (
-    <BaseLayout preview="Alguém tentou criar uma conta Qolmeia com o seu e-mail">
+    <BaseLayout preview="Alguém tentou criar uma conta Qolmeia com o seu e-mail" year={year}>
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
         Você tentou criar uma conta?
       </Heading>

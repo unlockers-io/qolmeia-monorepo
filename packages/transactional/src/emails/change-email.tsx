@@ -12,6 +12,7 @@ type ChangeEmailProps = {
   expiresInSeconds: number;
   newEmail: string;
   username?: string;
+  year: number;
 };
 
 const ChangeEmail = ({
@@ -20,9 +21,10 @@ const ChangeEmail = ({
   expiresInSeconds,
   newEmail,
   username,
+  year,
 }: ChangeEmailProps) => {
   return (
-    <BaseLayout preview="Confirme o novo e-mail da sua conta Qolmeia.">
+    <BaseLayout preview="Confirme o novo e-mail da sua conta Qolmeia." year={year}>
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
         Confirme seu novo e-mail
       </Heading>
