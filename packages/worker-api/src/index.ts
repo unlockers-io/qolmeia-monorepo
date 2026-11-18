@@ -25,7 +25,6 @@ const STATUS_MESSAGES = new Map<number, string>([
 
 const SERVER_ERROR = 500;
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- this is the parser for values thrown into catch clauses, which TypeScript types as unknown
 const describeRequestError = (error: unknown, fallback: string): string => {
   if (!(error instanceof ApiError)) {
     return error instanceof TypeError
