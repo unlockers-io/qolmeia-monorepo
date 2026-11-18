@@ -11,6 +11,7 @@ type InvitationEmailProps = {
   companyName: string;
   expiresInSeconds: number;
   userEmail: string;
+  year: number;
 };
 
 const InvitationEmail = ({
@@ -18,11 +19,13 @@ const InvitationEmail = ({
   companyName,
   expiresInSeconds,
   userEmail,
+  year,
 }: InvitationEmailProps) => {
   return (
     <BaseLayout
       footerText="Você está recebendo este e-mail porque a equipe Qolmeia convidou este endereço."
       preview={`Seu convite para a ${companyName} na Qolmeia`}
+      year={year}
     >
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
         Você foi convidado para a Qolmeia

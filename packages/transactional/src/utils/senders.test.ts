@@ -22,6 +22,7 @@ describe("WelcomeEmail render", () => {
         userEmail: "user@example.com",
         username: "Pedro",
         verificationUrl: "https://app.qolmeia.com/verify?token=abc",
+        year: 2026,
       }),
     );
 
@@ -40,6 +41,7 @@ describe("PasswordResetEmail render", () => {
         expiresInSeconds: 3600,
         resetUrl: "https://app.qolmeia.com/reset?token=xyz",
         userEmail: "user@example.com",
+        year: 2026,
       }),
     );
 
@@ -57,6 +59,7 @@ describe("SignUpAttemptEmail render", () => {
         resetPasswordUrl: "https://app.qolmeia.com/recover",
         signInUrl: "https://app.qolmeia.com/login",
         userEmail: "user@example.com",
+        year: 2026,
       }),
     );
 
@@ -74,6 +77,7 @@ describe("ChangeEmail render", () => {
         currentEmail: "old@example.com",
         expiresInSeconds: 3600,
         newEmail: "new@example.com",
+        year: 2026,
       }),
     );
 
@@ -92,6 +96,7 @@ describe("MagicLinkEmail render", () => {
         url: "https://app.qolmeia.com/auth/magic?token=mlk-123",
         userEmail: "user@example.com",
         username: "Pedro",
+        year: 2026,
       }),
     );
 
@@ -109,6 +114,7 @@ describe("MagicLinkEmail render", () => {
         expiresInSeconds: 300,
         url: "https://app.qolmeia.com/auth/magic?token=mlk-456",
         userEmail: "user@example.com",
+        year: 2026,
       }),
     );
 
@@ -125,6 +131,7 @@ describe("InvitationEmail render", () => {
         companyName: "Padaria Nova",
         expiresInSeconds: 604_800,
         userEmail: "cliente@example.com",
+        year: 2026,
       }),
     );
 

@@ -67,7 +67,7 @@ type Endpoint<
   types?: { query: Query; response: Response };
 };
 
-type NoQuery = Record<never, never>;
+type NoQuery = Record<string, never>;
 
 const get =
   <Response, Query extends Record<string, number | string> = NoQuery>() =>

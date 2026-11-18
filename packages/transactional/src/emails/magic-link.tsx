@@ -11,13 +11,21 @@ type MagicLinkEmailProps = {
   url: string;
   userEmail: string;
   username?: string;
+  year: number;
 };
 
-const MagicLinkEmail = ({ expiresInSeconds, url, userEmail, username }: MagicLinkEmailProps) => {
+const MagicLinkEmail = ({
+  expiresInSeconds,
+  url,
+  userEmail,
+  username,
+  year,
+}: MagicLinkEmailProps) => {
   return (
     <BaseLayout
       footerText="Você está recebendo este e-mail porque alguém pediu acesso à sua conta Qolmeia."
       preview="Seu link de acesso à Qolmeia"
+      year={year}
     >
       <Heading className="mt-0 mb-4 text-2xl font-semibold tracking-tight text-balance break-words text-foreground">
         Entre na Qolmeia
