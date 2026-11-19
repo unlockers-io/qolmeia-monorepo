@@ -10,7 +10,7 @@ import { cn } from "@repo/ui/lib/utils";
 import { apiCall, describeRequestError } from "@repo/worker-api";
 import { type DecisionOutcome, FEEDBACK_MAX_LENGTH } from "@repo/worker-api/contracts";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { decide, getPendingActions } from "@/lib/backoffice-api";
@@ -234,6 +234,8 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
   const [decision, setDecision] = useState<DecisionOutcome | null>(defaultDecision);
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isNavigating, startNavigation] = useTransition();
+  const busy = submitting || isNavigating;
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -244,7 +246,7 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (submitting) {
+    if (busy) {
       return;
     }
 
@@ -265,8 +267,10 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
       toast.success(
         nextId === null ? SUCCESS_COPY[decision] : `${SUCCESS_COPY[decision]} Abrindo a próxima.`,
       );
-      push(nextId === null ? "/approvals" : `/approvals/${nextId}`);
-      refresh();
+      startNavigation(() => {
+        push(nextId === null ? "/approvals" : `/approvals/${nextId}`);
+        refresh();
+      });
     } catch (error) {
       setSubmitError(describeRequestError(error, "Não foi possível enviar a decisão."));
     }
@@ -306,12 +310,12 @@ const DecisionForm = ({ actionId, allowChanges, defaultDecision }: DecisionFormP
 
       <Button
         className="w-full"
-        disabled={submitting}
+        disabled={busy}
         size="lg"
         type="submit"
         variant={decision === "rejected" ? "destructive" : "default"}
       >
-        {submitting ? "Enviando…" : submitLabel(decision)}
+        {busy ? "Enviando…" : submitLabel(decision)}
       </Button>
       <p className="text-center text-xs text-muted-foreground">
         A decisão retoma o fluxo de trabalho do agente.

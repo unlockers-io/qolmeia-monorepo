@@ -7,7 +7,7 @@ import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { AuthFormCard } from "@/app/(auth)/auth-form-card";
@@ -16,6 +16,7 @@ import { resetPasswordSchema } from "@/lib/form-schemas";
 const ResetPasswordForm = ({ token }: { token: string }) => {
   const { push } = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isNavigating, startNavigation] = useTransition();
 
   const form = useForm({
     defaultValues: { confirmPassword: "", password: "" },
@@ -39,7 +40,9 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
       }
 
       toast.success("Senha redefinida com sucesso.");
-      push("/login");
+      startNavigation(() => {
+        push("/login");
+      });
     },
     onSubmitInvalid: ({ formApi }) => {
       focusFirstInvalidField(formApi.formId);
@@ -49,7 +52,7 @@ const ResetPasswordForm = ({ token }: { token: string }) => {
   });
 
   return (
-    <form.Subscribe selector={(state) => state.isSubmitting}>
+    <form.Subscribe selector={(state) => state.isSubmitting || isNavigating}>
       {(isSubmitting) => (
         <AuthFormCard
           description="Crie uma nova senha para sua conta."
