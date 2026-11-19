@@ -9,7 +9,7 @@ import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { AuthFormCard } from "@/app/(auth)/auth-form-card";
 
@@ -30,6 +30,7 @@ const createLoginForm = ({ signInEmail, useAppRouter }: LoginDependencies) => {
   const Form = ({ registerPrompt, searchParams }: Props) => {
     const { push, refresh } = useAppRouter();
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const [isNavigating, startNavigation] = useTransition();
 
     const form = useForm({
       defaultValues: { email: "", password: "" },
@@ -53,8 +54,10 @@ const createLoginForm = ({ signInEmail, useAppRouter }: LoginDependencies) => {
         }
 
         const { from } = await searchParams;
-        push(safeRedirectPath(from));
-        refresh();
+        startNavigation(() => {
+          push(safeRedirectPath(from));
+          refresh();
+        });
       },
       onSubmitInvalid: ({ formApi }) => {
         focusFirstInvalidField(formApi.formId);
@@ -64,7 +67,7 @@ const createLoginForm = ({ signInEmail, useAppRouter }: LoginDependencies) => {
     });
 
     return (
-      <form.Subscribe selector={(state) => state.isSubmitting}>
+      <form.Subscribe selector={(state) => state.isSubmitting || isNavigating}>
         {(isSubmitting) => (
           <AuthFormCard
             description="Acesse o painel operacional da Qolmeia."

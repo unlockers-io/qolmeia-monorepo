@@ -15,7 +15,7 @@ import {
 } from "@repo/worker-api/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -117,10 +117,30 @@ const toFormValues = (initial: Template | undefined): Record<FieldKey, string> =
         workerKind: initial.workerKind,
       };
 
-const useTemplateForm = (initial: Template | undefined) => {
+const useSaveTemplate = (initial: Template | undefined) => {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [isNavigating, startNavigation] = useTransition();
+
+  const saveMutation = useMutation({
+    mutationFn: (input: TemplateInput) =>
+      initial === undefined ? createTemplate(input) : updateTemplate(initial.id, input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: templateKeys.all });
+      toast.success(initial === undefined ? "Modelo criado." : "Modelo atualizado.");
+      startNavigation(() => {
+        router.push("/templates");
+      });
+    },
+  });
+
+  return { busy: saveMutation.isPending || isNavigating, saveMutation };
+};
+
+const useTemplateForm = (initial: Template | undefined) => {
+  const router = useRouter();
   const formId = useId();
+  const { busy, saveMutation } = useSaveTemplate(initial);
 
   const isEdit = initial !== undefined;
 
@@ -137,16 +157,6 @@ const useTemplateForm = (initial: Template | undefined) => {
     queryFn: () => getSkillCatalog(apiCall),
     queryKey: templateKeys.skills,
     staleTime: 5 * 60_000,
-  });
-
-  const saveMutation = useMutation({
-    mutationFn: (input: TemplateInput) =>
-      isEdit ? updateTemplate(initial.id, input) : createTemplate(input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: templateKeys.all });
-      toast.success(isEdit ? "Modelo atualizado." : "Modelo criado.");
-      router.push("/templates");
-    },
   });
 
   const toggleStatus = useToggleTemplateStatus();
@@ -195,8 +205,6 @@ const useTemplateForm = (initial: Template | undefined) => {
       },
     });
   };
-
-  const busy = saveMutation.isPending;
 
   const submitError =
     saveMutation.error === null

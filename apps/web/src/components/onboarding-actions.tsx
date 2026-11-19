@@ -70,6 +70,7 @@ const TemplateOption = ({ checked, invalid, onToggle, template }: TemplateOption
 
 const OnboardingActions = ({ templates }: OnboardingActionsProps) => {
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
 
   const form = useForm({
     defaultValues: { templateIds: templates.map((t) => t.id) },
@@ -92,6 +93,7 @@ const OnboardingActions = ({ templates }: OnboardingActionsProps) => {
       }
 
       toast.success("Time confirmado! Redirecionando…");
+      setIsLeaving(true);
       globalThis.location.assign("/");
     },
     onSubmitInvalid: ({ formApi }) => {
@@ -147,7 +149,7 @@ const OnboardingActions = ({ templates }: OnboardingActionsProps) => {
                     {field.state.value.length} de {templates.length} selecionado
                     {templates.length === 1 ? "" : "s"}
                   </span>
-                  <form.Subscribe selector={(state) => state.isSubmitting}>
+                  <form.Subscribe selector={(state) => state.isSubmitting || isLeaving}>
                     {(isSubmitting) => (
                       <Button disabled={isSubmitting} size="lg" type="submit">
                         {isSubmitting ? "Confirmando…" : "Confirmar Time"}

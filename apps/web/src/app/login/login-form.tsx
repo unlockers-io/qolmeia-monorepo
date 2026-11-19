@@ -11,7 +11,7 @@ import { FormAlert } from "@repo/ui/compositions/form-alert";
 import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 type LoginFormDependencies = {
   redirectTo: () => string;
@@ -59,6 +59,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
   const [loginMethod, setLoginMethod] = useState<"magicLink" | "password">("password");
   const [sent, setSent] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isNavigating, startNavigation] = useTransition();
   const isMagicLink = loginMethod === "magicLink";
 
   const signIn = async (credentials: { email: string; password: string }) => {
@@ -73,8 +74,10 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
       return;
     }
 
-    push(redirectTo());
-    refresh();
+    startNavigation(() => {
+      push(redirectTo());
+      refresh();
+    });
   };
 
   const requestMagicLink = async (email: string) => {
@@ -174,7 +177,7 @@ const LoginFormView = ({ dependencies }: { dependencies: LoginFormDependencies }
             </form.Field>
           )}
         </FieldGroup>
-        <form.Subscribe selector={(state) => state.isSubmitting}>
+        <form.Subscribe selector={(state) => state.isSubmitting || isNavigating}>
           {(isSubmitting) => (
             <div className="mt-6 flex flex-col gap-3">
               <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
