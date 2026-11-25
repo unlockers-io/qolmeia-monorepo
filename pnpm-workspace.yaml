@@ -18,8 +18,8 @@ nodeLinker: hoisted
 # a null hook dispatcher ("Cannot read properties of null (reading 'useRef')")
 # in component tests. Keep these in step with the apps' react version on bump.
 overrides:
-  react: 19.3.0
-  react-dom: 19.3.0
+  react: 19.3.1
+  react-dom: 19.3.1
   # Security: force patched transitive releases to clear pnpm audit advisories.
   # Each pin is the lowest release that carries the fix.
   "@modelcontextprotocol/client@<2.2.0": "^2.2.0"
@@ -101,13 +101,8 @@ minimumReleaseAgeExclude:
   - "@oxlint/binding-win32-x64-msvc@1.79.0"
   - "@oxlint/plugins@1.79.0"
   - oxlint@1.79.0
-  - "@testing-library/jest-dom@7.0.1"
   - cn@0.2.4
   - "@shadcn/lint@0.1.0"
-
-patchedDependencies:
-  # shortcut: jest-dom 7.0.1 types only augment Vitest 4's Assertion, drop once testing-library/jest-dom#742 ships
-  "@testing-library/jest-dom@7.0.1": patches/@testing-library__jest-dom@7.0.1.patch
 
 trustPolicy: no-downgrade
 trustPolicyExclude:
