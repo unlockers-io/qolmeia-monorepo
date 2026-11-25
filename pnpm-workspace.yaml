@@ -20,6 +20,9 @@ nodeLinker: hoisted
 overrides:
   react: 19.3.1
   react-dom: 19.3.1
+  # shortcut: better-auth's optional peer floats to the newest @prisma/client while the CLI that generates the client stays behind, bump these with prisma and drop them once both resolve the same version on their own.
+  "@prisma/client": 7.10.0
+  "@prisma/client-runtime-utils": 7.10.0
   # Security: force patched transitive releases to clear pnpm audit advisories.
   # Each pin is the lowest release that carries the fix.
   "@modelcontextprotocol/client@<2.2.0": "^2.2.0"
