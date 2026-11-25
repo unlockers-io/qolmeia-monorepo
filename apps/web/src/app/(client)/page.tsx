@@ -1,8 +1,8 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
 import { CompanyStatus } from "@repo/worker-api/contracts";
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { Suspense } from "react";
+import type { ReactNode } from "react";
 
 import { Chat, ChatSkeleton } from "@/components/chat";
 import { OnboardingActions } from "@/components/onboarding-actions";

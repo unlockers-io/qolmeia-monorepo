@@ -25,8 +25,8 @@ import { ArrowDown, ImageIcon, Maximize2, MessageSquare, TriangleAlert } from "l
 import { Skeleton } from "skullet/react";
 
 import { ChatComposer } from "@/components/chat-composer";
-import type { UseFlueChatResult } from "@/lib/use-flue-chat";
 import { useFlueChat } from "@/lib/use-flue-chat";
+import type { UseFlueChatResult } from "@/lib/use-flue-chat";
 
 type ChatProps = {
   agent: ConversationAgent;

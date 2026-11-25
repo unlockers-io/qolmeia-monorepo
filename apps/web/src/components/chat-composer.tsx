@@ -16,8 +16,8 @@ import { LoadingSpinner } from "@repo/ui/compositions/loading-spinner";
 import { cn } from "@repo/ui/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
 import { CornerDownLeft, Paperclip, X } from "lucide-react";
-import type { ChangeEvent, ClipboardEvent, KeyboardEvent, SubmitEvent } from "react";
 import { useRef, useState } from "react";
+import type { ChangeEvent, ClipboardEvent, KeyboardEvent, SubmitEvent } from "react";
 import { toast } from "sonner";
 
 import { uploadAccept, uploadChatFile, uploadRefusal } from "@/lib/library";

@@ -19,33 +19,33 @@
     "typecheck": "wrangler types --strict-vars=false && tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.79",
-    "@ai-sdk/openai-compatible": "^3.0.55",
-    "@earendil-works/pi-ai": "0.83.0",
-    "@flue/runtime": "2.1.1",
+    "@ai-sdk/openai": "^4.0.122",
+    "@ai-sdk/openai-compatible": "^3.0.94",
+    "@earendil-works/pi-ai": "0.87.1",
+    "@flue/runtime": "2.2.2",
     "@hono/zod-validator": "^0.9.1",
     "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/transactional": "workspace:*",
     "@repo/worker-api": "workspace:*",
-    "ai": "^7.0.113",
-    "better-auth": "^1.7.20",
-    "hono": "^4.13.9",
+    "ai": "^7.0.181",
+    "better-auth": "^1.7.28",
+    "hono": "^4.13.21",
     "valibot": "^1.5.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.59.0",
-    "@cloudflare/vitest-plugin": "^1.7.0",
-    "@flue/vite": "2.1.1",
+    "@cloudflare/vite-plugin": "^1.70.1",
+    "@cloudflare/vitest-plugin": "1.8.4",
+    "@flue/vite": "2.2.2",
     "@repo/portless-env": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vite": "^8.3.7",
-    "vitest": "^5.0.1",
-    "wrangler": "^4.138.0",
-    "zod-compiler": "^2.0.7"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1",
+    "wrangler": "4.164.0",
+    "zod-compiler": "^2.0.14"
   }
 }

@@ -12,7 +12,6 @@ declare module "vitest" {
 declare global {
   namespace Cloudflare {
     interface GlobalProps {
-      durableNamespaces: "TeamEvents";
       mainModule: typeof WorkerEntry;
     }
   }

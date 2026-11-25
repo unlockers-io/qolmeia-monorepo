@@ -1,6 +1,6 @@
 import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
-import type { ReactNode } from "react";
 import { Suspense } from "react";
+import type { ReactNode } from "react";
 import { Skeleton } from "skullet/react";
 
 import { Nav } from "@/components/nav";

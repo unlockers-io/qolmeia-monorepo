@@ -10,7 +10,7 @@ type GatewayEnv = Pick<
 >;
 
 // shortcut: metadata copied by hand from https://openrouter.ai/api/v1/models (2026-09-29) because
-// Pi 0.83's bundled catalog stops at Claude Sonnet 5; drop it once @earendil-works/pi-ai ships 5.5.
+// Pi 0.87's bundled catalog stops at Claude Sonnet 5; drop it once @earendil-works/pi-ai ships 5.5.
 const CONVERSATION: Omit<Model<"openai-completions">, "baseUrl"> = {
   api: "openai-completions",
   contextWindow: 1_000_000,
@@ -35,7 +35,9 @@ const gateway = (env: GatewayEnv) => ({
   headers: { "HTTP-Referer": env.WORKER_PUBLIC_URL, "X-Title": "Qolmeia" },
 });
 
-const conversationProvider = (env: GatewayEnv): Provider<"openai-completions"> => {
+const conversationProvider = (
+  env: GatewayEnv,
+): Provider<"anthropic-messages" | "openai-completions"> => {
   const builtin = openrouterProvider();
 
   return {

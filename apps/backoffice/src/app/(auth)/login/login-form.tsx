@@ -8,8 +8,8 @@ import { focusFirstInvalidField } from "@repo/ui/lib/focus-first-invalid-field";
 import { revalidateLogic, useForm } from "@tanstack/react-form";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
+import type { ReactNode } from "react";
 
 import { AuthFormCard } from "@/app/(auth)/auth-form-card";
 
