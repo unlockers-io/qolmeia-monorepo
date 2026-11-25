@@ -1,7 +1,7 @@
 import { apiGetServer } from "@repo/app-shell/server-api";
 import { MAIN_CONTENT_ID } from "@repo/app-shell/skip-link";
-import type { ReactNode } from "react";
 import { Suspense } from "react";
+import type { ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
 
 import { Sidebar } from "@/components/sidebar";

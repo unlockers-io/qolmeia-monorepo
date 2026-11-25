@@ -1,7 +1,7 @@
 import type { Deliverable } from "@repo/worker-api/contracts";
 
-import type { Generation } from "#/action/action-type";
 import { assetOutputSchema } from "#/action/action-type";
+import type { Generation } from "#/action/action-type";
 
 const escapeRegExp = (value: string): string =>
   value.replaceAll(/[.*+?^$\{\}\(\)\|\[\]\\]/gv, String.raw`\$&`);

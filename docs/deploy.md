@@ -173,7 +173,7 @@ declares, so the order decides whether production keeps answering:
   ```
 
   Run the output on production in one transaction. `prisma db push
---accept-data-loss` applies the same statements without showing them first.
+  --accept-data-loss` applies the same statements without showing them first.
 
 - **Removing an enum value, or changing a type or a default**: check that no
   row holds the old value before the Worker with the smaller schema deploys

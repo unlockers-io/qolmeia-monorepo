@@ -95,8 +95,8 @@ aprovação antes de ação sensível` as the gating requirement (already the AD
 
 - **Agente de Cobrança** (`workerKind: collections`): open-invoice panel,
   reminders, approved-message follow-up. `defaultActionType:
-send_collection_message`, `default_policies: { send_collection_message:
-require-approval }`.
+  send_collection_message`, `default_policies: { send_collection_message:
+  require-approval }`.
 - **Agente Comercial / Pré-atendimento** (`workerKind: sales`): leads,
   orçamentos, retornos, follow-up; acts as the light CRM's system of record.
 

@@ -1,7 +1,7 @@
 "use client";
 
-import type { AnchorHTMLAttributes, ComponentProps, ImgHTMLAttributes } from "react";
 import { memo } from "react";
+import type { AnchorHTMLAttributes, ComponentProps, ImgHTMLAttributes } from "react";
 import { Streamdown } from "streamdown";
 
 import { cn } from "../lib/utils";
