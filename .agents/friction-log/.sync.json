@@ -1,0 +1,9 @@
+{
+  "mirrors": [
+    {
+      "issue": "unlockers-io/qolmeia-monorepo#268",
+      "path": ".agents/friction-log/20261104222219-next-build-logs/friction.md"
+    }
+  ],
+  "version": 1
+}
